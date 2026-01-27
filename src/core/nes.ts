@@ -246,10 +246,17 @@ export class Nes {
   }
 
   /**
-   * 取得 APU 音頻緩衝區
+   * 從 APU 讀取音頻取樣到輸出緩衝區
    */
-  public getAudioBuffer(): Float32Array {
-    return this.apu.getAudioBuffer();
+  public readAudioSamples(outputBuffer: Float32Array): number {
+    return this.apu.readSamples(outputBuffer);
+  }
+
+  /**
+   * 取得可用的音頻取樣數
+   */
+  public getAvailableAudioSamples(): number {
+    return this.apu.getAvailableSamples();
   }
 
   /**

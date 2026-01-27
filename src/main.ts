@@ -75,6 +75,13 @@ function setupFileInput(): void {
       const buffer = await file.arrayBuffer();
       if (nes.loadRom(buffer)) {
         console.log('ROM 載入成功，開始執行');
+        
+        // 確保音頻系統設定正確
+        if (audioContext) {
+          nes.setAudioSampleRate(audioContext.sampleRate);
+          resumeAudio();
+        }
+        
         startEmulation();
       } else {
         console.error('ROM 載入失敗');
@@ -91,13 +98,32 @@ function startEmulation(): void {
     cancelAnimationFrame(animationId);
   }
 
-  const frameLoop = (): void => {
+  // NES NTSC 幀率：60.0988 fps
+  const TARGET_FRAME_TIME = 1000 / 60.0988; // 約 16.6392 毫秒
+  let lastFrameTime = performance.now();
+  let accumulator = 0;
+
+  const frameLoop = (currentTime: number): void => {
     if (!nes || !ctx || !imageData) return;
 
-    // 執行一幀
-    nes.frame();
+    const deltaTime = currentTime - lastFrameTime;
+    lastFrameTime = currentTime;
+    
+    // 累積經過的時間
+    accumulator += deltaTime;
+    
+    // 限制最大累積時間，避免長時間暫停後瘋狂追趕
+    if (accumulator > TARGET_FRAME_TIME * 3) {
+      accumulator = TARGET_FRAME_TIME;
+    }
 
-    // 渲染到畫布
+    // 執行足夠的幀數以趕上目標時間
+    while (accumulator >= TARGET_FRAME_TIME) {
+      nes.frame();
+      accumulator -= TARGET_FRAME_TIME;
+    }
+
+    // 渲染到畫布（只渲染最後一幀）
     renderFrame();
 
     // 排程下一幀
@@ -142,7 +168,7 @@ function renderFrame(): void {
 // ===== 音頻系統 =====
 
 let audioContext: AudioContext | null = null;
-const AUDIO_BUFFER_SIZE = 2048;
+const AUDIO_BUFFER_SIZE = 4096; // 增大緩衝區以減少卡頓
 
 /**
  * 初始化音頻系統
@@ -151,15 +177,23 @@ async function initAudio(): Promise<void> {
   try {
     audioContext = new AudioContext({ sampleRate: 44100 });
     
+    // 設定 NES 的音頻取樣率
+    if (nes) {
+      nes.setAudioSampleRate(audioContext.sampleRate);
+    }
+    
     // 使用 ScriptProcessor (較舊但相容性較好)
     const scriptProcessor = audioContext.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 1);
     
     scriptProcessor.onaudioprocess = (e) => {
       const output = e.outputBuffer.getChannelData(0);
       if (nes) {
-        const buffer = nes.getAudioBuffer();
-        for (let i = 0; i < output.length; i++) {
-          output[i] = buffer[i % buffer.length] || 0;
+        // 使用新的 readSamples API
+        const samplesRead = nes.readAudioSamples(output);
+        
+        // 如果沒有讀到任何取樣，靜音
+        if (samplesRead === 0) {
+          output.fill(0);
         }
       } else {
         output.fill(0);
@@ -167,7 +201,7 @@ async function initAudio(): Promise<void> {
     };
     
     scriptProcessor.connect(audioContext.destination);
-    console.log('音頻系統已初始化');
+    console.log('音頻系統已初始化，取樣率:', audioContext.sampleRate);
   } catch (e) {
     console.error('音頻初始化失敗:', e);
   }

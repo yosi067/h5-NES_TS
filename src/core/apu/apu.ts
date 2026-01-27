@@ -74,10 +74,20 @@ export class Apu {
   /** 音頻回調 */
   private audioCallback: AudioCallback | null = null;
 
-  /** 音頻緩衝區 */
+  /** 音頻緩衝區 (環形緩衝區) */
   private audioBuffer: Float32Array;
-  private bufferIndex: number = 0;
-  private readonly BUFFER_SIZE: number = 2048;
+  private writeIndex: number = 0;
+  private readIndex: number = 0;
+  private readonly BUFFER_SIZE: number = 8192; // 增大緩衝區
+
+  /** 低通濾波器狀態 */
+  private filterAccumulator: number = 0;
+  private readonly FILTER_COEFFICIENT: number = 0.9; // 提高濾波強度
+
+  /** 高通濾波器狀態 (移除直流偏移) */
+  private highPassPrev: number = 0;
+  private highPassOutput: number = 0;
+  private readonly HIGHPASS_COEFFICIENT: number = 0.996;
 
 
 
@@ -110,7 +120,12 @@ export class Apu {
     this.statusRegister = 0;
     this.clockCounter = 0;
     this.sampleCounter = 0;
-    this.bufferIndex = 0;
+    this.writeIndex = 0;
+    this.readIndex = 0;
+    this.filterAccumulator = 0;
+    this.highPassPrev = 0;
+    this.highPassOutput = 0;
+    this.audioBuffer.fill(0);
   }
 
   /**
@@ -202,7 +217,7 @@ export class Apu {
    * 生成一個音頻取樣
    */
   private generateSample(): void {
-    // 取得各通道輸出
+    // 取得各通道輸出 (0-15 範圍)
     const pulse1 = this.pulse1.output();
     const pulse2 = this.pulse2.output();
     const triangle = this.triangle.output();
@@ -213,40 +228,64 @@ export class Apu {
     const pulseOut = this.mixPulse(pulse1, pulse2);
     const tndOut = this.mixTnd(triangle, noise, dmc);
 
-    const sample = pulseOut + tndOut;
+    // 合併 (輸出範圍約 0 到 1)
+    let sample = pulseOut + tndOut;
+    
+    // 應用低通濾波器減少高頻噪音
+    this.filterAccumulator = this.filterAccumulator * this.FILTER_COEFFICIENT + 
+                             sample * (1 - this.FILTER_COEFFICIENT);
+    sample = this.filterAccumulator;
 
-    // 寫入緩衝區
-    this.audioBuffer[this.bufferIndex++] = sample;
-
-    // 緩衝區滿時通知
-    if (this.bufferIndex >= this.BUFFER_SIZE) {
-      if (this.audioCallback) {
-        for (let i = 0; i < this.BUFFER_SIZE; i++) {
-          this.audioCallback(this.audioBuffer[i]);
-        }
-      }
-      this.bufferIndex = 0;
+    // 應用高通濾波器移除直流偏移
+    const input = sample;
+    this.highPassOutput = this.HIGHPASS_COEFFICIENT * this.highPassOutput + 
+                          input - this.highPassPrev;
+    this.highPassPrev = input;
+    sample = this.highPassOutput;
+    
+    // 縮放到 [-1, 1] 範圍並調整音量
+    sample = sample * 1.5; // 適度放大
+    
+    // 軟削波避免爆音
+    if (sample > 0.95) {
+      sample = 0.95 + (sample - 0.95) * 0.2;
+    } else if (sample < -0.95) {
+      sample = -0.95 + (sample + 0.95) * 0.2;
     }
+    
+    // 最終限制
+    sample = Math.max(-1, Math.min(1, sample));
+
+    // 寫入環形緩衝區
+    this.audioBuffer[this.writeIndex] = sample;
+    this.writeIndex = (this.writeIndex + 1) % this.BUFFER_SIZE;
   }
 
   /**
    * 脈衝波混音 (非線性)
+   * 輸出範圍: 0 到約 0.26
    */
   private mixPulse(pulse1: number, pulse2: number): number {
-    if (pulse1 === 0 && pulse2 === 0) {
+    const sum = pulse1 + pulse2;
+    if (sum === 0) {
       return 0;
     }
-    return 95.88 / (8128 / (pulse1 + pulse2) + 100);
+    return 95.88 / (8128 / sum + 100);
   }
 
   /**
    * 三角波/雜訊/DMC 混音 (非線性)
+   * 輸出範圍: 0 到約 0.74
    */
   private mixTnd(triangle: number, noise: number, dmc: number): number {
     if (triangle === 0 && noise === 0 && dmc === 0) {
       return 0;
     }
-    return 159.79 / (1 / (triangle / 8227 + noise / 12241 + dmc / 22638) + 100);
+    const tnd = triangle / 8227 + noise / 12241 + dmc / 22638;
+    if (tnd === 0) {
+      return 0;
+    }
+    return 159.79 / (1 / tnd + 100);
   }
 
   /**
@@ -382,17 +421,65 @@ export class Apu {
   }
 
   /**
-   * 取得音頻緩衝區
+   * 從環形緩衝區讀取音頻取樣
+   * @param outputBuffer 輸出緩衝區
+   * @returns 實際讀取的取樣數
    */
-  public getAudioBuffer(): Float32Array {
-    return this.audioBuffer.slice(0, this.bufferIndex);
+  public readSamples(outputBuffer: Float32Array): number {
+    let samplesRead = 0;
+    const length = outputBuffer.length;
+    
+    // 計算可用的取樣數
+    const available = this.getAvailableSamples();
+    
+    if (available === 0) {
+      // 緩衝區空，靜音輸出（漸變到0避免爆音）
+      for (let i = 0; i < length; i++) {
+        outputBuffer[i] = 0;
+      }
+      return 0;
+    }
+    
+    // 如果可用取樣少於需要的量，進行線性插值以避免爆音
+    if (available < length) {
+      // 讀取所有可用的取樣
+      const tempBuffer: number[] = [];
+      while (this.readIndex !== this.writeIndex) {
+        tempBuffer.push(this.audioBuffer[this.readIndex]);
+        this.readIndex = (this.readIndex + 1) % this.BUFFER_SIZE;
+      }
+      
+      // 線性插值以填滿輸出緩衝區
+      const ratio = tempBuffer.length / length;
+      for (let i = 0; i < length; i++) {
+        const pos = i * ratio;
+        const index = Math.floor(pos);
+        const frac = pos - index;
+        const current = tempBuffer[Math.min(index, tempBuffer.length - 1)];
+        const next = tempBuffer[Math.min(index + 1, tempBuffer.length - 1)];
+        outputBuffer[i] = current * (1 - frac) + next * frac;
+      }
+      return length;
+    }
+    
+    // 正常情況：直接從緩衝區讀取
+    while (samplesRead < length && this.readIndex !== this.writeIndex) {
+      outputBuffer[samplesRead] = this.audioBuffer[this.readIndex];
+      this.readIndex = (this.readIndex + 1) % this.BUFFER_SIZE;
+      samplesRead++;
+    }
+    
+    return samplesRead;
   }
 
   /**
-   * 清空音頻緩衝區
+   * 取得緩衝區中可用的取樣數
    */
-  public clearAudioBuffer(): void {
-    this.bufferIndex = 0;
+  public getAvailableSamples(): number {
+    if (this.writeIndex >= this.readIndex) {
+      return this.writeIndex - this.readIndex;
+    }
+    return this.BUFFER_SIZE - this.readIndex + this.writeIndex;
   }
 
   // ===== 序列化 (用於存檔) =====
