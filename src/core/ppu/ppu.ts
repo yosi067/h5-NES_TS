@@ -459,10 +459,10 @@ export class Ppu {
   /** 更新移位器 */
   private updateShifters(): void {
     if (this.mask & PpuMask.SHOW_BACKGROUND) {
-      this.bgShifterPatternLo <<= 1;
-      this.bgShifterPatternHi <<= 1;
-      this.bgShifterAttrLo <<= 1;
-      this.bgShifterAttrHi <<= 1;
+      this.bgShifterPatternLo = (this.bgShifterPatternLo << 1) & 0xFFFF;
+      this.bgShifterPatternHi = (this.bgShifterPatternHi << 1) & 0xFFFF;
+      this.bgShifterAttrLo = (this.bgShifterAttrLo << 1) & 0xFFFF;
+      this.bgShifterAttrHi = (this.bgShifterAttrHi << 1) & 0xFFFF;
     }
 
     if ((this.mask & PpuMask.SHOW_SPRITES) && this.cycle >= 1 && this.cycle < 258) {
@@ -471,8 +471,8 @@ export class Ppu {
         if (x > 0) {
           this.secondaryOam[i * 4 + 3]--;
         } else {
-          this.spriteShifterPatternLo[i] <<= 1;
-          this.spriteShifterPatternHi[i] <<= 1;
+          this.spriteShifterPatternLo[i] = (this.spriteShifterPatternLo[i] << 1) & 0xFF;
+          this.spriteShifterPatternHi[i] = (this.spriteShifterPatternHi[i] << 1) & 0xFF;
         }
       }
     }
@@ -743,12 +743,15 @@ export class Ppu {
       // 精靈 0 碰撞檢測
       if (this.spriteZeroHitPossible && this.spriteZeroRendering) {
         if ((this.mask & PpuMask.SHOW_BACKGROUND) && (this.mask & PpuMask.SHOW_SPRITES)) {
-          if (~(this.mask & (PpuMask.SHOW_BACKGROUND_LEFT | PpuMask.SHOW_SPRITES_LEFT))) {
-            if (x >= 9 && x < 258) {
+          // 如果左側 8 像素被隱藏，則在 x >= 8 時才能發生碰撞
+          const leftClip = !((this.mask & PpuMask.SHOW_BACKGROUND_LEFT) && 
+                             (this.mask & PpuMask.SHOW_SPRITES_LEFT));
+          if (leftClip) {
+            if (x >= 8 && x < 255) {
               this.status |= PpuStatus.SPRITE_ZERO_HIT;
             }
           } else {
-            if (x >= 1 && x < 258) {
+            if (x >= 0 && x < 255) {
               this.status |= PpuStatus.SPRITE_ZERO_HIT;
             }
           }

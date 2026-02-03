@@ -1,0 +1,40 @@
+{
+  "roms": [
+    {
+      "name": "超級瑪利歐兄弟 3",
+      "file": "SuperMarioBros3.nes"
+    },
+    {
+      "name": "足球小將翼 2",
+      "file": "Captain Tsubasa II - Super Striker (Japan).nes"
+    },
+    {
+      "name": "雙乘龍 (街機修正版)",
+      "file": "Double Dragon - Arcade Fix by iamstillhiro1112 (Hack).nes"
+    },
+    {
+      "name": "熱血行進曲 - 運動會格鬥技",
+      "file": "Downtown - Nekketsu Koushin Kyoku - Soreyuke Daiundoukai - Fighting Skill (Hack).nes"
+    },
+    {
+      "name": "洛克人 6",
+      "file": "Rockman 6 - Shijou Saidai no Tatakai (Rockman 6 Hack).nes"
+    },
+    {
+      "name": "Final Fantasy III (穿牆版)",
+      "file": "Final Fantasy III - Walk Through Walls (Hack).nes"
+    },
+    {
+      "name": "忍者貓 二代目",
+      "file": "Kyatto Ninden Teyandee the Second Coming (by_Lomax__Ti).nes"
+    },
+    {
+      "name": "Crash 'n the Boys 運動杯",
+      "file": "Crash 'n the Boys - Technos Cup (Japan) [T-En by PentarouZero v1.2] [Add by Lipetsk v1.0] [Add by El Duderino v1.0] [n].nes"
+    },
+    {
+      "name": "Tecmo NBA 2004",
+      "file": "Tecmo NBA 2004 by JG Games (Hack).nes"
+    }
+  ]
+}

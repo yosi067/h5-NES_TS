@@ -2,64 +2,149 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#8b956d">
   <title>H5-NES 模擬器</title>
   <style>
+    /* ===== 基礎重置 ===== */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
 
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background-color: #1a1a2e;
-      color: #eee;
-      min-height: 100vh;
+      background: linear-gradient(180deg, #8b956d 0%, #7a8660 50%, #6b7555 100%);
+      color: #1a1a1a;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 20px;
+      justify-content: center;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
 
-    h1 {
-      margin-bottom: 20px;
-      color: #e94560;
-    }
-
-    .container {
+    /* ===== GameBoy 外殼 ===== */
+    .gameboy-shell {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 20px;
+      width: 100%;
+      height: 100%;
+      max-width: 430px;
+      padding: 15px;
     }
 
-    .screen-container {
-      background-color: #0f0f23;
-      padding: 20px;
+    /* ===== 頂部裝飾線 ===== */
+    .top-decoration {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .decoration-line {
+      width: 40px;
+      height: 4px;
+      background: linear-gradient(90deg, #6b5a5a 0%, #8b6a6a 50%, #6b5a5a 100%);
+      border-radius: 2px;
+    }
+
+    /* ===== 螢幕區域 ===== */
+    .screen-bezel {
+      background: linear-gradient(180deg, #1a1a2a 0%, #2a2a3a 100%);
+      padding: 15px;
       border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.5),
+                  0 2px 4px rgba(0, 0, 0, 0.3);
+      margin-bottom: 15px;
+    }
+
+    .screen-inner {
+      background: #0f0f1a;
+      padding: 8px;
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .screen-label {
+      position: absolute;
+      top: -20px;
+      left: 10px;
+      font-size: 10px;
+      color: #666;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .power-led {
+      position: absolute;
+      top: 50%;
+      left: -25px;
+      transform: translateY(-50%);
+      width: 8px;
+      height: 8px;
+      background: #333;
+      border-radius: 50%;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .power-led.on {
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80,
+                  inset 0 1px 2px rgba(255, 255, 255, 0.3);
     }
 
     #screen {
       display: block;
-      width: 512px;
-      height: 480px;
+      width: 256px;
+      height: 240px;
       image-rendering: pixelated;
-      background-color: #000;
-      border: 4px solid #333;
+      image-rendering: crisp-edges;
+      background-color: #9bbc0f;
       border-radius: 4px;
     }
 
-    .controls {
+    /* ===== 品牌區域 ===== */
+    .brand-area {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .brand-nintendo {
+      font-family: 'Arial', sans-serif;
+      font-size: 11px;
+      font-weight: bold;
+      color: #4a4a4a;
+      letter-spacing: 3px;
+      margin-bottom: 2px;
+    }
+
+    .brand-name {
+      font-family: 'Arial Black', sans-serif;
+      font-size: 28px;
+      font-style: italic;
+      color: #2a2a6a;
+      text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    /* ===== 電腦版控制區 ===== */
+    .desktop-controls {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       justify-content: center;
+      margin-bottom: 15px;
     }
 
-    .controls button,
-    .controls label {
+    .desktop-controls button,
+    .desktop-controls label {
       padding: 10px 20px;
       font-size: 14px;
       border: none;
@@ -68,40 +153,45 @@
       transition: all 0.2s;
     }
 
-    .controls button {
-      background-color: #e94560;
+    .desktop-controls button {
+      background: linear-gradient(180deg, #e94560 0%, #c73550 100%);
       color: white;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
 
-    .controls button:hover {
-      background-color: #ff6b6b;
+    .desktop-controls button:hover {
       transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
 
-    .controls label {
-      background-color: #16213e;
+    .desktop-controls label {
+      background: linear-gradient(180deg, #3a3a4a 0%, #2a2a3a 100%);
       color: #eee;
       border: 2px dashed #e94560;
     }
 
-    .controls label:hover {
-      background-color: #1a1a2e;
+    .desktop-controls label:hover {
+      background: linear-gradient(180deg, #4a4a5a 0%, #3a3a4a 100%);
     }
 
     #rom-input {
       display: none;
     }
 
+    /* ===== 鍵盤指南 (電腦版) ===== */
     .keyboard-guide {
-      background-color: #16213e;
+      background: linear-gradient(180deg, #2a2a3a 0%, #1f1f2f 100%);
       padding: 20px;
       border-radius: 8px;
-      max-width: 600px;
+      max-width: 500px;
+      color: #eee;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
 
     .keyboard-guide h3 {
       margin-bottom: 10px;
       color: #e94560;
+      font-size: 14px;
     }
 
     .keyboard-guide table {
@@ -110,47 +200,597 @@
     }
 
     .keyboard-guide td {
-      padding: 8px;
+      padding: 6px 8px;
       border-bottom: 1px solid #333;
+      font-size: 13px;
     }
 
     .keyboard-guide td:first-child {
       color: #888;
+      width: 100px;
     }
 
     kbd {
-      background-color: #333;
-      padding: 4px 8px;
+      background: linear-gradient(180deg, #444 0%, #333 100%);
+      padding: 3px 8px;
       border-radius: 4px;
       font-family: monospace;
+      font-size: 12px;
+      box-shadow: 0 2px 0 #222;
     }
 
-    .debug-info {
-      font-family: monospace;
-      font-size: 12px;
+    /* ===== 虛擬控制器 ===== */
+    .virtual-controller {
+      display: none;
+      width: 100%;
+      padding: 15px;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      flex: 1;
+    }
+
+    /* D-Pad 容器 */
+    .dpad-container {
+      flex: 0 0 auto;
+    }
+
+    .dpad {
+      display: grid;
+      grid-template-columns: 50px 50px 50px;
+      grid-template-rows: 50px 50px 50px;
+      gap: 0;
+    }
+
+    .dpad-btn {
+      width: 50px;
+      height: 50px;
+      border: none;
+      background: linear-gradient(145deg, #3a3a4a, #2a2a3a);
+      color: #666;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+
+    .dpad-btn:active, .dpad-btn.pressed {
+      background: linear-gradient(145deg, #2a2a3a, #3a3a4a);
+      color: #e94560;
+      transform: scale(0.95);
+    }
+
+    .dpad-up { 
+      grid-column: 2; 
+      grid-row: 1;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .dpad-down { 
+      grid-column: 2; 
+      grid-row: 3;
+      border-radius: 0 0 8px 8px;
+    }
+
+    .dpad-left { 
+      grid-column: 1; 
+      grid-row: 2;
+      border-radius: 8px 0 0 8px;
+    }
+
+    .dpad-right { 
+      grid-column: 3; 
+      grid-row: 2;
+      border-radius: 0 8px 8px 0;
+    }
+
+    .dpad-center {
+      grid-column: 2;
+      grid-row: 2;
+      background: #2a2a3a;
+      width: 50px;
+      height: 50px;
+    }
+
+    .dpad-arrow {
+      pointer-events: none;
+    }
+
+    /* 中間按鈕 (SELECT/START) */
+    .center-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .func-btn {
+      width: 70px;
+      height: 28px;
+      border: none;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #5a5a5a 0%, #3a3a3a 100%);
+      color: #aaa;
+      font-size: 10px;
+      font-weight: bold;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transform: rotate(-25deg);
+      transition: all 0.1s;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .func-btn:active, .func-btn.pressed {
+      background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%);
+      color: #e94560;
+      transform: rotate(-25deg) scale(0.95);
+    }
+
+    /* A/B 按鈕 */
+    .ab-container {
+      flex: 0 0 auto;
+      display: flex;
+      gap: 15px;
+      transform: rotate(-25deg);
+    }
+
+    .action-btn {
+      width: 65px;
+      height: 65px;
+      border: none;
+      border-radius: 50%;
+      font-size: 22px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.1s;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4),
+                  inset 0 2px 4px rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-a {
+      background: linear-gradient(145deg, #a02040, #801830);
+      color: #fff;
+    }
+
+    .btn-b {
+      background: linear-gradient(145deg, #a02040, #801830);
+      color: #fff;
+    }
+
+    .action-btn:active, .action-btn.pressed {
+      transform: scale(0.92);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4),
+                  inset 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-label {
+      display: block;
+      text-align: center;
+      font-size: 10px;
+      color: #4a4a6a;
+      margin-top: 5px;
+      font-weight: bold;
+    }
+
+    /* ===== ROM 選擇器 ===== */
+    .rom-selector {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .rom-selector-content {
+      width: 100%;
+      max-width: 400px;
+      max-height: 90vh;
+      background: linear-gradient(180deg, #8b956d 0%, #7a8660 100%);
+      border-radius: 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+                  inset 0 2px 4px rgba(255, 255, 255, 0.2);
+      margin: 10px;
+    }
+
+    .rom-selector-header {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .rom-selector-header h2 {
+      font-size: 16px;
+      color: #2a2a2a;
+      margin: 10px 0;
+      font-weight: normal;
+    }
+
+    .rom-list {
+      flex: 1;
+      overflow-y: auto;
+      background: #1a1a2a;
+      border-radius: 8px;
+      padding: 10px;
+      max-height: 50vh;
+    }
+
+    .rom-item {
+      width: 100%;
+      padding: 14px 15px;
+      margin-bottom: 8px;
+      background: linear-gradient(180deg, #2a2a3a 0%, #1f1f2f 100%);
+      border: none;
+      border-radius: 8px;
+      color: #eee;
+      font-size: 14px;
+      text-align: left;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+
+    .rom-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .rom-item:hover, .rom-item:active {
+      background: linear-gradient(180deg, #3a3a4a 0%, #2a2a3a 100%);
+      transform: translateX(5px);
+    }
+
+    .rom-icon {
+      font-size: 20px;
+    }
+
+    .rom-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rom-arrow {
+      color: #e94560;
+      font-size: 14px;
+    }
+
+    .rom-loading, .rom-empty, .rom-error {
+      text-align: center;
       color: #888;
-      margin-top: 10px;
+      padding: 40px 20px;
+    }
+
+    .rom-error {
+      color: #e94560;
+    }
+
+    .rom-selector-footer {
+      margin-top: 15px;
+      text-align: center;
+    }
+
+    .upload-btn {
+      display: inline-block;
+      padding: 14px 28px;
+      background: linear-gradient(180deg, #3a3a3a 0%, #2a2a2a 100%);
+      color: #eee;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-btn:hover {
+      background: linear-gradient(180deg, #4a4a4a 0%, #3a3a3a 100%);
+    }
+
+    /* ===== RWD 響應式設計 ===== */
+    
+    /* 電腦版 (寬螢幕) */
+    @media (min-width: 769px) {
+      body {
+        background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+      }
+
+      .gameboy-shell {
+        background: linear-gradient(180deg, #8b956d 0%, #7a8660 50%, #6b7555 100%);
+        max-width: 600px;
+        border-radius: 30px 30px 80px 80px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+                    inset 0 2px 4px rgba(255, 255, 255, 0.2),
+                    inset 0 -4px 8px rgba(0, 0, 0, 0.1);
+        height: auto;
+        max-height: 95vh;
+      }
+
+      .virtual-controller {
+        display: none !important;
+      }
+
+      .desktop-controls {
+        display: flex;
+      }
+
+      .keyboard-guide {
+        display: block;
+      }
+
+      #screen {
+        width: 512px;
+        height: 480px;
+      }
+
+      .screen-bezel {
+        padding: 20px;
+      }
+
+      .power-led {
+        left: -35px;
+        width: 10px;
+        height: 10px;
+      }
+    }
+
+    /* 手機版 (直立) */
+    @media (max-width: 768px) {
+      .gameboy-shell {
+        justify-content: flex-start;
+        padding-top: 20px;
+      }
+
+      .desktop-controls {
+        display: none;
+      }
+
+      .keyboard-guide {
+        display: none;
+      }
+
+      .virtual-controller {
+        display: flex;
+      }
+
+      #screen {
+        width: 100%;
+        max-width: 320px;
+        height: auto;
+        aspect-ratio: 256 / 240;
+      }
+
+      .screen-bezel {
+        width: 100%;
+        max-width: 360px;
+      }
+
+      .brand-name {
+        font-size: 24px;
+      }
+    }
+
+    /* iPhone 17 Pro Max 尺寸優化 (430 x 932) */
+    @media (max-width: 430px) {
+      .gameboy-shell {
+        padding: 10px;
+        padding-top: 15px;
+      }
+
+      .screen-bezel {
+        padding: 12px;
+        margin-bottom: 10px;
+      }
+
+      .brand-area {
+        margin-bottom: 15px;
+      }
+
+      .brand-name {
+        font-size: 22px;
+      }
+
+      .dpad {
+        grid-template-columns: 45px 45px 45px;
+        grid-template-rows: 45px 45px 45px;
+      }
+
+      .dpad-btn {
+        width: 45px;
+        height: 45px;
+        font-size: 16px;
+      }
+
+      .dpad-center {
+        width: 45px;
+        height: 45px;
+      }
+
+      .action-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 20px;
+      }
+
+      .func-btn {
+        width: 65px;
+        height: 26px;
+        font-size: 9px;
+      }
+
+      .virtual-controller {
+        padding: 10px;
+      }
+    }
+
+    /* 小螢幕手機 */
+    @media (max-width: 375px) {
+      .dpad {
+        grid-template-columns: 40px 40px 40px;
+        grid-template-rows: 40px 40px 40px;
+      }
+
+      .dpad-btn, .dpad-center {
+        width: 40px;
+        height: 40px;
+      }
+
+      .action-btn {
+        width: 55px;
+        height: 55px;
+        font-size: 18px;
+      }
+
+      .ab-container {
+        gap: 10px;
+      }
+    }
+
+    /* 橫向模式提示 */
+    @media (max-width: 768px) and (orientation: landscape) {
+      .gameboy-shell {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 20px;
+        padding: 10px;
+      }
+
+      .screen-bezel {
+        margin-bottom: 0;
+      }
+
+      .brand-area {
+        display: none;
+      }
+
+      .virtual-controller {
+        width: auto;
+        flex: 0;
+        padding: 10px;
+      }
+
+      .center-btns {
+        flex-direction: row;
+      }
+
+      .top-decoration {
+        display: none;
+      }
     }
   </style>
-  <script type="module" crossorigin src="/assets/index-D7ryDJju.js"></script>
+  <script type="module" crossorigin src="/assets/index-Bx5-Y4N7.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/nes-core-CQWCNBCb.js">
 </head>
 <body>
-  <h1>🎮 H5-NES 模擬器</h1>
-  
-  <div class="container">
-    <div class="controls">
+  <!-- ROM 選擇器 (初始顯示) -->
+  <div class="rom-selector" id="rom-selector">
+    <div class="rom-selector-content">
+      <div class="rom-selector-header">
+        <div class="brand-nintendo">NINTENDO</div>
+        <div class="brand-name">H5-NES</div>
+        <h2>🎮 選擇遊戲</h2>
+      </div>
+      
+      <div class="rom-list" id="rom-list">
+        <div class="rom-loading">載入遊戲列表中...</div>
+      </div>
+      
+      <div class="rom-selector-footer">
+        <label class="upload-btn" for="rom-file-input">
+          📁 從裝置選擇 ROM
+        </label>
+        <input type="file" id="rom-file-input" accept=".nes" style="display: none;">
+      </div>
+    </div>
+  </div>
+
+  <!-- GameBoy 外殼 -->
+  <div class="gameboy-shell" id="gameboy-shell" style="display: none;">
+    <!-- 頂部裝飾 -->
+    <div class="top-decoration">
+      <div class="decoration-line"></div>
+      <div class="decoration-line"></div>
+    </div>
+
+    <!-- 螢幕區域 -->
+    <div class="screen-bezel">
+      <div class="screen-inner">
+        <div class="screen-label">DOT MATRIX WITH STEREO SOUND</div>
+        <div class="power-led" id="power-led"></div>
+        <canvas id="screen" width="256" height="240"></canvas>
+      </div>
+    </div>
+
+    <!-- 品牌 -->
+    <div class="brand-area">
+      <div class="brand-nintendo">NINTENDO</div>
+      <div class="brand-name">H5-NES</div>
+    </div>
+
+    <!-- 電腦版控制按鈕 -->
+    <div class="desktop-controls">
       <label for="rom-input">📁 載入 ROM</label>
       <input type="file" id="rom-input" accept=".nes">
-      <button onclick="window.stopEmulation()">⏸ 暫停</button>
-      <button onclick="window.startEmulation()">▶ 繼續</button>
-      <button onclick="window.nes?.reset()">🔄 重置</button>
+      <button id="btn-pause">⏸ 暫停</button>
+      <button id="btn-resume">▶ 繼續</button>
+      <button id="btn-reset">🔄 重置</button>
+      <button id="btn-select-game">🎮 選擇遊戲</button>
     </div>
 
-    <div class="screen-container">
-      <canvas id="screen" width="256" height="240"></canvas>
-      <div class="debug-info" id="debug-info"></div>
+    <!-- 虛擬控制器 (手機版) -->
+    <div class="virtual-controller" id="virtual-controller">
+      <!-- 左側 D-Pad -->
+      <div class="dpad-container">
+        <div class="dpad">
+          <button class="dpad-btn dpad-up" data-btn="up">
+            <span class="dpad-arrow">▲</span>
+          </button>
+          <button class="dpad-btn dpad-left" data-btn="left">
+            <span class="dpad-arrow">◀</span>
+          </button>
+          <div class="dpad-center"></div>
+          <button class="dpad-btn dpad-right" data-btn="right">
+            <span class="dpad-arrow">▶</span>
+          </button>
+          <button class="dpad-btn dpad-down" data-btn="down">
+            <span class="dpad-arrow">▼</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- 中間 Select/Start -->
+      <div class="center-btns">
+        <button class="func-btn select-btn" data-btn="select">SELECT</button>
+        <button class="func-btn start-btn" data-btn="start">START</button>
+      </div>
+      
+      <!-- 右側 A/B 按鈕 -->
+      <div class="ab-container">
+        <div>
+          <button class="action-btn btn-b" data-btn="b">B</button>
+          <span class="btn-label">B</span>
+        </div>
+        <div>
+          <button class="action-btn btn-a" data-btn="a">A</button>
+          <span class="btn-label">A</span>
+        </div>
+      </div>
     </div>
 
+    <!-- 鍵盤指南 (電腦版) -->
     <div class="keyboard-guide">
       <h3>⌨️ 鍵盤控制</h3>
       <table>
@@ -173,6 +813,14 @@
         <tr>
           <td>Select</td>
           <td><kbd>Shift (右)</kbd></td>
+        </tr>
+        <tr>
+          <td>存檔</td>
+          <td><kbd>F5</kbd></td>
+        </tr>
+        <tr>
+          <td>讀檔</td>
+          <td><kbd>F7</kbd></td>
         </tr>
       </table>
     </div>
