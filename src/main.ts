@@ -123,7 +123,7 @@ async function loadRomList(): Promise<void> {
   if (!romListEl) return;
 
   try {
-    const response = await fetch('/roms.json');
+    const response = await fetch('./roms.json');
     if (!response.ok) {
       throw new Error('無法載入 ROM 列表');
     }
@@ -178,7 +178,7 @@ function renderRomList(roms: RomInfo[]): void {
  */
 async function loadRomFromServer(filename: string): Promise<void> {
   try {
-    const response = await fetch(`/roms/${encodeURIComponent(filename)}`);
+    const response = await fetch(`./roms/${encodeURIComponent(filename)}`);
     if (!response.ok) {
       throw new Error(`無法載入 ROM: ${filename}`);
     }

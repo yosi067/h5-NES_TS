@@ -103,6 +103,17 @@ npm test
 
 ### 部署到 GitHub Pages
 
+本專案已設定 **GitHub Actions 自動部署**，每次推送到 `main` 分支時會自動建置並部署。
+
+#### 首次設定
+
+1. 在 GitHub 專案頁面進入 **Settings** → **Pages**
+2. 在 **Build and deployment** 區塊：
+   - **Source**: 選擇 `GitHub Actions`
+3. 推送程式碼到 `main` 分支即會自動部署
+
+#### 手動部署
+
 ```bash
 # 建置後，dist 目錄可直接部署
 npm run build
@@ -114,6 +125,13 @@ npm run build
 #   roms/          # ROM 檔案
 #   roms.json      # ROM 列表
 ```
+
+#### 工作流程檔案
+
+部署設定位於 `.github/workflows/deploy.yml`，包含：
+- Node.js 20 環境
+- 自動安裝依賴與建置
+- 部署到 GitHub Pages
 
 ---
 
