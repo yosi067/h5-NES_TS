@@ -31,6 +31,8 @@ function copyRomsPlugin() {
 }
 
 export default defineConfig({
+  // 使用相對路徑，確保部署到任何目錄都能正常運作
+  base: './',
   resolve: {
     alias: {
       '@core': resolve(__dirname, 'src/core'),
