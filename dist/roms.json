@@ -1,20 +1,16 @@
 {
   "roms": [
     {
+      "name": "超級瑪利歐兄弟",
+      "file": "超级玛丽.nes"
+    },
+    {
       "name": "超級瑪利歐兄弟 3",
       "file": "SuperMarioBros3.nes"
     },
     {
-      "name": "足球小將翼 2",
-      "file": "Captain Tsubasa II - Super Striker (Japan).nes"
-    },
-    {
-      "name": "雙乘龍 (街機修正版)",
-      "file": "Double Dragon - Arcade Fix by iamstillhiro1112 (Hack).nes"
-    },
-    {
-      "name": "熱血行進曲 - 運動會格鬥技",
-      "file": "Downtown - Nekketsu Koushin Kyoku - Soreyuke Daiundoukai - Fighting Skill (Hack).nes"
+      "name": "魂斗羅 (無限人散彈槍版)",
+      "file": "魂斗罗1代无限人散弹枪.nes"
     },
     {
       "name": "洛克人 6",
@@ -25,16 +21,84 @@
       "file": "Final Fantasy III - Walk Through Walls (Hack).nes"
     },
     {
-      "name": "忍者貓 二代目",
-      "file": "Kyatto Ninden Teyandee the Second Coming (by_Lomax__Ti).nes"
+      "name": "薩爾達傳說 (中文版)",
+      "file": "FC塞尔达传说汉化版.nes"
     },
     {
-      "name": "Crash 'n the Boys 運動杯",
-      "file": "Crash 'n the Boys - Technos Cup (Japan) [T-En by PentarouZero v1.2] [Add by Lipetsk v1.0] [Add by El Duderino v1.0] [n].nes"
+      "name": "雙截龍 3",
+      "file": "双截龙3.nes"
     },
     {
-      "name": "Tecmo NBA 2004",
-      "file": "Tecmo NBA 2004 by JG Games (Hack).nes"
+      "name": "聖鈴傳說",
+      "file": "圣铃传说.nes"
+    },
+    {
+      "name": "熱血新記錄",
+      "file": "热血新记录.nes"
+    },
+    {
+      "name": "熱血曲棍球",
+      "file": "热血曲棍球(J).nes"
+    },
+    {
+      "name": "熱血格鬥 (中文版)",
+      "file": "热血格斗中文.nes"
+    },
+    {
+      "name": "熱血物語 (中文版)",
+      "file": "热血物语中文版.nes"
+    },
+    {
+      "name": "熱血籃球",
+      "file": "热血篮球.nes"
+    },
+    {
+      "name": "熱血足球 3",
+      "file": "热血足球3.NES"
+    },
+    {
+      "name": "熱血進行曲 (中文版)",
+      "file": "热血进行曲中文版.nes"
+    },
+    {
+      "name": "熱血高校足球",
+      "file": "热血高校足球(J).nes"
+    },
+    {
+      "name": "熱血高校躲避球",
+      "file": "热血高校躲避球(J).nes"
+    },
+    {
+      "name": "龍珠 Z 強襲賽亞人",
+      "file": "龙珠Z_强袭赛亚人.nes"
+    },
+    {
+      "name": "龍珠 Z2 激鬥弗利薩",
+      "file": "龙珠Z2-激斗弗利撒.nes"
+    },
+    {
+      "name": "龍珠 Z3 烈戰人造人",
+      "file": "龙珠Z3-烈战人造人.nes"
+    },
+    {
+      "name": "龍珠 Z 外傳 賽亞人滅絕計劃",
+      "file": "龙珠Z外传-塞亚人灭绝计划.nes"
+    },
+    {
+      "name": "Zombie Hunter",
+      "file": "Zombie Hunter (Japan).nes"
+    },
+    {
+      "name": "五子棋",
+      "file": "五子棋.nes"
+    },
+    {
+      "name": "台灣 16 張麻將 (中文)",
+      "file": "台湾16张麻将(中文).nes"
+    },
+    {
+      "name": "100 合 1",
+      "file": "100合1.NES"
     }
   ]
 }

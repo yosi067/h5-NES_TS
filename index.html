@@ -202,6 +202,22 @@
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     }
 
+    .desktop-controls .save-btn {
+      background: linear-gradient(180deg, #2a8a4a 0%, #1a6a3a 100%);
+    }
+
+    .desktop-controls .save-btn:hover {
+      background: linear-gradient(180deg, #3a9a5a 0%, #2a7a4a 100%);
+    }
+
+    .desktop-controls .load-btn {
+      background: linear-gradient(180deg, #4a6a9a 0%, #3a5a8a 100%);
+    }
+
+    .desktop-controls .load-btn:hover {
+      background: linear-gradient(180deg, #5a7aaa 0%, #4a6a9a 100%);
+    }
+
     .desktop-controls label {
       background: linear-gradient(180deg, var(--gb-dark) 0%, var(--gb-darker) 100%);
       color: #eee;
@@ -423,6 +439,35 @@
     .func-btn:active::before, .func-btn.pressed::before {
       background: radial-gradient(circle at center, var(--glow-func) 0%, transparent 70%);
       opacity: 1;
+    }
+
+    /* 存檔/讀取按鈕樣式 */
+    .func-btn.save-state-btn {
+      background: linear-gradient(180deg, #2a8a4a 0%, #1a6a3a 100%);
+      color: white;
+      font-size: 8px;
+    }
+
+    .func-btn.save-state-btn:hover {
+      background: linear-gradient(180deg, #3a9a5a 0%, #2a7a4a 100%);
+    }
+
+    .func-btn.save-state-btn:active, .func-btn.save-state-btn.pressed {
+      background: linear-gradient(180deg, #1a6a3a 0%, #0a5a2a 100%);
+    }
+
+    .func-btn.load-state-btn {
+      background: linear-gradient(180deg, #4a6a9a 0%, #3a5a8a 100%);
+      color: white;
+      font-size: 8px;
+    }
+
+    .func-btn.load-state-btn:hover {
+      background: linear-gradient(180deg, #5a7aaa 0%, #4a6a9a 100%);
+    }
+
+    .func-btn.load-state-btn:active, .func-btn.load-state-btn.pressed {
+      background: linear-gradient(180deg, #3a5a8a 0%, #2a4a7a 100%);
     }
 
     /* ===== A/B 按鈕 ===== */
@@ -1018,7 +1063,6 @@
     <!-- 螢幕區域 -->
     <div class="screen-bezel">
       <div class="screen-inner">
-        <div class="screen-label">DOT MATRIX WITH STEREO SOUND</div>
         <div class="power-led" id="power-led"></div>
         <canvas id="screen" width="256" height="240"></canvas>
       </div>
@@ -1034,6 +1078,8 @@
     <div class="desktop-controls">
       <label for="rom-input">📁 載入 ROM</label>
       <input type="file" id="rom-input" accept=".nes">
+      <button id="btn-save-state" class="save-btn">💾 存檔 (F5)</button>
+      <button id="btn-load-state" class="load-btn">📂 讀取 (F7)</button>
       <button id="btn-pause">⏸ 暫停</button>
       <button id="btn-resume">▶ 繼續</button>
       <button id="btn-reset">🔄 重置</button>
@@ -1061,8 +1107,10 @@
         </div>
       </div>
       
-      <!-- 中間 Select/Start -->
+      <!-- 中間 存檔/讀取/Select/Start -->
       <div class="center-btns">
+        <button class="func-btn save-state-btn" id="mobile-save-state">💾SAVE</button>
+        <button class="func-btn load-state-btn" id="mobile-load-state">📂LOAD</button>
         <button class="func-btn select-btn" data-btn="select">SELECT</button>
         <button class="func-btn start-btn" data-btn="start">START</button>
       </div>

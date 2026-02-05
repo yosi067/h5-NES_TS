@@ -345,6 +345,38 @@ function setupDesktopControls(): void {
   document.getElementById('btn-resume')?.addEventListener('click', startEmulation);
   document.getElementById('btn-reset')?.addEventListener('click', () => nes?.reset());
   document.getElementById('btn-select-game')?.addEventListener('click', showRomSelector);
+  
+  // 存檔/讀取按鈕 (電腦版)
+  document.getElementById('btn-save-state')?.addEventListener('click', () => {
+    if (saveState(0)) {
+      showToast('✅ 存檔成功');
+    } else {
+      showToast('❌ 存檔失敗');
+    }
+  });
+  document.getElementById('btn-load-state')?.addEventListener('click', () => {
+    if (loadState(0)) {
+      showToast('✅ 讀取成功');
+    } else {
+      showToast('❌ 沒有存檔');
+    }
+  });
+  
+  // 存檔/讀取按鈕 (手機版)
+  document.getElementById('mobile-save-state')?.addEventListener('click', () => {
+    if (saveState(0)) {
+      showToast('✅ 存檔成功');
+    } else {
+      showToast('❌ 存檔失敗');
+    }
+  });
+  document.getElementById('mobile-load-state')?.addEventListener('click', () => {
+    if (loadState(0)) {
+      showToast('✅ 讀取成功');
+    } else {
+      showToast('❌ 沒有存檔');
+    }
+  });
 }
 
 /**
@@ -482,6 +514,55 @@ function resumeAudio(): void {
 // ===== 存檔系統 =====
 
 const SAVE_STATE_PREFIX = 'nes_savestate_';
+
+/**
+ * 顯示提示訊息
+ */
+function showToast(message: string): void {
+  // 移除舊的 toast
+  const existingToast = document.querySelector('.toast-message');
+  if (existingToast) {
+    existingToast.remove();
+  }
+  
+  // 建立新的 toast
+  const toast = document.createElement('div');
+  toast.className = 'toast-message';
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    z-index: 10000;
+    animation: toastFade 1.5s ease-out forwards;
+  `;
+  
+  // 添加動畫樣式
+  if (!document.querySelector('#toast-style')) {
+    const style = document.createElement('style');
+    style.id = 'toast-style';
+    style.textContent = `
+      @keyframes toastFade {
+        0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  document.body.appendChild(toast);
+  
+  // 自動移除
+  setTimeout(() => toast.remove(), 1500);
+}
 
 function saveState(slot: number = 0): boolean {
   if (!nes) return false;
