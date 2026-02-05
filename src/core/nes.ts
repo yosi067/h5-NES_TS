@@ -121,6 +121,9 @@ export class Nes {
       
       // APU 每個 CPU 週期執行
       this.apu.clock();
+      
+      // Mapper CPU 週期計時 (用於 Bandai FCG 等 cycle-based IRQ)
+      this.cartridge.cpuClock();
     }
 
     // 檢查 NMI
@@ -128,12 +131,14 @@ export class Nes {
       this.cpu.nmi();
     }
     
-    // 檢查 Mapper IRQ (MMC3)
+    // 檢查 Mapper scanline IRQ (用於 MMC3 等 scanline-based IRQ)
     if (this.ppu.checkScanlineIrq()) {
       this.cartridge.scanline();
-      if (this.cartridge.checkIrq()) {
-        this.cpu.irq();
-      }
+    }
+    
+    // 檢查 Mapper IRQ (統一處理 cycle-based 和 scanline-based)
+    if (this.cartridge.checkIrq()) {
+      this.cpu.irq();
     }
 
     this.systemClockCounter++;

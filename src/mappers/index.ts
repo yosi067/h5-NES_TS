@@ -41,8 +41,11 @@ export interface Mapper {
   /** 重置 */
   reset?(): void;
   
-  /** 掃描線計數 (用於 IRQ) */
+  /** 掃描線計數 (用於 MMC3 等 scanline-based IRQ) */
   scanline?(): void;
+  
+  /** CPU 週期計數 (用於 Bandai FCG 等 cycle-based IRQ) */
+  cpuClock?(): void;
 }
 
 /**
@@ -201,17 +204,21 @@ export class Mapper1 implements Mapper {
   ppuMapRead(address: number): number | null {
     if (address < 0x2000) {
       const chrMode = (this.controlRegister >> 4) & 0x01;
+      // 以 4KB 為單位的總 bank 數
+      const totalChrBanks = Math.max(1, this.chrBanks * 2);
 
       if (chrMode === 0) {
-        // 8KB 模式
-        const bank = (this.chrBank0 & 0x1E) * 4096;
-        return bank + address;
+        // 8KB 模式 - 忽略最低位
+        const bank = (this.chrBank0 & 0x1E) % totalChrBanks;
+        return bank * 4096 + address;
       } else {
         // 4KB 模式
         if (address < 0x1000) {
-          return this.chrBank0 * 4096 + address;
+          const bank = this.chrBank0 % totalChrBanks;
+          return bank * 4096 + address;
         } else {
-          return this.chrBank1 * 4096 + (address & 0x0FFF);
+          const bank = this.chrBank1 % totalChrBanks;
+          return bank * 4096 + (address & 0x0FFF);
         }
       }
     }
@@ -220,6 +227,7 @@ export class Mapper1 implements Mapper {
 
   ppuMapWrite(address: number): number | null {
     if (address < 0x2000 && this.chrBanks === 0) {
+      // CHR RAM
       return address;
     }
     return null;
@@ -698,72 +706,62 @@ export class Mapper16 implements Mapper {
   }
 
   cpuMapWrite(address: number, data: number): MapperWriteResult | null {
-    // Bandai FCG 有多種變體，這是基本實作
+    // Bandai FCG 有多種變體
+    // FCG-1/FCG-2: 使用 $6000-$7FFF
+    // LZ93D50: 使用 $8000-$FFFF
+    
+    let reg: number;
+    
     if (address >= 0x6000 && address < 0x8000) {
-      const reg = address & 0x000F;
-      
-      if (reg < 8) {
-        // CHR bank 暫存器 $6000-$6007
-        this.chrBankRegs[reg] = data;
-      } else if (reg === 8) {
-        // PRG bank $6008
-        this.prgBank = data & 0x0F;
-      } else if (reg === 9) {
-        // 鏡像 $6009
-        const mirror = data & 0x03;
-        switch (mirror) {
-          case 0: this.mirrorModeValue = MirrorMode.Vertical; break;
-          case 1: this.mirrorModeValue = MirrorMode.Horizontal; break;
-          case 2: this.mirrorModeValue = MirrorMode.SingleScreenLow; break;
-          case 3: this.mirrorModeValue = MirrorMode.SingleScreenHigh; break;
-        }
-        return { mirrorMode: this.mirrorModeValue };
-      } else if (reg === 0x0A) {
-        // IRQ 控制 $600A
-        this.irqEnabled = (data & 0x01) !== 0;
-        this.irqCounter = this.irqLatch;
-        this.irqPending = false;
-      } else if (reg === 0x0B) {
-        // IRQ latch 低位元 $600B
-        this.irqLatch = (this.irqLatch & 0xFF00) | data;
-      } else if (reg === 0x0C) {
-        // IRQ latch 高位元 $600C
-        this.irqLatch = (this.irqLatch & 0x00FF) | (data << 8);
-      }
+      // FCG-1/FCG-2 變體
+      reg = address & 0x000F;
     } else if (address >= 0x8000) {
-      // 有些變體在 $8000-$FFFF 寫入
-      const reg = address & 0x000F;
-      
-      if (reg < 8) {
-        this.chrBankRegs[reg] = data;
-      } else if (reg === 8) {
-        this.prgBank = data & 0x0F;
-      } else if (reg === 9) {
-        const mirror = data & 0x03;
-        switch (mirror) {
-          case 0: this.mirrorModeValue = MirrorMode.Vertical; break;
-          case 1: this.mirrorModeValue = MirrorMode.Horizontal; break;
-          case 2: this.mirrorModeValue = MirrorMode.SingleScreenLow; break;
-          case 3: this.mirrorModeValue = MirrorMode.SingleScreenHigh; break;
-        }
-        return { mirrorMode: this.mirrorModeValue };
-      } else if (reg === 0x0A) {
-        this.irqEnabled = (data & 0x01) !== 0;
-        this.irqCounter = this.irqLatch;
-        this.irqPending = false;
-      } else if (reg === 0x0B) {
-        this.irqLatch = (this.irqLatch & 0xFF00) | data;
-      } else if (reg === 0x0C) {
-        this.irqLatch = (this.irqLatch & 0x00FF) | (data << 8);
-      }
+      // LZ93D50 變體 (龍珠系列使用這個)
+      reg = address & 0x000F;
+    } else {
+      return null;
     }
+    
+    if (reg < 8) {
+      // CHR bank 暫存器 (0-7)
+      this.chrBankRegs[reg] = data;
+    } else if (reg === 8) {
+      // PRG bank
+      this.prgBank = data & 0x0F;
+    } else if (reg === 9) {
+      // 鏡像控制
+      const mirror = data & 0x03;
+      switch (mirror) {
+        case 0: this.mirrorModeValue = MirrorMode.Vertical; break;
+        case 1: this.mirrorModeValue = MirrorMode.Horizontal; break;
+        case 2: this.mirrorModeValue = MirrorMode.SingleScreenLow; break;
+        case 3: this.mirrorModeValue = MirrorMode.SingleScreenHigh; break;
+      }
+      return { mirrorMode: this.mirrorModeValue };
+    } else if (reg === 0x0A) {
+      // IRQ 控制
+      this.irqEnabled = (data & 0x01) !== 0;
+      this.irqCounter = this.irqLatch;
+      this.irqPending = false;
+    } else if (reg === 0x0B) {
+      // IRQ latch 低位元
+      this.irqLatch = (this.irqLatch & 0xFF00) | data;
+    } else if (reg === 0x0C) {
+      // IRQ latch 高位元
+      this.irqLatch = (this.irqLatch & 0x00FF) | (data << 8);
+    } else if (reg === 0x0D) {
+      // EEPROM 控制 (某些變體)
+      // 忽略此暫存器
+    }
+    
     return null;
   }
 
   ppuMapRead(address: number): number | null {
     if (address < 0x2000) {
       const region = address >> 10; // 1KB region (0-7)
-      const bank = this.chrBankRegs[region] % (this.chrBanks * 8);
+      const totalChrBanks = Math.max(1, this.chrBanks * 8);
+      const bank = this.chrBankRegs[region] % totalChrBanks;
       return bank * 1024 + (address & 0x3FF);
     }
     return null;
@@ -773,10 +771,13 @@ export class Mapper16 implements Mapper {
     return null;
   }
 
-  scanline(): void {
+  /**
+   * Bandai FCG 使用 CPU 週期計時器，而非 scanline 計時器
+   * IRQ 在每個 CPU 週期遞減計數器
+   */
+  cpuClock(): void {
     if (this.irqEnabled) {
       if (this.irqCounter === 0) {
-        this.irqCounter = this.irqLatch;
         this.irqPending = true;
       } else {
         this.irqCounter--;

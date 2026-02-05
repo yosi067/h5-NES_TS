@@ -281,6 +281,13 @@ export class Cartridge {
   }
 
   /**
+   * CPU 週期計數 (用於 Bandai FCG 等 Mapper)
+   */
+  public cpuClock(): void {
+    this.mapper?.cpuClock?.();
+  }
+
+  /**
    * 檢查 Mapper IRQ
    */
   public checkIrq(): boolean {
