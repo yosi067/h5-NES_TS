@@ -31,8 +31,10 @@ function copyRomsPlugin() {
 }
 
 export default defineConfig({
-  // 使用相對路徑，確保部署到任何目錄都能正常運作
-  base: './',
+  // GitHub Pages 部署需要設定正確的 base 路徑
+  // 使用環境變數 VITE_BASE_PATH，預設為 './' (本地開發)
+  // 在 GitHub Actions 中會設定為 '/<repo-name>/'
+  base: process.env.VITE_BASE_PATH || './',
   resolve: {
     alias: {
       '@core': resolve(__dirname, 'src/core'),

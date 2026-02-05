@@ -123,7 +123,9 @@ async function loadRomList(): Promise<void> {
   if (!romListEl) return;
 
   try {
-    const response = await fetch('./roms.json');
+    // 使用 Vite 的 BASE_URL 確保在 GitHub Pages 等子目錄部署時路徑正確
+    const baseUrl = import.meta.env.BASE_URL;
+    const response = await fetch(`${baseUrl}roms.json`);
     if (!response.ok) {
       throw new Error('無法載入 ROM 列表');
     }
@@ -178,7 +180,9 @@ function renderRomList(roms: RomInfo[]): void {
  */
 async function loadRomFromServer(filename: string): Promise<void> {
   try {
-    const response = await fetch(`./roms/${encodeURIComponent(filename)}`);
+    // 使用 Vite 的 BASE_URL 確保在 GitHub Pages 等子目錄部署時路徑正確
+    const baseUrl = import.meta.env.BASE_URL;
+    const response = await fetch(`${baseUrl}roms/${encodeURIComponent(filename)}`);
     if (!response.ok) {
       throw new Error(`無法載入 ROM: ${filename}`);
     }
