@@ -255,57 +255,38 @@ function showRomSelector(): void {
   if (gameboyShell) gameboyShell.style.display = 'none';
 }
 
-// ===== 虛擬控制器 =====
+// ===== 虛擬控制器 (多點觸控支援) =====
+
+// 追蹤活躍的觸控點
+interface TouchState {
+  identifier: number;
+  element: string;  // 'dpad', 'a', 'b', 'start', 'select'
+}
+
+const activeTouches: Map<number, TouchState> = new Map();
+
+// D-Pad 方向狀態
+interface DpadState {
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+}
+
+let currentDpadState: DpadState = { up: false, down: false, left: false, right: false };
 
 /**
- * 設定虛擬控制器
+ * 設定虛擬控制器 (支援多點觸控)
  */
 function setupVirtualController(controller: Controller): void {
-  const buttons = document.querySelectorAll('[data-btn]');
+  // 設定 D-Pad 觸控區域 (支援斜向)
+  setupDpad(controller);
   
-  buttons.forEach(btn => {
-    const button = btn as HTMLElement;
-    const btnType = button.dataset.btn;
-
-    // 觸控開始
-    button.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      handleButtonPress(controller, btnType!, true);
-      button.classList.add('pressed');
-    }, { passive: false });
-
-    // 觸控結束
-    button.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      handleButtonPress(controller, btnType!, false);
-      button.classList.remove('pressed');
-    }, { passive: false });
-
-    // 觸控取消
-    button.addEventListener('touchcancel', (e) => {
-      e.preventDefault();
-      handleButtonPress(controller, btnType!, false);
-      button.classList.remove('pressed');
-    }, { passive: false });
-
-    // 滑鼠事件 (用於測試)
-    button.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      handleButtonPress(controller, btnType!, true);
-      button.classList.add('pressed');
-    });
-
-    button.addEventListener('mouseup', (e) => {
-      e.preventDefault();
-      handleButtonPress(controller, btnType!, false);
-      button.classList.remove('pressed');
-    });
-
-    button.addEventListener('mouseleave', () => {
-      handleButtonPress(controller, btnType!, false);
-      button.classList.remove('pressed');
-    });
-  });
+  // 設定 A/B 按鈕 (支援同時按)
+  setupABButtons(controller);
+  
+  // 設定功能按鈕 (Select/Start)
+  setupFunctionButtons(controller);
 
   // 防止頁面捲動
   const virtualController = document.getElementById('virtual-controller');
@@ -315,7 +296,321 @@ function setupVirtualController(controller: Controller): void {
 }
 
 /**
- * 處理按鈕按下/釋放
+ * 設定 D-Pad (區域偵測，支援斜向輸入)
+ */
+function setupDpad(controller: Controller): void {
+  const dpadArea = document.getElementById('dpad-touch-area');
+  const dpad = document.getElementById('dpad');
+  if (!dpadArea || !dpad) return;
+
+  const updateDpadFromTouch = (touch: Touch) => {
+    const rect = dpad.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const dx = touch.clientX - centerX;
+    const dy = touch.clientY - centerY;
+    
+    // 計算距離中心的距離
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const maxRadius = rect.width / 2;
+    
+    // 死區：距離中心太近時不觸發
+    const deadZone = maxRadius * 0.15;
+    
+    const newState: DpadState = { up: false, down: false, left: false, right: false };
+    
+    if (distance > deadZone) {
+      // 計算角度 (-180 到 180)
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      
+      // 45 度分割，支援 8 方向
+      // 右: -22.5 到 22.5
+      // 右下: 22.5 到 67.5
+      // 下: 67.5 到 112.5
+      // 左下: 112.5 到 157.5
+      // 左: 157.5 到 180 或 -180 到 -157.5
+      // 左上: -157.5 到 -112.5
+      // 上: -112.5 到 -67.5
+      // 右上: -67.5 到 -22.5
+      
+      if (angle >= -22.5 && angle < 22.5) {
+        newState.right = true;
+      } else if (angle >= 22.5 && angle < 67.5) {
+        newState.right = true;
+        newState.down = true;
+      } else if (angle >= 67.5 && angle < 112.5) {
+        newState.down = true;
+      } else if (angle >= 112.5 && angle < 157.5) {
+        newState.left = true;
+        newState.down = true;
+      } else if (angle >= 157.5 || angle < -157.5) {
+        newState.left = true;
+      } else if (angle >= -157.5 && angle < -112.5) {
+        newState.left = true;
+        newState.up = true;
+      } else if (angle >= -112.5 && angle < -67.5) {
+        newState.up = true;
+      } else if (angle >= -67.5 && angle < -22.5) {
+        newState.right = true;
+        newState.up = true;
+      }
+    }
+    
+    applyDpadState(controller, newState);
+  };
+
+  const clearDpad = () => {
+    const newState: DpadState = { up: false, down: false, left: false, right: false };
+    applyDpadState(controller, newState);
+  };
+
+  // 觸控開始
+  dpadArea.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    for (const touch of Array.from(e.changedTouches)) {
+      activeTouches.set(touch.identifier, { identifier: touch.identifier, element: 'dpad' });
+      updateDpadFromTouch(touch);
+    }
+  }, { passive: false });
+
+  // 觸控移動 (支援滑動改變方向)
+  dpadArea.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    for (const touch of Array.from(e.changedTouches)) {
+      if (activeTouches.get(touch.identifier)?.element === 'dpad') {
+        updateDpadFromTouch(touch);
+      }
+    }
+  }, { passive: false });
+
+  // 觸控結束
+  dpadArea.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    for (const touch of Array.from(e.changedTouches)) {
+      if (activeTouches.get(touch.identifier)?.element === 'dpad') {
+        activeTouches.delete(touch.identifier);
+        // 檢查是否還有其他 D-Pad 觸控
+        const remainingDpadTouches = Array.from(activeTouches.values()).filter(t => t.element === 'dpad');
+        if (remainingDpadTouches.length === 0) {
+          clearDpad();
+        }
+      }
+    }
+  }, { passive: false });
+
+  dpadArea.addEventListener('touchcancel', (e) => {
+    e.preventDefault();
+    for (const touch of Array.from(e.changedTouches)) {
+      activeTouches.delete(touch.identifier);
+    }
+    clearDpad();
+  }, { passive: false });
+
+  // 滑鼠事件 (用於電腦測試)
+  let mouseDown = false;
+  dpadArea.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    mouseDown = true;
+    const rect = dpad.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = e.clientX - centerX;
+    const dy = e.clientY - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const maxRadius = rect.width / 2;
+    const deadZone = maxRadius * 0.15;
+    
+    const newState: DpadState = { up: false, down: false, left: false, right: false };
+    
+    if (distance > deadZone) {
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (angle >= -22.5 && angle < 22.5) newState.right = true;
+      else if (angle >= 22.5 && angle < 67.5) { newState.right = true; newState.down = true; }
+      else if (angle >= 67.5 && angle < 112.5) newState.down = true;
+      else if (angle >= 112.5 && angle < 157.5) { newState.left = true; newState.down = true; }
+      else if (angle >= 157.5 || angle < -157.5) newState.left = true;
+      else if (angle >= -157.5 && angle < -112.5) { newState.left = true; newState.up = true; }
+      else if (angle >= -112.5 && angle < -67.5) newState.up = true;
+      else if (angle >= -67.5 && angle < -22.5) { newState.right = true; newState.up = true; }
+    }
+    applyDpadState(controller, newState);
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!mouseDown) return;
+    const rect = dpad.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = e.clientX - centerX;
+    const dy = e.clientY - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const maxRadius = rect.width / 2;
+    const deadZone = maxRadius * 0.15;
+    
+    const newState: DpadState = { up: false, down: false, left: false, right: false };
+    
+    if (distance > deadZone && distance < maxRadius * 1.5) {
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (angle >= -22.5 && angle < 22.5) newState.right = true;
+      else if (angle >= 22.5 && angle < 67.5) { newState.right = true; newState.down = true; }
+      else if (angle >= 67.5 && angle < 112.5) newState.down = true;
+      else if (angle >= 112.5 && angle < 157.5) { newState.left = true; newState.down = true; }
+      else if (angle >= 157.5 || angle < -157.5) newState.left = true;
+      else if (angle >= -157.5 && angle < -112.5) { newState.left = true; newState.up = true; }
+      else if (angle >= -112.5 && angle < -67.5) newState.up = true;
+      else if (angle >= -67.5 && angle < -22.5) { newState.right = true; newState.up = true; }
+    }
+    applyDpadState(controller, newState);
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (mouseDown) {
+      mouseDown = false;
+      clearDpad();
+    }
+  });
+}
+
+/**
+ * 套用 D-Pad 狀態並更新視覺
+ */
+function applyDpadState(controller: Controller, newState: DpadState): void {
+  // 更新控制器
+  if (newState.up !== currentDpadState.up) {
+    controller.setButton(ControllerButton.Up, newState.up);
+  }
+  if (newState.down !== currentDpadState.down) {
+    controller.setButton(ControllerButton.Down, newState.down);
+  }
+  if (newState.left !== currentDpadState.left) {
+    controller.setButton(ControllerButton.Left, newState.left);
+  }
+  if (newState.right !== currentDpadState.right) {
+    controller.setButton(ControllerButton.Right, newState.right);
+  }
+  
+  // 更新視覺
+  document.getElementById('dpad-up')?.classList.toggle('pressed', newState.up);
+  document.getElementById('dpad-down')?.classList.toggle('pressed', newState.down);
+  document.getElementById('dpad-left')?.classList.toggle('pressed', newState.left);
+  document.getElementById('dpad-right')?.classList.toggle('pressed', newState.right);
+  
+  currentDpadState = { ...newState };
+}
+
+/**
+ * 設定 A/B 按鈕 (支援多點觸控同時按)
+ */
+function setupABButtons(controller: Controller): void {
+  const btnA = document.getElementById('btn-a');
+  const btnB = document.getElementById('btn-b');
+  
+  const setupButton = (btn: HTMLElement | null, buttonType: ControllerButton, elementId: string) => {
+    if (!btn) return;
+    
+    btn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      for (const touch of Array.from(e.changedTouches)) {
+        activeTouches.set(touch.identifier, { identifier: touch.identifier, element: elementId });
+      }
+      controller.setButton(buttonType, true);
+      btn.classList.add('pressed');
+    }, { passive: false });
+
+    btn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      for (const touch of Array.from(e.changedTouches)) {
+        activeTouches.delete(touch.identifier);
+      }
+      controller.setButton(buttonType, false);
+      btn.classList.remove('pressed');
+    }, { passive: false });
+
+    btn.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      for (const touch of Array.from(e.changedTouches)) {
+        activeTouches.delete(touch.identifier);
+      }
+      controller.setButton(buttonType, false);
+      btn.classList.remove('pressed');
+    }, { passive: false });
+
+    // 滑鼠事件
+    btn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      controller.setButton(buttonType, true);
+      btn.classList.add('pressed');
+    });
+
+    btn.addEventListener('mouseup', (e) => {
+      e.preventDefault();
+      controller.setButton(buttonType, false);
+      btn.classList.remove('pressed');
+    });
+
+    btn.addEventListener('mouseleave', () => {
+      controller.setButton(buttonType, false);
+      btn.classList.remove('pressed');
+    });
+  };
+
+  setupButton(btnA, ControllerButton.A, 'a');
+  setupButton(btnB, ControllerButton.B, 'b');
+}
+
+/**
+ * 設定功能按鈕 (Select/Start)
+ */
+function setupFunctionButtons(controller: Controller): void {
+  const buttons = document.querySelectorAll('[data-btn="select"], [data-btn="start"]');
+  
+  buttons.forEach(btn => {
+    const button = btn as HTMLElement;
+    const btnType = button.dataset.btn;
+    const buttonEnum = btnType === 'start' ? ControllerButton.Start : ControllerButton.Select;
+
+    button.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      controller.setButton(buttonEnum, true);
+      button.classList.add('pressed');
+    }, { passive: false });
+
+    button.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      controller.setButton(buttonEnum, false);
+      button.classList.remove('pressed');
+    }, { passive: false });
+
+    button.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      controller.setButton(buttonEnum, false);
+      button.classList.remove('pressed');
+    }, { passive: false });
+
+    button.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      controller.setButton(buttonEnum, true);
+      button.classList.add('pressed');
+    });
+
+    button.addEventListener('mouseup', (e) => {
+      e.preventDefault();
+      controller.setButton(buttonEnum, false);
+      button.classList.remove('pressed');
+    });
+
+    button.addEventListener('mouseleave', () => {
+      controller.setButton(buttonEnum, false);
+      button.classList.remove('pressed');
+    });
+  });
+}
+
+/**
+ * 處理按鈕按下/釋放 (保留給其他用途)
  */
 function handleButtonPress(controller: Controller, btnType: string, pressed: boolean): void {
   const buttonMap: Record<string, ControllerButton> = {

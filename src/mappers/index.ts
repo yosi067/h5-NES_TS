@@ -1194,6 +1194,84 @@ export class Mapper113 implements Mapper {
 }
 
 /**
+ * Mapper 202
+ * 
+ * 用於 150合1 等合集卡帶
+ * 簡單的 PRG/CHR bank 切換
+ */
+export class Mapper202 implements Mapper {
+  private prgBanks: number;
+  private chrBanks: number;
+  private prgBank: number = 0;
+  private chrBank: number = 0;
+  private prgMode: number = 0; // 0 = 32KB, 1 = 16KB
+  private mirrorMode: MirrorMode = MirrorMode.Vertical;
+
+  constructor(prgBanks: number, chrBanks: number) {
+    this.prgBanks = prgBanks;
+    this.chrBanks = chrBanks;
+  }
+
+  reset(): void {
+    this.prgBank = 0;
+    this.chrBank = 0;
+    this.prgMode = 0;
+    this.mirrorMode = MirrorMode.Vertical;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000) {
+      const totalPrgSize = this.prgBanks * 16384;
+      
+      if (this.prgMode === 0) {
+        // 16KB 模式 (鏡像)
+        const offset = address & 0x3FFF;
+        return ((this.prgBank * 16384) + offset) % totalPrgSize;
+      } else {
+        // 32KB 模式
+        const bank32k = this.prgBank >> 1;
+        const offset = address & 0x7FFF;
+        return ((bank32k * 32768) + offset) % totalPrgSize;
+      }
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, _data: number): MapperWriteResult | null {
+    if (address >= 0x8000) {
+      // $8000-$FFFF: Bank 選擇
+      // 地址的低位決定 bank
+      const bank = (address >> 1) & 0x07;
+      this.prgBank = bank;
+      this.chrBank = bank;
+      this.prgMode = (address & 0x01) ^ ((address >> 3) & 0x01);
+      this.mirrorMode = (address & 0x01) ? MirrorMode.Horizontal : MirrorMode.Vertical;
+      
+      return { mirrorMode: this.mirrorMode };
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      if (this.chrBanks === 0) {
+        return address; // CHR RAM
+      }
+      const totalChrSize = this.chrBanks * 8192;
+      return ((this.chrBank * 8192) + (address & 0x1FFF)) % totalChrSize;
+    }
+    return null;
+  }
+
+  ppuMapWrite(address: number): number | null {
+    if (address < 0x2000 && this.chrBanks === 0) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+}
+
+/**
  * Mapper 245 (Waixing MMC3 variant)
  * 
  * 類似 MMC3 但有額外的 CHR RAM 控制
@@ -1545,6 +1623,176 @@ export class Mapper253 implements Mapper {
 }
 
 /**
+ * Mapper 225
+ * 
+ * 用於 52合1、64合1、72合1 等合集卡帶
+ * 支援高達 2MB PRG ROM 和 1MB CHR ROM
+ */
+export class Mapper225 implements Mapper {
+  private prgBanks: number;
+  private chrBanks: number;
+  private prgBank: number = 0;
+  private chrBank: number = 0;
+  private prgMode: number = 0; // 0 = 32KB, 1 = 16KB
+  private mirrorMode: MirrorMode = MirrorMode.Vertical;
+
+  constructor(prgBanks: number, chrBanks: number) {
+    this.prgBanks = prgBanks;
+    this.chrBanks = chrBanks;
+  }
+
+  reset(): void {
+    this.prgBank = 0;
+    this.chrBank = 0;
+    this.prgMode = 0;
+    this.mirrorMode = MirrorMode.Vertical;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000) {
+      const totalPrgSize = this.prgBanks * 16384; // PRG ROM 總大小
+      
+      if (this.prgMode === 0) {
+        // 32KB 模式
+        const bank32k = this.prgBank >> 1;
+        const offset = address & 0x7FFF;
+        return ((bank32k * 32768) + offset) % totalPrgSize;
+      } else {
+        // 16KB 模式
+        const offset = address & 0x3FFF;
+        return ((this.prgBank * 16384) + offset) % totalPrgSize;
+      }
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, _data: number): MapperWriteResult | null {
+    if (address >= 0x8000) {
+      // $8000-$FFFF: Bank 選擇
+      // A0-A5: PRG bank
+      // A6: PRG mode (0=32KB, 1=16KB)
+      // A7: Mirroring (0=vertical, 1=horizontal)
+      // A8-A13: CHR bank
+      // A14: High PRG bit (512KB boundary)
+      
+      this.prgBank = (address & 0x3F) | ((address >> 8) & 0x40);
+      this.prgMode = (address >> 6) & 1;
+      this.chrBank = ((address >> 8) & 0x3F);
+      this.mirrorMode = (address & 0x80) ? MirrorMode.Horizontal : MirrorMode.Vertical;
+      
+      return { mirrorMode: this.mirrorMode };
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      if (this.chrBanks === 0) {
+        return address; // CHR RAM
+      }
+      const totalChrSize = this.chrBanks * 8192;
+      return ((this.chrBank * 8192) + (address & 0x1FFF)) % totalChrSize;
+    }
+    return null;
+  }
+
+  ppuMapWrite(address: number): number | null {
+    if (address < 0x2000 && this.chrBanks === 0) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+}
+
+/**
+ * Mapper 227
+ * 
+ * 用於 1200合1 等合集卡帶
+ * 支援高達 1MB PRG ROM (無 CHR ROM，使用 CHR RAM)
+ */
+export class Mapper227 implements Mapper {
+  private prgBanks: number;
+  private chrBanks: number;
+  private prgBank: number = 0;
+  private prgMode: number = 0; // 0 = 32KB, 1 = 16KB
+  private lastBank: boolean = false;
+  private mirrorMode: MirrorMode = MirrorMode.Vertical;
+
+  constructor(prgBanks: number, chrBanks: number) {
+    this.prgBanks = prgBanks;
+    this.chrBanks = chrBanks;
+  }
+
+  reset(): void {
+    this.prgBank = 0;
+    this.prgMode = 0;
+    this.lastBank = false;
+    this.mirrorMode = MirrorMode.Vertical;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000) {
+      const totalPrgSize = this.prgBanks * 16384;
+      
+      if (this.prgMode === 0) {
+        // 32KB 模式
+        const offset = address & 0x7FFF;
+        const bank32k = this.prgBank >> 1;
+        return ((bank32k * 32768) + offset) % totalPrgSize;
+      } else {
+        // 16KB 模式
+        const offset = address & 0x3FFF;
+        if (address >= 0xC000) {
+          if (this.lastBank) {
+            // $C000-$FFFF 映射到最後一個 bank
+            const lastBankStart = totalPrgSize - 16384;
+            return lastBankStart + offset;
+          } else {
+            // $C000-$FFFF 鏡像 $8000-$BFFF
+            return ((this.prgBank * 16384) + offset) % totalPrgSize;
+          }
+        }
+        return ((this.prgBank * 16384) + offset) % totalPrgSize;
+      }
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, _data: number): MapperWriteResult | null {
+    if (address >= 0x8000) {
+      // $8000-$FFFF: Bank 選擇
+      // A0: PRG mode (0=32KB, 1=16KB)
+      // A1: Mirroring (0=vertical, 1=horizontal)
+      // A2-A6: PRG bank low bits
+      // A7: Last bank select (16KB mode only)
+      // A8-A9: PRG bank high bits
+      
+      this.prgMode = address & 0x01;
+      this.mirrorMode = (address & 0x02) ? MirrorMode.Horizontal : MirrorMode.Vertical;
+      this.prgBank = ((address >> 2) & 0x1F) | ((address >> 3) & 0x60);
+      this.lastBank = (address & 0x80) !== 0;
+      
+      return { mirrorMode: this.mirrorMode };
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+
+  ppuMapWrite(address: number): number | null {
+    if (address < 0x2000) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+}
+
+/**
  * 建立 Mapper 實例
  */
 export function createMapper(mapperNumber: number, prgBanks: number, chrBanks: number): Mapper | null {
@@ -1575,6 +1823,12 @@ export function createMapper(mapperNumber: number, prgBanks: number, chrBanks: n
       return new Mapper71(prgBanks, chrBanks);
     case 113:
       return new Mapper113(prgBanks, chrBanks);
+    case 202:
+      return new Mapper202(prgBanks, chrBanks);
+    case 225:
+      return new Mapper225(prgBanks, chrBanks);
+    case 227:
+      return new Mapper227(prgBanks, chrBanks);
     case 245:
       return new Mapper245(prgBanks, chrBanks);
     case 253:
