@@ -548,6 +548,1002 @@ export class Mapper4 implements Mapper {
 }
 
 /**
+ * Mapper 7 (AxROM)
+ * 
+ * PRG ROM: 32KB 切換
+ * CHR: RAM
+ * 鏡像: 單屏
+ */
+export class Mapper7 implements Mapper {
+  private prgBanks: number;
+  private selectedBank: number = 0;
+  private singleScreen: number = 0; // 0 = 低頁, 1 = 高頁
+  private mirrorModeValue: MirrorMode = MirrorMode.SingleScreenLow;
+
+  constructor(prgBanks: number, _chrBanks: number) {
+    this.prgBanks = prgBanks;
+  }
+
+  reset(): void {
+    this.selectedBank = 0;
+    this.singleScreen = 0;
+    this.mirrorModeValue = MirrorMode.SingleScreenLow;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000) {
+      return this.selectedBank * 32768 + (address & 0x7FFF);
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, data: number): MapperWriteResult | null {
+    if (address >= 0x8000) {
+      this.selectedBank = data & 0x07;
+      this.singleScreen = (data >> 4) & 0x01;
+      this.mirrorModeValue = this.singleScreen ? MirrorMode.SingleScreenHigh : MirrorMode.SingleScreenLow;
+      return { mirrorMode: this.mirrorModeValue };
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+
+  ppuMapWrite(address: number): number | null {
+    if (address < 0x2000) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+}
+
+/**
+ * Mapper 11 (Color Dreams)
+ * 
+ * 簡單的 PRG/CHR ROM 切換
+ */
+export class Mapper11 implements Mapper {
+  private prgBanks: number;
+  private chrBanks: number;
+  private prgBank: number = 0;
+  private chrBank: number = 0;
+
+  constructor(prgBanks: number, chrBanks: number) {
+    this.prgBanks = prgBanks;
+    this.chrBanks = chrBanks;
+  }
+
+  reset(): void {
+    this.prgBank = 0;
+    this.chrBank = 0;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000) {
+      return (this.prgBank % this.prgBanks) * 32768 + (address & 0x7FFF);
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, data: number): MapperWriteResult | null {
+    if (address >= 0x8000) {
+      this.prgBank = data & 0x03;
+      this.chrBank = (data >> 4) & 0x0F;
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      return (this.chrBank % Math.max(1, this.chrBanks)) * 8192 + address;
+    }
+    return null;
+  }
+
+  ppuMapWrite(_address: number): number | null {
+    return null;
+  }
+}
+
+/**
+ * Mapper 16 (Bandai FCG)
+ * 
+ * 用於龍珠系列遊戲
+ * 支援 PRG/CHR bank 切換和 IRQ
+ */
+export class Mapper16 implements Mapper {
+  private prgBanks: number;
+  private chrBanks: number;
+  
+  // Bank 暫存器
+  private chrBankRegs: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
+  private prgBank: number = 0;
+  
+  // IRQ 相關
+  private irqCounter: number = 0;
+  private irqLatch: number = 0;
+  private irqEnabled: boolean = false;
+  private irqPending: boolean = false;
+  
+  // 鏡像
+  private mirrorModeValue: MirrorMode = MirrorMode.Vertical;
+
+  constructor(prgBanks: number, chrBanks: number) {
+    this.prgBanks = prgBanks;
+    this.chrBanks = chrBanks;
+  }
+
+  reset(): void {
+    this.chrBankRegs.fill(0);
+    this.prgBank = 0;
+    this.irqCounter = 0;
+    this.irqLatch = 0;
+    this.irqEnabled = false;
+    this.irqPending = false;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000 && address < 0xC000) {
+      return (this.prgBank % this.prgBanks) * 16384 + (address & 0x3FFF);
+    } else if (address >= 0xC000) {
+      // 最後一個 bank 固定
+      return (this.prgBanks - 1) * 16384 + (address & 0x3FFF);
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, data: number): MapperWriteResult | null {
+    // Bandai FCG 有多種變體，這是基本實作
+    if (address >= 0x6000 && address < 0x8000) {
+      const reg = address & 0x000F;
+      
+      if (reg < 8) {
+        // CHR bank 暫存器 $6000-$6007
+        this.chrBankRegs[reg] = data;
+      } else if (reg === 8) {
+        // PRG bank $6008
+        this.prgBank = data & 0x0F;
+      } else if (reg === 9) {
+        // 鏡像 $6009
+        const mirror = data & 0x03;
+        switch (mirror) {
+          case 0: this.mirrorModeValue = MirrorMode.Vertical; break;
+          case 1: this.mirrorModeValue = MirrorMode.Horizontal; break;
+          case 2: this.mirrorModeValue = MirrorMode.SingleScreenLow; break;
+          case 3: this.mirrorModeValue = MirrorMode.SingleScreenHigh; break;
+        }
+        return { mirrorMode: this.mirrorModeValue };
+      } else if (reg === 0x0A) {
+        // IRQ 控制 $600A
+        this.irqEnabled = (data & 0x01) !== 0;
+        this.irqCounter = this.irqLatch;
+        this.irqPending = false;
+      } else if (reg === 0x0B) {
+        // IRQ latch 低位元 $600B
+        this.irqLatch = (this.irqLatch & 0xFF00) | data;
+      } else if (reg === 0x0C) {
+        // IRQ latch 高位元 $600C
+        this.irqLatch = (this.irqLatch & 0x00FF) | (data << 8);
+      }
+    } else if (address >= 0x8000) {
+      // 有些變體在 $8000-$FFFF 寫入
+      const reg = address & 0x000F;
+      
+      if (reg < 8) {
+        this.chrBankRegs[reg] = data;
+      } else if (reg === 8) {
+        this.prgBank = data & 0x0F;
+      } else if (reg === 9) {
+        const mirror = data & 0x03;
+        switch (mirror) {
+          case 0: this.mirrorModeValue = MirrorMode.Vertical; break;
+          case 1: this.mirrorModeValue = MirrorMode.Horizontal; break;
+          case 2: this.mirrorModeValue = MirrorMode.SingleScreenLow; break;
+          case 3: this.mirrorModeValue = MirrorMode.SingleScreenHigh; break;
+        }
+        return { mirrorMode: this.mirrorModeValue };
+      } else if (reg === 0x0A) {
+        this.irqEnabled = (data & 0x01) !== 0;
+        this.irqCounter = this.irqLatch;
+        this.irqPending = false;
+      } else if (reg === 0x0B) {
+        this.irqLatch = (this.irqLatch & 0xFF00) | data;
+      } else if (reg === 0x0C) {
+        this.irqLatch = (this.irqLatch & 0x00FF) | (data << 8);
+      }
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      const region = address >> 10; // 1KB region (0-7)
+      const bank = this.chrBankRegs[region] % (this.chrBanks * 8);
+      return bank * 1024 + (address & 0x3FF);
+    }
+    return null;
+  }
+
+  ppuMapWrite(_address: number): number | null {
+    return null;
+  }
+
+  scanline(): void {
+    if (this.irqEnabled) {
+      if (this.irqCounter === 0) {
+        this.irqCounter = this.irqLatch;
+        this.irqPending = true;
+      } else {
+        this.irqCounter--;
+      }
+    }
+  }
+
+  getIrqPending(): boolean {
+    const pending = this.irqPending;
+    this.irqPending = false;
+    return pending;
+  }
+}
+
+/**
+ * Mapper 23 (VRC2b/VRC4)
+ * 
+ * Konami VRC 系列，用於魂斗羅等遊戲
+ */
+export class Mapper23 implements Mapper {
+  private prgBanks: number;
+  private chrBanks: number;
+  
+  // Bank 暫存器
+  private prgBank0: number = 0;
+  private prgBank1: number = 0;
+  private chrBankRegs: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
+  
+  // 控制
+  private prgSwapMode: number = 0;
+  private mirrorModeValue: MirrorMode = MirrorMode.Vertical;
+  
+  // IRQ (VRC4)
+  private irqLatch: number = 0;
+  private irqControl: number = 0;
+  private irqCounter: number = 0;
+  private irqPrescaler: number = 0;
+  private irqEnabled: boolean = false;
+  private irqPending: boolean = false;
+
+  constructor(prgBanks: number, chrBanks: number) {
+    this.prgBanks = prgBanks;
+    this.chrBanks = chrBanks;
+  }
+
+  reset(): void {
+    this.prgBank0 = 0;
+    this.prgBank1 = 0;
+    this.chrBankRegs.fill(0);
+    this.prgSwapMode = 0;
+    this.irqLatch = 0;
+    this.irqControl = 0;
+    this.irqCounter = 0;
+    this.irqPrescaler = 0;
+    this.irqEnabled = false;
+    this.irqPending = false;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000 && address < 0xA000) {
+      const bank = this.prgSwapMode ? (this.prgBanks * 2 - 2) : this.prgBank0;
+      return (bank % (this.prgBanks * 2)) * 8192 + (address & 0x1FFF);
+    } else if (address >= 0xA000 && address < 0xC000) {
+      return (this.prgBank1 % (this.prgBanks * 2)) * 8192 + (address & 0x1FFF);
+    } else if (address >= 0xC000 && address < 0xE000) {
+      const bank = this.prgSwapMode ? this.prgBank0 : (this.prgBanks * 2 - 2);
+      return (bank % (this.prgBanks * 2)) * 8192 + (address & 0x1FFF);
+    } else if (address >= 0xE000) {
+      return (this.prgBanks * 2 - 1) * 8192 + (address & 0x1FFF);
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, data: number): MapperWriteResult | null {
+    // VRC2/VRC4 地址解碼
+    const a0 = address & 0x0001;
+    const a1 = (address & 0x0002) >> 1;
+    const reg = (address & 0xF000) | (a1 << 1) | a0;
+
+    switch (reg) {
+      case 0x8000:
+      case 0x8001:
+      case 0x8002:
+      case 0x8003:
+        this.prgBank0 = data & 0x1F;
+        break;
+
+      case 0x9000:
+      case 0x9001:
+        const mirror = data & 0x03;
+        switch (mirror) {
+          case 0: this.mirrorModeValue = MirrorMode.Vertical; break;
+          case 1: this.mirrorModeValue = MirrorMode.Horizontal; break;
+          case 2: this.mirrorModeValue = MirrorMode.SingleScreenLow; break;
+          case 3: this.mirrorModeValue = MirrorMode.SingleScreenHigh; break;
+        }
+        return { mirrorMode: this.mirrorModeValue };
+
+      case 0x9002:
+      case 0x9003:
+        this.prgSwapMode = (data >> 1) & 0x01;
+        break;
+
+      case 0xA000:
+      case 0xA001:
+      case 0xA002:
+      case 0xA003:
+        this.prgBank1 = data & 0x1F;
+        break;
+
+      // CHR banks (1KB 切換)
+      case 0xB000: this.chrBankRegs[0] = (this.chrBankRegs[0] & 0xF0) | (data & 0x0F); break;
+      case 0xB001: this.chrBankRegs[0] = (this.chrBankRegs[0] & 0x0F) | ((data & 0x0F) << 4); break;
+      case 0xB002: this.chrBankRegs[1] = (this.chrBankRegs[1] & 0xF0) | (data & 0x0F); break;
+      case 0xB003: this.chrBankRegs[1] = (this.chrBankRegs[1] & 0x0F) | ((data & 0x0F) << 4); break;
+      case 0xC000: this.chrBankRegs[2] = (this.chrBankRegs[2] & 0xF0) | (data & 0x0F); break;
+      case 0xC001: this.chrBankRegs[2] = (this.chrBankRegs[2] & 0x0F) | ((data & 0x0F) << 4); break;
+      case 0xC002: this.chrBankRegs[3] = (this.chrBankRegs[3] & 0xF0) | (data & 0x0F); break;
+      case 0xC003: this.chrBankRegs[3] = (this.chrBankRegs[3] & 0x0F) | ((data & 0x0F) << 4); break;
+      case 0xD000: this.chrBankRegs[4] = (this.chrBankRegs[4] & 0xF0) | (data & 0x0F); break;
+      case 0xD001: this.chrBankRegs[4] = (this.chrBankRegs[4] & 0x0F) | ((data & 0x0F) << 4); break;
+      case 0xD002: this.chrBankRegs[5] = (this.chrBankRegs[5] & 0xF0) | (data & 0x0F); break;
+      case 0xD003: this.chrBankRegs[5] = (this.chrBankRegs[5] & 0x0F) | ((data & 0x0F) << 4); break;
+      case 0xE000: this.chrBankRegs[6] = (this.chrBankRegs[6] & 0xF0) | (data & 0x0F); break;
+      case 0xE001: this.chrBankRegs[6] = (this.chrBankRegs[6] & 0x0F) | ((data & 0x0F) << 4); break;
+      case 0xE002: this.chrBankRegs[7] = (this.chrBankRegs[7] & 0xF0) | (data & 0x0F); break;
+      case 0xE003: this.chrBankRegs[7] = (this.chrBankRegs[7] & 0x0F) | ((data & 0x0F) << 4); break;
+
+      // IRQ (VRC4)
+      case 0xF000:
+        this.irqLatch = (this.irqLatch & 0xF0) | (data & 0x0F);
+        break;
+      case 0xF001:
+        this.irqLatch = (this.irqLatch & 0x0F) | ((data & 0x0F) << 4);
+        break;
+      case 0xF002:
+        this.irqControl = data;
+        this.irqEnabled = (data & 0x02) !== 0;
+        if (data & 0x02) {
+          this.irqCounter = this.irqLatch;
+          this.irqPrescaler = 341;
+        }
+        this.irqPending = false;
+        break;
+      case 0xF003:
+        this.irqEnabled = (this.irqControl & 0x01) !== 0;
+        this.irqPending = false;
+        break;
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      const region = address >> 10; // 1KB region
+      const bank = this.chrBankRegs[region];
+      const totalChrBanks = this.chrBanks * 8; // 以 1KB 為單位
+      return (bank % totalChrBanks) * 1024 + (address & 0x3FF);
+    }
+    return null;
+  }
+
+  ppuMapWrite(_address: number): number | null {
+    return null;
+  }
+
+  scanline(): void {
+    if (this.irqEnabled) {
+      this.irqPrescaler -= 3;
+      if (this.irqPrescaler <= 0) {
+        this.irqPrescaler += 341;
+        if (this.irqCounter === 0xFF) {
+          this.irqCounter = this.irqLatch;
+          this.irqPending = true;
+        } else {
+          this.irqCounter++;
+        }
+      }
+    }
+  }
+
+  getIrqPending(): boolean {
+    const pending = this.irqPending;
+    this.irqPending = false;
+    return pending;
+  }
+}
+
+/**
+ * Mapper 66 (GxROM)
+ * 
+ * 簡單的 PRG/CHR 切換
+ */
+export class Mapper66 implements Mapper {
+  private prgBanks: number;
+  private chrBanks: number;
+  private prgBank: number = 0;
+  private chrBank: number = 0;
+
+  constructor(prgBanks: number, chrBanks: number) {
+    this.prgBanks = prgBanks;
+    this.chrBanks = chrBanks;
+  }
+
+  reset(): void {
+    this.prgBank = 0;
+    this.chrBank = 0;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000) {
+      return (this.prgBank % this.prgBanks) * 32768 + (address & 0x7FFF);
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, data: number): MapperWriteResult | null {
+    if (address >= 0x8000) {
+      this.chrBank = data & 0x03;
+      this.prgBank = (data >> 4) & 0x03;
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      return (this.chrBank % Math.max(1, this.chrBanks)) * 8192 + address;
+    }
+    return null;
+  }
+
+  ppuMapWrite(_address: number): number | null {
+    return null;
+  }
+}
+
+/**
+ * Mapper 71 (Camerica/Codemasters)
+ * 
+ * 用於 Camerica 和 Codemasters 遊戲
+ */
+export class Mapper71 implements Mapper {
+  private prgBanks: number;
+  private selectedBank: number = 0;
+  private mirrorModeValue: MirrorMode = MirrorMode.Horizontal;
+
+  constructor(prgBanks: number, _chrBanks: number) {
+    this.prgBanks = prgBanks;
+  }
+
+  reset(): void {
+    this.selectedBank = 0;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000 && address < 0xC000) {
+      return this.selectedBank * 16384 + (address & 0x3FFF);
+    } else if (address >= 0xC000) {
+      return (this.prgBanks - 1) * 16384 + (address & 0x3FFF);
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, data: number): MapperWriteResult | null {
+    if (address >= 0x9000 && address < 0xA000) {
+      // 鏡像控制 (部分變體)
+      this.mirrorModeValue = (data & 0x10) ? MirrorMode.SingleScreenHigh : MirrorMode.SingleScreenLow;
+      return { mirrorMode: this.mirrorModeValue };
+    } else if (address >= 0xC000) {
+      this.selectedBank = data & 0x0F;
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+
+  ppuMapWrite(address: number): number | null {
+    if (address < 0x2000) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+}
+
+/**
+ * Mapper 15 (100-in-1 Contra Function 16)
+ * 
+ * 用於 100 合 1 多遊戲卡帶
+ */
+export class Mapper15 implements Mapper {
+  private prgBanks: number;
+  private prgBank: number = 0;
+  private prgMode: number = 0;
+  private mirrorModeValue: MirrorMode = MirrorMode.Vertical;
+
+  constructor(prgBanks: number, _chrBanks: number) {
+    this.prgBanks = prgBanks;
+  }
+
+  reset(): void {
+    this.prgBank = 0;
+    this.prgMode = 0;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000) {
+      const bank8k = this.prgBank * 2;
+      const totalBanks = this.prgBanks * 2; // 8KB banks
+
+      switch (this.prgMode) {
+        case 0: // 32KB mode
+          return ((bank8k & ~3) % totalBanks) * 8192 + (address & 0x7FFF);
+        case 1: // 128KB mode (mirror $8000-$BFFF)
+          if (address < 0xC000) {
+            return (bank8k % totalBanks) * 8192 + (address & 0x3FFF);
+          } else {
+            return ((bank8k | 1) % totalBanks) * 8192 + (address & 0x3FFF);
+          }
+        case 2: // 8KB mode
+          return (bank8k % totalBanks) * 8192 + (address & 0x1FFF);
+        case 3: // 16KB mode
+        default:
+          if (address < 0xC000) {
+            return (bank8k % totalBanks) * 8192 + (address & 0x3FFF);
+          } else {
+            return ((bank8k | 1) % totalBanks) * 8192 + (address & 0x3FFF);
+          }
+      }
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, data: number): MapperWriteResult | null {
+    if (address >= 0x8000) {
+      this.prgMode = address & 0x03;
+      this.prgBank = ((data & 0x3F) | ((data & 0x80) >> 1));
+      this.mirrorModeValue = (data & 0x40) ? MirrorMode.Horizontal : MirrorMode.Vertical;
+      return { mirrorMode: this.mirrorModeValue };
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+
+  ppuMapWrite(address: number): number | null {
+    if (address < 0x2000) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+}
+
+/**
+ * Mapper 113 (NINA-03/06 / Sachen / Hacker / HES)
+ * 
+ * 用於台灣麻將等遊戲
+ */
+export class Mapper113 implements Mapper {
+  private prgBanks: number;
+  private chrBanks: number;
+  private prgBank: number = 0;
+  private chrBank: number = 0;
+  private mirrorModeValue: MirrorMode = MirrorMode.Vertical;
+
+  constructor(prgBanks: number, chrBanks: number) {
+    this.prgBanks = prgBanks;
+    this.chrBanks = chrBanks;
+  }
+
+  reset(): void {
+    this.prgBank = 0;
+    this.chrBank = 0;
+  }
+
+  cpuMapRead(address: number): number | null {
+    if (address >= 0x8000) {
+      return (this.prgBank % this.prgBanks) * 32768 + (address & 0x7FFF);
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, data: number): MapperWriteResult | null {
+    if (address >= 0x4100 && address < 0x6000) {
+      // $4100-$5FFF
+      this.prgBank = (data >> 3) & 0x07;
+      this.chrBank = ((data & 0x07) | ((data >> 3) & 0x08));
+      this.mirrorModeValue = (data & 0x80) ? MirrorMode.Vertical : MirrorMode.Horizontal;
+      return { mirrorMode: this.mirrorModeValue };
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      const totalChrBanks = Math.max(1, this.chrBanks);
+      return (this.chrBank % totalChrBanks) * 8192 + address;
+    }
+    return null;
+  }
+
+  ppuMapWrite(_address: number): number | null {
+    return null;
+  }
+}
+
+/**
+ * Mapper 245 (Waixing MMC3 variant)
+ * 
+ * 類似 MMC3 但有額外的 CHR RAM 控制
+ * 用於一些中文版遊戲
+ */
+export class Mapper245 implements Mapper {
+  private prgBanks: number;
+  private chrBanks: number;
+  
+  // Bank 暫存器
+  private bankRegs: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
+  private bankSelect: number = 0;
+  
+  // 鏡像
+  private mirrorModeValue: MirrorMode = MirrorMode.Vertical;
+  
+  // IRQ (與 MMC3 類似)
+  private irqCounter: number = 0;
+  private irqLatch: number = 0;
+  private irqEnabled: boolean = false;
+  private irqReload: boolean = false;
+  private irqPending: boolean = false;
+
+  // 額外的 PRG 控制
+  private prgHighBit: number = 0;
+
+  constructor(prgBanks: number, chrBanks: number) {
+    this.prgBanks = prgBanks;
+    this.chrBanks = chrBanks;
+  }
+
+  reset(): void {
+    this.bankRegs.fill(0);
+    this.bankSelect = 0;
+    this.irqCounter = 0;
+    this.irqLatch = 0;
+    this.irqEnabled = false;
+    this.irqReload = false;
+    this.irqPending = false;
+    this.prgHighBit = 0;
+  }
+
+  cpuMapRead(address: number): number | null {
+    const prgBankCount = this.prgBanks * 2; // 8KB banks
+    
+    if (address >= 0x8000 && address < 0xA000) {
+      const bank = (this.bankSelect & 0x40) 
+        ? (prgBankCount - 2) 
+        : ((this.bankRegs[6] | this.prgHighBit) % prgBankCount);
+      return bank * 8192 + (address & 0x1FFF);
+    } else if (address >= 0xA000 && address < 0xC000) {
+      const bank = (this.bankRegs[7] | this.prgHighBit) % prgBankCount;
+      return bank * 8192 + (address & 0x1FFF);
+    } else if (address >= 0xC000 && address < 0xE000) {
+      const bank = (this.bankSelect & 0x40)
+        ? ((this.bankRegs[6] | this.prgHighBit) % prgBankCount)
+        : (prgBankCount - 2);
+      return bank * 8192 + (address & 0x1FFF);
+    } else if (address >= 0xE000) {
+      return (prgBankCount - 1) * 8192 + (address & 0x1FFF);
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, data: number): MapperWriteResult | null {
+    if (address >= 0x8000 && address < 0xA000) {
+      if (address & 1) {
+        // Bank data
+        const reg = this.bankSelect & 0x07;
+        this.bankRegs[reg] = data;
+        // R0 控制 PRG 高位
+        if (reg === 0) {
+          this.prgHighBit = (data & 0x02) ? 0x40 : 0;
+        }
+      } else {
+        // Bank select
+        this.bankSelect = data;
+      }
+    } else if (address >= 0xA000 && address < 0xC000) {
+      if (!(address & 1)) {
+        // 鏡像
+        this.mirrorModeValue = (data & 0x01) ? MirrorMode.Horizontal : MirrorMode.Vertical;
+        return { mirrorMode: this.mirrorModeValue };
+      }
+    } else if (address >= 0xC000 && address < 0xE000) {
+      if (address & 1) {
+        this.irqReload = true;
+      } else {
+        this.irqLatch = data;
+      }
+    } else if (address >= 0xE000) {
+      if (address & 1) {
+        this.irqEnabled = true;
+      } else {
+        this.irqEnabled = false;
+        this.irqPending = false;
+      }
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      // CHR RAM
+      return address;
+    }
+    return null;
+  }
+
+  ppuMapWrite(address: number): number | null {
+    if (address < 0x2000) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+
+  scanline(): void {
+    if (this.irqReload || this.irqCounter === 0) {
+      this.irqCounter = this.irqLatch;
+      this.irqReload = false;
+    } else {
+      this.irqCounter--;
+    }
+    
+    if (this.irqCounter === 0 && this.irqEnabled) {
+      this.irqPending = true;
+    }
+  }
+
+  getIrqPending(): boolean {
+    const pending = this.irqPending;
+    this.irqPending = false;
+    return pending;
+  }
+}
+
+/**
+ * Mapper 253 (Waixing VRC4 variant)
+ * 
+ * 類似 VRC4 的中國變體
+ * 用於龍珠等遊戲
+ */
+export class Mapper253 implements Mapper {
+  private prgBanks: number;
+  private chrBanks: number;
+  
+  // Bank 暫存器
+  private prgBank0: number = 0;
+  private prgBank1: number = 0;
+  private chrBankRegs: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
+  private chrBankHigh: number[] = [0, 0, 0, 0, 0, 0, 0, 0];
+  
+  // 鏡像
+  private mirrorModeValue: MirrorMode = MirrorMode.Vertical;
+  
+  // IRQ
+  private irqLatch: number = 0;
+  private irqControl: number = 0;
+  private irqCounter: number = 0;
+  private irqEnabled: boolean = false;
+  private irqPending: boolean = false;
+  private irqPrescaler: number = 0;
+
+  // VRAM 控制
+  private vramEnable: boolean = false;
+
+  constructor(prgBanks: number, chrBanks: number) {
+    this.prgBanks = prgBanks;
+    this.chrBanks = chrBanks;
+  }
+
+  reset(): void {
+    this.prgBank0 = 0;
+    this.prgBank1 = 0;
+    this.chrBankRegs.fill(0);
+    this.chrBankHigh.fill(0);
+    this.irqLatch = 0;
+    this.irqControl = 0;
+    this.irqCounter = 0;
+    this.irqEnabled = false;
+    this.irqPending = false;
+    this.irqPrescaler = 0;
+    this.vramEnable = false;
+  }
+
+  cpuMapRead(address: number): number | null {
+    const prgBankCount = this.prgBanks * 2;
+    
+    if (address >= 0x8000 && address < 0xA000) {
+      return (this.prgBank0 % prgBankCount) * 8192 + (address & 0x1FFF);
+    } else if (address >= 0xA000 && address < 0xC000) {
+      return (this.prgBank1 % prgBankCount) * 8192 + (address & 0x1FFF);
+    } else if (address >= 0xC000 && address < 0xE000) {
+      return (prgBankCount - 2) * 8192 + (address & 0x1FFF);
+    } else if (address >= 0xE000) {
+      return (prgBankCount - 1) * 8192 + (address & 0x1FFF);
+    }
+    return null;
+  }
+
+  cpuMapWrite(address: number, data: number): MapperWriteResult | null {
+    const addr = address & 0xF00C;
+    
+    switch (addr) {
+      case 0x8000:
+      case 0x8004:
+      case 0x8008:
+      case 0x800C:
+        this.prgBank0 = data;
+        break;
+        
+      case 0x9000:
+        this.mirrorModeValue = (data & 0x01) ? MirrorMode.Horizontal : MirrorMode.Vertical;
+        return { mirrorMode: this.mirrorModeValue };
+        
+      case 0xA000:
+      case 0xA004:
+      case 0xA008:
+      case 0xA00C:
+        this.prgBank1 = data;
+        break;
+        
+      case 0xB000:
+        this.chrBankRegs[0] = (this.chrBankRegs[0] & 0xF0) | (data & 0x0F);
+        break;
+      case 0xB004:
+        this.chrBankRegs[0] = (this.chrBankRegs[0] & 0x0F) | ((data & 0x0F) << 4);
+        this.chrBankHigh[0] = data & 0x10;
+        break;
+      case 0xB008:
+        this.chrBankRegs[1] = (this.chrBankRegs[1] & 0xF0) | (data & 0x0F);
+        break;
+      case 0xB00C:
+        this.chrBankRegs[1] = (this.chrBankRegs[1] & 0x0F) | ((data & 0x0F) << 4);
+        this.chrBankHigh[1] = data & 0x10;
+        break;
+        
+      case 0xC000:
+        this.chrBankRegs[2] = (this.chrBankRegs[2] & 0xF0) | (data & 0x0F);
+        break;
+      case 0xC004:
+        this.chrBankRegs[2] = (this.chrBankRegs[2] & 0x0F) | ((data & 0x0F) << 4);
+        this.chrBankHigh[2] = data & 0x10;
+        break;
+      case 0xC008:
+        this.chrBankRegs[3] = (this.chrBankRegs[3] & 0xF0) | (data & 0x0F);
+        break;
+      case 0xC00C:
+        this.chrBankRegs[3] = (this.chrBankRegs[3] & 0x0F) | ((data & 0x0F) << 4);
+        this.chrBankHigh[3] = data & 0x10;
+        break;
+        
+      case 0xD000:
+        this.chrBankRegs[4] = (this.chrBankRegs[4] & 0xF0) | (data & 0x0F);
+        break;
+      case 0xD004:
+        this.chrBankRegs[4] = (this.chrBankRegs[4] & 0x0F) | ((data & 0x0F) << 4);
+        this.chrBankHigh[4] = data & 0x10;
+        break;
+      case 0xD008:
+        this.chrBankRegs[5] = (this.chrBankRegs[5] & 0xF0) | (data & 0x0F);
+        break;
+      case 0xD00C:
+        this.chrBankRegs[5] = (this.chrBankRegs[5] & 0x0F) | ((data & 0x0F) << 4);
+        this.chrBankHigh[5] = data & 0x10;
+        break;
+        
+      case 0xE000:
+        this.chrBankRegs[6] = (this.chrBankRegs[6] & 0xF0) | (data & 0x0F);
+        break;
+      case 0xE004:
+        this.chrBankRegs[6] = (this.chrBankRegs[6] & 0x0F) | ((data & 0x0F) << 4);
+        this.chrBankHigh[6] = data & 0x10;
+        break;
+      case 0xE008:
+        this.chrBankRegs[7] = (this.chrBankRegs[7] & 0xF0) | (data & 0x0F);
+        break;
+      case 0xE00C:
+        this.chrBankRegs[7] = (this.chrBankRegs[7] & 0x0F) | ((data & 0x0F) << 4);
+        this.chrBankHigh[7] = data & 0x10;
+        break;
+        
+      case 0xF000:
+        this.irqLatch = (this.irqLatch & 0xF0) | (data & 0x0F);
+        break;
+      case 0xF004:
+        this.irqLatch = (this.irqLatch & 0x0F) | ((data & 0x0F) << 4);
+        break;
+      case 0xF008:
+        this.irqControl = data;
+        this.irqEnabled = (data & 0x02) !== 0;
+        if (data & 0x02) {
+          this.irqCounter = this.irqLatch;
+          this.irqPrescaler = 341;
+        }
+        this.irqPending = false;
+        break;
+      case 0xF00C:
+        this.irqEnabled = (this.irqControl & 0x01) !== 0;
+        this.irqPending = false;
+        break;
+    }
+    return null;
+  }
+
+  ppuMapRead(address: number): number | null {
+    if (address < 0x2000) {
+      const region = address >> 10;
+      const bank = this.chrBankRegs[region] | (this.chrBankHigh[region] ? 0x100 : 0);
+      
+      // 如果沒有 CHR ROM，使用 CHR RAM
+      if (this.chrBanks === 0) {
+        return address;
+      }
+      
+      const totalChrBanks = this.chrBanks * 8;
+      return (bank % totalChrBanks) * 1024 + (address & 0x3FF);
+    }
+    return null;
+  }
+
+  ppuMapWrite(address: number): number | null {
+    if (address < 0x2000 && this.chrBanks === 0) {
+      return address; // CHR RAM
+    }
+    return null;
+  }
+
+  scanline(): void {
+    if (this.irqEnabled) {
+      this.irqPrescaler -= 3;
+      if (this.irqPrescaler <= 0) {
+        this.irqPrescaler += 341;
+        if (this.irqCounter === 0xFF) {
+          this.irqCounter = this.irqLatch;
+          this.irqPending = true;
+        } else {
+          this.irqCounter++;
+        }
+      }
+    }
+  }
+
+  getIrqPending(): boolean {
+    const pending = this.irqPending;
+    this.irqPending = false;
+    return pending;
+  }
+}
+
+/**
  * 建立 Mapper 實例
  */
 export function createMapper(mapperNumber: number, prgBanks: number, chrBanks: number): Mapper | null {
@@ -562,6 +1558,26 @@ export function createMapper(mapperNumber: number, prgBanks: number, chrBanks: n
       return new Mapper3(prgBanks, chrBanks);
     case 4:
       return new Mapper4(prgBanks, chrBanks);
+    case 7:
+      return new Mapper7(prgBanks, chrBanks);
+    case 11:
+      return new Mapper11(prgBanks, chrBanks);
+    case 15:
+      return new Mapper15(prgBanks, chrBanks);
+    case 16:
+      return new Mapper16(prgBanks, chrBanks);
+    case 23:
+      return new Mapper23(prgBanks, chrBanks);
+    case 66:
+      return new Mapper66(prgBanks, chrBanks);
+    case 71:
+      return new Mapper71(prgBanks, chrBanks);
+    case 113:
+      return new Mapper113(prgBanks, chrBanks);
+    case 245:
+      return new Mapper245(prgBanks, chrBanks);
+    case 253:
+      return new Mapper253(prgBanks, chrBanks);
     default:
       console.warn(`未實作的 Mapper: ${mapperNumber}`);
       return null;
