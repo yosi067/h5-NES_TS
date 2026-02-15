@@ -46,11 +46,13 @@ export default defineConfig({
   },
   // 開發伺服器設定
   server: {
-    // 允許存取 roms 目錄
+    // 允許存取 roms 及 WASM 目錄
     fs: {
       allow: ['..']
     }
   },
+  // 將 WASM 檔案視為靜態資源
+  assetsInclude: ['**/*.wasm'],
   // 將 public 目錄設為根目錄
   publicDir: 'public',
   build: {
@@ -58,11 +60,7 @@ export default defineConfig({
     sourcemap: true,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'nes-core': [
-            './src/core/index.ts',
-          ],
-        },
+        manualChunks: undefined,
       },
     },
   },

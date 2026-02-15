@@ -54,6 +54,75 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 
 ---
 
+## 🔧 最新更新 (2026-02-07) — Rust/WASM 核心與遊戲相容性大修
+
+### 🦀 架構遷移：TypeScript → Rust/WebAssembly
+
+將模擬器核心從 TypeScript 遷移至 Rust，編譯為 WebAssembly 執行。
+
+**調整原因**：TypeScript 執行效能受限於 JavaScript 引擎的 JIT 編譯，大量位元運算與記憶體存取在 Rust 中能獲得接近原生的效能。
+
+**方案優點**：
+- WASM 提供可預測的高效能，無 GC 暫停問題
+- Rust 的所有權系統在編譯期防止記憶體安全問題
+- 保持前端 TypeScript UI 不變，僅替換核心運算層
+- 支援 18 種 Mapper（0, 1, 2, 3, 4, 7, 11, 15, 16, 23, 66, 71, 113, 202, 225, 227, 245, 253）
+
+### 🎯 Mapper 225 鏡像模式修正
+
+**問題**：64 合 1 合集遊戲開啟後藍屏無反應。
+
+**原因**：FCEUX 使用 `setmirror(mirr ^ 1)` 進行異或翻轉，其中 `MI_V=0, MI_H=1`。原先實作中 bit13=0 對應 Vertical、bit13=1 對應 Horizontal，與 FCEUX 邏輯相反。
+
+**處理方案**：交換鏡像對應關係，bit13=0 → Horizontal，bit13=1 → Vertical，與 FCEUX 行為一致。
+
+### 🎯 Mapper 253 (VRC4 變體) 完整重寫
+
+**問題**：龍珠 Z 強襲賽亞人部分畫面破圖。
+
+**原因**：發現 4 個關鍵錯誤：
+1. **缺少 CHR RAM 替換**：當 `chrlo==4||5` 且 `!vlock` 時應使用 CHR RAM 而非 CHR ROM
+2. **缺少 vlock 機制**：`chrlo[0]==0xC8` 解鎖、`0x88` 鎖定的開關未實作
+3. **chrhi 儲存錯誤**：原為 `data & 0x10`，應為 `data >> 4`
+4. **地址解碼錯誤**：應使用 FCEUX 公式 `ind=(((A&8|A>>8)>>3)+2)&7`
+
+**處理方案**：
+- 以 FCEUX `253.cpp` 為權威參考，完整重寫 Mapper 253
+- PPU 新增 `chr_writable_mask` 欄位，支援混合 CHR ROM/RAM bank 映射
+- Cartridge 載入時為 Mapper 253 追加 8KB CHR RAM 到 CHR 資料末尾
+- `sync_mapper_to_ppu()` 同步傳遞 `chr_writable_mask`
+
+### 🎯 Mapper 16 (Bandai FCG) IRQ 精度改進
+
+**問題**：龍珠 Z3 烈戰人造人部分畫面破圖。
+
+**原因**：IRQ 計數器使用 `u16` 型別並以 `== 0` 判斷觸發，存在邊界條件錯失。
+
+**處理方案**：計數器改為 `i32` 型別，觸發條件改為 `< 0`，與 FCEUX `bandai.cpp` 行為一致。
+
+### 🔊 APU DMC 通道邏輯修正與音頻濾波器
+
+**問題**：Captain Tsubasa II 部分音效聽不到，且有爆音現象。
+
+**原因**：
+- DMC 缺少 `silence` 旗標，導致在沒有資料時仍錯誤修改輸出電平
+- 缺少音頻濾波器，DC 偏移與高頻雜訊直接輸出
+
+**處理方案**：
+- 新增 `silence: bool` 旗標，依據 NES 硬體規格控制輸出修改時機
+- 初始 `bits_remaining` 設為 8（非 0），修正啟動時序
+- 重寫 `clock_dmc()` 流程：silence → 輸出修改 → shift → bits 計數 → buffer → fetch
+- 新增低通濾波器（係數 0.9）消除高頻雜訊
+- 新增高通濾波器（係數 0.996）消除 DC 偏移
+- 新增軟削波（>0.95 壓縮），避免音量爆破
+
+### 🎮 遊戲列表更新 (32 款)
+
+新增遊戲：冒險島 1/2/3、迷宮組曲、Captain Tsubasa II  
+移除已下架遊戲：100 合 1、64 合 1
+
+---
+
 ## ✨ 最新功能 (2026-02-05)
 
 ### 🖥️ 畫面比例修正
@@ -93,7 +162,7 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 
 ### 🎮 遊戲列表更新 (28 款)
 
-新增合集遊戲：64 合 1、150 合 1、1200 合 1
+新增遊戲：64 合 1、150 合 1、1200 合 1
 
 ---
 
@@ -185,16 +254,28 @@ h5-NES_TS/
 ├── public/
 │   └── roms.json          # ROM 列表配置
 ├── roms/                   # ROM 遊戲檔案
+├── nes-wasm/              # Rust/WASM 核心
+│   └── src/
+│       ├── lib.rs         # WASM 入口
+│       ├── emulator.rs    # 模擬器主迴圈
+│       ├── cpu.rs         # 6502 CPU
+│       ├── ppu.rs         # 圖形處理器
+│       ├── apu.rs         # 音頻處理器
+│       ├── bus.rs         # 系統匯流排
+│       ├── cartridge.rs   # 卡帶載入
+│       ├── controller.rs  # 控制器
+│       └── mappers.rs     # 18 種 Mapper 實作
 ├── src/
 │   ├── main.ts            # 應用程式進入點
-│   ├── core/              # NES 核心模擬器
+│   ├── wasm/              # WASM 編譯輸出
+│   ├── core/              # NES 核心模擬器 (TS 版)
 │   │   ├── cpu/           # 6502 CPU
 │   │   ├── ppu/           # 圖形處理器
 │   │   ├── apu/           # 音頻處理器
 │   │   ├── bus.ts         # 系統匯流排
 │   │   ├── cartridge.ts   # 卡帶與 Mapper
 │   │   └── controller.ts  # 控制器
-│   ├── mappers/           # Mapper 實作
+│   ├── mappers/           # Mapper 實作 (TS 版)
 │   └── ui/                # UI 元件
 │       ├── virtual-controller.ts  # 虛擬控制器
 │       └── rom-selector.ts        # ROM 選擇器
@@ -258,6 +339,8 @@ h5-NES_TS/
 | 71 | Camerica | Fire Hawk |
 | 113 | Multicart | 合集卡帶 |
 | 202 | 150-in-1 | 150 合 1 合集 |
+| 225 | 52-in-1 | 合集卡帶 |
+| 227 | 1200-in-1 | 1200 合 1 合集 |
 | 245 | MMC3 變體 | 中文遊戲 |
 | 253 | VRC4 變體 | 龍珠 Z 強襲賽亞人 |
 

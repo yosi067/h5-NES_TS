@@ -1,20 +1,15 @@
 /**
- * H5-NES 模擬器主程式入口
+ * H5-NES 模擬器主程式入口（WASM 版本）
  * 
  * 功能：
- * - GameBoy 風格 UI
+ * - GameBoy 風格 UI（完整保留）
  * - ROM 選擇器
  * - 虛擬控制器 (手機版)
  * - RWD 響應式設計
+ * - 使用 Rust/WASM 核心取代 TypeScript 硬體模擬
  */
 
-import { 
-  Nes, 
-  KeyboardInputHandler, 
-  DEFAULT_KEYBOARD_MAP_P1,
-  Controller,
-  ControllerButton
-} from './core';
+import init, { NesWasm } from '../nes-wasm/pkg/nes_wasm.js';
 
 // ===== 型別定義 =====
 
@@ -27,9 +22,22 @@ interface RomListResponse {
   roms: RomInfo[];
 }
 
+// 控制器按鈕編號（與 Rust 端一致）
+const ControllerButton = {
+  A: 0,
+  B: 1,
+  Select: 2,
+  Start: 3,
+  Up: 4,
+  Down: 5,
+  Left: 6,
+  Right: 7,
+} as const;
+type ControllerButton = typeof ControllerButton[keyof typeof ControllerButton];
+
 // ===== 全域變數 =====
 
-let nes: Nes | null = null;
+let nes: NesWasm | null = null;
 let animationId: number | null = null;
 let canvas: HTMLCanvasElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
@@ -45,13 +53,20 @@ let powerLed: HTMLElement | null = null;
 
 // ===== 音頻設定 =====
 const AUDIO_BUFFER_SIZE = 4096;
+let lastAudioSample: number = 0;  // 上一個有效取樣值，用於平滑填充
 
 // ===== 初始化 =====
 
 /**
- * 初始化模擬器
+ * 初始化模擬器（載入 WASM 模組）
  */
-function init(): void {
+async function initWasm(): Promise<void> {
+  // 初始化 WASM 模組
+  await init();
+  
+  // 建立 NES 實例
+  nes = new NesWasm();
+
   // 取得 UI 元素
   romSelector = document.getElementById('rom-selector');
   gameboyShell = document.getElementById('gameboy-shell');
@@ -72,18 +87,11 @@ function init(): void {
 
   imageData = ctx.createImageData(256, 240);
 
-  // 建立 NES 實例
-  nes = new Nes();
-
-  // 設定鍵盤輸入
-  const inputHandler = new KeyboardInputHandler(
-    nes.controller1,
-    DEFAULT_KEYBOARD_MAP_P1
-  );
-  inputHandler.bind();
+  // 設定鍵盤輸入（直接對 WASM 控制器操作）
+  setupKeyboardInput();
 
   // 設定虛擬控制器
-  setupVirtualController(nes.controller1);
+  setupVirtualController();
 
   // 設定電腦版控制按鈕
   setupDesktopControls();
@@ -94,7 +102,38 @@ function init(): void {
   // 設定檔案選擇器
   setupFileInput();
 
-  console.log('H5-NES 模擬器已初始化');
+  console.log('H5-NES 模擬器已初始化（WASM 核心）');
+}
+
+// ===== 鍵盤輸入 =====
+
+/** 鍵盤映射 (玩家 1) */
+const KEYBOARD_MAP_P1: Record<string, ControllerButton> = {
+  'KeyZ': ControllerButton.A,
+  'KeyX': ControllerButton.B,
+  'ShiftRight': ControllerButton.Select,
+  'Enter': ControllerButton.Start,
+  'ArrowUp': ControllerButton.Up,
+  'ArrowDown': ControllerButton.Down,
+  'ArrowLeft': ControllerButton.Left,
+  'ArrowRight': ControllerButton.Right,
+};
+
+function setupKeyboardInput(): void {
+  window.addEventListener('keydown', (e) => {
+    const button = KEYBOARD_MAP_P1[e.code];
+    if (button !== undefined && nes) {
+      nes.setButton(0, button, true);
+      e.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', (e) => {
+    const button = KEYBOARD_MAP_P1[e.code];
+    if (button !== undefined && nes) {
+      nes.setButton(0, button, false);
+      e.preventDefault();
+    }
+  });
 }
 
 // ===== ROM 選擇器 =====
@@ -214,7 +253,8 @@ async function loadRomFromFile(file: File): Promise<void> {
 function startGame(romData: ArrayBuffer): void {
   if (!nes) return;
 
-  if (nes.loadRom(romData)) {
+  const romBytes = new Uint8Array(romData);
+  if (nes.loadRom(romBytes)) {
     console.log('ROM 載入成功，開始執行');
     
     // 隱藏選擇器，顯示遊戲畫面
@@ -278,15 +318,15 @@ let currentDpadState: DpadState = { up: false, down: false, left: false, right: 
 /**
  * 設定虛擬控制器 (支援多點觸控)
  */
-function setupVirtualController(controller: Controller): void {
+function setupVirtualController(): void {
   // 設定 D-Pad 觸控區域 (支援斜向)
-  setupDpad(controller);
+  setupDpad();
   
   // 設定 A/B 按鈕 (支援同時按)
-  setupABButtons(controller);
+  setupABButtons();
   
   // 設定功能按鈕 (Select/Start)
-  setupFunctionButtons(controller);
+  setupFunctionButtons();
 
   // 防止頁面捲動
   const virtualController = document.getElementById('virtual-controller');
@@ -298,7 +338,7 @@ function setupVirtualController(controller: Controller): void {
 /**
  * 設定 D-Pad (區域偵測，支援斜向輸入)
  */
-function setupDpad(controller: Controller): void {
+function setupDpad(): void {
   const dpadArea = document.getElementById('dpad-touch-area');
   const dpad = document.getElementById('dpad');
   if (!dpadArea || !dpad) return;
@@ -357,12 +397,12 @@ function setupDpad(controller: Controller): void {
       }
     }
     
-    applyDpadState(controller, newState);
+    applyDpadState(newState);
   };
 
   const clearDpad = () => {
     const newState: DpadState = { up: false, down: false, left: false, right: false };
-    applyDpadState(controller, newState);
+    applyDpadState(newState);
   };
 
   // 觸控開始
@@ -434,7 +474,7 @@ function setupDpad(controller: Controller): void {
       else if (angle >= -112.5 && angle < -67.5) newState.up = true;
       else if (angle >= -67.5 && angle < -22.5) { newState.right = true; newState.up = true; }
     }
-    applyDpadState(controller, newState);
+    applyDpadState(newState);
   });
 
   document.addEventListener('mousemove', (e) => {
@@ -461,7 +501,7 @@ function setupDpad(controller: Controller): void {
       else if (angle >= -112.5 && angle < -67.5) newState.up = true;
       else if (angle >= -67.5 && angle < -22.5) { newState.right = true; newState.up = true; }
     }
-    applyDpadState(controller, newState);
+    applyDpadState(newState);
   });
 
   document.addEventListener('mouseup', () => {
@@ -475,19 +515,19 @@ function setupDpad(controller: Controller): void {
 /**
  * 套用 D-Pad 狀態並更新視覺
  */
-function applyDpadState(controller: Controller, newState: DpadState): void {
-  // 更新控制器
+function applyDpadState(newState: DpadState): void {
+  // 更新控制器（透過 WASM 介面）
   if (newState.up !== currentDpadState.up) {
-    controller.setButton(ControllerButton.Up, newState.up);
+    nes?.setButton(0, ControllerButton.Up, newState.up);
   }
   if (newState.down !== currentDpadState.down) {
-    controller.setButton(ControllerButton.Down, newState.down);
+    nes?.setButton(0, ControllerButton.Down, newState.down);
   }
   if (newState.left !== currentDpadState.left) {
-    controller.setButton(ControllerButton.Left, newState.left);
+    nes?.setButton(0, ControllerButton.Left, newState.left);
   }
   if (newState.right !== currentDpadState.right) {
-    controller.setButton(ControllerButton.Right, newState.right);
+    nes?.setButton(0, ControllerButton.Right, newState.right);
   }
   
   // 更新視覺
@@ -502,7 +542,7 @@ function applyDpadState(controller: Controller, newState: DpadState): void {
 /**
  * 設定 A/B 按鈕 (支援多點觸控同時按)
  */
-function setupABButtons(controller: Controller): void {
+function setupABButtons(): void {
   const btnA = document.getElementById('btn-a');
   const btnB = document.getElementById('btn-b');
   
@@ -515,7 +555,7 @@ function setupABButtons(controller: Controller): void {
       for (const touch of Array.from(e.changedTouches)) {
         activeTouches.set(touch.identifier, { identifier: touch.identifier, element: elementId });
       }
-      controller.setButton(buttonType, true);
+      nes?.setButton(0, buttonType, true);
       btn.classList.add('pressed');
     }, { passive: false });
 
@@ -525,7 +565,7 @@ function setupABButtons(controller: Controller): void {
       for (const touch of Array.from(e.changedTouches)) {
         activeTouches.delete(touch.identifier);
       }
-      controller.setButton(buttonType, false);
+      nes?.setButton(0, buttonType, false);
       btn.classList.remove('pressed');
     }, { passive: false });
 
@@ -534,25 +574,25 @@ function setupABButtons(controller: Controller): void {
       for (const touch of Array.from(e.changedTouches)) {
         activeTouches.delete(touch.identifier);
       }
-      controller.setButton(buttonType, false);
+      nes?.setButton(0, buttonType, false);
       btn.classList.remove('pressed');
     }, { passive: false });
 
     // 滑鼠事件
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      controller.setButton(buttonType, true);
+      nes?.setButton(0, buttonType, true);
       btn.classList.add('pressed');
     });
 
     btn.addEventListener('mouseup', (e) => {
       e.preventDefault();
-      controller.setButton(buttonType, false);
+      nes?.setButton(0, buttonType, false);
       btn.classList.remove('pressed');
     });
 
     btn.addEventListener('mouseleave', () => {
-      controller.setButton(buttonType, false);
+      nes?.setButton(0, buttonType, false);
       btn.classList.remove('pressed');
     });
   };
@@ -564,7 +604,7 @@ function setupABButtons(controller: Controller): void {
 /**
  * 設定功能按鈕 (Select/Start)
  */
-function setupFunctionButtons(controller: Controller): void {
+function setupFunctionButtons(): void {
   const buttons = document.querySelectorAll('[data-btn="select"], [data-btn="start"]');
   
   buttons.forEach(btn => {
@@ -574,36 +614,36 @@ function setupFunctionButtons(controller: Controller): void {
 
     button.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      controller.setButton(buttonEnum, true);
+      nes?.setButton(0, buttonEnum, true);
       button.classList.add('pressed');
     }, { passive: false });
 
     button.addEventListener('touchend', (e) => {
       e.preventDefault();
-      controller.setButton(buttonEnum, false);
+      nes?.setButton(0, buttonEnum, false);
       button.classList.remove('pressed');
     }, { passive: false });
 
     button.addEventListener('touchcancel', (e) => {
       e.preventDefault();
-      controller.setButton(buttonEnum, false);
+      nes?.setButton(0, buttonEnum, false);
       button.classList.remove('pressed');
     }, { passive: false });
 
     button.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      controller.setButton(buttonEnum, true);
+      nes?.setButton(0, buttonEnum, true);
       button.classList.add('pressed');
     });
 
     button.addEventListener('mouseup', (e) => {
       e.preventDefault();
-      controller.setButton(buttonEnum, false);
+      nes?.setButton(0, buttonEnum, false);
       button.classList.remove('pressed');
     });
 
     button.addEventListener('mouseleave', () => {
-      controller.setButton(buttonEnum, false);
+      nes?.setButton(0, buttonEnum, false);
       button.classList.remove('pressed');
     });
   });
@@ -612,7 +652,7 @@ function setupFunctionButtons(controller: Controller): void {
 /**
  * 處理按鈕按下/釋放 (保留給其他用途)
  */
-function handleButtonPress(controller: Controller, btnType: string, pressed: boolean): void {
+function handleButtonPress(btnType: string, pressed: boolean): void {
   const buttonMap: Record<string, ControllerButton> = {
     'up': ControllerButton.Up,
     'down': ControllerButton.Down,
@@ -626,7 +666,7 @@ function handleButtonPress(controller: Controller, btnType: string, pressed: boo
   
   const button = buttonMap[btnType];
   if (button !== undefined) {
-    controller.setButton(button, pressed);
+    nes?.setButton(0, button, pressed);
   }
 }
 
@@ -748,18 +788,16 @@ function stopEmulation(): void {
 function renderFrame(): void {
   if (!nes || !ctx || !imageData) return;
 
-  const frameBuffer = nes.getFrameBuffer();
-  const data = imageData.data;
+  // 重要：每次都重新取得 WASM memory 參考
+  // 因為 WASM 記憶體增長後 buffer 會變為 detached
+  const memory = nes.getWasmMemory() as WebAssembly.Memory;
 
-  for (let i = 0; i < 256 * 240; i++) {
-    const pixel = frameBuffer[i];
-    const offset = i * 4;
-    data[offset + 0] = (pixel >> 16) & 0xFF;
-    data[offset + 1] = (pixel >> 8) & 0xFF;
-    data[offset + 2] = pixel & 0xFF;
-    data[offset + 3] = 255;
-  }
-
+  // 從 WASM 記憶體讀取 RGBA 畫面資料
+  const ptr = nes.getFrameBufferPtr();
+  const len = nes.getFrameBufferLen();
+  const frameBuffer = new Uint8Array(memory.buffer, ptr, len);
+  
+  imageData.data.set(frameBuffer);
   ctx.putImageData(imageData, 0, 0);
 }
 
@@ -781,9 +819,29 @@ async function initAudio(): Promise<void> {
     scriptProcessor.onaudioprocess = (e) => {
       const output = e.outputBuffer.getChannelData(0);
       if (nes && isRunning) {
-        const samplesRead = nes.readAudioSamples(output);
-        if (samplesRead === 0) {
-          output.fill(0);
+        const available = nes.getAudioBufferLen();
+        if (available > 0) {
+          // 重要：每次都重新取得 WASM memory 參考
+          const memory = nes.getWasmMemory() as WebAssembly.Memory;
+          const ptr = nes.getAudioBufferPtr();
+          const samples = new Float32Array(memory.buffer, ptr, available);
+          const count = Math.min(available, output.length);
+          for (let i = 0; i < count; i++) {
+            output[i] = samples[i];
+          }
+          lastAudioSample = samples[count - 1];
+          // 取樣不足時用最後一個有效值漸變填充
+          for (let i = count; i < output.length; i++) {
+            lastAudioSample *= 0.999;
+            output[i] = lastAudioSample;
+          }
+          nes.consumeAudioSamples();
+        } else {
+          // 無資料：用上次最後取樣值漸變到靜音
+          for (let i = 0; i < output.length; i++) {
+            lastAudioSample *= 0.999;
+            output[i] = lastAudioSample;
+          }
         }
       } else {
         output.fill(0);
@@ -901,12 +959,12 @@ function exportSaveToFile(): void {
   if (!nes) return;
   
   const saveData = nes.exportSaveState();
-  const blob = new Blob([saveData], { type: 'application/json' });
+  const blob = new Blob([saveData], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   
   const a = document.createElement('a');
   a.href = url;
-  a.download = `nes_savestate_${Date.now()}.json`;
+  a.download = `nes_savestate_${Date.now()}.txt`;
   a.click();
   
   URL.revokeObjectURL(url);
@@ -945,7 +1003,7 @@ function setupKeyboardShortcuts(): void {
 
 declare global {
   interface Window {
-    nes: Nes | null;
+    nes: NesWasm | null;
     startEmulation: () => void;
     stopEmulation: () => void;
     saveState: (slot?: number) => boolean;
@@ -966,7 +1024,7 @@ window.showRomSelector = showRomSelector;
 // ===== 啟動 =====
 
 document.addEventListener('DOMContentLoaded', async () => {
-  init();
+  await initWasm();
   await initAudio();
   setupKeyboardShortcuts();
   window.nes = nes;

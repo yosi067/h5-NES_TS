@@ -33,6 +33,30 @@
       "file": "圣铃传说.nes"
     },
     {
+      "name": "冒險島",
+      "file": "冒险岛1.nes"
+    },
+    {
+      "name": "冒險島 (無敵版)",
+      "file": "冒险岛1无敌版.nes"
+    },
+    {
+      "name": "冒險島 2 (無限人)",
+      "file": "冒险岛2无限人.nes"
+    },
+    {
+      "name": "冒險島 3 (無限人+恐龍)",
+      "file": "冒险岛3无限人出来就有恐龙可以骑.nes"
+    },
+    {
+      "name": "迷宮組曲",
+      "file": "迷宫组曲.nes"
+    },
+    {
+      "name": "Captain Tsubasa II",
+      "file": "Captain Tsubasa II - Super Striker (Japan).nes"
+    },
+    {
       "name": "熱血新記錄",
       "file": "热血新记录.nes"
     },
@@ -95,14 +119,6 @@
     {
       "name": "台灣 16 張麻將 (中文)",
       "file": "台湾16张麻将(中文).nes"
-    },
-    {
-      "name": "100 合 1",
-      "file": "100合1.NES"
-    },
-    {
-      "name": "64 合 1",
-      "file": "64-in-1.nes"
     },
     {
       "name": "150 合 1",
