@@ -1,6 +1,25 @@
-# H5-NES 模擬器
+# H5-EMU 多平台復古遊戲模擬器
 
-一個使用 HTML5 Canvas + TypeScript 開發的 NES 模擬器。
+一個使用 HTML5 Canvas + TypeScript 前端搭配 Rust/WebAssembly 核心開發的多平台復古遊戲模擬器，目前支援 **NES (FC)** 與 **Game Boy (DMG)**。
+
+---
+
+## 🎮 支援平台
+
+| 平台 | 解析度 | CPU | 幀率 | 音頻聲道 | 狀態 |
+|------|--------|-----|------|----------|------|
+| **NES / FC** | 256×240 | 6502 (1.789 MHz) | 60.0988 fps | 5 (2 方波 + 三角 + 雜訊 + DMC) | ✅ 完整支援 |
+| **Game Boy (DMG)** | 160×144 | LR35902 (4.194 MHz) | 59.7275 fps | 4 (2 方波 + 波形 + 雜訊) | ✅ 新增支援 |
+| Game Gear | — | — | — | — | 🔮 規劃中 |
+| SFC / SNES | — | — | — | — | 🔮 規劃中 |
+
+### 自動偵測 ROM 格式
+
+載入 ROM 檔案時，模擬器會自動判別格式：
+- 檔案開頭為 `NES\x1A` (iNES 標頭) → **NES 核心**
+- 其他 → **Game Boy 核心**
+
+無需手動選擇平台，選擇 `.nes` 或 `.gb` 遊戲即可直接開始。
 
 ---
 
@@ -45,16 +64,145 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 
 ## 專案目標
 
-在瀏覽器中完整模擬 Nintendo Entertainment System (NES/FC)，支援：
+在瀏覽器中完整模擬多款經典遊戲主機，目前支援：
+
+### NES (FC)
 - 完整的 6502 CPU 指令集
-- PPU 圖形渲染 (256x240 解析度)
+- PPU 圖形渲染 (256×240 解析度)
 - APU 音頻輸出 (5 聲道)
 - 標準控制器輸入
-- 常見 Mapper 支援
+- 18 種 Mapper 支援
+
+### Game Boy (DMG) — 🆕 2026-03-01 新增
+- 完整的 Sharp LR35902 CPU 指令集 (256 基本 + 256 CB 前綴 = 512 opcodes)
+- PPU 掃描線渲染 (160×144，DMG 4 灰階綠色調色盤)
+- APU 4 聲道音頻 (2 方波 + 波形表 + LFSR 雜訊)
+- MBC 記憶體映射控制器 (MBC0/MBC1/MBC3/MBC5)
+- 計時器 (DIV/TIMA/TMA/TAC)
+- Joypad 輸入 (與 NES 共用按鍵映射)
 
 ---
 
-## 🔧 最新更新 (2026-02-07) — Rust/WASM 核心與遊戲相容性大修
+## 🔧 最新更新 (2026-03-01) — Phase 2: Game Boy (DMG) 核心與多平台統一架構
+
+### 🎮 Game Boy (DMG) 完整核心實作
+
+在現有 NES 核心之外，新增完整的 Game Boy DMG 模擬核心（約 2,356 行 Rust），實現從 CPU 到音頻的全部硬體模擬。
+
+#### Sharp LR35902 CPU (`gb/cpu.rs` + `gb/emulator.rs`)
+- **暫存器**：A/F/B/C/D/E/H/L (8-bit)、SP/PC (16-bit)
+- **16 位元暫存器對**：AF/BC/DE/HL，含讀寫存取器
+- **旗標操作**：Z (Zero)、N (Subtract)、H (Half-Carry)、C (Carry) — 儲存於 F 暫存器 bit 7~4
+- **指令集**：完整 512 opcodes
+  - 基本指令 256 個 (0x00~0xFF)：載入、算術、邏輯、跳轉、呼叫/返回、旋轉、DAA、HALT/STOP
+  - CB 前綴指令 256 個 (0xCB 0x00~0xFF)：RLC/RRC/RL/RR/SLA/SRA/SWAP/SRL/BIT/RES/SET
+- **ALU 運算**：ADD/ADC/SUB/SBC/AND/XOR/OR/CP/INC/DEC，含完整的旗標計算
+- **中斷處理**：優先級判斷 (VBlank > STAT > Timer > Serial > Joypad)、IME/EI 延遲、中斷向量分派
+- **HALT 機制**：含 HALT bug 模擬 (IME=0 且有 pending 中斷時 PC 不遞增)
+- **Post-Boot-ROM 初始狀態**：A=0x01, F=0xB0, SP=0xFFFE, PC=0x0100（跳過 Boot ROM）
+
+#### PPU 掃描線渲染器 (`gb/ppu.rs`, 405 行)
+- **狀態機**：Mode 2 (OAM Search, 80 dots) → Mode 3 (Pixel Transfer, ~172 dots) → Mode 0 (H-Blank) → Mode 1 (V-Blank)
+- **暫存器**：LCDC/STAT/SCY/SCX/LY/LYC/BGP/OBP0/OBP1/WY/WX/DMA
+- **背景渲染**：Tile Map ($9800/$9C00)、Tile Data ($8000/$8800 有號/無號模式)、SCX/SCY 捲軸
+- **窗口渲染**：獨立行計數器、WX-7 偏移
+- **精靈渲染**：8×8 / 8×16 模式、每行最多 10 個精靈、X 座標優先排序、翻轉 X/Y、BG-over-OBJ 優先級
+- **DMG 綠色調色盤**：`[#E0F8D0, #88C070, #346856, #081820]`
+- **STAT IRQ 邊緣偵測**：防止重複觸發 (Mode 0/1/2 + LYC=LY 條件)
+- **幀緩衝區**：160×144×4 bytes (RGBA)
+
+#### APU 4 聲道音頻 (`gb/apu.rs`, 611 行)
+- **Channel 1 (方波+掃頻)**：Duty cycle (12.5%/25%/50%/75%)、頻率掃頻 (加/減法，含溢出檢查)、音量包絡
+- **Channel 2 (方波)**：同 Channel 1 但無掃頻
+- **Channel 3 (波形表)**：32 個 4-bit 樣本 (wave_ram[16])、音量位移 (0/右移1/右移2/靜音)
+- **Channel 4 (雜訊)**：LFSR 線性反饋移位暫存器 (7-bit/15-bit 模式)、除數碼 + 時鐘位移
+- **幀序列器**：512 Hz (8192 T-cycles/step)，8 步循環 (Length → Sweep → Length → ∅ → Length+Envelope → Sweep → Length+Envelope → ∅)
+- **主控制**：NR50 (音量)、NR51 (聲道混音/平衡)、NR52 (電源/狀態)
+- **音頻輸出**：立體聲混合 → 單聲道、高通濾波、取樣率 44100 Hz
+- **暫存器讀寫遮罩**：$FF10~$FF3F 的正確 read-back mask
+
+#### 卡帶與 MBC 記憶體映射控制器 (`gb/cartridge.rs`, 280 行)
+- **ROM 標頭解析**：標題 ($0134)、卡帶類型 ($0147)、ROM 大小 ($0148)、RAM 大小 ($0149)
+- **MBC0 (No MBC)**：32KB ROM 直接映射
+- **MBC1**：5-bit ROM bank + 2-bit RAM/上位 ROM bank、Banking Mode 0/1
+- **MBC3**：7-bit ROM bank、RTC 即時時鐘暫存器 (秒/分/時/日低/日高+Halt+Carry)、Latch 機制
+- **MBC5**：9-bit ROM bank (分割於 $2000~$3FFF)、4-bit RAM bank
+- **電池/RTC 偵測**：根據卡帶類型位元組自動判定
+
+#### 計時器 (`gb/timer.rs`, 96 行)
+- **16-bit 內部計數器**：DIV 為高 8 位元
+- **TIMA/TMA/TAC**：可選頻率 4096/262144/65536/16384 Hz
+- **下降沿偵測**：精確的 TIMA 遞增時機
+- **溢出延遲**：4 T-cycles 後重載 TMA 並觸發 IRQ
+
+#### Joypad 輸入 (`gb/joypad.rs`, 79 行)
+- **按鈕矩陣**：動作按鈕 (A/B/Select/Start) 與方向鍵 (Up/Down/Left/Right) 分 bank 選取
+- **Active-low 邏輯**：bit = 0 表示按下、1 表示放開
+- **IRQ 偵測**：高到低轉換 (按鈕按下) 時請求 Joypad 中斷
+
+#### 匯流排與記憶體映射 (`gb/emulator.rs`, 804 行)
+- **$0000~$7FFF**：Cartridge ROM (透過 MBC 映射)
+- **$8000~$9FFF**：VRAM (8KB)
+- **$A000~$BFFF**：External RAM (透過 MBC 映射)
+- **$C000~$DFFF**：WRAM (8KB)
+- **$E000~$FDFF**：Echo RAM (映射到 WRAM)
+- **$FE00~$FE9F**：OAM (160 bytes)
+- **$FF00~$FF7F**：I/O 暫存器 (Joypad/Serial/Timer/APU/PPU)
+- **$FF80~$FFFE**：HRAM (127 bytes)
+- **$FFFF**：IE 中斷致能暫存器
+- **DMA 傳輸**：$FF46 寫入觸發 160 bytes OAM 搬移
+
+### 🔗 統一 WASM 介面 (`EmuWasm`)
+
+採用 **單一 WASM 二進位** 包含 NES + GB 雙核心，使用 Rust enum dispatch：
+
+```rust
+enum CoreType {
+    None,
+    Nes(emulator::Emulator),    // NES 核心
+    Gb(gb::emulator::GbEmulator), // GB 核心
+}
+```
+
+- **自動 ROM 偵測**：檢查前 4 bytes 是否為 `NES\x1A` → NES，否則 → GB
+- **統一 API**：`loadRom()` / `frame()` / `setButton()` / `getFrameBufferPtr()` 等所有方法透過 match 委派
+- **新增方法**：`getScreenWidth()` (256/160)、`getScreenHeight()` (240/144)、`getCoreType()` ("nes"/"gb"/"none")
+- **向後相容**：原 `NesWasm` struct 完整保留，不影響舊程式碼
+
+### 🖥️ 前端多平台適配 (`main.ts`)
+
+- **動態 Canvas 尺寸**：載入 ROM 後根據 `getScreenWidth()` / `getScreenHeight()` 即時調整 Canvas 解析度與 CSS `aspect-ratio`
+- **動態幀率**：NES 60.0988 fps / GB 59.7275 fps 自動切換
+- **ROM 列表系統標籤**：NES 遊戲顯示紅色 `NES` 標籤，GB 遊戲顯示綠色 `GB` 標籤與 🟢 圖示
+- **存檔隔離**：LocalStorage key 含核心類型前綴 (`emu_savestate_nes_0` / `emu_savestate_gb_0`)
+- **檔案上傳**：支援 `.nes` / `.gb` / `.gbc` 副檔名
+
+### 🐛 Game Boy Joypad 方向鍵修正
+
+**問題**：進入 GB 遊戲後方向鍵完全無法操作。
+
+**原因**：`read()` 方法中，`result` 初始低 4 位為 `0x0`。當遊戲只選取方向鍵 bank (select=0x20) 時，按鈕區塊不執行，低 4 位維持 `0x0`。方向區塊的 `result & 0x0F & dpad` 因 `result & 0x0F = 0`，AND 結果永遠 `0x00`，等同所有方向同時按下 (GB active-low)。
+
+**處理方案**：重寫 `read()` 為先將低 4 位初始化為 `0x0F` (全部放開)，再由被選取的 bank 透過 AND 清除對應 bit (表示按下)。兩個 bank 同時選取時 AND 效果自然正確合併。
+
+### 🔧 基礎設施更新
+
+- **Vite 配置** (`vite.config.ts`)：build 時複製 `.gb` / `.gbc` 檔案到輸出目錄
+- **HTML** (`index.html`)：檔案上傳接受 `.gb/.gbc`、ROM 系統標籤 CSS、品牌名更新為 H5-EMU
+- **WASM 建置**：`wasm-pack build --target web --out-dir ../src/wasm` 同時輸出到 `src/wasm/` 與 `pkg/`
+
+### 🎮 遊戲列表更新 (35 款：NES 32 + GB 3)
+
+NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛克人 6 / FF III / 薩爾達傳說 / 雙截龍 3 / 聖鈴傳說 / 冒險島 1~3 / 迷宮組曲 / Captain Tsubasa II / 熱血系列 ×9 / 龍珠 Z 系列 ×4 / Zombie Hunter / 五子棋 / 台灣麻將 / 150 合 1 / 1200 合 1
+
+🟢 Game Boy (3 款新增)：
+- Super Mario Land 2: 6 Golden Coins (超級瑪利歐大陸 2)
+- 口袋妖怪黃 (繁體中文加強版)
+- 聖劍傳說 (簡體中文版)
+
+---
+
+## 🔧 更新記錄 (2026-02-07) — Rust/WASM 核心與遊戲相容性大修
 
 ### 🦀 架構遷移：TypeScript → Rust/WebAssembly
 
@@ -252,23 +400,32 @@ npm run build
 ```
 h5-NES_TS/
 ├── public/
-│   └── roms.json          # ROM 列表配置
-├── roms/                   # ROM 遊戲檔案
-├── nes-wasm/              # Rust/WASM 核心
+│   └── roms.json          # ROM 列表配置 (NES + GB)
+├── roms/                   # ROM 遊戲檔案 (.nes / .gb)
+├── nes-wasm/              # Rust/WASM 核心 (單一二進位，雙平台)
 │   └── src/
-│       ├── lib.rs         # WASM 入口
-│       ├── emulator.rs    # 模擬器主迴圈
-│       ├── cpu.rs         # 6502 CPU
-│       ├── ppu.rs         # 圖形處理器
-│       ├── apu.rs         # 音頻處理器
-│       ├── bus.rs         # 系統匯流排
-│       ├── cartridge.rs   # 卡帶載入
-│       ├── controller.rs  # 控制器
-│       └── mappers.rs     # 18 種 Mapper 實作
+│       ├── lib.rs         # WASM 入口 (EmuWasm 統一介面 + CoreType 分派)
+│       ├── emulator.rs    # NES 模擬器主迴圈
+│       ├── cpu.rs         # NES 6502 CPU
+│       ├── ppu.rs         # NES 圖形處理器
+│       ├── apu.rs         # NES 音頻處理器
+│       ├── bus.rs         # NES 系統匯流排
+│       ├── cartridge.rs   # NES 卡帶載入
+│       ├── controller.rs  # NES 控制器
+│       ├── mappers.rs     # NES 18 種 Mapper 實作
+│       └── gb/            # 🟢 Game Boy DMG 核心 (2,356 行)
+│           ├── mod.rs         # 模組宣告 (11 行)
+│           ├── cpu.rs         # Sharp LR35902 暫存器與旗標 (70 行)
+│           ├── emulator.rs    # CPU 指令集 + 匯流排 + 整合 (804 行)
+│           ├── ppu.rs         # 掃描線渲染器 160×144 (405 行)
+│           ├── apu.rs         # 4 聲道音頻引擎 (611 行)
+│           ├── cartridge.rs   # MBC0/1/3/5 記憶體映射 (280 行)
+│           ├── timer.rs       # DIV/TIMA 計時器 (96 行)
+│           └── joypad.rs      # 按鈕矩陣輸入 (79 行)
 ├── src/
-│   ├── main.ts            # 應用程式進入點
+│   ├── main.ts            # 應用程式進入點 (多平台適配)
 │   ├── wasm/              # WASM 編譯輸出
-│   ├── core/              # NES 核心模擬器 (TS 版)
+│   ├── core/              # NES 核心模擬器 (TS 版，備用)
 │   │   ├── cpu/           # 6502 CPU
 │   │   ├── ppu/           # 圖形處理器
 │   │   ├── apu/           # 音頻處理器
@@ -297,18 +454,47 @@ h5-NES_TS/
 | Phase 4 | APU 音頻 | 音頻波形測試 | ✅ 完成 |
 | Phase 5 | Mapper | 遊戲相容性測試 | ✅ 完成 |
 | Phase 6 | 手機版 UI | RWD 與虛擬控制器 | ✅ 完成 |
+| Phase 7 | 🟢 Game Boy DMG | GB ROM 可正常遊玩 | ✅ 完成 |
 
 ---
 
 ## 技術架構
 
+### 多平台統一架構
+
+```
+┌───────────────────────────────────────────────────────────────┐
+│                        Browser (前端)                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐    │
+│  │ Canvas 2D    │  │ Web Audio    │  │ UI (ROM 選擇器   │    │
+│  │ (動態解析度) │  │ (動態幀率)   │  │  + 虛擬控制器)   │    │
+│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘    │
+├─────────┴─────────────────┴───────────────────┴──────────────┤
+│                  EmuWasm (Rust/WASM 統一介面)                 │
+│                                                               │
+│  loadRom() ─── 自動偵測 ROM 格式 (iNES header check)          │
+│                    │                                          │
+│         ┌──────────┴──────────┐                               │
+│         ▼                     ▼                               │
+│  ┌─────────────┐     ┌──────────────┐                        │
+│  │  NES 核心   │     │  GB 核心     │                        │
+│  │  256×240    │     │  160×144     │                        │
+│  │  60.10 fps  │     │  59.73 fps   │                        │
+│  ├─────────────┤     ├──────────────┤                        │
+│  │ 6502 CPU    │     │ LR35902 CPU  │                        │
+│  │ PPU (BG+SPR)│     │ PPU (BG+W+S) │                        │
+│  │ APU (5ch)   │     │ APU (4ch)    │                        │
+│  │ 18 Mappers  │     │ MBC 0/1/3/5  │                        │
+│  │ Controller  │     │ Joypad       │                        │
+│  └─────────────┘     └──────────────┘                        │
+└───────────────────────────────────────────────────────────────┘
+```
+
+### NES 核心內部架構
+
 ```
 ┌─────────────────────────────────────────────────┐
-│                    Browser                       │
-├─────────────────────────────────────────────────┤
-│  Canvas (PPU輸出)  │  Web Audio (APU輸出)       │
-├─────────────────────────────────────────────────┤
-│                   Emulator                       │
+│                 NES Emulator                     │
 │  ┌─────┐  ┌─────┐  ┌─────┐  ┌────────────┐     │
 │  │ CPU │──│ Bus │──│ PPU │  │ Controller │     │
 │  └─────┘  └──┬──┘  └─────┘  └────────────┘     │
@@ -346,6 +532,17 @@ h5-NES_TS/
 
 ---
 
+## 🟢 Game Boy MBC 支援
+
+| MBC | 名稱 | ROM 大小 | RAM 大小 | 特殊功能 | 代表遊戲 |
+|-----|------|----------|----------|----------|----------|
+| MBC0 | No MBC | 32KB | — | — | Tetris、Dr. Mario |
+| MBC1 | — | 最大 2MB | 最大 32KB | Banking Mode 0/1 | Super Mario Land、Zelda: Link's Awakening |
+| MBC3 | — | 最大 2MB | 最大 32KB | RTC 即時時鐘、Latch | Pokémon Gold/Silver/Crystal |
+| MBC5 | — | 最大 8MB | 最大 128KB | 9-bit ROM bank | Pokémon Yellow (GBC)、聖劍傳說 |
+
+---
+
 ## 授權
 
 MIT License
@@ -354,6 +551,14 @@ MIT License
 
 ## 致謝
 
+### NES 參考資料
 - [NESDev Wiki](https://www.nesdev.org/wiki/) - 最完整的 NES 技術文件
 - [6502.org](http://6502.org/) - 6502 CPU 參考資料
 - [FCEUX](https://fceux.com/) - 參考實作與除錯工具
+
+### Game Boy 參考資料
+- [Pan Docs](https://gbdev.io/pandocs/) - Game Boy 硬體規格聖經
+- [Game Boy CPU Manual](http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf) - CPU 指令集完整手冊
+- [RGBDS](https://rgbds.gbdev.io/) - Game Boy 開發工具鏈與組語參考
+- [The Cycle-Accurate Game Boy Docs](https://github.com/AntonioND/giibiiadvance/blob/master/docs/TCAGBD.pdf) - 週期精確技術文件
+- [Imran Nazar's GB in JS](http://imrannazar.com/GameBoy-Emulation-in-JavaScript) - JavaScript Game Boy 模擬器教學

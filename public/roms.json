@@ -127,6 +127,18 @@
     {
       "name": "1200 合 1",
       "file": "1200-in-1.nes"
+    },
+    {
+      "name": "🟢 Super Mario Land 2: 6 Golden Coins (超級瑪利歐大陸 2)",
+      "file": "Super Mario Land 2 - 6 Golden Coins (USA, Europe) (Rev 2).gb"
+    },
+    {
+      "name": "🟢 口袋妖怪黃 (繁體中文加強版)",
+      "file": "口袋妖怪黃 (繁) (加強版) (unknown).gb"
+    },
+    {
+      "name": "🟢 聖劍傳說 (簡體中文版)",
+      "file": "圣剑传说(简)(v1.1)(RangerMarsh)(4Mb).gb"
     }
   ]
 }

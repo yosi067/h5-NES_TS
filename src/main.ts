@@ -9,13 +9,14 @@
  * - 使用 Rust/WASM 核心取代 TypeScript 硬體模擬
  */
 
-import init, { NesWasm } from '../nes-wasm/pkg/nes_wasm.js';
+import init, { EmuWasm } from '../nes-wasm/pkg/nes_wasm.js';
 
 // ===== 型別定義 =====
 
 interface RomInfo {
   name: string;
   file: string;
+  system?: string;  // 'nes' | 'gb' (可選，自動偵測)
 }
 
 interface RomListResponse {
@@ -37,7 +38,7 @@ type ControllerButton = typeof ControllerButton[keyof typeof ControllerButton];
 
 // ===== 全域變數 =====
 
-let nes: NesWasm | null = null;
+let nes: EmuWasm | null = null;
 let animationId: number | null = null;
 let canvas: HTMLCanvasElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
@@ -79,8 +80,8 @@ async function initWasm(): Promise<void> {
   // 初始化 WASM 模組
   await init();
   
-  // 建立 NES 實例
-  nes = new NesWasm();
+  // 建立統一模擬器實例（支援 NES 及 Game Boy）
+  nes = new EmuWasm();
 
   // 取得 UI 元素
   romSelector = document.getElementById('rom-selector');
@@ -100,7 +101,7 @@ async function initWasm(): Promise<void> {
     return;
   }
 
-  imageData = ctx.createImageData(256, 240);
+  imageData = ctx.createImageData(256, 240);  // 預設 NES 尺寸，載入 ROM 後會更新
 
   // 設定鍵盤輸入（直接對 WASM 控制器操作）
   setupKeyboardInput();
@@ -209,13 +210,19 @@ function renderRomList(roms: RomInfo[]): void {
     return;
   }
 
-  romListEl.innerHTML = roms.map((rom, index) => `
-    <button class="rom-item" data-index="${index}" data-file="${encodeURIComponent(rom.file)}">
-      <span class="rom-icon">🎮</span>
-      <span class="rom-name">${rom.name}</span>
-      <span class="rom-arrow">▶</span>
-    </button>
-  `).join('');
+  romListEl.innerHTML = roms.map((rom, index) => {
+    const isGb = rom.file.toLowerCase().endsWith('.gb') || rom.file.toLowerCase().endsWith('.gbc');
+    const icon = isGb ? '🟢' : '🎮';
+    const systemTag = isGb ? '<span class="rom-system gb">GB</span>' : '<span class="rom-system nes">NES</span>';
+    return `
+      <button class="rom-item" data-index="${index}" data-file="${encodeURIComponent(rom.file)}">
+        <span class="rom-icon">${icon}</span>
+        <span class="rom-name">${rom.name}</span>
+        ${systemTag}
+        <span class="rom-arrow">▶</span>
+      </button>
+    `;
+  }).join('');
 
   // 綁定點擊事件
   const items = romListEl.querySelectorAll('.rom-item');
@@ -272,7 +279,20 @@ function startGame(romData: ArrayBuffer): void {
 
   const romBytes = new Uint8Array(romData);
   if (nes.loadRom(romBytes)) {
-    console.log('ROM 載入成功，開始執行');
+    // 取得核心類型及對應的螢幕尺寸
+    const coreType = nes.getCoreType();
+    const screenW = nes.getScreenWidth();
+    const screenH = nes.getScreenHeight();
+    console.log(`ROM 載入成功 [${coreType.toUpperCase()}] ${screenW}×${screenH}，開始執行`);
+
+    // 更新 Canvas 與 ImageData 為對應尺寸
+    if (canvas && ctx) {
+      canvas.width = screenW;
+      canvas.height = screenH;
+      imageData = ctx.createImageData(screenW, screenH);
+      // 更新 CSS aspect-ratio (NES = 256:240 ≈ 4:3, GB = 160:144 = 10:9)
+      canvas.style.aspectRatio = `${screenW} / ${screenH}`;
+    }
     
     // 隱藏選擇器，顯示遊戲畫面
     hideRomSelector();
@@ -776,8 +796,11 @@ function startEmulation(): void {
 
   isRunning = true;
 
-  // NES NTSC 幀率：60.0988 fps
-  const TARGET_FRAME_TIME = 1000 / 60.0988;
+  // 根據核心類型選擇幀率
+  // NES NTSC: 60.0988 fps, Game Boy: 59.7275 fps (4194304 / 70224)
+  const coreType = nes?.getCoreType() || 'nes';
+  const targetFps = coreType === 'gb' ? 59.7275 : 60.0988;
+  const TARGET_FRAME_TIME = 1000 / targetFps;
   let lastFrameTime = performance.now();
   let accumulator = 0;
 
@@ -919,7 +942,15 @@ function resumeAudio(): void {
 
 // ===== 存檔系統 =====
 
-const SAVE_STATE_PREFIX = 'nes_savestate_';
+const SAVE_STATE_PREFIX = 'emu_savestate_';
+
+/**
+ * 取得帶有核心類型的存檔 key
+ */
+function getSaveKey(slot: number): string {
+  const coreType = nes?.getCoreType() || 'nes';
+  return `${SAVE_STATE_PREFIX}${coreType}_${slot}`;
+}
 
 /**
  * 顯示提示訊息
@@ -975,7 +1006,7 @@ function saveState(slot: number = 0): boolean {
   
   try {
     const saveData = nes.exportSaveState();
-    const key = `${SAVE_STATE_PREFIX}${slot}`;
+    const key = getSaveKey(slot);
     localStorage.setItem(key, saveData);
     console.log(`存檔成功 (Slot ${slot})`);
     return true;
@@ -989,7 +1020,7 @@ function loadState(slot: number = 0): boolean {
   if (!nes) return false;
   
   try {
-    const key = `${SAVE_STATE_PREFIX}${slot}`;
+    const key = getSaveKey(slot);
     const saveData = localStorage.getItem(key);
     
     if (!saveData) {
@@ -1017,7 +1048,8 @@ function exportSaveToFile(): void {
   
   const a = document.createElement('a');
   a.href = url;
-  a.download = `nes_savestate_${Date.now()}.txt`;
+  const coreTag = nes?.getCoreType() || 'emu';
+  a.download = `${coreTag}_savestate_${Date.now()}.txt`;
   a.click();
   
   URL.revokeObjectURL(url);
@@ -1056,7 +1088,7 @@ function setupKeyboardShortcuts(): void {
 
 declare global {
   interface Window {
-    nes: NesWasm | null;
+    nes: EmuWasm | null;
     startEmulation: () => void;
     stopEmulation: () => void;
     saveState: (slot?: number) => boolean;

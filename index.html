@@ -649,6 +649,23 @@
       font-size: 14px;
     }
 
+    .rom-system {
+      font-size: 10px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-right: 4px;
+      letter-spacing: 1px;
+    }
+    .rom-system.nes {
+      background: #c0392b;
+      color: #fff;
+    }
+    .rom-system.gb {
+      background: #27ae60;
+      color: #fff;
+    }
+
     .rom-loading, .rom-empty, .rom-error {
       text-align: center;
       color: #888;
@@ -1063,8 +1080,8 @@
     <div class="rom-selector-content">
       <div class="rom-selector-header">
         <div class="brand-nintendo">NINTENDO</div>
-        <div class="brand-name">H5-NES</div>
-        <h2>🎮 選擇遊戲</h2>
+        <div class="brand-name">H5-EMU</div>
+        <h2>🎮 選擇遊戲 (NES / Game Boy)</h2>
       </div>
       
       <div class="rom-list" id="rom-list">
@@ -1073,9 +1090,9 @@
       
       <div class="rom-selector-footer">
         <label class="upload-btn" for="rom-file-input">
-          📁 從裝置選擇 ROM
+          📁 從裝置選擇 ROM (.nes / .gb)
         </label>
-        <input type="file" id="rom-file-input" accept=".nes" style="display: none;">
+        <input type="file" id="rom-file-input" accept=".nes,.gb,.gbc" style="display: none;">
       </div>
     </div>
   </div>
@@ -1105,7 +1122,7 @@
     <!-- 電腦版控制按鈕 -->
     <div class="desktop-controls">
       <label for="rom-input">📁 載入 ROM</label>
-      <input type="file" id="rom-input" accept=".nes">
+      <input type="file" id="rom-input" accept=".nes,.gb,.gbc">
       <button id="btn-save-state" class="save-btn">💾 存檔 (F5)</button>
       <button id="btn-load-state" class="load-btn">📂 讀取 (F7)</button>
       <button id="btn-pause">⏸ 暫停</button>
