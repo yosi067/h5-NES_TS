@@ -44,6 +44,13 @@ let ctx: CanvasRenderingContext2D | null = null;
 let imageData: ImageData | null = null;
 let audioContext: AudioContext | null = null;
 let isRunning: boolean = false;
+let currentRomFilename: string = '';
+
+// 需要自動重整的特殊 ROM（首次載入有問題，需重整一次才能正常）
+const AUTO_RESET_ROMS: string[] = [
+  'Captain Tsubasa II - Super Striker (Japan).nes',
+  'SuperMarioBros3.nes',
+];
 
 // ===== UI 元素 =====
 
@@ -227,6 +234,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
     }
     
     const buffer = await response.arrayBuffer();
+    currentRomFilename = filename;
     startGame(buffer);
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
@@ -240,6 +248,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
 async function loadRomFromFile(file: File): Promise<void> {
   try {
     const buffer = await file.arrayBuffer();
+    currentRomFilename = file.name;
     startGame(buffer);
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
@@ -271,6 +280,17 @@ function startGame(romData: ArrayBuffer): void {
     
     // 開始模擬
     startEmulation();
+
+    // 特殊 ROM 自動重整：部分遊戲首次載入有問題，需自動 reset 一次
+    if (AUTO_RESET_ROMS.some(name => currentRomFilename === name)) {
+      console.log(`[Auto-Reset] 偵測到特殊 ROM「${currentRomFilename}」，將自動重整...`);
+      setTimeout(() => {
+        if (nes && isRunning) {
+          nes.reset();
+          console.log('[Auto-Reset] 重整完成');
+        }
+      }, 500);
+    }
   } else {
     console.error('ROM 載入失敗');
     alert('無法載入此 ROM 檔案');
