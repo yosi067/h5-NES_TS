@@ -950,13 +950,15 @@ impl Apu {
     fn output_sample(&mut self) {
         let mut sample = self.mix();
 
-        // 低通濾波器（減少高頻噪音 / 抗鋸齒）
-        const LOWPASS_COEFF: f32 = 0.9;
+        // 低通濾波器（模擬 NES 類比輸出 RC 濾波器）
+        // fc ≈ 14 kHz (α = e^(-2π×14000/44100) ≈ 0.14)
+        // 原始值 0.9 截止頻率僅 ~741 Hz，嚴重衰減 NES 音頻
+        const LOWPASS_COEFF: f32 = 0.14;
         self.filter_accumulator = self.filter_accumulator * LOWPASS_COEFF +
                                   sample * (1.0 - LOWPASS_COEFF);
         sample = self.filter_accumulator;
 
-        // 高通濾波器（移除直流偏移）
+        // 高通濾波器（移除直流偏移，fc ≈ 28 Hz）
         const HIGHPASS_COEFF: f32 = 0.996;
         let input = sample;
         self.highpass_output = HIGHPASS_COEFF * self.highpass_output +
@@ -964,12 +966,14 @@ impl Apu {
         self.highpass_prev = input;
         sample = self.highpass_output;
 
-        // 縮放到合理範圍並加入軟削波防止爆音
-        sample *= 1.5;
+        // 適度放大（mix 輸出約 0~1，高通後居中於 0）
+        sample *= 1.2;
+
+        // 軟削波防止爆音
         if sample > 0.95 {
-            sample = 0.95 + (sample - 0.95) * 0.2;
+            sample = 0.95 + (sample - 0.95) * 0.1;
         } else if sample < -0.95 {
-            sample = -0.95 + (sample + 0.95) * 0.2;
+            sample = -0.95 + (sample + 0.95) * 0.1;
         }
 
         // 最終限制在 [-1, 1] 範圍

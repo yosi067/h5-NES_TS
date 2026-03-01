@@ -59,8 +59,16 @@ let gameboyShell: HTMLElement | null = null;
 let powerLed: HTMLElement | null = null;
 
 // ===== 音頻設定 =====
-const AUDIO_BUFFER_SIZE = 4096;
+const AUDIO_BUFFER_SIZE = 2048;  // ScriptProcessor 緩衝區大小（~46ms）
 let lastAudioSample: number = 0;  // 上一個有效取樣值，用於平滑填充
+
+// ===== 音頻環形緩衝區 =====
+// 解耦 WASM 音頻產生與 ScriptProcessor 消費的時序差異
+const JS_RING_SIZE = 16384;       // 可容納 ~22 幀的音頻資料
+const jsRing = new Float32Array(JS_RING_SIZE);
+let ringW = 0;   // 寫入位置
+let ringR = 0;   // 讀取位置
+let ringCount = 0; // 目前可用樣本數
 
 // ===== 初始化 =====
 
@@ -277,6 +285,12 @@ function startGame(romData: ArrayBuffer): void {
     
     // 開啟電源指示燈
     powerLed?.classList.add('on');
+    
+    // 重置音頻環形緩衝區（避免上一局殘留音頻）
+    ringW = 0;
+    ringR = 0;
+    ringCount = 0;
+    lastAudioSample = 0;
     
     // 開始模擬
     startEmulation();
@@ -781,6 +795,7 @@ function startEmulation(): void {
 
     while (accumulator >= TARGET_FRAME_TIME) {
       nes.frame();
+      drainWasmAudioToRing();  // 每幀後排入環形緩衝區，防止 WASM buffer 溢出
       accumulator -= TARGET_FRAME_TIME;
     }
 
@@ -824,6 +839,34 @@ function renderFrame(): void {
 // ===== 音頻系統 =====
 
 /**
+ * 將 WASM 音頻緩衝區的樣本排入 JS 環形緩衝區
+ * 在每次 frame() 後呼叫，確保所有樣本都被捕獲
+ */
+function drainWasmAudioToRing(): void {
+  if (!nes) return;
+  const available = nes.getAudioBufferLen();
+  if (available === 0) return;
+
+  // 重要：每次都重新取得 WASM memory 參考（記憶體增長後 buffer 可能 detached）
+  const memory = nes.getWasmMemory() as WebAssembly.Memory;
+  const ptr = nes.getAudioBufferPtr();
+  const samples = new Float32Array(memory.buffer, ptr, available);
+
+  for (let i = 0; i < available; i++) {
+    jsRing[ringW] = samples[i];
+    ringW = (ringW + 1) % JS_RING_SIZE;
+    if (ringCount < JS_RING_SIZE) {
+      ringCount++;
+    } else {
+      // 環形緩衝區已滿：覆蓋最舊的樣本
+      ringR = (ringR + 1) % JS_RING_SIZE;
+    }
+  }
+
+  nes.consumeAudioSamples();
+}
+
+/**
  * 初始化音頻系統
  */
 async function initAudio(): Promise<void> {
@@ -838,33 +881,23 @@ async function initAudio(): Promise<void> {
     
     scriptProcessor.onaudioprocess = (e) => {
       const output = e.outputBuffer.getChannelData(0);
-      if (nes && isRunning) {
-        const available = nes.getAudioBufferLen();
-        if (available > 0) {
-          // 重要：每次都重新取得 WASM memory 參考
-          const memory = nes.getWasmMemory() as WebAssembly.Memory;
-          const ptr = nes.getAudioBufferPtr();
-          const samples = new Float32Array(memory.buffer, ptr, available);
-          const count = Math.min(available, output.length);
-          for (let i = 0; i < count; i++) {
-            output[i] = samples[i];
-          }
-          lastAudioSample = samples[count - 1];
-          // 取樣不足時用最後一個有效值漸變填充
-          for (let i = count; i < output.length; i++) {
-            lastAudioSample *= 0.999;
-            output[i] = lastAudioSample;
-          }
-          nes.consumeAudioSamples();
-        } else {
-          // 無資料：用上次最後取樣值漸變到靜音
-          for (let i = 0; i < output.length; i++) {
-            lastAudioSample *= 0.999;
-            output[i] = lastAudioSample;
-          }
-        }
-      } else {
+      if (!isRunning) {
         output.fill(0);
+        return;
+      }
+
+      // 從環形緩衝區讀取樣本
+      for (let i = 0; i < output.length; i++) {
+        if (ringCount > 0) {
+          output[i] = jsRing[ringR];
+          lastAudioSample = output[i];
+          ringR = (ringR + 1) % JS_RING_SIZE;
+          ringCount--;
+        } else {
+          // 欠載：用最後一個有效值漸變到靜音，避免爆音
+          lastAudioSample *= 0.999;
+          output[i] = lastAudioSample;
+        }
       }
     };
     
