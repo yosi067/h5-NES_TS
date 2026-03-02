@@ -665,6 +665,10 @@
       background: #27ae60;
       color: #fff;
     }
+    .rom-system.gg {
+      background: #e67e22;
+      color: #fff;
+    }
 
     .rom-loading, .rom-empty, .rom-error {
       text-align: center;
@@ -1092,7 +1096,7 @@
         <label class="upload-btn" for="rom-file-input">
           📁 從裝置選擇 ROM (.nes / .gb)
         </label>
-        <input type="file" id="rom-file-input" accept=".nes,.gb,.gbc" style="display: none;">
+        <input type="file" id="rom-file-input" accept=".nes,.gb,.gbc,.gg,.sms" style="display: none;">
       </div>
     </div>
   </div>
@@ -1122,7 +1126,7 @@
     <!-- 電腦版控制按鈕 -->
     <div class="desktop-controls">
       <label for="rom-input">📁 載入 ROM</label>
-      <input type="file" id="rom-input" accept=".nes,.gb,.gbc">
+      <input type="file" id="rom-input" accept=".nes,.gb,.gbc,.gg,.sms">
       <button id="btn-save-state" class="save-btn">💾 存檔 (F5)</button>
       <button id="btn-load-state" class="load-btn">📂 讀取 (F7)</button>
       <button id="btn-pause">⏸ 暫停</button>

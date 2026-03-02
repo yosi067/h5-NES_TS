@@ -23,10 +23,10 @@ pub struct Cartridge {
     pub title: String,
 
     // MBC 狀態
-    ram_enabled: bool,
-    rom_bank: u16,      // 目前 ROM Bank（$4000-$7FFF）
-    ram_bank: u8,       // 目前 RAM Bank / RTC 暫存器選擇
-    banking_mode: u8,   // MBC1 banking mode (0=ROM, 1=RAM)
+    pub ram_enabled: bool,
+    pub rom_bank: u16,      // 目前 ROM Bank（$4000-$7FFF）
+    pub ram_bank: u8,       // 目前 RAM Bank / RTC 暫存器選擇
+    pub banking_mode: u8,   // MBC1 banking mode (0=ROM, 1=RAM)
 
     // ROM/RAM 遮罩
     rom_bank_mask: u16,

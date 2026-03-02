@@ -9,14 +9,14 @@
  * - 使用 Rust/WASM 核心取代 TypeScript 硬體模擬
  */
 
-import init, { EmuWasm } from '../nes-wasm/pkg/nes_wasm.js';
+import init, { EmuWasm } from './wasm/nes_wasm.js';
 
 // ===== 型別定義 =====
 
 interface RomInfo {
   name: string;
   file: string;
-  system?: string;  // 'nes' | 'gb' (可選，自動偵測)
+  system?: string;  // 'nes' | 'gb' | 'gg' (可選，自動偵測)
 }
 
 interface RomListResponse {
@@ -211,9 +211,15 @@ function renderRomList(roms: RomInfo[]): void {
   }
 
   romListEl.innerHTML = roms.map((rom, index) => {
-    const isGb = rom.file.toLowerCase().endsWith('.gb') || rom.file.toLowerCase().endsWith('.gbc');
-    const icon = isGb ? '🟢' : '🎮';
-    const systemTag = isGb ? '<span class="rom-system gb">GB</span>' : '<span class="rom-system nes">NES</span>';
+    const lower = rom.file.toLowerCase();
+    const isGb = lower.endsWith('.gb') || lower.endsWith('.gbc');
+    const isGg = lower.endsWith('.gg') || lower.endsWith('.sms');
+    const icon = isGg ? '🟠' : isGb ? '🟢' : '🎮';
+    const systemTag = isGg
+      ? '<span class="rom-system gg">GG</span>'
+      : isGb
+        ? '<span class="rom-system gb">GB</span>'
+        : '<span class="rom-system nes">NES</span>';
     return `
       <button class="rom-item" data-index="${index}" data-file="${encodeURIComponent(rom.file)}">
         <span class="rom-icon">${icon}</span>
@@ -278,7 +284,19 @@ function startGame(romData: ArrayBuffer): void {
   if (!nes) return;
 
   const romBytes = new Uint8Array(romData);
-  if (nes.loadRom(romBytes)) {
+  
+  // 根據副檔名選擇對應的載入方法
+  const lower = currentRomFilename.toLowerCase();
+  let loaded = false;
+  if (lower.endsWith('.gg')) {
+    loaded = nes.loadGgRom(romBytes);
+  } else if (lower.endsWith('.sms')) {
+    loaded = nes.loadSmsRom(romBytes);
+  } else {
+    loaded = nes.loadRom(romBytes);
+  }
+  
+  if (loaded) {
     // 取得核心類型及對應的螢幕尺寸
     const coreType = nes.getCoreType();
     const screenW = nes.getScreenWidth();
@@ -797,9 +815,9 @@ function startEmulation(): void {
   isRunning = true;
 
   // 根據核心類型選擇幀率
-  // NES NTSC: 60.0988 fps, Game Boy: 59.7275 fps (4194304 / 70224)
+  // NES NTSC: 60.0988 fps, Game Boy: 59.7275 fps, Game Gear: 59.92 fps (3579545 / 228 / 262)
   const coreType = nes?.getCoreType() || 'nes';
-  const targetFps = coreType === 'gb' ? 59.7275 : 60.0988;
+  const targetFps = coreType === 'gb' ? 59.7275 : coreType === 'gg' ? 59.92 : 60.0988;
   const TARGET_FRAME_TIME = 1000 / targetFps;
   let lastFrameTime = performance.now();
   let accumulator = 0;

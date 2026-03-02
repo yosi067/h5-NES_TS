@@ -22,6 +22,14 @@
 // - gb::timer: 計時器
 // - gb::joypad: 輸入處理
 // - gb::emulator: 整合所有元件
+//
+// Game Gear / Master System 模組：
+// - gg::cpu: Zilog Z80 CPU（完整指令集含 DD/FD/ED/CB 前綴）
+// - gg::vdp: TMS9918 衍生 VDP（256×192 內部, GG 160×144 裁切, 4096 色）
+// - gg::psg: SN76489 PSG（3 聲道 + 雜訊, GG 立體聲）
+// - gg::cartridge: Sega / Codemasters Mapper
+// - gg::joypad: 輸入處理（Port $DC/$DD/$00）
+// - gg::emulator: 整合所有元件
 // ============================================================
 
 use wasm_bindgen::prelude::*;
@@ -38,6 +46,9 @@ pub mod emulator;
 
 // Game Boy 模組
 pub mod gb;
+
+// Game Gear / Master System 模組
+pub mod gg;
 
 // ============================================================
 // WASM 匯出介面 - 供 JavaScript 呼叫
@@ -151,6 +162,7 @@ enum CoreType {
     None,
     Nes(emulator::Emulator),
     Gb(gb::emulator::GbEmulator),
+    Gg(gg::emulator::GgEmulator),
 }
 
 /// 統一多平台模擬器 WASM 包裝器
@@ -192,11 +204,36 @@ impl EmuWasm {
         false
     }
 
+    /// 載入 Game Gear ROM
+    #[wasm_bindgen(js_name = "loadGgRom")]
+    pub fn load_gg_rom(&mut self, rom_data: &[u8]) -> bool {
+        if rom_data.is_empty() { return false; }
+        let mut emu = gg::emulator::GgEmulator::new();
+        if emu.load_rom(rom_data) {
+            self.core = CoreType::Gg(emu);
+            return true;
+        }
+        false
+    }
+
+    /// 載入 SMS ROM
+    #[wasm_bindgen(js_name = "loadSmsRom")]
+    pub fn load_sms_rom(&mut self, rom_data: &[u8]) -> bool {
+        if rom_data.is_empty() { return false; }
+        let mut emu = gg::emulator::GgEmulator::new();
+        if emu.load_rom_sms(rom_data) {
+            self.core = CoreType::Gg(emu);
+            return true;
+        }
+        false
+    }
+
     /// 重置模擬器
     pub fn reset(&mut self) {
         match &mut self.core {
             CoreType::Nes(emu) => emu.reset(),
             CoreType::Gb(emu) => emu.reset(),
+            CoreType::Gg(emu) => emu.reset(),
             CoreType::None => {}
         }
     }
@@ -206,6 +243,7 @@ impl EmuWasm {
         match &mut self.core {
             CoreType::Nes(emu) => emu.frame(),
             CoreType::Gb(emu) => emu.frame(),
+            CoreType::Gg(emu) => emu.frame(),
             CoreType::None => {}
         }
     }
@@ -216,6 +254,7 @@ impl EmuWasm {
         match &self.core {
             CoreType::Nes(_) => 256,
             CoreType::Gb(_) => 160,
+            CoreType::Gg(emu) => emu.screen_width(),
             CoreType::None => 256,
         }
     }
@@ -226,16 +265,18 @@ impl EmuWasm {
         match &self.core {
             CoreType::Nes(_) => 240,
             CoreType::Gb(_) => 144,
+            CoreType::Gg(emu) => emu.screen_height(),
             CoreType::None => 240,
         }
     }
 
-    /// 取得目前核心類型 ("nes", "gb", "none")
+    /// 取得目前核心類型 ("nes", "gb", "gg", "none")
     #[wasm_bindgen(js_name = "getCoreType")]
     pub fn get_core_type(&self) -> String {
         match &self.core {
             CoreType::Nes(_) => "nes".to_string(),
             CoreType::Gb(_) => "gb".to_string(),
+            CoreType::Gg(_) => "gg".to_string(),
             CoreType::None => "none".to_string(),
         }
     }
@@ -245,6 +286,7 @@ impl EmuWasm {
         match &self.core {
             CoreType::Nes(emu) => emu.get_frame_buffer_ptr(),
             CoreType::Gb(emu) => emu.get_frame_buffer_ptr(),
+            CoreType::Gg(emu) => emu.get_frame_buffer_ptr(),
             CoreType::None => std::ptr::null(),
         }
     }
@@ -254,6 +296,7 @@ impl EmuWasm {
         match &self.core {
             CoreType::Nes(emu) => emu.get_frame_buffer_len(),
             CoreType::Gb(emu) => emu.get_frame_buffer_len(),
+            CoreType::Gg(emu) => emu.get_frame_buffer_len(),
             CoreType::None => 0,
         }
     }
@@ -263,6 +306,7 @@ impl EmuWasm {
         match &mut self.core {
             CoreType::Nes(emu) => emu.set_button(controller, button, pressed),
             CoreType::Gb(emu) => emu.set_button(controller, button, pressed),
+            CoreType::Gg(emu) => emu.set_button(controller, button, pressed),
             CoreType::None => {}
         }
     }
@@ -272,6 +316,7 @@ impl EmuWasm {
         match &mut self.core {
             CoreType::Nes(emu) => emu.set_audio_sample_rate(rate),
             CoreType::Gb(emu) => emu.set_audio_sample_rate(rate),
+            CoreType::Gg(emu) => emu.set_audio_sample_rate(rate),
             CoreType::None => {}
         }
     }
@@ -281,6 +326,7 @@ impl EmuWasm {
         match &self.core {
             CoreType::Nes(emu) => emu.get_audio_buffer_ptr(),
             CoreType::Gb(emu) => emu.get_audio_buffer_ptr(),
+            CoreType::Gg(emu) => emu.get_audio_buffer_ptr(),
             CoreType::None => std::ptr::null(),
         }
     }
@@ -290,6 +336,7 @@ impl EmuWasm {
         match &self.core {
             CoreType::Nes(emu) => emu.get_audio_buffer_len(),
             CoreType::Gb(emu) => emu.get_audio_buffer_len(),
+            CoreType::Gg(emu) => emu.get_audio_buffer_len(),
             CoreType::None => 0,
         }
     }
@@ -299,6 +346,7 @@ impl EmuWasm {
         match &mut self.core {
             CoreType::Nes(emu) => emu.consume_audio_samples(),
             CoreType::Gb(emu) => emu.consume_audio_samples(),
+            CoreType::Gg(emu) => emu.consume_audio_samples(),
             CoreType::None => 0,
         }
     }
@@ -307,7 +355,9 @@ impl EmuWasm {
     pub fn export_save_state(&self) -> String {
         match &self.core {
             CoreType::Nes(emu) => emu.export_save_state(),
-            _ => String::new(),
+            CoreType::Gb(emu) => emu.export_save_state(),
+            CoreType::Gg(emu) => emu.export_save_state(),
+            CoreType::None => String::new(),
         }
     }
 
@@ -315,7 +365,9 @@ impl EmuWasm {
     pub fn import_save_state(&mut self, json: &str) -> bool {
         match &mut self.core {
             CoreType::Nes(emu) => emu.import_save_state(json),
-            _ => false,
+            CoreType::Gb(emu) => emu.import_save_state(json),
+            CoreType::Gg(emu) => emu.import_save_state(json),
+            CoreType::None => false,
         }
     }
 

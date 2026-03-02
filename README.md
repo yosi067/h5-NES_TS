@@ -1,6 +1,6 @@
 # H5-EMU 多平台復古遊戲模擬器
 
-一個使用 HTML5 Canvas + TypeScript 前端搭配 Rust/WebAssembly 核心開發的多平台復古遊戲模擬器，目前支援 **NES (FC)** 與 **Game Boy (DMG)**。
+一個使用 HTML5 Canvas + TypeScript 前端搭配 Rust/WebAssembly 核心開發的多平台復古遊戲模擬器，目前支援 **NES (FC)**、**Game Boy (DMG)** 與 **Game Gear / Master System**。
 
 ---
 
@@ -9,17 +9,20 @@
 | 平台 | 解析度 | CPU | 幀率 | 音頻聲道 | 狀態 |
 |------|--------|-----|------|----------|------|
 | **NES / FC** | 256×240 | 6502 (1.789 MHz) | 60.0988 fps | 5 (2 方波 + 三角 + 雜訊 + DMC) | ✅ 完整支援 |
-| **Game Boy (DMG)** | 160×144 | LR35902 (4.194 MHz) | 59.7275 fps | 4 (2 方波 + 波形 + 雜訊) | ✅ 新增支援 |
-| Game Gear | — | — | — | — | 🔮 規劃中 |
+| **Game Boy (DMG)** | 160×144 | LR35902 (4.194 MHz) | 59.7275 fps | 4 (2 方波 + 波形 + 雜訊) | ✅ 完整支援 |
+| **Game Gear** | 160×144 (內部 256×192) | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊, GG 立體聲) | ✅ 新增支援 |
+| **Master System** | 256×192 | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊) | ✅ 新增支援 |
 | SFC / SNES | — | — | — | — | 🔮 規劃中 |
 
 ### 自動偵測 ROM 格式
 
-載入 ROM 檔案時，模擬器會自動判別格式：
+載入 ROM 檔案時，模擬器會根據副檔名與檔案標頭自動判別格式：
 - 檔案開頭為 `NES\x1A` (iNES 標頭) → **NES 核心**
-- 其他 → **Game Boy 核心**
+- 副檔名 `.gg` → **Game Gear 核心** (160×144 GG 視窗裁切)
+- 副檔名 `.sms` → **Master System 核心** (256×192 全畫面)
+- 其他 (`.gb` / `.gbc`) → **Game Boy 核心**
 
-無需手動選擇平台，選擇 `.nes` 或 `.gb` 遊戲即可直接開始。
+無需手動選擇平台，選擇對應副檔名的遊戲即可直接開始。
 
 ---
 
@@ -81,6 +84,13 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 - 計時器 (DIV/TIMA/TMA/TAC)
 - Joypad 輸入 (與 NES 共用按鍵映射)
 
+### Game Gear / Master System — 🆕 最新新增
+- 完整的 Zilog Z80 CPU 指令集 (含 DD/FD/ED/CB 全部前綴指令，約 2,965 行 Rust)
+- VDP 掃描線渲染 (256×192 內部，GG 裁切為 160×144)
+- PSG SN76489 音頻 (3 方波 + 雜訊，GG 立體聲)
+- Sega Mapper 記憶體映射
+- GG / SMS 雙模式支援 (Port $00 bit 0 區分)
+
 ---
 
 ## 🔧 最新更新 (2026-03-01) — Phase 2: Game Boy (DMG) 核心與多平台統一架構
@@ -140,6 +150,80 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 - **Active-low 邏輯**：bit = 0 表示按下、1 表示放開
 - **IRQ 偵測**：高到低轉換 (按鈕按下) 時請求 Joypad 中斷
 
+### 🟠 Game Gear / Master System 完整核心實作
+
+在 NES + GB 核心之外，新增完整的 Game Gear / Master System 模擬核心（約 2,965 行 Rust），基於 Zilog Z80 CPU 與 TMS9918 衍生 VDP 實現全硬體模擬。
+
+#### Zilog Z80 CPU (`gg/cpu.rs` + `gg/emulator.rs`, 1,771 行)
+- **暫存器**：A/F/B/C/D/E/H/L (8-bit)、SP/PC/IX/IY (16-bit)、影子組 A'/F'/B'/C'/D'/E'/H'/L'
+- **16 位元暫存器對**：AF/BC/DE/HL、AF'/BC'/DE'/HL'、IX/IY
+- **旗標操作**：S (Sign)、Z (Zero)、H (Half-Carry)、P/V (Parity/Overflow)、N (Subtract)、C (Carry) — F 暫存器 bit 7~0
+- **中斷模式**：IM 0 / IM 1 / IM 2、IFF1/IFF2 翻轉旗標、NMI 不可遮蔽中斷
+- **指令集**：完整 Z80 opcodes 含 4 組前綴
+  - 基本指令 (0x00~0xFF)：載入、算術、邏輯、跳轉、呼叫/返回、I/O、區塊操作
+  - CB 前綴 (位元操作)：RLC/RRC/RL/RR/SLA/SRA/SLL/SRL/BIT/RES/SET
+  - DD 前綴 (IX 暫存器)：所有 HL 操作替換為 IX+d
+  - FD 前綴 (IY 暫存器)：所有 HL 操作替換為 IY+d
+  - ED 前綴 (擴展指令)：LDIR/LDDR/CPIR/CPDR/INI/IND/INIR/INDR/OUTI/OUTD/OTIR/OTDR、16-bit 算術 (ADC/SBC HL)、I/R 暫存器存取、RETI/RETN
+  - DD CB / FD CB 前綴 (IX/IY 位元操作)：含 undocumented opcodes
+- **ALU 運算**：ADD/ADC/SUB/SBC/AND/XOR/OR/CP/INC/DEC/DAA/CPL/NEG/CCF/SCF
+- **DAA 精確實作**：採用 MAME/ZEXALL 公式，H 旗標使用 `(original_a ^ corrected_a) & 0x10`
+- **區塊操作**：LDI/LDD/LDIR/LDDR (記憶體搬移)、CPI/CPD/CPIR/CPDR (記憶體搜尋)、INI/IND/INIR/INDR (I/O 輸入)、OUTI/OUTD/OTIR/OTDR (I/O 輸出)
+- **INI/IND 修正**：B 遞減在 mem_write 之前執行（符合 Z80 硬體時序）
+- **RETN undocumented**：0xED 0x5D/0x6D/0x7D 作為 RETN 別名
+
+#### VDP 掃描線渲染器 (`gg/vdp.rs`, 593 行)
+- **Mode 4 渲染**：TMS9918 衍生，SMS/GG 主要顯示模式
+- **解析度**：內部 256×192，GG 模式裁切為 160×144 (水平偏移 48px、垂直偏移 24px)
+- **Name Table**：基底位址 = `(reg[2] & 0x0E) << 10`，32×28 tiles (每 tile 2 bytes)
+- **背景渲染**：水平/垂直捲軸、每 tile 可翻轉 X/Y、前景優先級 bit
+- **精靈渲染**：最多 64 個精靈 (OAM)、每行最多 8 個、8×8 / 8×16 模式、Y 座標環繞 (Y >= 0xD1 時 wrap 到畫面頂部)
+- **調色盤**：CRAM 64 bytes (GG: 4096 色 RGB444, SMS: 64 色 RGB222)
+- **CRAM 寫入**：GG 模式偶數位址暫存、奇數位址與暫存值組合寫入 (12-bit 色彩)
+- **中斷系統**：
+  - Frame IRQ (`line_irq_pending`) 與 Line IRQ (`irq_pending`) 獨立追蹤
+  - 行中斷計數器：每行遞減，歸零時重載 reg[10] 並設定 pending
+  - VBlank 期間行計數器持續重載 reg[10]
+  - `irq_pending` 動態計算：`line_irq_pending | (status & 0x80 != 0)`
+- **V Counter**：0~261 (NTSC 262 行)，行 218 後設定 VBlank 旗標
+- **暫存器**：Mode Control (reg[0]/reg[1])、Name Table (reg[2])、Sprite Table (reg[5])、Sprite Pattern (reg[6])、Overscan Color (reg[7])、H-Scroll (reg[8])、V-Scroll (reg[9])、Line Counter (reg[10])
+- **控制埠 ($BF)**：讀取狀態/清除 IRQ、寫入暫存器/設定 VRAM 位址
+- **幀緩衝區**：256×192×4 bytes (RGBA)，GG 模式從中裁切 160×144
+
+#### PSG SN76489 音頻引擎 (`gg/psg.rs`, 273 行)
+- **Channel 0~2 (方波)**：10-bit 頻率分頻器、50% duty cycle
+- **Channel 3 (雜訊)**：LFSR 線性反饋移位暫存器 (16-bit)、白雜訊/週期雜訊模式、頻率可綁定 Channel 2
+- **GG 立體聲**：Port $06 控制 L/R 聲道混音 (每 channel 2 bits)
+- **音量控制**：4-bit 衰減器 (0=最大, 15=靜音)、衰減表 `[1.0, 0.794, 0.631, ...]`
+- **時脈分頻**：Z80 3.58 MHz → PSG 以 16 分頻 tick
+- **分數累加器**：精確的 tick 時序對齊
+- **音頻輸出**：取樣率 44100 Hz，L/R 立體聲混合
+
+#### 卡帶與 Sega Mapper (`gg/cartridge.rs`, 220 行)
+- **ROM 載入**：支援 .gg / .sms 格式，自動處理 512 bytes header 偏移
+- **Sega Mapper**：
+  - $FFFC: RAM mapping control
+  - $FFFD: Bank 0 (slot $0000~$3FFF)
+  - $FFFE: Bank 1 (slot $4000~$7FFF)
+  - $FFFF: Bank 2 (slot $8000~$BFFF)
+- **卡帶 RAM**：最大 32KB，可映射到 $8000~$BFFF
+- **GG/SMS 雙模式**：`is_game_gear` 旗標控制 Port $00 回傳值與 VDP 視窗裁切
+
+#### Joypad 輸入 (`gg/joypad.rs`, 93 行)
+- **Port $DC (Joypad 1)**：Up/Down/Left/Right/Button 1/Button 2 (active-low)
+- **Port $DD (Joypad 2 + 雜項)**：Player 2 方向與按鈕
+- **Port $00 (GG 專用)**：bit 0 = 0 (GG 模式) / 1 (SMS 模式)、bit 6 = Start 按鈕
+- **Active-low 邏輯**：bit = 0 表示按下、1 表示放開
+
+#### I/O 埠映射 (`gg/emulator.rs`)
+- **$7E/$7F**：V Counter / H Counter (讀取)、PSG 資料 (寫入)
+- **$BE/$BF**：VDP 資料/控制埠
+- **$DC/$DD**：Joypad 輸入
+- **$00**：GG 模式識別
+- **$06**：GG 立體聲控制
+- **$3E**：Memory Control
+- **$F0~$F2**：YM2413 FM (不實作，回傳 $FF)
+
 #### 匯流排與記憶體映射 (`gb/emulator.rs`, 804 行)
 - **$0000~$7FFF**：Cartridge ROM (透過 MBC 映射)
 - **$8000~$9FFF**：VRAM (8KB)
@@ -154,28 +238,33 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 
 ### 🔗 統一 WASM 介面 (`EmuWasm`)
 
-採用 **單一 WASM 二進位** 包含 NES + GB 雙核心，使用 Rust enum dispatch：
+採用 **單一 WASM 二進位** 包含 NES + GB + GG 三核心，使用 Rust enum dispatch：
 
 ```rust
 enum CoreType {
     None,
-    Nes(emulator::Emulator),    // NES 核心
-    Gb(gb::emulator::GbEmulator), // GB 核心
+    Nes(emulator::Emulator),       // NES 核心
+    Gb(gb::emulator::GbEmulator),  // GB 核心
+    Gg(gg::emulator::GgEmulator),  // GG/SMS 核心
 }
 ```
 
-- **自動 ROM 偵測**：檢查前 4 bytes 是否為 `NES\x1A` → NES，否則 → GB
-- **統一 API**：`loadRom()` / `frame()` / `setButton()` / `getFrameBufferPtr()` 等所有方法透過 match 委派
-- **新增方法**：`getScreenWidth()` (256/160)、`getScreenHeight()` (240/144)、`getCoreType()` ("nes"/"gb"/"none")
+- **自動 ROM 偵測**：檢查前 4 bytes 是否為 `NES\x1A` → NES，`.gg` → GG，`.sms` → SMS，其他 → GB
+- **專用載入方法**：`loadRom()` (NES/GB 自動偵測)、`loadGgRom()` (Game Gear)、`loadSmsRom()` (Master System)
+- **統一 API**：`frame()` / `setButton()` / `getFrameBufferPtr()` 等所有方法透過 match 委派
+- **動態解析度**：`getScreenWidth()` (256/160)、`getScreenHeight()` (240/144/192)
+- **核心類型**：`getCoreType()` 回傳 `"nes"` / `"gb"` / `"gg"` / `"none"`
+- **存檔/讀取**：`exportSaveState()` / `importSaveState()` 各核心獨立格式
 - **向後相容**：原 `NesWasm` struct 完整保留，不影響舊程式碼
 
 ### 🖥️ 前端多平台適配 (`main.ts`)
 
 - **動態 Canvas 尺寸**：載入 ROM 後根據 `getScreenWidth()` / `getScreenHeight()` 即時調整 Canvas 解析度與 CSS `aspect-ratio`
-- **動態幀率**：NES 60.0988 fps / GB 59.7275 fps 自動切換
-- **ROM 列表系統標籤**：NES 遊戲顯示紅色 `NES` 標籤，GB 遊戲顯示綠色 `GB` 標籤與 🟢 圖示
-- **存檔隔離**：LocalStorage key 含核心類型前綴 (`emu_savestate_nes_0` / `emu_savestate_gb_0`)
-- **檔案上傳**：支援 `.nes` / `.gb` / `.gbc` 副檔名
+- **動態幀率**：NES 60.0988 fps / GB 59.7275 fps / GG 59.9227 fps 自動切換
+- **ROM 列表系統標籤**：NES 遊戲顯示紅色 `NES` 標籤，GB 遊戲顯示綠色 🟢 `GB` 標籤，GG 遊戲顯示橙色 🟠 `GG` 標籤，SMS 遊戲顯示藍色 🔵 `SMS` 標籤
+- **存檔隔離**：LocalStorage key 含核心類型前綴 (`emu_savestate_nes_0` / `emu_savestate_gb_0` / `emu_savestate_gg_0`)
+- **檔案上傳**：支援 `.nes` / `.gb` / `.gbc` / `.gg` / `.sms` 副檔名
+- **ROM 載入路由**：根據副檔名自動選擇 `loadRom()` / `loadGgRom()` / `loadSmsRom()`
 
 ### 🐛 Game Boy Joypad 方向鍵修正
 
@@ -187,18 +276,82 @@ enum CoreType {
 
 ### 🔧 基礎設施更新
 
-- **Vite 配置** (`vite.config.ts`)：build 時複製 `.gb` / `.gbc` 檔案到輸出目錄
-- **HTML** (`index.html`)：檔案上傳接受 `.gb/.gbc`、ROM 系統標籤 CSS、品牌名更新為 H5-EMU
+- **Vite 配置** (`vite.config.ts`)：build 時複製 `.gb` / `.gbc` / `.gg` / `.sms` 檔案到輸出目錄
+- **HTML** (`index.html`)：檔案上傳接受 `.gb/.gbc/.gg/.sms`、ROM 系統標籤 CSS、品牌名更新為 H5-EMU
 - **WASM 建置**：`wasm-pack build --target web --out-dir ../src/wasm` 同時輸出到 `src/wasm/` 與 `pkg/`
 
-### 🎮 遊戲列表更新 (35 款：NES 32 + GB 3)
+### 🎮 遊戲列表更新 (42 款：NES 32 + GB 4 + GG 5 + SMS 1)
 
 NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛克人 6 / FF III / 薩爾達傳說 / 雙截龍 3 / 聖鈴傳說 / 冒險島 1~3 / 迷宮組曲 / Captain Tsubasa II / 熱血系列 ×9 / 龍珠 Z 系列 ×4 / Zombie Hunter / 五子棋 / 台灣麻將 / 150 合 1 / 1200 合 1
 
-🟢 Game Boy (3 款新增)：
+🟢 Game Boy (4 款)：
 - Super Mario Land 2: 6 Golden Coins (超級瑪利歐大陸 2)
 - 口袋妖怪黃 (繁體中文加強版)
 - 聖劍傳說 (簡體中文版)
+- 熱鬥拳皇 96 (簡體中文版)
+
+🟠 Game Gear (5 款新增)：
+- Ninku 忍空 (英文翻譯版)
+- Battletoads 忍者蛙
+- Captain America 美國隊長
+- Legend of Illusion 米老鼠幻影傳說
+- Sonic Drift 2 音速小子賽車 2
+
+🔵 Master System (1 款新增)：
+- Sonic The Hedgehog 2 音速小子 2
+
+---
+
+## 🔧 最新更新 — Phase 3: Game Gear / Master System 核心與 VDP/Z80 精度修正
+
+### 🎮 Game Gear / Master System 完整核心實作
+
+在 NES + GB 核心之外，新增完整的 Game Gear 與 Master System 模擬核心，共 2,965 行 Rust 程式碼，分為 7 個模組。
+
+**核心特點**：
+- 單一核心同時支援 GG (160×144) 與 SMS (256×192) 兩種模式
+- Z80 CPU 完整指令集含所有前綴與 undocumented opcodes
+- VDP Mode 4 逐行渲染，精確的中斷時序
+- PSG SN76489 音頻，GG 立體聲混音
+- Sega Mapper 記憶體映射 ($FFFC~$FFFF 控制暫存器)
+
+### 🎯 VDP 顯示修正 (4 項)
+
+#### 1. Line IRQ / Frame IRQ 獨立追蹤
+**問題**：部分遊戲捲軸與 HUD 閃爍或渲染位置錯誤。
+**原因**：行中斷與幀中斷共用 `irq_pending` 旗標，導致讀取狀態時互相清除。
+**處理**：新增 `line_irq_pending` 獨立追蹤行中斷，`irq_pending` 改為動態計算 `line_irq_pending | (status & 0x80 != 0)`。
+
+#### 2. CRAM 寫入邏輯重寫
+**問題**：色彩渲染異常，部分遊戲畫面色盤錯誤。
+**原因**：CRAM latch 狀態機過於複雜，與實際 GG 硬體行為不符。
+**處理**：移除 `cram_latch_active` 狀態機，改為直接以 VRAM 寫入位址的奇偶判斷：偶數位址暫存、奇數位址組合寫入 12-bit RGB444 色彩。
+
+#### 3. 掃描線時序重寫
+**問題**：行中斷計數器重載時機錯誤，導致 raster effect 失敗。
+**原因**：VBlank 期間行計數器未持續重載 reg[10]，V counter 更新順序不正確。
+**處理**：VBlank 期間每行重載 reg[10]；V counter 在行遞增之後更新；可見行的行計數器歸零時立即重載並設定 pending。
+
+#### 4. 精靈 Y 座標環繞
+**問題**：GG 模式下某些精靈消失或位置錯誤。
+**原因**：Y 座標 >= 0xD1 (209) 的精靈應 wrap 到畫面頂部但未處理。
+**處理**：使用 `(y_raw + 1) % 256` 計算實際 Y，精靈跨畫面頂部時正確計算行內偏移。
+
+### 🎯 Z80 CPU 修正 (3 項)
+
+#### 5. DAA H 旗標精確修正
+**問題**：部分遊戲在需要 BCD 運算的場景行為異常 (如 GG 忍開頭動畫崩潰)。
+**原因**：DAA 指令的 Half-Carry 旗標計算方式不正確。
+**處理**：採用 MAME / ZEXALL 標準公式：`H = ((original_a ^ corrected_a) & 0x10) != 0`，確保與真實 Z80 硬體行為一致。
+
+#### 6. INI/IND B 遞減時序
+**問題**：Defenders of Oasis 等遊戲無法顯示選單。
+**原因**：INI/IND 指令中 B 暫存器的遞減發生在 mem_write 之後，不符合 Z80 硬體時序。
+**處理**：調整為 read port → decrement B → write memory 的正確順序。
+
+#### 7. RETN 未文件化 opcodes
+**問題**：少數遊戲使用 0xED 前綴的未文件化 RETN 別名。
+**處理**：新增 0xED 0x5D / 0x6D / 0x7D 作為 RETN (等同 0x45)，復原 IFF1 = IFF2 並從堆疊返回。
 
 ---
 
@@ -400,9 +553,9 @@ npm run build
 ```
 h5-NES_TS/
 ├── public/
-│   └── roms.json          # ROM 列表配置 (NES + GB)
-├── roms/                   # ROM 遊戲檔案 (.nes / .gb)
-├── nes-wasm/              # Rust/WASM 核心 (單一二進位，雙平台)
+│   └── roms.json          # ROM 列表配置 (NES + GB + GG + SMS)
+├── roms/                   # ROM 遊戲檔案 (.nes / .gb / .gg / .sms)
+├── nes-wasm/              # Rust/WASM 核心 (單一二進位，三平台)
 │   └── src/
 │       ├── lib.rs         # WASM 入口 (EmuWasm 統一介面 + CoreType 分派)
 │       ├── emulator.rs    # NES 模擬器主迴圈
@@ -413,15 +566,23 @@ h5-NES_TS/
 │       ├── cartridge.rs   # NES 卡帶載入
 │       ├── controller.rs  # NES 控制器
 │       ├── mappers.rs     # NES 18 種 Mapper 實作
-│       └── gb/            # 🟢 Game Boy DMG 核心 (2,356 行)
-│           ├── mod.rs         # 模組宣告 (11 行)
-│           ├── cpu.rs         # Sharp LR35902 暫存器與旗標 (70 行)
-│           ├── emulator.rs    # CPU 指令集 + 匯流排 + 整合 (804 行)
-│           ├── ppu.rs         # 掃描線渲染器 160×144 (405 行)
-│           ├── apu.rs         # 4 聲道音頻引擎 (611 行)
-│           ├── cartridge.rs   # MBC0/1/3/5 記憶體映射 (280 行)
-│           ├── timer.rs       # DIV/TIMA 計時器 (96 行)
-│           └── joypad.rs      # 按鈕矩陣輸入 (79 行)
+│       ├── gb/            # 🟢 Game Boy DMG 核心 (2,356 行)
+│       │   ├── mod.rs         # 模組宣告 (11 行)
+│       │   ├── cpu.rs         # Sharp LR35902 暫存器與旗標 (70 行)
+│       │   ├── emulator.rs    # CPU 指令集 + 匯流排 + 整合 (804 行)
+│       │   ├── ppu.rs         # 掃描線渲染器 160×144 (405 行)
+│       │   ├── apu.rs         # 4 聲道音頻引擎 (611 行)
+│       │   ├── cartridge.rs   # MBC0/1/3/5 記憶體映射 (280 行)
+│       │   ├── timer.rs       # DIV/TIMA 計時器 (96 行)
+│       │   └── joypad.rs      # 按鈕矩陣輸入 (79 行)
+│       └── gg/            # 🟠 Game Gear / SMS 核心 (2,965 行)
+│           ├── mod.rs         # 模組宣告 (15 行)
+│           ├── cpu.rs         # Z80 暫存器與旗標 (121 行)
+│           ├── emulator.rs    # Z80 指令集 + I/O + 匯流排 + 整合 (1,650 行)
+│           ├── vdp.rs         # TMS9918 VDP 掃描線渲染 (593 行)
+│           ├── psg.rs         # SN76489 PSG 音頻引擎 (273 行)
+│           ├── cartridge.rs   # Sega Mapper 記憶體映射 (220 行)
+│           └── joypad.rs      # Port $DC/$DD/$00 輸入 (93 行)
 ├── src/
 │   ├── main.ts            # 應用程式進入點 (多平台適配)
 │   ├── wasm/              # WASM 編譯輸出
@@ -455,6 +616,7 @@ h5-NES_TS/
 | Phase 5 | Mapper | 遊戲相容性測試 | ✅ 完成 |
 | Phase 6 | 手機版 UI | RWD 與虛擬控制器 | ✅ 完成 |
 | Phase 7 | 🟢 Game Boy DMG | GB ROM 可正常遊玩 | ✅ 完成 |
+| Phase 8 | 🟠 Game Gear / SMS | GG + SMS ROM 可正常遊玩 | ✅ 完成 |
 
 ---
 
@@ -472,21 +634,21 @@ h5-NES_TS/
 ├─────────┴─────────────────┴───────────────────┴──────────────┤
 │                  EmuWasm (Rust/WASM 統一介面)                 │
 │                                                               │
-│  loadRom() ─── 自動偵測 ROM 格式 (iNES header check)          │
+│  loadRom() ─── 自動偵測 ROM 格式 (副檔名 + iNES header)       │
 │                    │                                          │
-│         ┌──────────┴──────────┐                               │
-│         ▼                     ▼                               │
-│  ┌─────────────┐     ┌──────────────┐                        │
-│  │  NES 核心   │     │  GB 核心     │                        │
-│  │  256×240    │     │  160×144     │                        │
-│  │  60.10 fps  │     │  59.73 fps   │                        │
-│  ├─────────────┤     ├──────────────┤                        │
-│  │ 6502 CPU    │     │ LR35902 CPU  │                        │
-│  │ PPU (BG+SPR)│     │ PPU (BG+W+S) │                        │
-│  │ APU (5ch)   │     │ APU (4ch)    │                        │
-│  │ 18 Mappers  │     │ MBC 0/1/3/5  │                        │
-│  │ Controller  │     │ Joypad       │                        │
-│  └─────────────┘     └──────────────┘                        │
+│         ┌──────────┼──────────┐                               │
+│         ▼          ▼          ▼                               │
+│  ┌─────────────┐ ┌────────────┐ ┌──────────────┐             │
+│  │  NES 核心   │ │  GB 核心   │ │  GG/SMS 核心 │             │
+│  │  256×240    │ │  160×144   │ │ 160×144/     │             │
+│  │  60.10 fps  │ │  59.73 fps │ │  256×192     │             │
+│  ├─────────────┤ ├────────────┤ │  59.92 fps   │             │
+│  │ 6502 CPU    │ │ LR35902    │ ├──────────────┤             │
+│  │ PPU (BG+SPR)│ │ PPU(BG+W+S)│ │ Z80 CPU      │             │
+│  │ APU (5ch)   │ │ APU (4ch)  │ │ VDP Mode 4   │             │
+│  │ 18 Mappers  │ │ MBC 0/1/3/5│ │ PSG (4ch)    │             │
+│  │ Controller  │ │ Joypad     │ │ Sega Mapper  │             │
+│  └─────────────┘ └────────────┘ └──────────────┘             │
 └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -562,3 +724,11 @@ MIT License
 - [RGBDS](https://rgbds.gbdev.io/) - Game Boy 開發工具鏈與組語參考
 - [The Cycle-Accurate Game Boy Docs](https://github.com/AntonioND/giibiiadvance/blob/master/docs/TCAGBD.pdf) - 週期精確技術文件
 - [Imran Nazar's GB in JS](http://imrannazar.com/GameBoy-Emulation-in-JavaScript) - JavaScript Game Boy 模擬器教學
+
+### Game Gear / Master System 參考資料
+- [SMS Power! Technical Docs](https://www.smspower.org/Development/Documents) - SMS/GG 硬體規格總站
+- [Z80 CPU User Manual](http://www.zilog.com/docs/z80/um0080.pdf) - Zilog Z80 官方手冊
+- [Sean Young's Z80 Undocumented](http://www.myquest.nl/z80undocumented/) - Z80 未文件化行為完整記錄
+- [MAME Source](https://github.com/mamedev/mame) - MAME Z80 核心參考實作 (DAA、旗標計算)
+- [SN76489 Application Manual](https://www.smspower.org/Development/SN76489) - PSG 音頻晶片技術手冊
+- [Charles MacDonald's VDP Documentation](https://www.smspower.org/Development/VDPRegisters) - VDP 暫存器與渲染細節

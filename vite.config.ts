@@ -17,9 +17,9 @@ function copyRomsPlugin() {
         
         const files = readdirSync(romsDir);
         files.forEach(file => {
-          // 支援 .nes, .NES, .gb, .gbc 副檔名
+          // 支援 .nes, .NES, .gb, .gbc, .gg, .sms 副檔名
           const lower = file.toLowerCase();
-          if (lower.endsWith('.nes') || lower.endsWith('.gb') || lower.endsWith('.gbc')) {
+          if (lower.endsWith('.nes') || lower.endsWith('.gb') || lower.endsWith('.gbc') || lower.endsWith('.gg') || lower.endsWith('.sms')) {
             copyFileSync(
               resolve(romsDir, file),
               resolve(distRomsDir, file)

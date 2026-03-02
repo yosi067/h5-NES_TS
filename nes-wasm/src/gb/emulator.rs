@@ -801,4 +801,161 @@ impl GbEmulator {
         if pressed { buttons |= 1 << button; } else { buttons &= !(1 << button); }
         self.joypad.set_input(buttons);
     }
+
+    // ===== Save State =====
+
+    fn hex_char(c: u8) -> u8 {
+        match c {
+            b'0'..=b'9' => c - b'0',
+            b'a'..=b'f' => c - b'a' + 10,
+            b'A'..=b'F' => c - b'A' + 10,
+            _ => 0xFF,
+        }
+    }
+
+    /// 匯出存檔（hex 編碼）
+    pub fn export_save_state(&self) -> String {
+        self.export_state_binary().iter().map(|b| format!("{:02x}", b)).collect()
+    }
+
+    /// 匯入存檔
+    pub fn import_save_state(&mut self, hex: &str) -> bool {
+        if hex.len() % 2 != 0 { return false; }
+        let mut data = Vec::with_capacity(hex.len() / 2);
+        let bytes = hex.as_bytes();
+        for i in (0..bytes.len()).step_by(2) {
+            let hi = Self::hex_char(bytes[i]);
+            let lo = Self::hex_char(bytes[i + 1]);
+            if hi == 0xFF || lo == 0xFF { return false; }
+            data.push((hi << 4) | lo);
+        }
+        self.import_state_binary(&data)
+    }
+
+    fn export_state_binary(&self) -> Vec<u8> {
+        let mut d = Vec::new();
+        // Magic + Version
+        d.extend_from_slice(b"GBSW");
+        d.push(1);
+
+        // CPU 暫存器
+        d.push(self.cpu.a); d.push(self.cpu.f);
+        d.push(self.cpu.b); d.push(self.cpu.c);
+        d.push(self.cpu.d); d.push(self.cpu.e);
+        d.push(self.cpu.h); d.push(self.cpu.l);
+        d.extend_from_slice(&self.cpu.sp.to_le_bytes());
+        d.extend_from_slice(&self.cpu.pc.to_le_bytes());
+        d.push(self.cpu.ime as u8);
+        d.push(self.cpu.halted as u8);
+
+        // 系統記憶體
+        d.extend_from_slice(&self.wram);       // 8192 bytes
+        d.extend_from_slice(&self.hram);       // 127 bytes
+        d.push(self.ie_reg);
+        d.push(self.if_reg);
+
+        // PPU 狀態
+        d.push(self.ppu.lcdc); d.push(self.ppu.stat);
+        d.push(self.ppu.scy);  d.push(self.ppu.scx);
+        d.push(self.ppu.ly);   d.push(self.ppu.lyc);
+        d.push(self.ppu.bgp);  d.push(self.ppu.obp0); d.push(self.ppu.obp1);
+        d.push(self.ppu.wy);   d.push(self.ppu.wx);
+        d.push(self.ppu.mode);
+        d.extend_from_slice(&self.ppu.dot.to_le_bytes());
+        d.extend_from_slice(&self.ppu.vram);   // 8192 bytes
+        d.extend_from_slice(&self.ppu.oam);    // 160 bytes
+
+        // Timer 狀態
+        d.extend_from_slice(&self.timer.div_counter.to_le_bytes());
+        d.push(self.timer.tima);
+        d.push(self.timer.tma);
+        d.push(self.timer.tac);
+
+        // 卡帶 RAM（電池存檔）
+        let ram_len = self.cartridge.ram.len() as u32;
+        d.extend_from_slice(&ram_len.to_le_bytes());
+        d.extend_from_slice(&self.cartridge.ram);
+
+        // 卡帶 MBC 狀態
+        d.push(self.cartridge.ram_enabled as u8);
+        d.extend_from_slice(&self.cartridge.rom_bank.to_le_bytes());
+        d.push(self.cartridge.ram_bank);
+        d.push(self.cartridge.banking_mode);
+
+        d
+    }
+
+    fn import_state_binary(&mut self, data: &[u8]) -> bool {
+        if data.len() < 9 || &data[0..4] != b"GBSW" || data[4] != 1 { return false; }
+        let mut p = 5;
+
+        // CPU
+        if p + 12 > data.len() { return false; }
+        self.cpu.a = data[p]; p += 1;
+        self.cpu.f = data[p]; p += 1;
+        self.cpu.b = data[p]; p += 1;
+        self.cpu.c = data[p]; p += 1;
+        self.cpu.d = data[p]; p += 1;
+        self.cpu.e = data[p]; p += 1;
+        self.cpu.h = data[p]; p += 1;
+        self.cpu.l = data[p]; p += 1;
+        self.cpu.sp = u16::from_le_bytes([data[p], data[p+1]]); p += 2;
+        self.cpu.pc = u16::from_le_bytes([data[p], data[p+1]]); p += 2;
+        self.cpu.ime = data[p] != 0; p += 1;
+        self.cpu.halted = data[p] != 0; p += 1;
+        self.cpu.ei_pending = false;
+        self.cpu.halt_bug = false;
+
+        // 系統記憶體
+        if p + 8192 + 127 + 2 > data.len() { return false; }
+        self.wram.copy_from_slice(&data[p..p+8192]); p += 8192;
+        self.hram.copy_from_slice(&data[p..p+127]); p += 127;
+        self.ie_reg = data[p]; p += 1;
+        self.if_reg = data[p]; p += 1;
+
+        // PPU
+        if p + 12 + 4 + 8192 + 160 > data.len() { return false; }
+        self.ppu.lcdc = data[p]; p += 1;
+        self.ppu.stat = data[p]; p += 1;
+        self.ppu.scy = data[p]; p += 1;
+        self.ppu.scx = data[p]; p += 1;
+        self.ppu.ly = data[p]; p += 1;
+        self.ppu.lyc = data[p]; p += 1;
+        self.ppu.bgp = data[p]; p += 1;
+        self.ppu.obp0 = data[p]; p += 1;
+        self.ppu.obp1 = data[p]; p += 1;
+        self.ppu.wy = data[p]; p += 1;
+        self.ppu.wx = data[p]; p += 1;
+        self.ppu.mode = data[p]; p += 1;
+        self.ppu.dot = u32::from_le_bytes([data[p], data[p+1], data[p+2], data[p+3]]); p += 4;
+        self.ppu.vram.copy_from_slice(&data[p..p+8192]); p += 8192;
+        self.ppu.oam.copy_from_slice(&data[p..p+160]); p += 160;
+
+        // Timer
+        if p + 5 > data.len() { return false; }
+        self.timer.div_counter = u16::from_le_bytes([data[p], data[p+1]]); p += 2;
+        self.timer.tima = data[p]; p += 1;
+        self.timer.tma = data[p]; p += 1;
+        self.timer.tac = data[p]; p += 1;
+
+        // 卡帶 RAM
+        if p + 4 > data.len() { return false; }
+        let ram_len = u32::from_le_bytes([data[p], data[p+1], data[p+2], data[p+3]]) as usize; p += 4;
+        if p + ram_len > data.len() { return false; }
+        if ram_len == self.cartridge.ram.len() {
+            self.cartridge.ram.copy_from_slice(&data[p..p+ram_len]);
+        }
+        p += ram_len;
+
+        // 卡帶 MBC
+        if p + 4 > data.len() { return false; }
+        self.cartridge.ram_enabled = data[p] != 0; p += 1;
+        self.cartridge.rom_bank = u16::from_le_bytes([data[p], data[p+1]]); p += 2;
+        self.cartridge.ram_bank = data[p]; p += 1;
+        if p < data.len() {
+            self.cartridge.banking_mode = data[p];
+        }
+
+        true
+    }
 }
