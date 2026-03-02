@@ -62,6 +62,7 @@ let powerLed: HTMLElement | null = null;
 // ===== 音頻設定 =====
 const AUDIO_BUFFER_SIZE = 2048;  // ScriptProcessor 緩衝區大小（~46ms）
 let lastAudioSample: number = 0;  // 上一個有效取樣值，用於平滑填充
+let audioMuted: boolean = false;    // 靜音旗標（同時停用 APU IRQ）
 
 // ===== 音頻環形緩衝區 =====
 // 解耦 WASM 音頻產生與 ScriptProcessor 消費的時序差異
@@ -753,6 +754,9 @@ function setupDesktopControls(): void {
   document.getElementById('btn-reset')?.addEventListener('click', () => nes?.reset());
   document.getElementById('btn-select-game')?.addEventListener('click', showRomSelector);
   
+  // 靜音按鈕
+  document.getElementById('btn-mute')?.addEventListener('click', toggleMute);
+
   // 存檔/讀取按鈕 (電腦版)
   document.getElementById('btn-save-state')?.addEventListener('click', () => {
     if (saveState(0)) {
@@ -784,6 +788,7 @@ function setupDesktopControls(): void {
       showToast('❌ 沒有存檔');
     }
   });
+  document.getElementById('mobile-mute')?.addEventListener('click', toggleMute);
 }
 
 /**
@@ -888,6 +893,12 @@ function drainWasmAudioToRing(): void {
   const available = nes.getAudioBufferLen();
   if (available === 0) return;
 
+  // 靜音時只消費 buffer 不排入環形緩衝區
+  if (audioMuted) {
+    nes.consumeAudioSamples();
+    return;
+  }
+
   // 重要：每次都重新取得 WASM memory 參考（記憶體增長後 buffer 可能 detached）
   const memory = nes.getWasmMemory() as WebAssembly.Memory;
   const ptr = nes.getAudioBufferPtr();
@@ -922,7 +933,7 @@ async function initAudio(): Promise<void> {
     
     scriptProcessor.onaudioprocess = (e) => {
       const output = e.outputBuffer.getChannelData(0);
-      if (!isRunning) {
+      if (!isRunning || audioMuted) {
         output.fill(0);
         return;
       }
@@ -956,6 +967,31 @@ function resumeAudio(): void {
   if (audioContext && audioContext.state === 'suspended') {
     audioContext.resume();
   }
+}
+
+/**
+ * 切換靜音（同時停用 NES APU IRQ，用於除錯畫面問題）
+ */
+function toggleMute(): void {
+  audioMuted = !audioMuted;
+  // 通知 Rust 核心停用/啟用 APU IRQ
+  nes?.setAudioEnabled(!audioMuted);
+
+  // 靜音時清空環形緩衝區，避免殘留聲音
+  if (audioMuted) {
+    ringW = 0;
+    ringR = 0;
+    ringCount = 0;
+    lastAudioSample = 0;
+  }
+
+  // 更新按鈕文字
+  const btn = document.getElementById('btn-mute');
+  if (btn) btn.textContent = audioMuted ? '🔇 靜音 (M)' : '🔊 音頻 (M)';
+  const mobileBtn = document.getElementById('mobile-mute');
+  if (mobileBtn) mobileBtn.textContent = audioMuted ? '🔇' : '🔊';
+
+  showToast(audioMuted ? '🔇 音頻已關閉（APU IRQ 同時停用）' : '🔊 音頻已開啟');
 }
 
 // ===== 存檔系統 =====
@@ -1098,6 +1134,10 @@ function setupKeyboardShortcuts(): void {
     // ESC 鍵返回選擇畫面
     if (e.key === 'Escape') {
       showRomSelector();
+    }
+    // M 鍵切換靜音
+    if (e.key === 'm' || e.key === 'M') {
+      toggleMute();
     }
   });
 }

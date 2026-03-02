@@ -302,7 +302,67 @@ NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛
 
 ---
 
-## 🔧 最新更新 — Phase 3: Game Gear / Master System 核心與 VDP/Z80 精度修正
+## � Bug 修復 (2026-03-02) — NES CPU 時序 Off-by-One 修正
+
+### 問題現象
+
+**Zombie Hunter (Japan).nes** 進入遊戲後出現嚴重的**場景跳動**與**文字部分顯示錯誤**。
+
+### 排查過程
+
+1. **懷疑 APU**：新增靜音 / 停用 APU IRQ 功能進行隔離測試 → 靜音後問題仍然存在，排除 APU 干擾
+2. **排查 PPU scroll**：Loopy scroll 實作 (`increment_scroll_x`/`increment_scroll_y`/`transfer_address_x`/`transfer_address_y`) 與 nesdev wiki 一致，無誤
+3. **排查 Mapper 1 (MMC1)**：shift register、PRG/CHR bank switching 邏輯正確
+4. **定位 CPU 時序**：發現 `cpu_clock()` 中存在 **off-by-one** 錯誤
+
+### 根本原因
+
+在 `emulator.rs` 的 `cpu_clock()` 函式中，CPU 指令的時鐘消耗計算有一個 off-by-one bug。每條指令的 **執行本身就佔用一個 CPU 時鐘週期**（即呼叫 `cpu_clock()` 的那次），但 `cycles` 計數器未扣除此消耗。
+
+以 `NOP`（正確值為 2 cycles）為例，修正前的執行流程：
+
+| cpu_clock 呼叫 | cycles 值 | 動作 |
+|---------------|-----------|------|
+| #1 | 0 → 執行 NOP → cycles = 2 | 取指+執行 |
+| #2 | 2 → 1 | 等待（消耗 cycle） |
+| #3 | 1 → 0 | 等待（消耗 cycle） |
+| #4 | 0 → 執行下一條指令 | ← 實際花了 **3** cycles |
+
+**所有指令、NMI、IRQ 都多消耗了 1 個 CPU 週期**，導致：
+- 平均指令 ~3.5 cycle → 實際 ~4.5 cycle
+- CPU 吞吐量下降約 **22%**
+- VBlank 可用的 ~2273 CPU cycles 內能完成的工作大幅減少
+- **Zombie Hunter 的 VBlank handler 無法在時限內完成 scroll 更新 → 場景跳動、文字渲染不完整**
+
+### 修正方式
+
+在 `cpu_clock()` 中，每次執行指令 / NMI / IRQ 後，對 `cycles` 執行 `saturating_sub(1)` 扣除當前呼叫本身消耗的週期：
+
+```rust
+fn cpu_clock(&mut self) {
+    if self.cpu.cycles > 0 {
+        self.cpu.cycles -= 1;
+        return;
+    }
+    // ... 執行指令 / NMI / IRQ ...
+    self.execute_cpu_instruction(opcode);
+    // 扣除本次呼叫消耗的 1 cycle
+    self.cpu.cycles = self.cpu.cycles.saturating_sub(1);
+}
+```
+
+修正後 NOP 正確僅耗時 2 cycles，所有指令回到正確時序，Zombie Hunter 場景跳動問題完全解決。
+
+### 附帶功能：靜音 / 停用 APU 切換
+
+排查過程中新增的除錯功能保留為正式功能：
+- **桌機**：點擊「🔊 音頻 (M)」按鈕或按 `M` 鍵切換
+- **手機**：中間功能列的 🔊 按鈕
+- 靜音時同時停用 Rust 核心的 APU IRQ（`audio_enabled` 旗標），可作為未來除錯其他遊戲的工具
+
+---
+
+## �🔧 最新更新 — Phase 3: Game Gear / Master System 核心與 VDP/Z80 精度修正
 
 ### 🎮 Game Gear / Master System 完整核心實作
 

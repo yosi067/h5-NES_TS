@@ -321,6 +321,15 @@ impl EmuWasm {
         }
     }
 
+    /// 設定音頻啟用/停用（停用時 NES APU IRQ 也會被抑制，用於除錯）
+    #[wasm_bindgen(js_name = "setAudioEnabled")]
+    pub fn set_audio_enabled(&mut self, enabled: bool) {
+        match &mut self.core {
+            CoreType::Nes(emu) => { emu.audio_enabled = enabled; }
+            _ => {}
+        }
+    }
+
     #[wasm_bindgen(js_name = "getAudioBufferPtr")]
     pub fn get_audio_buffer_ptr(&self) -> *const f32 {
         match &self.core {

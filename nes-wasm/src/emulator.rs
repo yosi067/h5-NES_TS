@@ -41,6 +41,9 @@ pub struct Emulator {
 
     /// 系統主時鐘計數器
     system_clock: u64,
+
+    /// 音頻啟用旗標 (false = 靜音且停用 APU IRQ)
+    pub audio_enabled: bool,
 }
 
 impl Emulator {
@@ -55,6 +58,7 @@ impl Emulator {
             ctrl1: Controller::new(),
             ctrl2: Controller::new(),
             system_clock: 0,
+            audio_enabled: true,
         }
     }
 
@@ -134,8 +138,8 @@ impl Emulator {
                 self.apu.dmc_provide_sample(data);
             }
 
-            // APU IRQ → CPU
-            if self.apu.check_irq() {
+            // APU IRQ → CPU（音頻停用時不產生 IRQ）
+            if self.audio_enabled && self.apu.check_irq() {
                 self.cpu.irq_pending = true;
             }
 
@@ -174,6 +178,8 @@ impl Emulator {
         if self.cpu.nmi_pending {
             self.cpu.nmi_pending = false;
             self.do_nmi();
+            // 扣除本次時鐘週期（執行週期本身消耗 1 cycle）
+            self.cpu.cycles = self.cpu.cycles.saturating_sub(1);
             return;
         }
 
@@ -181,6 +187,8 @@ impl Emulator {
         if self.cpu.irq_pending && (self.cpu.status & 0x04 == 0) {
             self.cpu.irq_pending = false;
             self.do_irq();
+            // 扣除本次時鐘週期
+            self.cpu.cycles = self.cpu.cycles.saturating_sub(1);
             return;
         }
 
@@ -188,6 +196,8 @@ impl Emulator {
         let opcode = self.bus_read(self.cpu.pc);
         self.cpu.pc = self.cpu.pc.wrapping_add(1);
         self.execute_cpu_instruction(opcode);
+        // 扣除本次時鐘週期（fetch + execute 本身消耗 1 cycle）
+        self.cpu.cycles = self.cpu.cycles.saturating_sub(1);
     }
 
     /// 匯流排讀取
