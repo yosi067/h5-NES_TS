@@ -127,6 +127,46 @@
     {
       "name": "1200 合 1",
       "file": "1200-in-1.nes"
+    },
+    {
+      "name": "🟢 Super Mario Land 2: 6 Golden Coins (超級瑪利歐大陸 2)",
+      "file": "Super Mario Land 2 - 6 Golden Coins (USA, Europe) (Rev 2).gb"
+    },
+    {
+      "name": "🟢 口袋妖怪黃 (繁體中文加強版)",
+      "file": "口袋妖怪黃 (繁) (加強版) (unknown).gb"
+    },
+    {
+      "name": "🟢 聖劍傳說 (簡體中文版)",
+      "file": "圣剑传说(简)(v1.1)(RangerMarsh)(4Mb).gb"
+    },
+    {
+      "name": "� 熱鬥拳皇 96 (簡體中文版)",
+      "file": "热斗拳皇96(简)(v1.0)(Stephen+湮没骑士の镇魂歌+落榜の美术生)(8Mb).gb"
+    },
+    {
+      "name": "🟠 Ninku 忍空 (英文翻譯版)",
+      "file": "Ninku (Japan) [T-En by Some Good Shit Translations v0.1] [i].gg"
+    },
+    {
+      "name": "🟠 Battletoads 忍者蛙",
+      "file": "Battletoads (U) [a1].gg"
+    },
+    {
+      "name": "🟠 Captain America 美國隊長",
+      "file": "Captain America and the Avengers (U) [!].gg"
+    },
+    {
+      "name": "🟠 Legend of Illusion 米老鼠幻影傳說",
+      "file": "Legend of Illusion Starring Mickey Mouse (J).gg"
+    },
+    {
+      "name": "🟠 Sonic Drift 2 音速小子賽車 2",
+      "file": "Sonic Drift 2 (World).gg"
+    },
+    {
+      "name": "🔵 Sonic The Hedgehog 2 音速小子 2",
+      "file": "Sonic The Hedgehog 2 (Europe, Brazil) (En) (Rev 1).sms"
     }
   ]
 }

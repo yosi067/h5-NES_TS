@@ -4,7 +4,7 @@
   "description": "NES 模擬器 - HTML5/TypeScript 實作",
   "type": "module",
   "scripts": {
-    "wasm:build": "cd nes-wasm && wasm-pack build --target web",
+    "wasm:build": "cd nes-wasm && wasm-pack build --target web --out-dir ../src/wasm",
     "dev": "vite",
     "build": "npm run wasm:build && tsc && vite build",
     "preview": "vite preview",
