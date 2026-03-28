@@ -1410,7 +1410,7 @@ window.debugStepTrace = (n: number) => nes ? nes.debugStepTrace(n) : 'No emulato
 window.debugFrameTrace = () => nes ? nes.debugFrameTrace() : 'No emulator';
 window.debugRunFrames = (n: number) => nes ? nes.debugRunFrames(n) : 'No emulator';
 window.debugRunInstructions = (n: number) => nes ? nes.debugRunInstructions(n) : 'No emulator';
-window.debugReadMem = (b: number, a: number) => nes ? nes.debugReadMem(b, a) : 'No emulator';
+window.debugReadMem = (b: number, a: number, count: number = 16) => nes ? nes.debugReadMem(b, a, count) : 'No emulator';
 window.debugRunThenTrace = (f: number, t: number) => nes ? nes.debugRunThenTrace(f, t) : 'No emulator';
 window.debugReadRomRange = (b: number, s: number, l: number) => nes ? nes.debugReadRomRange(b, s, l) : 'No emulator';
 window.debugRunUntilPcInRange = (b: number, lo: number, hi: number, mf: number, tc: number) => nes ? nes.debugRunUntilPcInRange(b, lo, hi, mf, tc) : 'No emulator';
