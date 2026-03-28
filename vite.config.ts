@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { copyFileSync, mkdirSync, readdirSync, existsSync } from 'fs';
+import { copyFileSync, mkdirSync, readdirSync, existsSync, readFileSync, statSync } from 'fs';
 
 // 複製 roms 目錄的 plugin
 function copyRomsPlugin() {
@@ -17,9 +17,9 @@ function copyRomsPlugin() {
         
         const files = readdirSync(romsDir);
         files.forEach(file => {
-          // 支援 .nes, .NES, .gb, .gbc, .gg, .sms 副檔名
+          // 支援 .nes, .NES, .gb, .gbc, .gg, .sms, .smc, .sfc 副檔名
           const lower = file.toLowerCase();
-          if (lower.endsWith('.nes') || lower.endsWith('.gb') || lower.endsWith('.gbc') || lower.endsWith('.gg') || lower.endsWith('.sms')) {
+          if (lower.endsWith('.nes') || lower.endsWith('.gb') || lower.endsWith('.gbc') || lower.endsWith('.gg') || lower.endsWith('.sms') || lower.endsWith('.smc') || lower.endsWith('.sfc')) {
             copyFileSync(
               resolve(romsDir, file),
               resolve(distRomsDir, file)
@@ -28,6 +28,31 @@ function copyRomsPlugin() {
           }
         });
       }
+    }
+  };
+}
+
+// 在開發模式下正確處理 .smc/.sfc ROM 檔案的二進位請求
+// (Vite 不認識這些副檔名，會誤觸 SPA fallback 回傳 index.html)
+function serveRomBinaryPlugin() {
+  return {
+    name: 'serve-rom-binary',
+    configureServer(server: any) {
+      server.middlewares.use((req: any, res: any, next: any) => {
+        const url = decodeURIComponent(req.url || '');
+        const lower = url.toLowerCase();
+        if (lower.startsWith('/roms/') && (lower.endsWith('.smc') || lower.endsWith('.sfc'))) {
+          const filePath = resolve(__dirname, url.slice(1)); // 去掉開頭的 /
+          if (existsSync(filePath)) {
+            const data = readFileSync(filePath);
+            res.setHeader('Content-Type', 'application/octet-stream');
+            res.setHeader('Content-Length', data.length);
+            res.end(data);
+            return;
+          }
+        }
+        next();
+      });
     }
   };
 }
@@ -52,8 +77,8 @@ export default defineConfig({
       allow: ['..']
     }
   },
-  // 將 WASM 檔案視為靜態資源
-  assetsInclude: ['**/*.wasm'],
+  // 將 WASM 及 ROM 檔案視為靜態資源
+  assetsInclude: ['**/*.wasm', '**/*.smc', '**/*.sfc'],
   // 將 public 目錄設為根目錄
   publicDir: 'public',
   build: {
@@ -65,7 +90,7 @@ export default defineConfig({
       },
     },
   },
-  plugins: [copyRomsPlugin()],
+  plugins: [copyRomsPlugin(), serveRomBinaryPlugin()],
   test: {
     globals: true,
     environment: 'jsdom',

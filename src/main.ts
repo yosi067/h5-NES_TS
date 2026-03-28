@@ -23,7 +23,7 @@ interface RomListResponse {
   roms: RomInfo[];
 }
 
-// 控制器按鈕編號（與 Rust 端一致）
+// 控制器按鈕編號（與 Rust 端一致 - NES）
 const ControllerButton = {
   A: 0,
   B: 1,
@@ -35,6 +35,27 @@ const ControllerButton = {
   Right: 7,
 } as const;
 type ControllerButton = typeof ControllerButton[keyof typeof ControllerButton];
+
+// SNES 控制器按鈕編號（與 Rust controller.rs 一致）
+const SnesButton = {
+  B: 0,
+  Y: 1,
+  Select: 2,
+  Start: 3,
+  Up: 4,
+  Down: 5,
+  Left: 6,
+  Right: 7,
+  A: 8,
+  X: 9,
+  L: 10,
+  R: 11,
+} as const;
+
+// 判斷當前是否為 SNES 核心
+function isSnesCore(): boolean {
+  return nes?.getCoreType() === 'snes';
+}
 
 // ===== 全域變數 =====
 
@@ -136,19 +157,53 @@ const KEYBOARD_MAP_P1: Record<string, ControllerButton> = {
   'ArrowRight': ControllerButton.Right,
 };
 
+/** SNES 鍵盤映射 (玩家 1) */
+const KEYBOARD_MAP_SNES: Record<string, number> = {
+  'KeyZ': SnesButton.A,
+  'KeyX': SnesButton.B,
+  'KeyA': SnesButton.Y,
+  'KeyS': SnesButton.X,
+  'KeyQ': SnesButton.L,
+  'KeyW': SnesButton.R,
+  'ShiftRight': SnesButton.Select,
+  'Enter': SnesButton.Start,
+  'ArrowUp': SnesButton.Up,
+  'ArrowDown': SnesButton.Down,
+  'ArrowLeft': SnesButton.Left,
+  'ArrowRight': SnesButton.Right,
+};
+
 function setupKeyboardInput(): void {
   window.addEventListener('keydown', (e) => {
-    const button = KEYBOARD_MAP_P1[e.code];
-    if (button !== undefined && nes) {
-      nes.setButton(0, button, true);
-      e.preventDefault();
+    if (!nes) return;
+    if (isSnesCore()) {
+      const button = KEYBOARD_MAP_SNES[e.code];
+      if (button !== undefined) {
+        nes.setButton(0, button, true);
+        e.preventDefault();
+      }
+    } else {
+      const button = KEYBOARD_MAP_P1[e.code];
+      if (button !== undefined) {
+        nes.setButton(0, button, true);
+        e.preventDefault();
+      }
     }
   });
   window.addEventListener('keyup', (e) => {
-    const button = KEYBOARD_MAP_P1[e.code];
-    if (button !== undefined && nes) {
-      nes.setButton(0, button, false);
-      e.preventDefault();
+    if (!nes) return;
+    if (isSnesCore()) {
+      const button = KEYBOARD_MAP_SNES[e.code];
+      if (button !== undefined) {
+        nes.setButton(0, button, false);
+        e.preventDefault();
+      }
+    } else {
+      const button = KEYBOARD_MAP_P1[e.code];
+      if (button !== undefined) {
+        nes.setButton(0, button, false);
+        e.preventDefault();
+      }
     }
   });
 }
@@ -215,12 +270,15 @@ function renderRomList(roms: RomInfo[]): void {
     const lower = rom.file.toLowerCase();
     const isGb = lower.endsWith('.gb') || lower.endsWith('.gbc');
     const isGg = lower.endsWith('.gg') || lower.endsWith('.sms');
-    const icon = isGg ? '🟠' : isGb ? '🟢' : '🎮';
-    const systemTag = isGg
-      ? '<span class="rom-system gg">GG</span>'
-      : isGb
-        ? '<span class="rom-system gb">GB</span>'
-        : '<span class="rom-system nes">NES</span>';
+    const isSnes = lower.endsWith('.smc') || lower.endsWith('.sfc');
+    const icon = isSnes ? '🟣' : isGg ? '🟠' : isGb ? '🟢' : '🎮';
+    const systemTag = isSnes
+      ? '<span class="rom-system snes">SNES</span>'
+      : isGg
+        ? '<span class="rom-system gg">GG</span>'
+        : isGb
+          ? '<span class="rom-system gb">GB</span>'
+          : '<span class="rom-system nes">NES</span>';
     return `
       <button class="rom-item" data-index="${index}" data-file="${encodeURIComponent(rom.file)}">
         <span class="rom-icon">${icon}</span>
@@ -288,11 +346,20 @@ function startGame(romData: ArrayBuffer): void {
   
   // 根據副檔名選擇對應的載入方法
   const lower = currentRomFilename.toLowerCase();
+  console.log(`[DEBUG] Loading ROM: "${currentRomFilename}", lower: "${lower}", size: ${romBytes.length}`);
   let loaded = false;
   if (lower.endsWith('.gg')) {
     loaded = nes.loadGgRom(romBytes);
   } else if (lower.endsWith('.sms')) {
     loaded = nes.loadSmsRom(romBytes);
+  } else if (lower.endsWith('.smc') || lower.endsWith('.sfc')) {
+    console.log(`[SNES] Attempting loadSnesRom, data size: ${romBytes.length}, first 4 bytes: ${romBytes[0].toString(16)} ${romBytes[1].toString(16)} ${romBytes[2].toString(16)} ${romBytes[3].toString(16)}`);
+    try {
+      loaded = nes.loadSnesRom(romBytes);
+      console.log(`[SNES] loadSnesRom returned: ${loaded}`);
+    } catch (e) {
+      console.error('[SNES] loadSnesRom threw:', e);
+    }
   } else {
     loaded = nes.loadRom(romBytes);
   }
@@ -315,6 +382,9 @@ function startGame(romData: ArrayBuffer): void {
     
     // 隱藏選擇器，顯示遊戲畫面
     hideRomSelector();
+    
+    // 根據核心類型切換控制器外觀
+    updateControllerLayout();
     
     // 確保音頻系統設定正確
     if (audioContext) {
@@ -826,6 +896,7 @@ function startEmulation(): void {
   const TARGET_FRAME_TIME = 1000 / targetFps;
   let lastFrameTime = performance.now();
   let accumulator = 0;
+  let bootDiagFrameCount = 0;
 
   const frameLoop = (currentTime: number): void => {
     if (!nes || !ctx || !imageData || !isRunning) return;
@@ -841,6 +912,19 @@ function startEmulation(): void {
 
     while (accumulator >= TARGET_FRAME_TIME) {
       nes.frame();
+      bootDiagFrameCount++;
+      // Boot diagnostic: dump state at key frames to find when BRK crash happens
+      if (coreType === 'snes' && (bootDiagFrameCount === 1 || bootDiagFrameCount === 5 ||
+          bootDiagFrameCount === 8 || bootDiagFrameCount === 10 || bootDiagFrameCount === 15 ||
+          bootDiagFrameCount === 20 || bootDiagFrameCount === 30 || bootDiagFrameCount === 60 ||
+          bootDiagFrameCount === 120 || bootDiagFrameCount === 300 || bootDiagFrameCount === 600 ||
+          bootDiagFrameCount === 1200 || bootDiagFrameCount === 1800 ||
+          bootDiagFrameCount === 2400 || bootDiagFrameCount === 3600)) {
+        try {
+          const state = nes.debugState();
+          console.log(`[BOOT DIAG] Frame ${bootDiagFrameCount}:\n${state}`);
+        } catch(e) { /* ignore */ }
+      }
       drainWasmAudioToRing();  // 每幀後排入環形緩衝區，防止 WASM buffer 溢出
       accumulator -= TARGET_FRAME_TIME;
     }
@@ -1109,6 +1193,153 @@ function exportSaveToFile(): void {
   URL.revokeObjectURL(url);
 }
 
+// ===== SNES 控制器設定 =====
+
+/**
+ * 切換虛擬控制器外觀（NES 或 SNES）
+ */
+function updateControllerLayout(): void {
+  const nesCtrl = document.getElementById('nes-controller-area');
+  const snesCtrl = document.getElementById('snes-controller-area');
+  if (isSnesCore()) {
+    if (nesCtrl) nesCtrl.style.display = 'none';
+    if (snesCtrl) snesCtrl.style.display = 'flex';
+    setupSnesButtons();
+  } else {
+    if (nesCtrl) nesCtrl.style.display = 'flex';
+    if (snesCtrl) snesCtrl.style.display = 'none';
+  }
+}
+
+/**
+ * 設定 SNES 按鈕觸控/滑鼠事件
+ */
+function setupSnesButtons(): void {
+  const btnDefs: { id: string; btn: number }[] = [
+    { id: 'snes-btn-a', btn: SnesButton.A },
+    { id: 'snes-btn-b', btn: SnesButton.B },
+    { id: 'snes-btn-x', btn: SnesButton.X },
+    { id: 'snes-btn-y', btn: SnesButton.Y },
+    { id: 'snes-btn-l', btn: SnesButton.L },
+    { id: 'snes-btn-r', btn: SnesButton.R },
+  ];
+
+  for (const { id, btn } of btnDefs) {
+    const el = document.getElementById(id);
+    if (!el || el.dataset.snesWired) continue;
+    el.dataset.snesWired = '1';
+
+    el.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      nes?.setButton(0, btn, true);
+      el.classList.add('pressed');
+    }, { passive: false });
+    el.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      nes?.setButton(0, btn, false);
+      el.classList.remove('pressed');
+    }, { passive: false });
+    el.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      nes?.setButton(0, btn, false);
+      el.classList.remove('pressed');
+    }, { passive: false });
+    el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      nes?.setButton(0, btn, true);
+      el.classList.add('pressed');
+    });
+    el.addEventListener('mouseup', (e) => {
+      e.preventDefault();
+      nes?.setButton(0, btn, false);
+      el.classList.remove('pressed');
+    });
+    el.addEventListener('mouseleave', () => {
+      nes?.setButton(0, btn, false);
+      el.classList.remove('pressed');
+    });
+  }
+
+  // SNES Select/Start 使用 SnesButton 編號
+  const snesFuncBtns = document.querySelectorAll('#snes-controller-area [data-snes-btn]');
+  snesFuncBtns.forEach(b => {
+    const el = b as HTMLElement;
+    if (el.dataset.snesWired) return;
+    el.dataset.snesWired = '1';
+    const btnType = el.dataset.snesBtn;
+    const btnId = btnType === 'start' ? SnesButton.Start : SnesButton.Select;
+
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); nes?.setButton(0, btnId, true); el.classList.add('pressed'); }, { passive: false });
+    el.addEventListener('touchend', (e) => { e.preventDefault(); nes?.setButton(0, btnId, false); el.classList.remove('pressed'); }, { passive: false });
+    el.addEventListener('touchcancel', (e) => { e.preventDefault(); nes?.setButton(0, btnId, false); el.classList.remove('pressed'); }, { passive: false });
+    el.addEventListener('mousedown', (e) => { e.preventDefault(); nes?.setButton(0, btnId, true); el.classList.add('pressed'); });
+    el.addEventListener('mouseup', (e) => { e.preventDefault(); nes?.setButton(0, btnId, false); el.classList.remove('pressed'); });
+    el.addEventListener('mouseleave', () => { nes?.setButton(0, btnId, false); el.classList.remove('pressed'); });
+  });
+
+  // SNES D-Pad (reuse same logic)
+  const snesDpad = document.getElementById('snes-dpad');
+  const snesDpadArea = document.getElementById('snes-dpad-touch-area');
+  if (snesDpadArea && snesDpad && !snesDpadArea.dataset.snesWired) {
+    snesDpadArea.dataset.snesWired = '1';
+    let snesCurrentDpad: DpadState = { up: false, down: false, left: false, right: false };
+
+    const applySnesDpad = (newState: DpadState) => {
+      if (newState.up !== snesCurrentDpad.up) nes?.setButton(0, SnesButton.Up, newState.up);
+      if (newState.down !== snesCurrentDpad.down) nes?.setButton(0, SnesButton.Down, newState.down);
+      if (newState.left !== snesCurrentDpad.left) nes?.setButton(0, SnesButton.Left, newState.left);
+      if (newState.right !== snesCurrentDpad.right) nes?.setButton(0, SnesButton.Right, newState.right);
+      document.getElementById('snes-dpad-up')?.classList.toggle('pressed', newState.up);
+      document.getElementById('snes-dpad-down')?.classList.toggle('pressed', newState.down);
+      document.getElementById('snes-dpad-left')?.classList.toggle('pressed', newState.left);
+      document.getElementById('snes-dpad-right')?.classList.toggle('pressed', newState.right);
+      snesCurrentDpad = { ...newState };
+    };
+
+    const calcDpad = (touch: Touch | MouseEvent): DpadState => {
+      const rect = snesDpad.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+      const dx = ('clientX' in touch ? touch.clientX : 0) - cx;
+      const dy = ('clientY' in touch ? touch.clientY : 0) - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const ns: DpadState = { up: false, down: false, left: false, right: false };
+      if (dist > rect.width / 2 * 0.15) {
+        const a = Math.atan2(dy, dx) * 180 / Math.PI;
+        if (a >= -22.5 && a < 22.5) ns.right = true;
+        else if (a >= 22.5 && a < 67.5) { ns.right = true; ns.down = true; }
+        else if (a >= 67.5 && a < 112.5) ns.down = true;
+        else if (a >= 112.5 && a < 157.5) { ns.left = true; ns.down = true; }
+        else if (a >= 157.5 || a < -157.5) ns.left = true;
+        else if (a >= -157.5 && a < -112.5) { ns.left = true; ns.up = true; }
+        else if (a >= -112.5 && a < -67.5) ns.up = true;
+        else if (a >= -67.5 && a < -22.5) { ns.right = true; ns.up = true; }
+      }
+      return ns;
+    };
+    const clearSnesDpad = () => applySnesDpad({ up: false, down: false, left: false, right: false });
+
+    snesDpadArea.addEventListener('touchstart', (e) => { e.preventDefault(); for (const t of Array.from(e.changedTouches)) applySnesDpad(calcDpad(t)); }, { passive: false });
+    snesDpadArea.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of Array.from(e.changedTouches)) applySnesDpad(calcDpad(t)); }, { passive: false });
+    snesDpadArea.addEventListener('touchend', (e) => { e.preventDefault(); clearSnesDpad(); }, { passive: false });
+    snesDpadArea.addEventListener('touchcancel', (e) => { e.preventDefault(); clearSnesDpad(); }, { passive: false });
+
+    let md = false;
+    snesDpadArea.addEventListener('mousedown', (e) => { e.preventDefault(); md = true; applySnesDpad(calcDpad(e)); });
+    document.addEventListener('mousemove', (e) => { if (md) applySnesDpad(calcDpad(e)); });
+    document.addEventListener('mouseup', () => { if (md) { md = false; clearSnesDpad(); } });
+  }
+  // SNES Save/Load/Mute buttons
+  document.getElementById('snes-mobile-save')?.addEventListener('click', () => {
+    if (saveState(0)) showToast('✅ 存檔成功'); else showToast('❌ 存檔失敗');
+  });
+  document.getElementById('snes-mobile-load')?.addEventListener('click', () => {
+    if (loadState(0)) showToast('✅ 讀取成功'); else showToast('❌ 沒有存檔');
+  });
+  document.getElementById('snes-mobile-mute')?.addEventListener('click', toggleMute);
+}
+
 // ===== 鍵盤快捷鍵 =====
 
 function setupKeyboardShortcuts(): void {
@@ -1153,6 +1384,15 @@ declare global {
     loadState: (slot?: number) => boolean;
     exportSaveToFile: () => void;
     showRomSelector: () => void;
+    debugState: () => string;
+    debugStepTrace: (count: number) => string;
+    debugFrameTrace: () => string;
+    debugRunFrames: (n: number) => string;
+    debugRunInstructions: (n: number) => string;
+    debugReadMem: (bank: number, addr: number) => string;
+    debugRunThenTrace: (frames: number, traceCount: number) => string;
+    debugReadRomRange: (bank: number, start: number, len: number) => string;
+    debugRunUntilPcInRange: (bank: number, lo: number, hi: number, maxFrames: number, traceCount: number) => string;
   }
 }
 
@@ -1163,6 +1403,17 @@ window.saveState = saveState;
 window.loadState = loadState;
 window.exportSaveToFile = exportSaveToFile;
 window.showRomSelector = showRomSelector;
+
+// Debug functions for SNES development
+window.debugState = () => nes ? nes.debugState() : 'No emulator';
+window.debugStepTrace = (n: number) => nes ? nes.debugStepTrace(n) : 'No emulator';
+window.debugFrameTrace = () => nes ? nes.debugFrameTrace() : 'No emulator';
+window.debugRunFrames = (n: number) => nes ? nes.debugRunFrames(n) : 'No emulator';
+window.debugRunInstructions = (n: number) => nes ? nes.debugRunInstructions(n) : 'No emulator';
+window.debugReadMem = (b: number, a: number) => nes ? nes.debugReadMem(b, a) : 'No emulator';
+window.debugRunThenTrace = (f: number, t: number) => nes ? nes.debugRunThenTrace(f, t) : 'No emulator';
+window.debugReadRomRange = (b: number, s: number, l: number) => nes ? nes.debugReadRomRange(b, s, l) : 'No emulator';
+window.debugRunUntilPcInRange = (b: number, lo: number, hi: number, mf: number, tc: number) => nes ? nes.debugRunUntilPcInRange(b, lo, hi, mf, tc) : 'No emulator';
 
 // ===== 啟動 =====
 

@@ -50,6 +50,9 @@ pub mod gb;
 // Game Gear / Master System 模組
 pub mod gg;
 
+// SNES (Super Famicom) 模組
+pub mod snes;
+
 // ============================================================
 // WASM 匯出介面 - 供 JavaScript 呼叫
 // ============================================================
@@ -163,6 +166,7 @@ enum CoreType {
     Nes(emulator::Emulator),
     Gb(gb::emulator::GbEmulator),
     Gg(gg::emulator::GgEmulator),
+    Snes(snes::emulator::SnesEmulator),
 }
 
 /// 統一多平台模擬器 WASM 包裝器
@@ -216,6 +220,18 @@ impl EmuWasm {
         false
     }
 
+    /// 載入 SNES ROM (.smc / .sfc)
+    #[wasm_bindgen(js_name = "loadSnesRom")]
+    pub fn load_snes_rom(&mut self, rom_data: &[u8]) -> bool {
+        if rom_data.is_empty() { return false; }
+        let mut emu = snes::emulator::SnesEmulator::new();
+        if emu.load_rom(rom_data) {
+            self.core = CoreType::Snes(emu);
+            return true;
+        }
+        false
+    }
+
     /// 載入 SMS ROM
     #[wasm_bindgen(js_name = "loadSmsRom")]
     pub fn load_sms_rom(&mut self, rom_data: &[u8]) -> bool {
@@ -234,6 +250,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.reset(),
             CoreType::Gb(emu) => emu.reset(),
             CoreType::Gg(emu) => emu.reset(),
+            CoreType::Snes(emu) => emu.reset(),
             CoreType::None => {}
         }
     }
@@ -244,6 +261,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.frame(),
             CoreType::Gb(emu) => emu.frame(),
             CoreType::Gg(emu) => emu.frame(),
+            CoreType::Snes(emu) => emu.frame(),
             CoreType::None => {}
         }
     }
@@ -255,6 +273,7 @@ impl EmuWasm {
             CoreType::Nes(_) => 256,
             CoreType::Gb(_) => 160,
             CoreType::Gg(emu) => emu.screen_width(),
+            CoreType::Snes(_) => 256,
             CoreType::None => 256,
         }
     }
@@ -266,6 +285,7 @@ impl EmuWasm {
             CoreType::Nes(_) => 240,
             CoreType::Gb(_) => 144,
             CoreType::Gg(emu) => emu.screen_height(),
+            CoreType::Snes(_) => 224,
             CoreType::None => 240,
         }
     }
@@ -277,6 +297,7 @@ impl EmuWasm {
             CoreType::Nes(_) => "nes".to_string(),
             CoreType::Gb(_) => "gb".to_string(),
             CoreType::Gg(_) => "gg".to_string(),
+            CoreType::Snes(_) => "snes".to_string(),
             CoreType::None => "none".to_string(),
         }
     }
@@ -287,6 +308,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.get_frame_buffer_ptr(),
             CoreType::Gb(emu) => emu.get_frame_buffer_ptr(),
             CoreType::Gg(emu) => emu.get_frame_buffer_ptr(),
+            CoreType::Snes(emu) => emu.get_frame_buffer_ptr(),
             CoreType::None => std::ptr::null(),
         }
     }
@@ -297,6 +319,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.get_frame_buffer_len(),
             CoreType::Gb(emu) => emu.get_frame_buffer_len(),
             CoreType::Gg(emu) => emu.get_frame_buffer_len(),
+            CoreType::Snes(emu) => emu.get_frame_buffer_len(),
             CoreType::None => 0,
         }
     }
@@ -307,6 +330,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.set_button(controller, button, pressed),
             CoreType::Gb(emu) => emu.set_button(controller, button, pressed),
             CoreType::Gg(emu) => emu.set_button(controller, button, pressed),
+            CoreType::Snes(emu) => emu.set_button(controller, button, pressed),
             CoreType::None => {}
         }
     }
@@ -317,6 +341,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.set_audio_sample_rate(rate),
             CoreType::Gb(emu) => emu.set_audio_sample_rate(rate),
             CoreType::Gg(emu) => emu.set_audio_sample_rate(rate),
+            CoreType::Snes(emu) => emu.set_audio_sample_rate(rate),
             CoreType::None => {}
         }
     }
@@ -336,6 +361,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.get_audio_buffer_ptr(),
             CoreType::Gb(emu) => emu.get_audio_buffer_ptr(),
             CoreType::Gg(emu) => emu.get_audio_buffer_ptr(),
+            CoreType::Snes(emu) => emu.get_audio_buffer_ptr(),
             CoreType::None => std::ptr::null(),
         }
     }
@@ -346,6 +372,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.get_audio_buffer_len(),
             CoreType::Gb(emu) => emu.get_audio_buffer_len(),
             CoreType::Gg(emu) => emu.get_audio_buffer_len(),
+            CoreType::Snes(emu) => emu.get_audio_buffer_len(),
             CoreType::None => 0,
         }
     }
@@ -356,6 +383,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.consume_audio_samples(),
             CoreType::Gb(emu) => emu.consume_audio_samples(),
             CoreType::Gg(emu) => emu.consume_audio_samples(),
+            CoreType::Snes(emu) => emu.consume_audio_samples(),
             CoreType::None => 0,
         }
     }
@@ -366,6 +394,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.export_save_state(),
             CoreType::Gb(emu) => emu.export_save_state(),
             CoreType::Gg(emu) => emu.export_save_state(),
+            CoreType::Snes(emu) => emu.export_save_state(),
             CoreType::None => String::new(),
         }
     }
@@ -376,6 +405,7 @@ impl EmuWasm {
             CoreType::Nes(emu) => emu.import_save_state(json),
             CoreType::Gb(emu) => emu.import_save_state(json),
             CoreType::Gg(emu) => emu.import_save_state(json),
+            CoreType::Snes(emu) => emu.import_save_state(json),
             CoreType::None => false,
         }
     }
@@ -383,5 +413,92 @@ impl EmuWasm {
     #[wasm_bindgen(js_name = "getWasmMemory")]
     pub fn get_wasm_memory(&self) -> JsValue {
         wasm_bindgen::memory()
+    }
+
+    /// SNES 除錯狀態
+    #[wasm_bindgen(js_name = "debugState")]
+    pub fn debug_state(&self) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_state(),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// SNES 單步追蹤
+    #[wasm_bindgen(js_name = "debugStepTrace")]
+    pub fn debug_step_trace(&mut self, count: u32) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_step_trace(count),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// SNES 幀追蹤
+    #[wasm_bindgen(js_name = "debugFrameTrace")]
+    pub fn debug_frame_trace(&mut self) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_frame_trace(),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// SNES 多幀執行計數
+    #[wasm_bindgen(js_name = "debugRunFrames")]
+    pub fn debug_run_frames(&mut self, num_frames: u32) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_run_frames(num_frames),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// SNES 指令計數執行 (不走 frame loop)
+    #[wasm_bindgen(js_name = "debugRunInstructions")]
+    pub fn debug_run_instructions(&mut self, count: u32) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_run_instructions(count),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// SNES 記憶體讀取
+    #[wasm_bindgen(js_name = "debugReadMem")]
+    pub fn debug_read_mem(&mut self, bank: u8, addr: u16, count: u16) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_read_mem(bank, addr, count),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// SNES bank 轉移追蹤
+    #[wasm_bindgen(js_name = "debugTraceBankChange")]
+    pub fn debug_trace_bank_change(&mut self, target_bank: u8, max_insns: u32) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_trace_bank_change(target_bank, max_insns),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugRunThenTrace")]
+    pub fn debug_run_then_trace(&mut self, frames: u32, trace_count: u32) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_run_then_trace(frames, trace_count),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugReadRomRange")]
+    pub fn debug_read_rom_range(&self, bank: u8, start: u16, len: u16) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_read_rom_range(bank, start, len),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugRunUntilPcInRange")]
+    pub fn debug_run_until_pc_in_range(&mut self, target_bank: u8, target_lo: u16, target_hi: u16, max_frames: u32, trace_count: u32) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_run_until_pc_in_range(target_bank, target_lo, target_hi, max_frames, trace_count),
+            _ => "Not SNES".to_string(),
+        }
     }
 }

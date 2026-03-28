@@ -558,6 +558,115 @@
       transform: rotate(-25deg);
     }
 
+    /* ===== SNES Controller ===== */
+    .snes-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 0 4px;
+      margin-bottom: 4px;
+    }
+    .snes-func-row {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .snes-mini-btn {
+      width: 36px;
+      height: 24px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(180deg, #555, #3a3a3a);
+      color: rgba(255,255,255,0.7);
+      font-size: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+      transition: all 0.08s;
+      padding: 0 2px;
+    }
+    .snes-mini-btn:active, .snes-mini-btn.pressed {
+      background: linear-gradient(180deg, #3a3a3a, #252525);
+      transform: scale(0.92);
+      color: #88ccff;
+    }
+    .snes-shoulder-btn {
+      width: 56px;
+      height: 28px;
+      border: none;
+      border-radius: 8px 8px 14px 14px;
+      background: linear-gradient(180deg, #6a6a7a, #4a4a5a);
+      color: rgba(255,255,255,0.8);
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.4);
+      transition: all 0.08s;
+    }
+    .snes-shoulder-btn:active, .snes-shoulder-btn.pressed {
+      background: linear-gradient(180deg, #4a4a5a, #3a3a4a);
+      transform: scale(0.94);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+      color: #88ccff;
+    }
+    .snes-main-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 0 8px;
+    }
+    .snes-right-area {
+      flex: 0 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .snes-abxy-diamond {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+    .snes-abxy-row {
+      display: flex;
+      gap: 36px;
+    }
+    .snes-face-btn {
+      width: 52px;
+      height: 52px;
+      border: none;
+      border-radius: 50%;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.08s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.4),
+                  inset 0 2px 3px rgba(255,255,255,0.15);
+    }
+    .snes-a {
+      background: linear-gradient(145deg, #cc3050, #901838);
+      color: rgba(255,255,255,0.9);
+    }
+    .snes-b {
+      background: linear-gradient(145deg, #d8a020, #a07010);
+      color: rgba(255,255,255,0.9);
+    }
+    .snes-x {
+      background: linear-gradient(145deg, #3060c0, #1840a0);
+      color: rgba(255,255,255,0.9);
+    }
+    .snes-y {
+      background: linear-gradient(145deg, #30a050, #107838);
+      color: rgba(255,255,255,0.9);
+    }
+    .snes-face-btn:active, .snes-face-btn.pressed {
+      transform: scale(0.90);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5), inset 0 2px 5px rgba(0,0,0,0.3);
+      filter: brightness(0.8);
+    }
+
     /* ===== ROM 選擇器 ===== */
     .rom-selector {
       position: fixed;
@@ -1094,9 +1203,9 @@
       
       <div class="rom-selector-footer">
         <label class="upload-btn" for="rom-file-input">
-          📁 從裝置選擇 ROM (.nes / .gb)
+          📁 從裝置選擇 ROM (.nes / .gb / .smc)
         </label>
-        <input type="file" id="rom-file-input" accept=".nes,.gb,.gbc,.gg,.sms" style="display: none;">
+        <input type="file" id="rom-file-input" accept=".nes,.gb,.gbc,.gg,.sms,.smc,.sfc" style="display: none;">
       </div>
     </div>
   </div>
@@ -1138,6 +1247,9 @@
 
     <!-- 虛擬控制器 (手機版) -->
     <div class="virtual-controller" id="virtual-controller">
+
+      <!-- === NES 控制器 (預設) === -->
+      <div id="nes-controller-area" style="display:flex; width:100%; justify-content:space-between; align-items:center;">
       <!-- 左側 D-Pad (支援斜向) -->
       <div class="dpad-container">
         <div class="dpad" id="dpad">
@@ -1183,40 +1295,68 @@
         </div>
         <span class="btn-label">B &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; A</span>
       </div>
+      </div><!-- /nes-controller-area -->
+
+      <!-- === SNES 控制器 === -->
+      <div id="snes-controller-area" style="display:none; width:100%; flex-direction:column; align-items:stretch;">
+        <!-- 上排：L / 功能鍵 / R（緊貼螢幕下方）-->
+        <div class="snes-top-row">
+          <button class="snes-shoulder-btn" id="snes-btn-l">L</button>
+          <div class="snes-func-row">
+            <button class="snes-mini-btn snes-save-btn" id="snes-mobile-save">💾</button>
+            <button class="snes-mini-btn snes-load-btn" id="snes-mobile-load">📂</button>
+            <button class="snes-mini-btn" id="snes-mobile-mute">🔊</button>
+            <button class="snes-mini-btn" data-snes-btn="select">SEL</button>
+            <button class="snes-mini-btn" data-snes-btn="start">STA</button>
+          </div>
+          <button class="snes-shoulder-btn" id="snes-btn-r">R</button>
+        </div>
+        <!-- 下排：D-Pad / ABXY -->
+        <div class="snes-main-row">
+          <!-- D-Pad -->
+          <div class="dpad-container">
+            <div class="dpad" id="snes-dpad">
+              <div class="dpad-touch-area" id="snes-dpad-touch-area"></div>
+              <div class="dpad-visual">
+                <div class="dpad-btn dpad-up" id="snes-dpad-up"><span class="dpad-arrow">▲</span></div>
+                <div class="dpad-btn dpad-left" id="snes-dpad-left"><span class="dpad-arrow">◀</span></div>
+                <div class="dpad-center"></div>
+                <div class="dpad-btn dpad-right" id="snes-dpad-right"><span class="dpad-arrow">▶</span></div>
+                <div class="dpad-btn dpad-down" id="snes-dpad-down"><span class="dpad-arrow">▼</span></div>
+              </div>
+            </div>
+          </div>
+          <!-- ABXY 菱形 -->
+          <div class="snes-right-area">
+            <div class="snes-abxy-diamond">
+              <button class="snes-face-btn snes-x" id="snes-btn-x">X</button>
+              <div class="snes-abxy-row">
+                <button class="snes-face-btn snes-y" id="snes-btn-y">Y</button>
+                <button class="snes-face-btn snes-a" id="snes-btn-a">A</button>
+              </div>
+              <button class="snes-face-btn snes-b" id="snes-btn-b">B</button>
+            </div>
+          </div>
+        </div>
+      </div><!-- /snes-controller-area -->
+
     </div>
 
     <!-- 鍵盤指南 (電腦版) -->
     <div class="keyboard-guide">
       <h3>⌨️ 鍵盤控制</h3>
       <table>
-        <tr>
-          <td>方向鍵</td>
-          <td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></td>
-        </tr>
-        <tr>
-          <td>A 按鈕</td>
-          <td><kbd>Z</kbd></td>
-        </tr>
-        <tr>
-          <td>B 按鈕</td>
-          <td><kbd>X</kbd></td>
-        </tr>
-        <tr>
-          <td>Start</td>
-          <td><kbd>Enter</kbd></td>
-        </tr>
-        <tr>
-          <td>Select</td>
-          <td><kbd>Shift (右)</kbd></td>
-        </tr>
-        <tr>
-          <td>存檔</td>
-          <td><kbd>F5</kbd></td>
-        </tr>
-        <tr>
-          <td>讀檔</td>
-          <td><kbd>F7</kbd></td>
-        </tr>
+        <tr><td>方向鍵</td><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></td></tr>
+        <tr><td>A 按鈕</td><td><kbd>Z</kbd></td></tr>
+        <tr><td>B 按鈕</td><td><kbd>X</kbd></td></tr>
+        <tr><td>Y 按鈕 (SNES)</td><td><kbd>A</kbd></td></tr>
+        <tr><td>X 按鈕 (SNES)</td><td><kbd>S</kbd></td></tr>
+        <tr><td>L 肩鍵 (SNES)</td><td><kbd>Q</kbd></td></tr>
+        <tr><td>R 肩鍵 (SNES)</td><td><kbd>W</kbd></td></tr>
+        <tr><td>Start</td><td><kbd>Enter</kbd></td></tr>
+        <tr><td>Select</td><td><kbd>Shift (右)</kbd></td></tr>
+        <tr><td>存檔</td><td><kbd>F5</kbd></td></tr>
+        <tr><td>讀檔</td><td><kbd>F7</kbd></td></tr>
       </table>
     </div>
   </div>

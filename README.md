@@ -1,6 +1,6 @@
 # H5-EMU 多平台復古遊戲模擬器
 
-一個使用 HTML5 Canvas + TypeScript 前端搭配 Rust/WebAssembly 核心開發的多平台復古遊戲模擬器，目前支援 **NES (FC)**、**Game Boy (DMG)** 與 **Game Gear / Master System**。
+一個使用 HTML5 Canvas + TypeScript 前端搭配 Rust/WebAssembly 核心開發的多平台復古遊戲模擬器，目前支援 **NES (FC)**、**Game Boy (DMG)**、**Game Gear / Master System** 與 **SFC / SNES (超級任天堂)**。
 
 ---
 
@@ -12,7 +12,7 @@
 | **Game Boy (DMG)** | 160×144 | LR35902 (4.194 MHz) | 59.7275 fps | 4 (2 方波 + 波形 + 雜訊) | ✅ 完整支援 |
 | **Game Gear** | 160×144 (內部 256×192) | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊, GG 立體聲) | ✅ 新增支援 |
 | **Master System** | 256×192 | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊) | ✅ 新增支援 |
-| SFC / SNES | — | — | — | — | 🔮 規劃中 |
+| **SFC / SNES** | 256×224 | 65816 (3.58 MHz) + SPC700 (1.024 MHz) | 60.0988 fps | 8 (S-DSP 8 聲道 BRR) | 🟣 新增支援 |
 
 ### 自動偵測 ROM 格式
 
@@ -20,6 +20,7 @@
 - 檔案開頭為 `NES\x1A` (iNES 標頭) → **NES 核心**
 - 副檔名 `.gg` → **Game Gear 核心** (160×144 GG 視窗裁切)
 - 副檔名 `.sms` → **Master System 核心** (256×192 全畫面)
+- 副檔名 `.sfc` / `.smc` → **SNES 核心** (256×224)
 - 其他 (`.gb` / `.gbc`) → **Game Boy 核心**
 
 無需手動選擇平台，選擇對應副檔名的遊戲即可直接開始。
@@ -90,6 +91,19 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 - PSG SN76489 音頻 (3 方波 + 雜訊，GG 立體聲)
 - Sega Mapper 記憶體映射
 - GG / SMS 雙模式支援 (Port $00 bit 0 區分)
+
+### SFC / SNES (超級任天堂) — 🟣 最新新增
+- 完整的 65816 CPU (16-bit 累加器/索引、24-bit 定址、模擬模式相容)
+- PPU 掃描線渲染 (256×224，Mode 0-7 全支援)
+  - Mode 7 仿射變換 (旋轉/縮放/透視)
+  - OAM 精靈渲染 (128 精靈，每行最多 32 個)
+  - 色彩數學 (加減法混合、半透明)
+  - 視窗遮罩 (Window 1/2)
+- SPC700 APU (獨立 64KB RAM，4 個 16-bit 計時器)
+- DMA / HDMA (8 個 DMA 通道，含間接模式)
+- DSP-1 協處理器 (Mode 7 3D 變換、投影、光柵運算)
+- LoROM / HiROM 卡帶映射自動偵測
+- 128KB WRAM + SRAM 存檔支援
 
 ---
 
@@ -555,6 +569,72 @@ fn cpu_clock(&mut self) {
 - **相對路徑部署**：支援部署到任意子目錄（如 GitHub Pages）
 - **TypeScript 類型安全**：所有控制器按鈕使用 `ControllerButton` 列舉
 - **模組化架構**：UI 元件獨立於核心模擬器邏輯
+
+---
+
+## 🟣 最新更新 — Phase 4: SFC / SNES 超級任天堂核心
+
+### 🎮 SNES 完整核心實作
+
+新增完整的 Super Nintendo (SFC/SNES) 模擬核心，基於 Ricoh 5A22 (65816 CPU) + S-PPU + S-SMP (SPC700 APU) 架構。
+
+**核心模組**：
+- `snes/cpu.rs` — 完整 65816 CPU (16-bit 模式/8-bit 模擬模式切換)
+- `snes/ppu.rs` — PPU 掃描線渲染器 (Mode 0~7、OAM、色彩數學、視窗)
+- `snes/apu.rs` — SPC700 APU (獨立 64KB RAM、4 計時器、BRR 音頻)
+- `snes/dma.rs` — DMA/HDMA 控制器 (8 通道、間接定址模式)
+- `snes/dsp1.rs` — DSP-1 協處理器 (Mode 7 3D 投影變換)
+- `snes/cartridge.rs` — LoROM/HiROM 自動偵測、SRAM 支援
+- `snes/emulator.rs` — 主模擬迴路、匯流排仲裁、H/V IRQ
+
+### 🎯 SNES 開發中遇到的主要問題與解決方案
+
+#### 1. RDNMI ($4210) VBlank 輪詢凍結
+**問題**：超時空之鑰 (Chrono Trigger) 在開場動畫後畫面完全凍結。
+
+**排查**：透過 CPU 迴圈偵測，發現 CPU 停滯在 `C0:3B71: LDA $4210; BPL loop` — 即輪詢 RDNMI 暫存器的 bit 7 等待 VBlank 旗標。
+
+**原因**：RDNMI bit 7 實作為「讀取後清除」(edge-triggered)，NMI handler 中已讀取過一次，之後的輪詢永遠看到 0。但 SNES 硬體上 RDNMI bit 7 反映的是 **VBlank 連續狀態** — 在整個 VBlank 期間 (掃描線 225-261) 保持 HIGH。
+
+**處理**：bus_read `$4210` 改為直接回傳 `ppu.vblank_flag` 狀態，VBlank 期間始終返回 `0x81`，非 VBlank 期間返回 `0x01`。
+
+#### 2. SPC700 缺少 $B8 指令碼
+**問題**：多款 SNES 遊戲音頻異常或 SPC700 PC 跑飛。
+
+**原因**：SPC700 APU 的指令解碼器缺少 opcode `$B8` (SBC dp, #imm)，遇到時跳過導致 PC 對齊錯誤，後續所有指令解碼錯亂。
+
+**處理**：補上 `$B8: SBC dp, #imm` — 從零頁位址讀取值，減去立即數，結果寫回零頁。
+
+#### 3. PPU 圖層優先級交錯錯誤
+**問題**：最終幻想 VI (FF6) 圖層顯示混亂，背景遮擋精靈或精靈順序不對。
+
+**原因**：Mode 0/1 的 BG 優先級數值設定過高，與 OBJ (精靈) 的優先級範圍重疊甚至超過，導致背景無條件蓋住精靈。
+
+**處理**：重新校正 Mode 0~7 所有圖層的 priority 數值，確保 BG 優先級 (low/high) 與 OBJ 優先級 (0~3) 正確交錯排列，符合 SNES 硬體規格。
+
+#### 4. HDMA 間接定址指標錯誤
+**問題**：使用 HDMA 間接模式的遊戲 (如 Super Mario Kart) 畫面光柵效果失敗。
+
+**原因**：HDMA 間接模式 (control bit 6 = 1) 需要從表格讀取 16-bit 指標到獨立的 `indirect_addr` 欄位，再從該位址傳輸資料。原實作缺少 `indirect_addr` 欄位，與 `count` 欄位混用。
+
+**處理**：DMA 通道新增獨立 `indirect_addr: u16` 欄位，HDMA init/transfer 時正確讀取間接指標並從對應位址存取資料。
+
+#### 5. SPC700 SUBW H 旗標缺失
+**問題**：部分遊戲 APU 行為異常。
+
+**原因**：SPC700 的 `SUBW YA, dp` ($9A) 指令缺少 Half-Carry (H) 旗標計算。
+
+**處理**：參照 ADDW 的做法，為 SUBW 補上低位元組的半進位計算：`H = ((ya ^ dp_val ^ result) >> 8) & 0x10 != 0`。
+
+### 🟣 SNES 遊戲列表 (5 款)
+- 🟣 超級瑪利歐世界 (Super Mario World)
+- 🟣 洛克人 X (Rockman X)
+- 🟣 超級瑪利歐賽車 (Super Mario Kart) — DSP-1 協處理器
+- 🟣 超級瑪利歐 RPG (Super Mario RPG)
+- 🟣 超時空之鑰 (Chrono Trigger)
+- 🟣 最終幻想 VI (Final Fantasy VI)
+- 🟣 聖劍傳說 3 (Seiken Densetsu 3)
+- 🟣 快打旋風 II (Super Street Fighter II)
 
 ---
 
