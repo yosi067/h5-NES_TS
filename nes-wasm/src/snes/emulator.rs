@@ -90,6 +90,9 @@ pub struct SnesEmulator {
     /// H/V IRQ
     irq_pending: bool,
 
+    /// NMI 已在本次 VBlank 觸發過 (防止 NMITIMEN toggle 重複觸發)
+    nmi_fired_this_vblank: bool,
+
     // Debug: BRK crash origin
     brk_origin: Option<(u8, u16)>,  // (PB, PC) where BRK was executed
     /// Frame counter for diagnostics
@@ -135,6 +138,7 @@ impl SnesEmulator {
             open_bus: 0,
 
             irq_pending: false,
+            nmi_fired_this_vblank: false,
             brk_origin: None,
             frame_count: 0,
         }
@@ -169,6 +173,7 @@ impl SnesEmulator {
         self.rdnmi = 0;
         self.timeup = 0;
         self.irq_pending = false;
+        self.nmi_fired_this_vblank = false;
         self.brk_origin = None;
         self.frame_count = 0;
 
@@ -219,8 +224,14 @@ impl SnesEmulator {
 
         // HDMA 初始化（VBlank → Active 轉換時）+ 第一次傳輸
         if scanline == 0 {
+            // VBlank 結束：先清除旗標，再讓 CPU 執行
+            self.ppu.vblank_flag = false;
+            self.hvbjoy &= !0x80;
+            self.rdnmi &= !0x80;
+            self.nmi_fired_this_vblank = false;
+            self.ppu.frame_complete = true;
+
             // 允許 CPU 完成 NMI handler （DSP1 讀取、WRAM 寫入）再啟動 HDMA
-            // 真實 SNES 上 HDMA init 在 H~6 發生，CPU 在該點前仍有執行機會
             let pre_hdma = 1364u32.saturating_sub(self.cpu_cycles_this_line);
             if pre_hdma > 0 {
                 self.run_cpu_for(pre_hdma);
@@ -237,6 +248,7 @@ impl SnesEmulator {
         if scanline == 225 {
             self.ppu.vblank_flag = true;
             self.hvbjoy |= 0x80; // VBlank flag
+            self.nmi_fired_this_vblank = false; // 新一輪 VBlank，重設 NMI 鎖
 
             // RDNMI bit 7 is ALWAYS set at VBlank start, regardless of NMITIMEN
             self.rdnmi |= 0x80;
@@ -244,6 +256,7 @@ impl SnesEmulator {
             // NMI interrupt fires only when enabled in NMITIMEN
             if self.nmitimen & 0x80 != 0 {
                 self.cpu.nmi_pending = true;
+                self.nmi_fired_this_vblank = true;
             }
 
             // OAM 地址重載
@@ -258,13 +271,7 @@ impl SnesEmulator {
             }
         }
 
-        // VBlank 結束
-        if scanline == 0 {
-            self.ppu.vblank_flag = false;
-            self.hvbjoy &= !0x80;
-            self.rdnmi &= !0x80;
-            self.ppu.frame_complete = true;
-        }
+        // (VBlank 結束已移至 scanline==0 最前面處理)
 
         // H/V Timer IRQ 檢查 (在渲染之前，讓 Mode 切換等操作在渲染前生效)
         self.check_hv_irq(scanline);
@@ -788,11 +795,9 @@ impl SnesEmulator {
             0x4016 => { /* Joypad serial - 簡化 */ 0 }
             0x4017 => 0,
             0x4210 => {
-                // RDNMI: bit 7 reflects VBlank NMI flag.
-                // On real hardware, bit 7 stays HIGH during entire VBlank (scanlines 225-261).
-                // Reading acknowledges the NMI edge (prevents re-trigger) but the
-                // VBlank status bit remains set until VBlank ends at scanline 0.
-                let v = if self.ppu.vblank_flag { 0x81 } else { 0x01 };
+                // RDNMI: bit 7 = NMI flag (set at VBlank start, cleared on read)
+                let v = (self.rdnmi & 0x80) | 0x01;
+                self.rdnmi &= !0x80; // 讀取後清除 bit 7 (acknowledge)
                 v
             }
             0x4211 => {
@@ -824,9 +829,13 @@ impl SnesEmulator {
                 let old_nmi = self.nmitimen & 0x80;
                 self.nmitimen = val;
                 self.ppu.nmi_enabled = val & 0x80 != 0;
-                // NMI edge detection
-                if old_nmi == 0 && val & 0x80 != 0 && self.ppu.vblank_flag {
+                // NMI edge detection — 僅在本次 VBlank 尚未觸發過時才允許
+                // 防止 NMI handler 內 toggle NMITIMEN bit7 導致無限遞迴
+                if old_nmi == 0 && val & 0x80 != 0 && self.ppu.vblank_flag
+                    && !self.nmi_fired_this_vblank
+                {
                     self.cpu.nmi_pending = true;
+                    self.nmi_fired_this_vblank = true;
                 }
             }
             0x4201 => { self.wrio = val; }
@@ -1728,7 +1737,7 @@ impl SnesEmulator {
             0x68 => { let v = if self.cpu.flag_m() { self.pull8() as u16 } else { self.pull16() }; self.cpu.set_a(v); self.cpu.set_nz_m(self.cpu.a_val()); self.cpu.cycles = 4; } // PLA
             0x7A => { let v = if self.cpu.flag_x() { self.pull8() as u16 } else { self.pull16() }; self.cpu.set_y(v); self.cpu.set_nz_x(self.cpu.y_val()); self.cpu.cycles = 4; } // PLY
             0x8B => { let v = self.cpu.db; self.push8(v); self.cpu.cycles = 3; }     // PHB
-            0xAB => { self.cpu.db = self.pull8(); self.cpu.set_nz_x(self.cpu.db as u16); self.cpu.cycles = 4; } // PLB
+            0xAB => { self.cpu.db = self.pull8(); self.cpu.set_flag(flags::ZERO, self.cpu.db == 0); self.cpu.set_flag(flags::NEGATIVE, self.cpu.db & 0x80 != 0); self.cpu.cycles = 4; } // PLB
             0xDA => { let v = self.cpu.x_val(); if self.cpu.flag_x() { self.push8(v as u8); } else { self.push16(v); } self.cpu.cycles = 3; } // PHX
             0xFA => { let v = if self.cpu.flag_x() { self.pull8() as u16 } else { self.pull16() }; self.cpu.set_x(v); self.cpu.set_nz_x(self.cpu.x_val()); self.cpu.cycles = 4; } // PLX
 
@@ -1748,7 +1757,7 @@ impl SnesEmulator {
             0xBB => { let v = self.cpu.y_val(); self.cpu.set_x(v); self.cpu.set_nz_x(self.cpu.x_val()); self.cpu.cycles = 2; } // TYX
             0x5B => { self.cpu.dp = self.cpu.a; self.cpu.set_flag(flags::ZERO, self.cpu.dp == 0); self.cpu.set_flag(flags::NEGATIVE, self.cpu.dp & 0x8000 != 0); self.cpu.cycles = 2; } // TCD
             0x7B => { self.cpu.a = self.cpu.dp; self.cpu.set_flag(flags::ZERO, self.cpu.a == 0); self.cpu.set_flag(flags::NEGATIVE, self.cpu.a & 0x8000 != 0); self.cpu.cycles = 2; } // TDC
-            0x1B => { self.cpu.sp = self.cpu.a; self.cpu.cycles = 2; } // TCS
+            0x1B => { self.cpu.sp = if self.cpu.emulation { 0x0100 | (self.cpu.a & 0xFF) } else { self.cpu.a }; self.cpu.cycles = 2; } // TCS
             0x3B => { self.cpu.a = self.cpu.sp; self.cpu.set_flag(flags::ZERO, self.cpu.a == 0); self.cpu.set_flag(flags::NEGATIVE, self.cpu.a & 0x8000 != 0); self.cpu.cycles = 2; } // TSC
 
             // === XBA ===
