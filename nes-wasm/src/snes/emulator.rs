@@ -97,6 +97,10 @@ pub struct SnesEmulator {
     brk_origin: Option<(u8, u16)>,  // (PB, PC) where BRK was executed
     /// Frame counter for diagnostics
     frame_count: u32,
+    /// Debug: one-shot trap for first invalid WRAM execution
+    debug_trap_fired: bool,
+    debug_trap_log: String,
+    debug_prev_pb_pc: (u8, u16),
 }
 
 impl SnesEmulator {
@@ -141,6 +145,9 @@ impl SnesEmulator {
             nmi_fired_this_vblank: false,
             brk_origin: None,
             frame_count: 0,
+            debug_trap_fired: false,
+            debug_trap_log: String::new(),
+            debug_prev_pb_pc: (0, 0),
         }
     }
 
@@ -176,6 +183,9 @@ impl SnesEmulator {
         self.nmi_fired_this_vblank = false;
         self.brk_origin = None;
         self.frame_count = 0;
+        self.debug_trap_fired = false;
+        self.debug_trap_log = String::new();
+        self.debug_prev_pb_pc = (0, 0);
 
         // CPU 重置
         self.cpu = Cpu65816::new();
@@ -398,8 +408,32 @@ impl SnesEmulator {
             }
 
             // 執行一條指令
+            let prev_pb = self.cpu.pb;
+            let prev_pc = self.cpu.pc;
             let opcode = self.fetch_pc();
+
+            // Debug trap: catch first BRK execution anywhere
+            if !self.debug_trap_fired && opcode == 0x00 {
+                self.debug_trap_fired = true;
+                let sp = self.cpu.sp;
+                let mut stack_bytes = String::new();
+                for i in 0..=20u16 {
+                    let addr = sp.wrapping_add(i);
+                    // Read via bus to handle any bank
+                    stack_bytes.push_str(&format!("{:02X} ", self.bus_read(0, addr)));
+                }
+                self.debug_trap_log = format!(
+                    "FIRST_BRK at {:02X}:{:04X}\n\
+                     SP={:04X} A={:04X} X={:04X} Y={:04X} P={:02X} DB={:02X} DP={:04X}\n\
+                     Frame={} Scanline={} NMITIMEN={:02X} vblank={}",
+                    prev_pb, prev_pc,
+                    sp, self.cpu.a, self.cpu.x, self.cpu.y, self.cpu.p, self.cpu.db, self.cpu.dp,
+                    self.frame_count, self.ppu.scanline, self.nmitimen, self.ppu.vblank_flag
+                );
+            }
+
             self.execute_instruction(opcode);
+            self.debug_prev_pb_pc = (prev_pb, prev_pc);
 
             // 指令週期轉換為 master clocks (CPU 約 3.58 MHz = 6 master clocks/cycle)
             self.cpu.cycles *= CPU_FAST_DIV;
@@ -749,43 +783,7 @@ impl SnesEmulator {
     /// CX4 寫入輔助（安全避開借用衝突）
     fn cx4_write(&mut self, snes_addr: u16, val: u8) {
         let offset = snes_addr.wrapping_sub(0x6000);
-        let off = offset as usize & 0x1FFF;
-
-        // 先寫入 RAM
-        self.cx4.ram[off] = val;
-
-        // 檢查是否觸發 DMA 或命令
-        if off == 0x1F47 {
-            // DMA: 需要從 ROM 複製資料到 CX4 RAM
-            let src = self.cx4.ram[0x1F40] as u32
-                | ((self.cx4.ram[0x1F41] as u32) << 8)
-                | ((self.cx4.ram[0x1F42] as u32) << 16);
-            let len = self.cx4.ram[0x1F43] as u32
-                | ((self.cx4.ram[0x1F44] as u32) << 8);
-            let dst = self.cx4.ram[0x1F45] as u16
-                | ((self.cx4.ram[0x1F46] as u16) << 8);
-
-            for i in 0..len {
-                let snes_a = src.wrapping_add(i);
-                let bank = (snes_a >> 16) as u8;
-                let addr = snes_a as u16;
-                let rom_offset = ((bank as usize & 0x7F) << 15) | (addr as usize & 0x7FFF);
-                let rom_val = if rom_offset < self.cart.rom.len() {
-                    self.cart.rom[rom_offset]
-                } else if !self.cart.rom.is_empty() {
-                    self.cart.rom[rom_offset % self.cart.rom.len()]
-                } else {
-                    0
-                };
-                let dst_off = dst.wrapping_add(i as u16).wrapping_sub(0x6000) as usize;
-                if dst_off < 0x2000 {
-                    self.cx4.ram[dst_off] = rom_val;
-                }
-            }
-        } else if off == 0x1F4F {
-            // 命令觸發
-            self.cx4.execute_command();
-        }
+        self.cx4.write(offset, val, &self.cart.rom);
     }
 
     // === CPU 暫存器讀寫 ($4200-$42FF) ===
@@ -795,10 +793,12 @@ impl SnesEmulator {
             0x4016 => { /* Joypad serial - 簡化 */ 0 }
             0x4017 => 0,
             0x4210 => {
-                // RDNMI: bit 7 = NMI flag (set at VBlank start, cleared on read)
-                let v = (self.rdnmi & 0x80) | 0x01;
-                self.rdnmi &= !0x80; // 讀取後清除 bit 7 (acknowledge)
-                v
+                // RDNMI: bit 7 = NMI flag (set at VBlank start, cleared at VBlank end)
+                // 在掃描線級模擬器中，不在讀取時清除 bit 7。
+                // 這避免了 NMI handler 的 LDA $4210 搶先清除旗標，
+                // 導致主迴圈的 LDA $4210 / BPL 永遠無法偵測到 VBlank 的問題。
+                // bit 7 改在 scanline 0（VBlank 結束）統一清除。
+                (self.rdnmi & 0x80) | 0x01
             }
             0x4211 => {
                 let v = self.timeup;
@@ -891,6 +891,14 @@ impl SnesEmulator {
             let a_bank = ch.a_bank;
             let b_base = 0x2100u16 + ch.b_addr as u16;
             let mut count = if ch.count == 0 { 0x10000u32 } else { ch.count as u32 };
+
+            // DMA log for OAM ($2104) and VRAM ($2118/$2119) transfers
+            if ch.b_addr == 0x04 || ch.b_addr == 0x18 || ch.b_addr == 0x22 {
+                self.debug_trap_log.push_str(&format!(
+                    "DMA ch{}: ${:02X}{:04X}→${:04X} cnt={} mode={} adj={} dir={:?} | ",
+                    i, a_bank, a_addr, b_base, count, ch.transfer_mode(), adjust, direction
+                ));
+            }
 
             while count > 0 {
                 for &offset in offsets {
@@ -2407,6 +2415,13 @@ impl SnesEmulator {
             None => String::from("No BRK"),
         };
 
+        // Debug trap info
+        let trap_info = if self.debug_trap_log.is_empty() {
+            String::from("No trap")
+        } else {
+            self.debug_trap_log.clone()
+        };
+
         let result = format!(
             "CPU: PC={:02X}:{:04X} A={:04X} X={:04X} Y={:04X} SP={:04X} P={:02X} DP={:04X} DB={:02X} E={} cyc={} stopped={} waiting={}\n\
              Bytes@PC: {}\n\
@@ -2421,7 +2436,8 @@ impl SnesEmulator {
              APU: PC={:04X} A={:02X} X={:02X} Y={:02X} SP={:02X} PSW={:02X} ctrl={:02X}\n\
              APU Ports: from_cpu=[{:02X},{:02X},{:02X},{:02X}] from_spc=[{:02X},{:02X},{:02X},{:02X}]\n\
              APU cycles={} total_cycles={}\n\
-             Frame={}",
+             Frame={}\n\
+             {}",
             self.cpu.pb, self.cpu.pc, self.cpu.a, self.cpu.x, self.cpu.y,
             self.cpu.sp, self.cpu.p, self.cpu.dp, self.cpu.db,
             self.cpu.emulation, self.cpu.cycles, self.cpu.stopped, self.cpu.waiting,
@@ -2458,6 +2474,7 @@ impl SnesEmulator {
             self.apu.ports_from_spc[2], self.apu.ports_from_spc[3],
             self.apu.cycles, self.apu.total_cycles,
             self.frame_count,
+            trap_info,
         );
 
         result
@@ -2674,6 +2691,122 @@ impl SnesEmulator {
             bytes.push(format!("{:02X}", val));
         }
         format!("{:02X}:{:04X}-{:04X}: {}", bank, start, start.wrapping_add(len.wrapping_sub(1)), bytes.join(" "))
+    }
+
+    /// Debug: 精靈/PPU 診斷
+    pub fn debug_sprite_info(&self) -> String {
+        let ppu = &self.ppu;
+        let mut lines: Vec<String> = Vec::new();
+
+        lines.push(format!(
+            "PPU: mode={} brightness={} force_blank={} TM={:02X} TS={:02X} TMW={:02X} TSW={:02X}",
+            ppu.bg_mode, ppu.brightness, ppu.force_blank, ppu.tm, ppu.ts, ppu.tmw, ppu.tsw
+        ));
+        lines.push(format!(
+            "OBJ: size={} base={:04X} name_sel={:04X} oam_priority={} oam_addr={:03X} oam_addr_reload={:03X}",
+            ppu.obj_size, ppu.obj_base, ppu.obj_name_select, ppu.oam_priority,
+            ppu.oam_addr, ppu.oam_addr_reload
+        ));
+
+        // Raw OAM dump: first 8 entries (32 bytes) + high table
+        let mut raw = String::from("OAM raw[0..31]: ");
+        for i in 0..32 {
+            raw.push_str(&format!("{:02X} ", ppu.oam[i]));
+        }
+        lines.push(raw);
+        let mut raw_hi = String::from("OAM hi[512..543]: ");
+        for i in 512..544 {
+            raw_hi.push_str(&format!("{:02X} ", ppu.oam[i]));
+        }
+        lines.push(raw_hi);
+
+        // Also dump WRAM OAM buffer at $0400 (common in MMX2)
+        let mut wram_buf = String::from("WRAM@0400[0..31]: ");
+        for i in 0..32 {
+            wram_buf.push_str(&format!("{:02X} ", self.wram[0x0400 + i]));
+        }
+        lines.push(wram_buf);
+
+        // Count non-empty OAM entries and show first 16 visible sprites
+        let (small_w, small_h, large_w, large_h) = match ppu.obj_size {
+            0 => (8, 8, 16, 16),
+            1 => (8, 8, 32, 32),
+            2 => (8, 8, 64, 64),
+            3 => (16, 16, 32, 32),
+            4 => (16, 16, 64, 64),
+            5 => (32, 32, 64, 64),
+            _ => (8, 8, 16, 16),
+        };
+
+        let mut visible_count = 0;
+        let mut on_screen = Vec::new();
+        for i in 0..128 {
+            let base = i * 4;
+            let extra_byte = ppu.oam[512 + (i >> 2)];
+            let extra_bits = (extra_byte >> ((i & 3) * 2)) & 0x03;
+
+            let x_low = ppu.oam[base] as i16;
+            let y_pos = ppu.oam[base + 1];
+            let tile = ppu.oam[base + 2] as u16;
+            let attr = ppu.oam[base + 3];
+
+            let x_high = extra_bits & 0x01;
+            let size_bit = (extra_bits >> 1) & 0x01;
+            let x = if x_high != 0 { x_low - 256 } else { x_low };
+            let (w, h) = if size_bit != 0 { (large_w, large_h) } else { (small_w, small_h) };
+            let name_table = (attr & 0x01) as u16;
+            let palette = (attr >> 1) & 0x07;
+            let priority = (attr >> 4) & 0x03;
+
+            // is it on screen?
+            if y_pos < 224 && x > -64 && x < 256 {
+                visible_count += 1;
+                if on_screen.len() < 16 {
+                    let chr_base = if name_table != 0 {
+                        ppu.obj_base.wrapping_add(ppu.obj_name_select) as usize
+                    } else {
+                        ppu.obj_base as usize
+                    };
+                    // Sample first pixel of tile to check if VRAM has data
+                    let tile_addr = (chr_base + tile as usize * 32) & 0xFFFF;
+                    let vram_byte = ppu.vram[tile_addr];
+                    on_screen.push(format!(
+                        "  spr{}: x={} y={} tile={:03X} nt={} pal={} pri={} size={}x{} chr_base={:04X} vram@tile={:02X}",
+                        i, x, y_pos, tile, name_table, palette, priority, w, h, chr_base, vram_byte
+                    ));
+                }
+            }
+        }
+        lines.push(format!("OAM: {}/128 sprites on-screen", visible_count));
+        for s in &on_screen {
+            lines.push(s.clone());
+        }
+
+        // BG info
+        for bg in 0..4 {
+            let sc = ppu.bg_tilemap_addr[bg];
+            let chr = ppu.bg_chr_addr[bg];
+            let enabled_main = ppu.tm & (1 << bg) != 0;
+            let enabled_sub = ppu.ts & (1 << bg) != 0;
+            lines.push(format!(
+                "BG{}: sc={:04X} chr={:04X} main={} sub={}",
+                bg + 1, sc, chr, enabled_main, enabled_sub
+            ));
+        }
+
+        // CGRAM first 4 sprite palettes (base 128)
+        let mut pal_info = String::from("Sprite palettes (128+): ");
+        for p in 0..4 {
+            let base = 128 + p * 16;
+            let mut non_zero = 0;
+            for c in 0..16 {
+                if ppu.cgram[base + c] != 0 { non_zero += 1; }
+            }
+            pal_info.push_str(&format!("pal{}={}/16 ", p, non_zero));
+        }
+        lines.push(pal_info);
+
+        lines.join("\n")
     }
 
     /// Debug: 執行幀直到 PC 落入指定範圍, 然後 step trace

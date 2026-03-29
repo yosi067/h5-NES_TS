@@ -30,20 +30,28 @@
     {"name": "五子棋", "file": "五子棋.nes"},
     {"name": "台灣 16 張麻將 (中文)", "file": "台湾16张麻将(中文).nes"},
     {"name": "1200 合 1", "file": "1200-in-1.nes"},
-    {"name": "🟢 Super Mario Land 2 (超級瑪利歐大陸 2)", "file": "Super Mario Land 2 - 6 Golden Coins (USA, Europe) (Rev 2).gb"},
-    {"name": "🟢 口袋妖怪黃 (繁體中文加強版)", "file": "口袋妖怪黃 (繁) (加強版) (unknown).gb"},
-    {"name": "🟢 聖劍傳說 (簡體中文版)", "file": "圣剑传说(简)(v1.1)(RangerMarsh)(4Mb).gb"},
-    {"name": "🟢 熱鬥拳皇 96 (簡體中文版)", "file": "热斗拳皇96(简)(v1.0)(Stephen+湮没骑士の镇魂歌+落榜の美术生)(8Mb).gb"},
-    {"name": "🟠 Ninku 忍空 (英文翻譯版)", "file": "Ninku (Japan) [T-En by Some Good Shit Translations v0.1] [i].gg"},
-    {"name": "🟠 Battletoads 忍者蛙", "file": "Battletoads (U) [a1].gg"},
-    {"name": "🟠 Legend of Illusion 米老鼠幻影傳說", "file": "Legend of Illusion Starring Mickey Mouse (J).gg"},
-    {"name": "🟠 Sonic Drift 2 音速小子賽車 2", "file": "Sonic Drift 2 (World).gg"},
-    {"name": "🔵 Sonic The Hedgehog 2 音速小子 2", "file": "Sonic The Hedgehog 2 (Europe, Brazil) (En) (Rev 1).sms"},
-    {"name": "🟣 超級瑪利歐世界", "file": "Super Mario World (USA).sfc"},
-    {"name": "🟣 洛克人 X", "file": "Rockman X (Japan).sfc"},
-    {"name": "🟣 洛克人 X2 (Mega Man X2)", "file": "Mega Man X2 (USA).sfc"},
-    {"name": "🟣 洛克人 X3 (Mega Man X3)", "file": "Mega Man X3 (USA).sfc"},
-    {"name": "🟣 最終幻想 6 (繁體中文版)", "file": "0041 - 最終幻想6 (繁)(V1.1)(日選單)(勇者漢化組).smc"},
-    {"name": "🟣 超時空之鑰 (繁體中文版)", "file": "0045 - 超時空之鑰 (繁)(Beta)(Goldegg+Emukim).smc"}
+
+    {"name": "Super Mario Land 2 (超級瑪利歐大陸 2)", "file": "Super Mario Land 2 - 6 Golden Coins (USA, Europe) (Rev 2).gb"},
+    {"name": "口袋妖怪黃 (繁體中文加強版)", "file": "口袋妖怪黃 (繁) (加強版) (unknown).gb"},
+    {"name": "聖劍傳說 (簡體中文版)", "file": "圣剑传说(简)(v1.1)(RangerMarsh)(4Mb).gb"},
+    {"name": "熱鬥拳皇 96 (簡體中文版)", "file": "热斗拳皇96(简)(v1.0)(Stephen+湮没骑士の镇魂歌+落榜の美术生)(8Mb).gb"},
+
+    {"name": "Ninku 忍空 (英文翻譯版)", "file": "Ninku (Japan) [T-En by Some Good Shit Translations v0.1] [i].gg"},
+    {"name": "Battletoads 忍者蛙", "file": "Battletoads (U) [a1].gg"},
+    {"name": "Legend of Illusion 米老鼠幻影傳說", "file": "Legend of Illusion Starring Mickey Mouse (J).gg"},
+    {"name": "Sonic Drift 2 音速小子賽車 2", "file": "Sonic Drift 2 (World).gg"},
+
+    {"name": "Sonic The Hedgehog 2 音速小子 2", "file": "Sonic The Hedgehog 2 (Europe, Brazil) (En) (Rev 1).sms"},
+
+    {"name": "超級瑪利歐世界", "file": "Super Mario World (USA).sfc"},
+    {"name": "大金剛國度 (Donkey Kong Country)", "file": "Donkey Kong Country (USA) (Rev 1).sfc"},
+    {"name": "快打旋風 II Turbo (Street Fighter II Turbo)", "file": "Street Fighter II Turbo (Japan).sfc"},
+    {"name": "洛克人 X", "file": "Rockman X (Japan).sfc"},
+    {"name": "洛克人 X2 (Mega Man X2)", "file": "Mega Man X2 (USA).sfc"},
+    {"name": "洛克人 X3 (Mega Man X3)", "file": "Mega Man X3 (USA).sfc"},
+    {"name": "最終幻想 6 (繁體中文版)", "file": "0041 - 最終幻想6 (繁)(V1.1)(日選單)(勇者漢化組).smc"},
+    {"name": "超時空之鑰 (繁體中文版)", "file": "0045 - 超時空之鑰 (繁)(Beta)(Goldegg+Emukim).smc"},
+    {"name": "聖劍傳說 2 (Secret of Mana)", "file": "Secret of Mana (Reborn v2.5).sfc"},
+    {"name": "聖劍傳說 3 (Seiken Densetsu 3)", "file": "Seiken Densetsu 3 (Japan) [En by LNF+Neill Corlett+SoM2Freak v1.01].sfc"}
   ]
 }

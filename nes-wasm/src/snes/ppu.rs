@@ -744,13 +744,24 @@ impl Ppu {
                 self.render_bg(1, y, 4, 2, 6);
                 self.render_bg(0, y, 8, 4, 8);
             }
+            4 => {
+                // Mode 4: BG1=8bpp, BG2=2bpp (offset-per-tile)
+                self.render_bg(1, y, 2, 2, 6);
+                self.render_bg(0, y, 8, 4, 8);
+            }
+            5 => {
+                // Mode 5: BG1=4bpp, BG2=2bpp, hi-res (512px wide)
+                self.render_bg_hires(1, y, 2, 2, 6);
+                self.render_bg_hires(0, y, 4, 4, 8);
+            }
+            6 => {
+                // Mode 6: BG1=4bpp, hi-res (offset-per-tile)
+                self.render_bg_hires(0, y, 4, 4, 8);
+            }
             7 => {
                 self.render_mode7(y);
             }
-            _ => {
-                // Mode 4-6: 簡化處理
-                self.render_bg(0, y, 4, 4, 8);
-            }
+            _ => {}
         }
 
         // 渲染 OBJ (Sprites)
@@ -859,6 +870,108 @@ impl Ppu {
             }
 
             // 寫入 Sub Screen
+            if self.ts & (1 << bg_idx) != 0 && pri > self.sub_pri[screen_x] {
+                if !(self.tsw & (1 << bg_idx) != 0 && self.window_mask[bg_idx][screen_x]) {
+                    self.sub_buf[screen_x] = rgba;
+                    self.sub_pri[screen_x] = pri;
+                    self.sub_src[screen_x] = layer;
+                }
+            }
+        }
+    }
+
+    /// Hi-res (Mode 5/6) BG rendering. Tiles are 16 hi-res pixels wide (two 8x8 characters).
+    /// Output is downsampled to 256 lo-res pixels (every other hi-res pixel).
+    fn render_bg_hires(&mut self, bg_idx: usize, scanline: u16, bpp: u8, pri_lo: u8, pri_hi: u8) {
+        let tilemap_addr = self.bg_tilemap_addr[bg_idx] as usize;
+        let chr_addr = self.bg_chr_addr[bg_idx] as usize;
+        let hscroll = self.bg_hscroll[bg_idx] & 0x03FF;
+        let vscroll = self.bg_vscroll[bg_idx] & 0x03FF;
+        let map_size = self.bg_tilemap_size[bg_idx];
+        let tall = self.bg_tile_size[bg_idx]; // vertical 16-px tall if set
+
+        // In hi-res, tiles are always 16 hi-res pixels wide (two 8x8 chars)
+        let tile_h = if tall { 16usize } else { 8usize };
+
+        // Tilemap: each 32-entry row covers 32*16 = 512 hi-res pixels
+        let h_base = 512usize;
+        let v_base = if tall { 512 } else { 256 };
+        let h_total = h_base * (if map_size & 0x01 != 0 { 2 } else { 1 });
+        let v_total = v_base * (if map_size & 0x02 != 0 { 2 } else { 1 });
+        let h_mask = h_total - 1;
+        let v_mask = v_total - 1;
+
+        let y_scroll = (scanline as usize + vscroll as usize) & v_mask;
+        let tile_row_full = y_scroll / tile_h;
+        let fine_y = y_scroll & (tile_h - 1);
+
+        for screen_x in 0..256usize {
+            // Each output pixel maps to 2 hi-res pixels; take the even one
+            let hires_x = (screen_x * 2 + hscroll as usize) & h_mask;
+
+            let tile_col_full = hires_x / 16; // 16 hi-res pixels per tile entry
+            let fine_x_hires = hires_x & 15;  // 0-15 within the tile
+
+            let map_col = tile_col_full & 0x1F;
+            let map_row = tile_row_full & 0x1F;
+
+            let mut map_addr = tilemap_addr;
+            if (map_size & 0x01 != 0) && (tile_col_full & 0x20) != 0 {
+                map_addr += 0x800;
+            }
+            if (map_size & 0x02 != 0) && (tile_row_full & 0x20) != 0 {
+                map_addr += if map_size & 0x01 != 0 { 0x1000 } else { 0x800 };
+            }
+
+            let entry_addr = (map_addr + (map_row * 32 + map_col) * 2) & 0xFFFF;
+            let tile_lo = self.vram[entry_addr] as u16;
+            let tile_hi = self.vram[(entry_addr + 1) & 0xFFFF] as u16;
+            let tile_entry = tile_lo | (tile_hi << 8);
+
+            let mut tile_num = (tile_entry & 0x03FF) as usize;
+            let palette = ((tile_entry >> 10) & 0x07) as usize;
+            let priority = ((tile_entry >> 13) & 0x01) as u8;
+            let flip_x = tile_entry & 0x4000 != 0;
+            let flip_y = tile_entry & 0x8000 != 0;
+
+            // Horizontal sub-tile: left char = tile N, right char = tile N+1
+            let h_sub = if flip_x {
+                if fine_x_hires >= 8 { 0 } else { 1 }
+            } else {
+                if fine_x_hires >= 8 { 1 } else { 0 }
+            };
+
+            // Vertical sub-tile for 16-pixel tall tiles
+            let v_sub = if tall {
+                if flip_y { if fine_y >= 8 { 0 } else { 1 } }
+                else { if fine_y >= 8 { 1 } else { 0 } }
+            } else {
+                0usize
+            };
+
+            tile_num = tile_num.wrapping_add(h_sub).wrapping_add(v_sub * 16);
+
+            let px_in_tile = if flip_x { 7 - (fine_x_hires & 7) } else { fine_x_hires & 7 };
+            let py_in_tile = if flip_y { 7 - (fine_y & 7) } else { fine_y & 7 };
+
+            let color_idx = self.read_tile_pixel(chr_addr, tile_num, px_in_tile, py_in_tile, bpp);
+            if color_idx == 0 { continue; }
+
+            let pal_offset = palette * (1 << bpp) + color_idx;
+            let color = self.cgram[pal_offset & 0xFF];
+            let rgba = bgr15_to_rgba(color);
+
+            let pri = if priority != 0 { pri_hi } else { pri_lo };
+            let layer = bg_idx as u8;
+
+            if self.tm & (1 << bg_idx) != 0 && pri > self.main_pri[screen_x] {
+                if !(self.tmw & (1 << bg_idx) != 0 && self.window_mask[bg_idx][screen_x]) {
+                    self.main_buf[screen_x] = rgba;
+                    self.main_pri[screen_x] = pri;
+                    self.main_src[screen_x] = layer;
+                }
+            }
+
             if self.ts & (1 << bg_idx) != 0 && pri > self.sub_pri[screen_x] {
                 if !(self.tsw & (1 << bg_idx) != 0 && self.window_mask[bg_idx][screen_x]) {
                     self.sub_buf[screen_x] = rgba;

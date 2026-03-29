@@ -7,7 +7,7 @@
 // ============================================================
 
 /// DMA 傳輸方向
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum DmaDirection {
     AtoB,  // CPU → PPU (A-bus → B-bus)
     BtoA,  // PPU → CPU (B-bus → A-bus)

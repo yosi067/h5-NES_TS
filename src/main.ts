@@ -982,12 +982,9 @@ function startEmulation(): void {
       nes.frame();
       bootDiagFrameCount++;
       // Boot diagnostic: dump state at key frames to find when BRK crash happens
-      if (coreType === 'snes' && (bootDiagFrameCount === 1 || bootDiagFrameCount === 5 ||
-          bootDiagFrameCount === 8 || bootDiagFrameCount === 10 || bootDiagFrameCount === 15 ||
-          bootDiagFrameCount === 20 || bootDiagFrameCount === 30 || bootDiagFrameCount === 60 ||
-          bootDiagFrameCount === 120 || bootDiagFrameCount === 300 || bootDiagFrameCount === 600 ||
-          bootDiagFrameCount === 1200 || bootDiagFrameCount === 1800 ||
-          bootDiagFrameCount === 2400 || bootDiagFrameCount === 3600)) {
+      if (coreType === 'snes' && (bootDiagFrameCount <= 10 ||
+          bootDiagFrameCount === 15 || bootDiagFrameCount === 20 ||
+          bootDiagFrameCount === 30 || bootDiagFrameCount === 60)) {
         try {
           const state = nes.debugState();
           console.log(`[BOOT DIAG] Frame ${bootDiagFrameCount}:\n${state}`);
@@ -1492,6 +1489,7 @@ declare global {
     exportSaveToFile: () => void;
     showRomSelector: () => void;
     debugState: () => string;
+    debugSpriteInfo: () => string;
     debugStepTrace: (count: number) => string;
     debugFrameTrace: () => string;
     debugRunFrames: (n: number) => string;
@@ -1513,6 +1511,7 @@ window.showRomSelector = showRomSelector;
 
 // Debug functions for SNES development
 window.debugState = () => nes ? nes.debugState() : 'No emulator';
+window.debugSpriteInfo = () => nes ? nes.debugSpriteInfo() : 'No emulator';
 window.debugStepTrace = (n: number) => nes ? nes.debugStepTrace(n) : 'No emulator';
 window.debugFrameTrace = () => nes ? nes.debugFrameTrace() : 'No emulator';
 window.debugRunFrames = (n: number) => nes ? nes.debugRunFrames(n) : 'No emulator';
