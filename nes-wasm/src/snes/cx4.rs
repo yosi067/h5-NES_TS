@@ -632,23 +632,46 @@ impl Cx4 {
                 for i in 0..0x0800 {
                     sum = sum.wrapping_add(self.ram[i] as u16);
                 }
-                self.write_reg(0, sum as u32);
+                self.write16(REG_BASE, sum);
             }
             0x54 => {
-                // test_square: R1:R2 = R0 * R0
-                let val = self.read_reg16(0) as i32;
-                let result = val * val;
-                self.write_reg(1, ((result >> 16) as u32) & 0xFFFFFF);
-                self.write_reg(2, (result as u32) & 0xFFFFFF);
+                // test_square: R1:R0 的平方，結果存入 R1(低24位) R2(高24位)
+                let mut a = self.read_reg(0) as i64;
+                // 24-bit 有符號擴展
+                if a & 0x800000 != 0 {
+                    a |= !0xFFFFFF_i64;
+                }
+                let result = a * a;
+                self.write_reg(1, (result & 0xFFFFFF) as u32);
+                self.write_reg(2, ((result >> 24) & 0xFFFFFF) as u32);
             }
             0x5C => {
-                // test_immediate_register: 複製 CPU 常數到 RAM
-                // 測試用，不影響遊戲
+                // test_immediate_register: 將測試模式寫入 CX4 RAM
+                // 遊戲檢查這些值以驗證暫存器讀寫正確
+                const TEST_PATTERN: [u8; 48] = [
+                    0x00, 0x00, 0x00, 0xFF,
+                    0xFF, 0xFF, 0x00, 0xFF,
+                    0x00, 0x00, 0x00, 0xFF,
+                    0xFF, 0xFF, 0x00, 0x00,
+                    0xFF, 0xFF, 0x00, 0x00,
+                    0x80, 0xFF, 0xFF, 0x7F,
+                    0x00, 0x80, 0x00, 0xFF,
+                    0x7F, 0x00, 0xFF, 0x7F,
+                    0xFF, 0x7F, 0xFF, 0xFF,
+                    0x00, 0x00, 0x01, 0xFF,
+                    0xFF, 0xFE, 0x00, 0x01,
+                    0x00, 0xFF, 0xFE, 0x00,
+                ];
+                for i in 0..48 {
+                    self.ram[i] = TEST_PATTERN[i];
+                }
             }
             0x89 => {
-                // test_3K_rom_chksum: CX4 內部 ROM 校驗和
-                // 返回固定值（因為我們沒有實際 CX4 ROM）
-                self.write_reg(0, 0);
+                // test_3K_rom_chksum: CX4 內部資料 ROM 校驗和
+                // 返回已知正確值 $054336（與真實 CX4 晶片一致）
+                self.ram[0x1F80] = 0x36;
+                self.ram[0x1F81] = 0x43;
+                self.ram[0x1F82] = 0x05;
             }
             _ => {}
         }
