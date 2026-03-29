@@ -572,7 +572,7 @@ impl SnesEmulator {
     }
 
     /// Helper for LoROM system area reads ($0000-$7FFF in banks $40-$6F)
-    fn bus_read_system_low(&mut self, _effective: u8, addr: u16) -> u8 {
+    fn bus_read_system_low(&mut self, effective: u8, addr: u16) -> u8 {
         match addr {
             0x0000..=0x1FFF => self.wram[addr as usize],
             0x2100..=0x213F => self.ppu.read_register(addr),
@@ -588,6 +588,15 @@ impl SnesEmulator {
             0x4000..=0x40FF => self.read_cpu_register(addr),
             0x4200..=0x42FF => self.read_cpu_register(addr),
             0x4300..=0x43FF => self.dma.read_register(addr - 0x4300),
+            0x6000..=0x7FFF => {
+                // LoROM SRAM mirror for banks $40-$6F
+                if self.cart.sram_size > 0 {
+                    let sram_addr = ((effective as usize & 0x1F) * 0x2000) + (addr as usize - 0x6000);
+                    self.cart.read_sram(sram_addr)
+                } else {
+                    self.open_bus
+                }
+            }
             _ => self.open_bus,
         }
     }
@@ -684,7 +693,7 @@ impl SnesEmulator {
     }
 
     /// Helper for LoROM system area writes ($0000-$7FFF in banks $40-$6F)
-    fn bus_write_system_low(&mut self, _effective: u8, addr: u16, val: u8) {
+    fn bus_write_system_low(&mut self, effective: u8, addr: u16, val: u8) {
         match addr {
             0x0000..=0x1FFF => { self.wram[addr as usize] = val; }
             0x2100..=0x2133 => { self.ppu.write_register(addr, val); }
@@ -702,6 +711,13 @@ impl SnesEmulator {
             0x2183 => { self.wram_addr = (self.wram_addr & 0x0FFFF) | ((val as u32 & 0x01) << 16); }
             0x4200..=0x42FF => { self.write_cpu_register(addr, val); }
             0x4300..=0x43FF => { self.dma.write_register(addr - 0x4300, val); }
+            0x6000..=0x7FFF => {
+                // LoROM SRAM mirror for banks $40-$6F
+                if self.cart.sram_size > 0 {
+                    let sram_addr = ((effective as usize & 0x1F) * 0x2000) + (addr as usize - 0x6000);
+                    self.cart.write_sram(sram_addr, val);
+                }
+            }
             _ => {}
         }
     }
@@ -1876,11 +1892,398 @@ impl SnesEmulator {
     }
 
     pub fn export_save_state(&self) -> String {
-        String::new() // TODO: 實作存檔
+        let mut buf: Vec<u8> = Vec::with_capacity(256 * 1024);
+
+        // Magic + version
+        buf.extend_from_slice(b"SNES");
+        buf.push(1);
+
+        // CPU state (20 bytes)
+        buf.extend_from_slice(&self.cpu.a.to_le_bytes());
+        buf.extend_from_slice(&self.cpu.x.to_le_bytes());
+        buf.extend_from_slice(&self.cpu.y.to_le_bytes());
+        buf.extend_from_slice(&self.cpu.sp.to_le_bytes());
+        buf.extend_from_slice(&self.cpu.dp.to_le_bytes());
+        buf.push(self.cpu.db);
+        buf.push(self.cpu.pb);
+        buf.push(self.cpu.p);
+        buf.extend_from_slice(&self.cpu.pc.to_le_bytes());
+        buf.push(self.cpu.emulation as u8);
+        buf.push(self.cpu.nmi_pending as u8);
+        buf.push(self.cpu.irq_pending as u8);
+        buf.push(self.cpu.waiting as u8);
+        buf.push(self.cpu.stopped as u8);
+
+        // Emulator registers
+        buf.push(self.nmitimen);
+        buf.push(self.wrio);
+        buf.push(self.wrmpya);
+        buf.push(self.wrmpyb);
+        buf.extend_from_slice(&self.wrdivl.to_le_bytes());
+        buf.push(self.wrdivb);
+        buf.extend_from_slice(&self.htime.to_le_bytes());
+        buf.extend_from_slice(&self.vtime.to_le_bytes());
+        buf.push(self.rdnmi);
+        buf.push(self.timeup);
+        buf.push(self.hvbjoy);
+        buf.extend_from_slice(&self.rddiv.to_le_bytes());
+        buf.extend_from_slice(&self.rdmpy.to_le_bytes());
+        buf.push(self.auto_joypad_read as u8);
+        buf.extend_from_slice(&self.wram_addr.to_le_bytes());
+        buf.push(self.open_bus);
+        buf.push(self.irq_pending as u8);
+        buf.extend_from_slice(&self.frame_count.to_le_bytes());
+
+        // WRAM (128KB)
+        buf.extend_from_slice(&self.wram);
+
+        // SRAM
+        let sram_len = self.cart.sram.len() as u32;
+        buf.extend_from_slice(&sram_len.to_le_bytes());
+        buf.extend_from_slice(&self.cart.sram);
+
+        // PPU state
+        buf.extend_from_slice(&self.ppu.vram);
+        buf.extend_from_slice(&self.ppu.oam);
+        for &c in &self.ppu.cgram {
+            buf.extend_from_slice(&c.to_le_bytes());
+        }
+        buf.extend_from_slice(&self.ppu.vram_addr.to_le_bytes());
+        buf.extend_from_slice(&self.ppu.vram_increment.to_le_bytes());
+        buf.push(self.ppu.vram_mapping);
+        buf.push(self.ppu.vram_incmode as u8);
+        buf.extend_from_slice(&self.ppu.vram_prefetch.to_le_bytes());
+        buf.extend_from_slice(&self.ppu.oam_addr.to_le_bytes());
+        buf.extend_from_slice(&self.ppu.oam_addr_reload.to_le_bytes());
+        buf.push(self.ppu.oam_latch);
+        buf.push(self.ppu.oam_priority as u8);
+        buf.push(self.ppu.cgram_addr);
+        buf.push(self.ppu.cgram_latch);
+        buf.push(self.ppu.cgram_flipflop as u8);
+        buf.push(self.ppu.bg_mode);
+        buf.push(self.ppu.bg3_priority as u8);
+        for i in 0..4 {
+            buf.extend_from_slice(&self.ppu.bg_tilemap_addr[i].to_le_bytes());
+            buf.push(self.ppu.bg_tilemap_size[i]);
+            buf.extend_from_slice(&self.ppu.bg_chr_addr[i].to_le_bytes());
+            buf.push(self.ppu.bg_tile_size[i] as u8);
+            buf.extend_from_slice(&self.ppu.bg_hscroll[i].to_le_bytes());
+            buf.extend_from_slice(&self.ppu.bg_vscroll[i].to_le_bytes());
+        }
+        buf.push(self.ppu.scroll_latch);
+        buf.push(self.ppu.scroll_latch2);
+        buf.extend_from_slice(&(self.ppu.m7a as u16).to_le_bytes());
+        buf.extend_from_slice(&(self.ppu.m7b as u16).to_le_bytes());
+        buf.extend_from_slice(&(self.ppu.m7c as u16).to_le_bytes());
+        buf.extend_from_slice(&(self.ppu.m7d as u16).to_le_bytes());
+        buf.extend_from_slice(&(self.ppu.m7hofs as u16).to_le_bytes());
+        buf.extend_from_slice(&(self.ppu.m7vofs as u16).to_le_bytes());
+        buf.extend_from_slice(&(self.ppu.m7x as u16).to_le_bytes());
+        buf.extend_from_slice(&(self.ppu.m7y as u16).to_le_bytes());
+        buf.push(self.ppu.m7_latch);
+        buf.push(self.ppu.m7_flipflop as u8);
+        buf.push(self.ppu.m7_low_buffer);
+        buf.push(self.ppu.m7_mult_b as u8);
+        buf.push(self.ppu.m7sel);
+        for i in 0..4 { buf.push(self.ppu.wh[i]); }
+        buf.push(self.ppu.w12sel);
+        buf.push(self.ppu.w34sel);
+        buf.push(self.ppu.wobjsel);
+        buf.push(self.ppu.wbglog);
+        buf.push(self.ppu.wobjlog);
+        buf.push(self.ppu.tm);
+        buf.push(self.ppu.ts);
+        buf.push(self.ppu.tmw);
+        buf.push(self.ppu.tsw);
+        buf.push(self.ppu.cgwsel);
+        buf.push(self.ppu.cgadsub);
+        buf.push(self.ppu.fixed_color_r);
+        buf.push(self.ppu.fixed_color_g);
+        buf.push(self.ppu.fixed_color_b);
+        buf.push(self.ppu.brightness);
+        buf.push(self.ppu.force_blank as u8);
+        buf.push(self.ppu.obj_size);
+        buf.extend_from_slice(&self.ppu.obj_base.to_le_bytes());
+        buf.extend_from_slice(&self.ppu.obj_name_select.to_le_bytes());
+        buf.push(self.ppu.setini);
+        buf.extend_from_slice(&self.ppu.scanline.to_le_bytes());
+        buf.push(self.ppu.nmi_flag as u8);
+        buf.push(self.ppu.nmi_enabled as u8);
+        buf.push(self.ppu.vblank_flag as u8);
+
+        // APU state
+        buf.push(self.apu.a);
+        buf.push(self.apu.x);
+        buf.push(self.apu.y);
+        buf.push(self.apu.sp);
+        buf.extend_from_slice(&self.apu.pc.to_le_bytes());
+        buf.push(self.apu.psw);
+        buf.extend_from_slice(&self.apu.ram);
+        for i in 0..4 { buf.push(self.apu.ports_from_cpu[i]); }
+        for i in 0..4 { buf.push(self.apu.ports_from_spc[i]); }
+        for i in 0..3 { buf.push(self.apu.timer_target[i]); }
+        for i in 0..3 { buf.push(self.apu.timer_counter[i]); }
+        for i in 0..3 { buf.extend_from_slice(&self.apu.timer_divider[i].to_le_bytes()); }
+        for i in 0..3 { buf.push(self.apu.timer_enabled[i] as u8); }
+        buf.push(self.apu.dsp_addr);
+        buf.push(self.apu.control);
+        buf.extend_from_slice(&self.apu.cycles.to_le_bytes());
+        buf.extend_from_slice(&self.apu.total_cycles.to_le_bytes());
+
+        // DMA state
+        buf.push(self.dma.dma_enable);
+        buf.push(self.dma.hdma_enable);
+        for ch in &self.dma.channels {
+            buf.push(ch.control);
+            buf.push(ch.b_addr);
+            buf.extend_from_slice(&ch.a_addr.to_le_bytes());
+            buf.push(ch.a_bank);
+            buf.extend_from_slice(&ch.count.to_le_bytes());
+            buf.push(ch.hdma_bank);
+            buf.extend_from_slice(&ch.hdma_addr.to_le_bytes());
+            buf.push(ch.hdma_line_counter);
+            buf.extend_from_slice(&ch.indirect_addr.to_le_bytes());
+            buf.push(ch.hdma_do_transfer as u8);
+            buf.push(ch.hdma_completed as u8);
+        }
+
+        // Encode to base64
+        Self::encode_base64(&buf)
     }
 
-    pub fn import_save_state(&mut self, _json: &str) -> bool {
-        false // TODO: 實作讀檔
+    pub fn import_save_state(&mut self, data: &str) -> bool {
+        let buf = match Self::decode_base64(data.trim()) {
+            Some(b) => b,
+            None => return false,
+        };
+
+        let mut pos = 0usize;
+        macro_rules! read_u8 { () => { { if pos >= buf.len() { return false; } let v = buf[pos]; pos += 1; v } } }
+        macro_rules! read_u16 { () => { { if pos + 1 >= buf.len() { return false; } let v = u16::from_le_bytes([buf[pos], buf[pos+1]]); pos += 2; v } } }
+        macro_rules! read_u32 { () => { { if pos + 3 >= buf.len() { return false; } let v = u32::from_le_bytes([buf[pos], buf[pos+1], buf[pos+2], buf[pos+3]]); pos += 4; v } } }
+        macro_rules! read_u64 { () => { { if pos + 7 >= buf.len() { return false; } let v = u64::from_le_bytes([buf[pos], buf[pos+1], buf[pos+2], buf[pos+3], buf[pos+4], buf[pos+5], buf[pos+6], buf[pos+7]]); pos += 8; v } } }
+        macro_rules! read_bytes { ($n:expr) => { { if pos + $n > buf.len() { return false; } let s = &buf[pos..pos+$n]; pos += $n; s } } }
+
+        // Magic + version
+        if read_bytes!(4) != b"SNES" { return false; }
+        if read_u8!() != 1 { return false; }
+
+        // CPU
+        self.cpu.a = read_u16!();
+        self.cpu.x = read_u16!();
+        self.cpu.y = read_u16!();
+        self.cpu.sp = read_u16!();
+        self.cpu.dp = read_u16!();
+        self.cpu.db = read_u8!();
+        self.cpu.pb = read_u8!();
+        self.cpu.p = read_u8!();
+        self.cpu.pc = read_u16!();
+        self.cpu.emulation = read_u8!() != 0;
+        self.cpu.nmi_pending = read_u8!() != 0;
+        self.cpu.irq_pending = read_u8!() != 0;
+        self.cpu.waiting = read_u8!() != 0;
+        self.cpu.stopped = read_u8!() != 0;
+
+        // Emulator registers
+        self.nmitimen = read_u8!();
+        self.wrio = read_u8!();
+        self.wrmpya = read_u8!();
+        self.wrmpyb = read_u8!();
+        self.wrdivl = read_u16!();
+        self.wrdivb = read_u8!();
+        self.htime = read_u16!();
+        self.vtime = read_u16!();
+        self.rdnmi = read_u8!();
+        self.timeup = read_u8!();
+        self.hvbjoy = read_u8!();
+        self.rddiv = read_u16!();
+        self.rdmpy = read_u16!();
+        self.auto_joypad_read = read_u8!() != 0;
+        self.wram_addr = read_u32!();
+        self.open_bus = read_u8!();
+        self.irq_pending = read_u8!() != 0;
+        self.frame_count = read_u32!();
+
+        // WRAM
+        let wram_slice = read_bytes!(0x20000);
+        self.wram[..0x20000].copy_from_slice(wram_slice);
+
+        // SRAM
+        let sram_len = read_u32!() as usize;
+        if sram_len > 0 && sram_len <= buf.len() - pos {
+            let sram_slice = read_bytes!(sram_len);
+            if sram_len <= self.cart.sram.len() {
+                self.cart.sram[..sram_len].copy_from_slice(sram_slice);
+            }
+        }
+
+        // PPU
+        let vram_slice = read_bytes!(0x10000);
+        self.ppu.vram.copy_from_slice(vram_slice);
+        let oam_slice = read_bytes!(544);
+        self.ppu.oam.copy_from_slice(oam_slice);
+        for i in 0..256 {
+            self.ppu.cgram[i] = read_u16!();
+        }
+        self.ppu.vram_addr = read_u16!();
+        self.ppu.vram_increment = read_u16!();
+        self.ppu.vram_mapping = read_u8!();
+        self.ppu.vram_incmode = read_u8!() != 0;
+        self.ppu.vram_prefetch = read_u16!();
+        self.ppu.oam_addr = read_u16!();
+        self.ppu.oam_addr_reload = read_u16!();
+        self.ppu.oam_latch = read_u8!();
+        self.ppu.oam_priority = read_u8!() != 0;
+        self.ppu.cgram_addr = read_u8!();
+        self.ppu.cgram_latch = read_u8!();
+        self.ppu.cgram_flipflop = read_u8!() != 0;
+        self.ppu.bg_mode = read_u8!();
+        self.ppu.bg3_priority = read_u8!() != 0;
+        for i in 0..4 {
+            self.ppu.bg_tilemap_addr[i] = read_u16!();
+            self.ppu.bg_tilemap_size[i] = read_u8!();
+            self.ppu.bg_chr_addr[i] = read_u16!();
+            self.ppu.bg_tile_size[i] = read_u8!() != 0;
+            self.ppu.bg_hscroll[i] = read_u16!();
+            self.ppu.bg_vscroll[i] = read_u16!();
+        }
+        self.ppu.scroll_latch = read_u8!();
+        self.ppu.scroll_latch2 = read_u8!();
+        self.ppu.m7a = read_u16!() as i16;
+        self.ppu.m7b = read_u16!() as i16;
+        self.ppu.m7c = read_u16!() as i16;
+        self.ppu.m7d = read_u16!() as i16;
+        self.ppu.m7hofs = read_u16!() as i16;
+        self.ppu.m7vofs = read_u16!() as i16;
+        self.ppu.m7x = read_u16!() as i16;
+        self.ppu.m7y = read_u16!() as i16;
+        self.ppu.m7_latch = read_u8!();
+        self.ppu.m7_flipflop = read_u8!() != 0;
+        self.ppu.m7_low_buffer = read_u8!();
+        self.ppu.m7_mult_b = read_u8!() as i8;
+        self.ppu.m7sel = read_u8!();
+        for i in 0..4 { self.ppu.wh[i] = read_u8!(); }
+        self.ppu.w12sel = read_u8!();
+        self.ppu.w34sel = read_u8!();
+        self.ppu.wobjsel = read_u8!();
+        self.ppu.wbglog = read_u8!();
+        self.ppu.wobjlog = read_u8!();
+        self.ppu.tm = read_u8!();
+        self.ppu.ts = read_u8!();
+        self.ppu.tmw = read_u8!();
+        self.ppu.tsw = read_u8!();
+        self.ppu.cgwsel = read_u8!();
+        self.ppu.cgadsub = read_u8!();
+        self.ppu.fixed_color_r = read_u8!();
+        self.ppu.fixed_color_g = read_u8!();
+        self.ppu.fixed_color_b = read_u8!();
+        self.ppu.brightness = read_u8!();
+        self.ppu.force_blank = read_u8!() != 0;
+        self.ppu.obj_size = read_u8!();
+        self.ppu.obj_base = read_u16!();
+        self.ppu.obj_name_select = read_u16!();
+        self.ppu.setini = read_u8!();
+        self.ppu.scanline = read_u16!();
+        self.ppu.nmi_flag = read_u8!() != 0;
+        self.ppu.nmi_enabled = read_u8!() != 0;
+        self.ppu.vblank_flag = read_u8!() != 0;
+
+        // APU
+        self.apu.a = read_u8!();
+        self.apu.x = read_u8!();
+        self.apu.y = read_u8!();
+        self.apu.sp = read_u8!();
+        self.apu.pc = read_u16!();
+        self.apu.psw = read_u8!();
+        let apu_ram = read_bytes!(65536);
+        self.apu.ram[..65536].copy_from_slice(apu_ram);
+        for i in 0..4 { self.apu.ports_from_cpu[i] = read_u8!(); }
+        for i in 0..4 { self.apu.ports_from_spc[i] = read_u8!(); }
+        for i in 0..3 { self.apu.timer_target[i] = read_u8!(); }
+        for i in 0..3 { self.apu.timer_counter[i] = read_u8!(); }
+        for i in 0..3 { self.apu.timer_divider[i] = read_u16!(); }
+        for i in 0..3 { self.apu.timer_enabled[i] = read_u8!() != 0; }
+        self.apu.dsp_addr = read_u8!();
+        self.apu.control = read_u8!();
+        self.apu.cycles = read_u32!();
+        self.apu.total_cycles = read_u64!();
+
+        // DMA
+        self.dma.dma_enable = read_u8!();
+        self.dma.hdma_enable = read_u8!();
+        for ch in &mut self.dma.channels {
+            ch.control = read_u8!();
+            ch.b_addr = read_u8!();
+            ch.a_addr = read_u16!();
+            ch.a_bank = read_u8!();
+            ch.count = read_u16!();
+            ch.hdma_bank = read_u8!();
+            ch.hdma_addr = read_u16!();
+            ch.hdma_line_counter = read_u8!();
+            ch.indirect_addr = read_u16!();
+            ch.hdma_do_transfer = read_u8!() != 0;
+            ch.hdma_completed = read_u8!() != 0;
+        }
+
+        // Restore DSP registers from APU RAM
+        self.apu.restore_dsp_from_ram();
+
+        true
+    }
+
+    pub fn encode_base64(data: &[u8]) -> String {
+        const TABLE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut result = String::with_capacity((data.len() + 2) / 3 * 4);
+        let chunks = data.chunks(3);
+        for chunk in chunks {
+            let b0 = chunk[0] as u32;
+            let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
+            let b2 = if chunk.len() > 2 { chunk[2] as u32 } else { 0 };
+            let n = (b0 << 16) | (b1 << 8) | b2;
+            result.push(TABLE[((n >> 18) & 0x3F) as usize] as char);
+            result.push(TABLE[((n >> 12) & 0x3F) as usize] as char);
+            if chunk.len() > 1 {
+                result.push(TABLE[((n >> 6) & 0x3F) as usize] as char);
+            } else {
+                result.push('=');
+            }
+            if chunk.len() > 2 {
+                result.push(TABLE[(n & 0x3F) as usize] as char);
+            } else {
+                result.push('=');
+            }
+        }
+        result
+    }
+
+    pub fn decode_base64(data: &str) -> Option<Vec<u8>> {
+        let mut result = Vec::with_capacity(data.len() * 3 / 4);
+        let bytes = data.as_bytes();
+        let len = bytes.len();
+        if len % 4 != 0 { return None; }
+
+        for i in (0..len).step_by(4) {
+            let a = Self::b64_val(bytes[i])?;
+            let b = Self::b64_val(bytes[i + 1])?;
+            let c = if bytes[i + 2] == b'=' { 0 } else { Self::b64_val(bytes[i + 2])? };
+            let d = if bytes[i + 3] == b'=' { 0 } else { Self::b64_val(bytes[i + 3])? };
+            let n = (a << 18) | (b << 12) | (c << 6) | d;
+            result.push((n >> 16) as u8);
+            if bytes[i + 2] != b'=' { result.push((n >> 8) as u8); }
+            if bytes[i + 3] != b'=' { result.push(n as u8); }
+        }
+        Some(result)
+    }
+
+    pub fn b64_val(c: u8) -> Option<u32> {
+        match c {
+            b'A'..=b'Z' => Some((c - b'A') as u32),
+            b'a'..=b'z' => Some((c - b'a' + 26) as u32),
+            b'0'..=b'9' => Some((c - b'0' + 52) as u32),
+            b'+' => Some(62),
+            b'/' => Some(63),
+            _ => None,
+        }
     }
 
     /// Debug: 讀取記憶體

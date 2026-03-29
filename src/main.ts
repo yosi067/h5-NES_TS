@@ -10,6 +10,7 @@
  */
 
 import init, { EmuWasm } from './wasm/nes_wasm.js';
+import JSZip from 'jszip';
 
 // ===== 型別定義 =====
 
@@ -271,14 +272,17 @@ function renderRomList(roms: RomInfo[]): void {
     const isGb = lower.endsWith('.gb') || lower.endsWith('.gbc');
     const isGg = lower.endsWith('.gg') || lower.endsWith('.sms');
     const isSnes = lower.endsWith('.smc') || lower.endsWith('.sfc');
-    const icon = isSnes ? '🟣' : isGg ? '🟠' : isGb ? '🟢' : '🎮';
-    const systemTag = isSnes
-      ? '<span class="rom-system snes">SNES</span>'
-      : isGg
-        ? '<span class="rom-system gg">GG</span>'
-        : isGb
-          ? '<span class="rom-system gb">GB</span>'
-          : '<span class="rom-system nes">NES</span>';
+    const isZip = lower.endsWith('.zip');
+    const icon = isZip ? '📦' : isSnes ? '🟣' : isGg ? '🟠' : isGb ? '🟢' : '🎮';
+    const systemTag = isZip
+      ? '<span class="rom-system zip">ZIP</span>'
+      : isSnes
+        ? '<span class="rom-system snes">SNES</span>'
+        : isGg
+          ? '<span class="rom-system gg">GG</span>'
+          : isGb
+            ? '<span class="rom-system gb">GB</span>'
+            : '<span class="rom-system nes">NES</span>';
     return `
       <button class="rom-item" data-index="${index}" data-file="${encodeURIComponent(rom.file)}">
         <span class="rom-icon">${icon}</span>
@@ -302,7 +306,7 @@ function renderRomList(roms: RomInfo[]): void {
 }
 
 /**
- * 從伺服器載入 ROM
+ * 從伺服器載入 ROM（支援 ZIP）
  */
 async function loadRomFromServer(filename: string): Promise<void> {
   try {
@@ -314,8 +318,37 @@ async function loadRomFromServer(filename: string): Promise<void> {
     }
     
     const buffer = await response.arrayBuffer();
-    currentRomFilename = filename;
-    startGame(buffer);
+    const lower = filename.toLowerCase();
+
+    if (lower.endsWith('.zip')) {
+      // 解壓 ZIP
+      const zip = await JSZip.loadAsync(buffer);
+      const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms'];
+      let romFile: JSZip.JSZipObject | null = null;
+      let romFileName = '';
+
+      for (const [name, entry] of Object.entries(zip.files)) {
+        if (entry.dir) continue;
+        const nameLower = name.toLowerCase();
+        if (romExtensions.some(ext => nameLower.endsWith(ext))) {
+          romFile = entry;
+          romFileName = name;
+          break;
+        }
+      }
+
+      if (!romFile) {
+        alert('ZIP 檔案中找不到遊戲 ROM');
+        return;
+      }
+
+      const romBuffer = await romFile.async('arraybuffer');
+      currentRomFilename = romFileName.split('/').pop() || romFileName;
+      startGame(romBuffer);
+    } else {
+      currentRomFilename = filename;
+      startGame(buffer);
+    }
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
     alert('載入遊戲失敗，請重試');
@@ -323,12 +356,44 @@ async function loadRomFromServer(filename: string): Promise<void> {
 }
 
 /**
- * 從檔案載入 ROM
+ * 從檔案載入 ROM（支援 ZIP）
  */
 async function loadRomFromFile(file: File): Promise<void> {
   try {
-    const buffer = await file.arrayBuffer();
-    currentRomFilename = file.name;
+    const lower = file.name.toLowerCase();
+    let buffer: ArrayBuffer;
+    let romName = file.name;
+
+    if (lower.endsWith('.zip')) {
+      // 解壓 ZIP，找第一個遊戲檔案
+      const zip = await JSZip.loadAsync(await file.arrayBuffer());
+      const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms'];
+      let romFile: JSZip.JSZipObject | null = null;
+      let romFileName = '';
+
+      for (const [name, entry] of Object.entries(zip.files)) {
+        if (entry.dir) continue;
+        const nameLower = name.toLowerCase();
+        if (romExtensions.some(ext => nameLower.endsWith(ext))) {
+          romFile = entry;
+          romFileName = name;
+          break;
+        }
+      }
+
+      if (!romFile) {
+        alert('ZIP 檔案中找不到遊戲 ROM');
+        return;
+      }
+
+      buffer = await romFile.async('arraybuffer');
+      // Use the actual ROM filename inside the ZIP for extension detection
+      romName = romFileName.split('/').pop() || romFileName;
+    } else {
+      buffer = await file.arrayBuffer();
+    }
+
+    currentRomFilename = romName;
     startGame(buffer);
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
@@ -403,6 +468,9 @@ function startGame(romData: ArrayBuffer): void {
     
     // 開始模擬
     startEmulation();
+
+    // 載入 SRAM（遊戲內建電池存檔）
+    loadSram();
 
     // 特殊 ROM 自動重整：部分遊戲首次載入有問題，需自動 reset 一次
     if (AUTO_RESET_ROMS.some(name => currentRomFilename === name)) {
@@ -1193,6 +1261,45 @@ function exportSaveToFile(): void {
   URL.revokeObjectURL(url);
 }
 
+// ===== SRAM 持久化 (遊戲內建存檔) =====
+
+const SRAM_PREFIX = 'emu_sram_';
+
+function getSramKey(): string {
+  return `${SRAM_PREFIX}${currentRomFilename}`;
+}
+
+/** 將 SRAM 儲存到 localStorage */
+function saveSram(): void {
+  if (!nes || !currentRomFilename) return;
+  if (nes.getCoreType() !== 'snes') return;
+  
+  try {
+    const sramData = nes.exportSram();
+    if (sramData && sramData.length > 0) {
+      localStorage.setItem(getSramKey(), sramData);
+    }
+  } catch (e) {
+    console.error('SRAM 儲存失敗:', e);
+  }
+}
+
+/** 從 localStorage 讀取 SRAM */
+function loadSram(): void {
+  if (!nes || !currentRomFilename) return;
+  if (nes.getCoreType() !== 'snes') return;
+  
+  try {
+    const sramData = localStorage.getItem(getSramKey());
+    if (sramData) {
+      nes.importSram(sramData);
+      console.log('SRAM 已從 localStorage 載入');
+    }
+  } catch (e) {
+    console.error('SRAM 讀取失敗:', e);
+  }
+}
+
 // ===== SNES 控制器設定 =====
 
 /**
@@ -1427,4 +1534,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('click', resumeAudio, { once: true });
   document.addEventListener('keydown', resumeAudio, { once: true });
   document.addEventListener('touchstart', resumeAudio, { once: true });
+
+  // 定期自動儲存 SRAM（每 30 秒）
+  setInterval(() => {
+    if (isRunning) saveSram();
+  }, 30000);
+
+  // 頁面關閉時儲存 SRAM
+  window.addEventListener('beforeunload', () => {
+    saveSram();
+  });
 });

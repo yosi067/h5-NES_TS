@@ -410,6 +410,38 @@ impl EmuWasm {
         }
     }
 
+    /// Export SRAM (battery-backed save) as base64 string
+    #[wasm_bindgen(js_name = "exportSram")]
+    pub fn export_sram(&self) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => {
+                if emu.cart.sram_size > 0 {
+                    snes::emulator::SnesEmulator::encode_base64(&emu.cart.sram)
+                } else {
+                    String::new()
+                }
+            }
+            _ => String::new(),
+        }
+    }
+
+    /// Import SRAM (battery-backed save) from base64 string
+    #[wasm_bindgen(js_name = "importSram")]
+    pub fn import_sram(&mut self, data: &str) -> bool {
+        match &mut self.core {
+            CoreType::Snes(emu) => {
+                if let Some(bytes) = snes::emulator::SnesEmulator::decode_base64(data.trim()) {
+                    let len = bytes.len().min(emu.cart.sram.len());
+                    emu.cart.sram[..len].copy_from_slice(&bytes[..len]);
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
+        }
+    }
+
     #[wasm_bindgen(js_name = "getWasmMemory")]
     pub fn get_wasm_memory(&self) -> JsValue {
         wasm_bindgen::memory()

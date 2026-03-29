@@ -29,28 +29,28 @@ pub struct Ppu {
     // === VRAM: 64KB (32K words of 16-bit) ===
     pub vram: [u8; 0x10000],
     /// VRAM 位址
-    vram_addr: u16,
+    pub vram_addr: u16,
     /// VRAM 位址增量 (1 或 32)
-    vram_increment: u16,
+    pub vram_increment: u16,
     /// VRAM 位址映射模式
-    vram_mapping: u8,
+    pub vram_mapping: u8,
     /// VRAM 地址重映射 ($2115)
-    vram_incmode: bool, // true = 寫入高位元後遞增, false = 寫入低位元後遞增
+    pub vram_incmode: bool, // true = 寫入高位元後遞增, false = 寫入低位元後遞增
     /// VRAM 讀取預取緩衝
-    vram_prefetch: u16,
+    pub vram_prefetch: u16,
 
     // === OAM: 544 bytes ===
     pub oam: [u8; 544],
     pub oam_addr: u16,
     pub oam_addr_reload: u16,
-    oam_latch: u8,
-    oam_priority: bool,
+    pub oam_latch: u8,
+    pub oam_priority: bool,
 
     // === CGRAM: 256 色, 各 15-bit ===
     pub cgram: [u16; 256],
-    cgram_addr: u8,
-    cgram_latch: u8,
-    cgram_flipflop: bool,
+    pub cgram_addr: u8,
+    pub cgram_latch: u8,
+    pub cgram_flipflop: bool,
 
     // === 背景暫存器 ===
     /// 背景模式 ($2105)
@@ -69,8 +69,8 @@ pub struct Ppu {
     pub bg_hscroll: [u16; 4],
     pub bg_vscroll: [u16; 4],
     /// BG scroll latch (PPU1 舊值)
-    scroll_latch: u8,
-    scroll_latch2: u8,
+    pub scroll_latch: u8,
+    pub scroll_latch2: u8,
 
     // === Mode 7 ===
     pub m7a: i16,
@@ -81,13 +81,13 @@ pub struct Ppu {
     pub m7vofs: i16,
     pub m7x: i16,
     pub m7y: i16,
-    m7_latch: u8,
+    pub m7_latch: u8,
     /// Mode 7 write flip-flop: false = next write stores low byte; true = next write combines & updates
-    m7_flipflop: bool,
+    pub m7_flipflop: bool,
     /// Mode 7 low byte buffer (stored on first write, combined on second write)
-    m7_low_buffer: u8,
+    pub m7_low_buffer: u8,
     /// 最後寫入 $211C 的原始字節 (用於硬體乘法, 獨立於 latch)
-    m7_mult_b: i8,
+    pub m7_mult_b: i8,
     /// Mode 7 設定 ($211A)
     pub m7sel: u8,
 
@@ -411,51 +411,25 @@ impl Ppu {
             }
             // $211A - M7SEL: Mode 7 設定
             0x211A => { self.m7sel = val; }
-            // $211B-$211E - Mode 7 矩陣參數 (使用全域共享翻轉器)
-            // $211B-$211E: SNES hardware write-twice latch model
-            // Mode 7 matrix registers: flip-flop model
-            // First write: store low byte into buffer, do NOT update register
-            // Second write: combine (val << 8) | buffer → update register
-            // All $211B-$211E share one flip-flop state
+            // $211B-$211E - Mode 7 矩陣參數 (單次寫入 latch 模式)
+            // 每次寫入: register = (val << 8) | m7_latch; m7_latch = val
+            // 這些暫存器不使用 flip-flop，每次寫入都會立即更新
+            // 遊戲通常連續寫入兩次（低/高字節）來設定 16-bit 值
             0x211B => {
-                if !self.m7_flipflop {
-                    self.m7_low_buffer = val;
-                    self.m7_flipflop = true;
-                } else {
-                    self.m7a = (((val as u16) << 8) | (self.m7_low_buffer as u16)) as i16;
-                    self.m7_flipflop = false;
-                }
+                self.m7a = (((val as u16) << 8) | (self.m7_latch as u16)) as i16;
                 self.m7_latch = val;
             }
             0x211C => {
                 self.m7_mult_b = val as i8; // 硬體乘法用：每次寫入都記錄
-                if !self.m7_flipflop {
-                    self.m7_low_buffer = val;
-                    self.m7_flipflop = true;
-                } else {
-                    self.m7b = (((val as u16) << 8) | (self.m7_low_buffer as u16)) as i16;
-                    self.m7_flipflop = false;
-                }
+                self.m7b = (((val as u16) << 8) | (self.m7_latch as u16)) as i16;
                 self.m7_latch = val;
             }
             0x211D => {
-                if !self.m7_flipflop {
-                    self.m7_low_buffer = val;
-                    self.m7_flipflop = true;
-                } else {
-                    self.m7c = (((val as u16) << 8) | (self.m7_low_buffer as u16)) as i16;
-                    self.m7_flipflop = false;
-                }
+                self.m7c = (((val as u16) << 8) | (self.m7_latch as u16)) as i16;
                 self.m7_latch = val;
             }
             0x211E => {
-                if !self.m7_flipflop {
-                    self.m7_low_buffer = val;
-                    self.m7_flipflop = true;
-                } else {
-                    self.m7d = (((val as u16) << 8) | (self.m7_low_buffer as u16)) as i16;
-                    self.m7_flipflop = false;
-                }
+                self.m7d = (((val as u16) << 8) | (self.m7_latch as u16)) as i16;
                 self.m7_latch = val;
             }
             // $211F-$2120: M7 Center X/Y - 13-bit signed, uses shared latch (not flipflop)
@@ -721,7 +695,7 @@ impl Ppu {
         let backdrop_rgba = bgr15_to_rgba(backdrop);
         for x in 0..256 {
             self.main_buf[x] = backdrop_rgba;
-            self.sub_buf[x] = 0xFF000000; // 黑色
+            self.sub_buf[x] = backdrop_rgba; // Sub screen backdrop = CGRAM[0] (匹配硬體行為)
             self.main_pri[x] = 0;
             self.sub_pri[x] = 0;
             self.main_src[x] = 5; // backdrop
@@ -1157,24 +1131,26 @@ impl Ppu {
             }
         }
 
-        let regs = [self.w12sel, self.w12sel, self.w34sel, self.w34sel, self.wobjsel, self.wobjsel];
-        let shifts = [0u8, 2, 0, 2, 0, 2]; // BG1, BG2, BG3, BG4, OBJ, Color
+        // Window register bits per layer:
+        // $2123 (w12sel): bits 0-3 = BG1, bits 4-7 = BG2
+        // $2124 (w34sel): bits 0-3 = BG3, bits 4-7 = BG4
+        // $2125 (wobjsel): bits 0-3 = OBJ, bits 4-7 = Color
 
         for layer in 0..6 {
-            let reg_idx = layer;
-            let shift = if layer < 2 { layer * 2 } else if layer < 4 { (layer - 2) * 2 } else { (layer - 4) * 2 };
             let settings = match layer {
-                0 | 1 => self.w12sel,
-                2 | 3 => self.w34sel,
-                4 | 5 => self.wobjsel,
+                0 => self.w12sel & 0x0F,        // BG1: w12sel low nibble
+                1 => (self.w12sel >> 4) & 0x0F,  // BG2: w12sel high nibble
+                2 => self.w34sel & 0x0F,         // BG3: w34sel low nibble
+                3 => (self.w34sel >> 4) & 0x0F,  // BG4: w34sel high nibble
+                4 => self.wobjsel & 0x0F,        // OBJ: wobjsel low nibble
+                5 => (self.wobjsel >> 4) & 0x0F, // Color: wobjsel high nibble
                 _ => 0,
             };
-            let bits = (settings >> (shift * 2)) & 0x0F;
 
-            let w1_enable = bits & 0x02 != 0;
-            let w1_invert = bits & 0x01 != 0;
-            let w2_enable = bits & 0x08 != 0;
-            let w2_invert = bits & 0x04 != 0;
+            let w1_enable = settings & 0x02 != 0;
+            let w1_invert = settings & 0x01 != 0;
+            let w2_enable = settings & 0x08 != 0;
+            let w2_invert = settings & 0x04 != 0;
 
             if !w1_enable && !w2_enable { continue; }
 
@@ -1246,6 +1222,7 @@ impl Ppu {
 
             let in_window = self.window_mask[5][x];
 
+            // Clip blacks the main screen color before color math
             let clip = match clip_mode {
                 0 => false,
                 1 => in_window,
@@ -1254,6 +1231,7 @@ impl Ppu {
                 _ => false,
             };
 
+            // Prevent disables color math entirely
             let prevent = match prevent_mode {
                 0 => false,
                 1 => in_window,
@@ -1262,11 +1240,14 @@ impl Ppu {
                 _ => false,
             };
 
-            let final_rgba = if color_math_enabled && !clip && !prevent {
-                let mr = main_rgba & 0xFF;
-                let mg = (main_rgba >> 8) & 0xFF;
-                let mb = (main_rgba >> 16) & 0xFF;
+            // Apply clip: force main color to black
+            let (mr, mg, mb) = if clip {
+                (0u32, 0u32, 0u32)
+            } else {
+                (main_rgba & 0xFF, (main_rgba >> 8) & 0xFF, (main_rgba >> 16) & 0xFF)
+            };
 
+            let final_rgba = if color_math_enabled && !prevent {
                 // Sub screen 或固定色
                 let (sr, sg, sb) = if self.cgwsel & 0x02 != 0 {
                     // 使用固定色
@@ -1291,7 +1272,7 @@ impl Ppu {
 
                 r | (g << 8) | (b << 16) | 0xFF000000
             } else {
-                main_rgba
+                mr | (mg << 8) | (mb << 16) | 0xFF000000
             };
 
             // 套用亮度
