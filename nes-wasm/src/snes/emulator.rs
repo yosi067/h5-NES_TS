@@ -15,6 +15,7 @@ use super::cartridge::Cartridge;
 use super::controller::Controller;
 use super::dma::{DmaController, DmaDirection};
 use super::dsp1::Dsp1;
+use super::cx4::Cx4;
 
 /// Master Clock 頻率 (NTSC)
 const MASTER_CLOCK: f64 = 21_477_272.0;
@@ -42,6 +43,7 @@ pub struct SnesEmulator {
     pub ctrl2: Controller,
     pub dma: DmaController,
     pub dsp1: Dsp1,
+    pub cx4: Cx4,
 
     /// 128KB Work RAM
     pub wram: Vec<u8>,
@@ -105,6 +107,7 @@ impl SnesEmulator {
             ctrl2: Controller::new(),
             dma: DmaController::new(),
             dsp1: Dsp1::new(),
+            cx4: Cx4::new(),
 
             wram: vec![0; 0x20000], // 128KB
             wram_addr: 0,
@@ -140,6 +143,7 @@ impl SnesEmulator {
     pub fn load_rom(&mut self, data: &[u8]) -> bool {
         if self.cart.load(data) {
             self.dsp1.present = self.cart.has_dsp1;
+            self.cx4.present = self.cart.has_cx4;
             self.reset();
             true
         } else {
@@ -153,6 +157,7 @@ impl SnesEmulator {
         self.apu.reset();
         self.dma.reset();
         self.dsp1.reset();
+        self.cx4.reset();
         self.wram = vec![0; 0x20000];
         self.wram_addr = 0;
         self.master_clock = 0;
@@ -513,8 +518,11 @@ impl SnesEmulator {
                             }
                         }
                         crate::snes::cartridge::MapMode::LoROM => {
-                            // LoROM: $00-$3F:$6000-$7FFF mirrors SRAM ($70-$7D:$0000-$7FFF)
-                            if self.cart.sram_size > 0 {
+                            // CX4: $00-$3F/$80-$BF:$6000-$7FFF → CX4 RAM/IO
+                            if self.cx4.present {
+                                self.cx4.read(addr - 0x6000)
+                            } else if self.cart.sram_size > 0 {
+                                // LoROM: $00-$3F:$6000-$7FFF mirrors SRAM ($70-$7D:$0000-$7FFF)
                                 let sram_addr = ((effective as usize & 0x1F) * 0x2000) + (addr as usize - 0x6000);
                                 self.cart.read_sram(sram_addr)
                             } else {
@@ -589,8 +597,11 @@ impl SnesEmulator {
             0x4200..=0x42FF => self.read_cpu_register(addr),
             0x4300..=0x43FF => self.dma.read_register(addr - 0x4300),
             0x6000..=0x7FFF => {
-                // LoROM SRAM mirror for banks $40-$6F
-                if self.cart.sram_size > 0 {
+                // CX4: 也攔截 $40-$6F:$6000-$7FFF
+                if self.cx4.present {
+                    self.cx4.read(addr - 0x6000)
+                } else if self.cart.sram_size > 0 {
+                    // LoROM SRAM mirror for banks $40-$6F
                     let sram_addr = ((effective as usize & 0x1F) * 0x2000) + (addr as usize - 0x6000);
                     self.cart.read_sram(sram_addr)
                 } else {
@@ -645,8 +656,11 @@ impl SnesEmulator {
                             }
                         }
                         crate::snes::cartridge::MapMode::LoROM => {
-                            // LoROM: $00-$3F:$6000-$7FFF mirrors SRAM
-                            if self.cart.sram_size > 0 {
+                            // CX4: $00-$3F/$80-$BF:$6000-$7FFF → CX4 RAM/IO
+                            if self.cx4.present {
+                                self.cx4_write(addr, val);
+                            } else if self.cart.sram_size > 0 {
+                                // LoROM: $00-$3F:$6000-$7FFF mirrors SRAM
                                 let sram_addr = ((effective as usize & 0x1F) * 0x2000) + (addr as usize - 0x6000);
                                 self.cart.write_sram(sram_addr, val);
                             }
@@ -712,13 +726,58 @@ impl SnesEmulator {
             0x4200..=0x42FF => { self.write_cpu_register(addr, val); }
             0x4300..=0x43FF => { self.dma.write_register(addr - 0x4300, val); }
             0x6000..=0x7FFF => {
-                // LoROM SRAM mirror for banks $40-$6F
-                if self.cart.sram_size > 0 {
+                // CX4: 也攔截 $40-$6F:$6000-$7FFF
+                if self.cx4.present {
+                    self.cx4_write(addr, val);
+                } else if self.cart.sram_size > 0 {
+                    // LoROM SRAM mirror for banks $40-$6F
                     let sram_addr = ((effective as usize & 0x1F) * 0x2000) + (addr as usize - 0x6000);
                     self.cart.write_sram(sram_addr, val);
                 }
             }
             _ => {}
+        }
+    }
+
+    /// CX4 寫入輔助（安全避開借用衝突）
+    fn cx4_write(&mut self, snes_addr: u16, val: u8) {
+        let offset = snes_addr.wrapping_sub(0x6000);
+        let off = offset as usize & 0x1FFF;
+
+        // 先寫入 RAM
+        self.cx4.ram[off] = val;
+
+        // 檢查是否觸發 DMA 或命令
+        if off == 0x1F47 {
+            // DMA: 需要從 ROM 複製資料到 CX4 RAM
+            let src = self.cx4.ram[0x1F40] as u32
+                | ((self.cx4.ram[0x1F41] as u32) << 8)
+                | ((self.cx4.ram[0x1F42] as u32) << 16);
+            let len = self.cx4.ram[0x1F43] as u32
+                | ((self.cx4.ram[0x1F44] as u32) << 8);
+            let dst = self.cx4.ram[0x1F45] as u16
+                | ((self.cx4.ram[0x1F46] as u16) << 8);
+
+            for i in 0..len {
+                let snes_a = src.wrapping_add(i);
+                let bank = (snes_a >> 16) as u8;
+                let addr = snes_a as u16;
+                let rom_offset = ((bank as usize & 0x7F) << 15) | (addr as usize & 0x7FFF);
+                let rom_val = if rom_offset < self.cart.rom.len() {
+                    self.cart.rom[rom_offset]
+                } else if !self.cart.rom.is_empty() {
+                    self.cart.rom[rom_offset % self.cart.rom.len()]
+                } else {
+                    0
+                };
+                let dst_off = dst.wrapping_add(i as u16).wrapping_sub(0x6000) as usize;
+                if dst_off < 0x2000 {
+                    self.cx4.ram[dst_off] = rom_val;
+                }
+            }
+        } else if off == 0x1F4F {
+            // 命令觸發
+            self.cx4.execute_command();
         }
     }
 

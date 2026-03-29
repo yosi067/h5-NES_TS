@@ -15,4 +15,5 @@ pub mod cartridge;
 pub mod controller;
 pub mod dma;
 pub mod dsp1;
+pub mod cx4;
 pub mod emulator;
