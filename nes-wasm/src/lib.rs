@@ -456,6 +456,15 @@ impl EmuWasm {
         }
     }
 
+    /// SNES 精靈診斷
+    #[wasm_bindgen(js_name = "debugSpriteInfo")]
+    pub fn debug_sprite_info(&self) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_sprite_info(),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
     /// SNES 單步追蹤
     #[wasm_bindgen(js_name = "debugStepTrace")]
     pub fn debug_step_trace(&mut self, count: u32) -> String {

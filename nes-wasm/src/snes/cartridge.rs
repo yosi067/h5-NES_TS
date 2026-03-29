@@ -31,6 +31,8 @@ pub struct Cartridge {
     pub fast_rom: bool,
     /// 是否包含 DSP-1 協處理器
     pub has_dsp1: bool,
+    /// 是否包含 CX4 協處理器 (Mega Man X2/X3)
+    pub has_cx4: bool,
     /// 是否已載入
     pub loaded: bool,
 }
@@ -46,6 +48,7 @@ impl Cartridge {
             title: String::new(),
             fast_rom: false,
             has_dsp1: false,
+            has_cx4: false,
             loaded: false,
         }
     }
@@ -132,7 +135,7 @@ impl Cartridge {
             }
 
             // ROM type 合理性
-            if rom_type <= 0x06 {
+            if rom_type <= 0x06 || rom_type == 0xF3 {
                 score += 3;
             }
 
@@ -194,6 +197,22 @@ impl Cartridge {
         // 排除 SA-1 (mode $23) 和 SuperFX (type $13+)
         if (rom_type >= 0x03 && rom_type <= 0x05) && (map_mode_low == 0x00 || map_mode_low == 0x01) {
             self.has_dsp1 = true;
+        }
+
+        // CX4 偵測: ROM type $F3 + Extended Header ChipType $10
+        // 或者單純 ROM type $F3 配合 LoROM 模式
+        if rom_type == 0xF3 && map_mode_low == 0x00 {
+            self.has_cx4 = true;
+            self.has_dsp1 = false; // CX4 和 DSP1 互斥
+        }
+        // 額外透過 Extended Header ($FFB0 區域) 確認 CX4
+        let ext_header_base = header_base.wrapping_sub(0x10);
+        if ext_header_base + 0x0F < self.rom.len() {
+            let chip_type = self.rom[ext_header_base + 0x0F]; // $FFBF/$7FBF
+            if chip_type == 0x10 {
+                self.has_cx4 = true;
+                self.has_dsp1 = false;
+            }
         }
 
         // ROM 大小 ($FFD7): 2^N KB

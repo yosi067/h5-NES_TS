@@ -522,12 +522,12 @@ impl Dsp {
             let mut fir_r: i32 = 0;
             for j in 0..8 {
                 let hist_idx = (self.echo_hist_pos + 1 + j) & 7;
-                fir_l += (self.echo_hist_l[hist_idx] as i32 * self.fir[j] as i32) >> 6;
-                fir_r += (self.echo_hist_r[hist_idx] as i32 * self.fir[j] as i32) >> 6;
+                fir_l += self.echo_hist_l[hist_idx] as i32 * self.fir[j] as i32;
+                fir_r += self.echo_hist_r[hist_idx] as i32 * self.fir[j] as i32;
             }
-            // Clamp to 16-bit signed (critical: prevents echo from dominating main mix)
-            fir_l = (fir_l as i16) as i32;
-            fir_r = (fir_r as i16) as i32;
+            // Post-sum >>6 + clamp (matches blargg: echo_0 = clamp16(sum >> 6))
+            fir_l = (fir_l >> 6).max(-32768).min(32767);
+            fir_r = (fir_r >> 6).max(-32768).min(32767);
 
             self.echo_hist_pos = (self.echo_hist_pos + 1) & 7;
 

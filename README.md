@@ -252,7 +252,7 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 
 ### 🔗 統一 WASM 介面 (`EmuWasm`)
 
-採用 **單一 WASM 二進位** 包含 NES + GB + GG 三核心，使用 Rust enum dispatch：
+採用 **單一 WASM 二進位** 包含 NES + GB + GG + SNES 四核心，使用 Rust enum dispatch：
 
 ```rust
 enum CoreType {
@@ -260,6 +260,7 @@ enum CoreType {
     Nes(emulator::Emulator),       // NES 核心
     Gb(gb::emulator::GbEmulator),  // GB 核心
     Gg(gg::emulator::GgEmulator),  // GG/SMS 核心
+    Snes(snes::emulator::SnesEmulator),  // SNES 核心
 }
 ```
 
@@ -282,11 +283,7 @@ enum CoreType {
 
 ### 🐛 Game Boy Joypad 方向鍵修正
 
-**問題**：進入 GB 遊戲後方向鍵完全無法操作。
-
-**原因**：`read()` 方法中，`result` 初始低 4 位為 `0x0`。當遊戲只選取方向鍵 bank (select=0x20) 時，按鈕區塊不執行，低 4 位維持 `0x0`。方向區塊的 `result & 0x0F & dpad` 因 `result & 0x0F = 0`，AND 結果永遠 `0x00`，等同所有方向同時按下 (GB active-low)。
-
-**處理方案**：重寫 `read()` 為先將低 4 位初始化為 `0x0F` (全部放開)，再由被選取的 bank 透過 AND 清除對應 bit (表示按下)。兩個 bank 同時選取時 AND 效果自然正確合併。
+GB 方向鍵無法操作 — `result` 低 4 位初始為 0x0 等同所有方向按下。修正為初始化 0x0F。詳見 [問題集 Q28](docs/TROUBLESHOOTING.md#game-boy--joypad)。
 
 ### 🔧 基礎設施更新
 
@@ -294,7 +291,7 @@ enum CoreType {
 - **HTML** (`index.html`)：檔案上傳接受 `.gb/.gbc/.gg/.sms`、ROM 系統標籤 CSS、品牌名更新為 H5-EMU
 - **WASM 建置**：`wasm-pack build --target web --out-dir ../src/wasm` 同時輸出到 `src/wasm/` 與 `pkg/`
 
-### 🎮 遊戲列表更新 (42 款：NES 32 + GB 4 + GG 5 + SMS 1)
+### 🎮 遊戲列表更新 (49 款：NES 30 + GB 4 + GG 5 + SMS 1 + SNES 10)
 
 NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛克人 6 / FF III / 薩爾達傳說 / 雙截龍 3 / 聖鈴傳說 / 冒險島 1~3 / 迷宮組曲 / Captain Tsubasa II / 熱血系列 ×9 / 龍珠 Z 系列 ×4 / Zombie Hunter / 五子棋 / 台灣麻將 / 150 合 1 / 1200 合 1
 
@@ -316,71 +313,21 @@ NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛
 
 ---
 
-## � Bug 修復 (2026-03-02) — NES CPU 時序 Off-by-One 修正
+## 🐛 Bug 修復 — NES CPU 時序 Off-by-One 修正
 
-### 問題現象
+**Zombie Hunter** 場景跳動 — `cpu_clock()` 每條指令多消耗 1 cycle，CPU 吞吐量下降 22%，VBlank handler 超時。修正：執行後 `cycles.saturating_sub(1)` 扣除本次呼叫消耗。
 
-**Zombie Hunter (Japan).nes** 進入遊戲後出現嚴重的**場景跳動**與**文字部分顯示錯誤**。
+👉 **完整排查過程請參閱 [問題集 Q19](docs/TROUBLESHOOTING.md#q19-cpu-指令-off-by-one--zombie-hunter-場景跳動)**
 
-### 排查過程
-
-1. **懷疑 APU**：新增靜音 / 停用 APU IRQ 功能進行隔離測試 → 靜音後問題仍然存在，排除 APU 干擾
-2. **排查 PPU scroll**：Loopy scroll 實作 (`increment_scroll_x`/`increment_scroll_y`/`transfer_address_x`/`transfer_address_y`) 與 nesdev wiki 一致，無誤
-3. **排查 Mapper 1 (MMC1)**：shift register、PRG/CHR bank switching 邏輯正確
-4. **定位 CPU 時序**：發現 `cpu_clock()` 中存在 **off-by-one** 錯誤
-
-### 根本原因
-
-在 `emulator.rs` 的 `cpu_clock()` 函式中，CPU 指令的時鐘消耗計算有一個 off-by-one bug。每條指令的 **執行本身就佔用一個 CPU 時鐘週期**（即呼叫 `cpu_clock()` 的那次），但 `cycles` 計數器未扣除此消耗。
-
-以 `NOP`（正確值為 2 cycles）為例，修正前的執行流程：
-
-| cpu_clock 呼叫 | cycles 值 | 動作 |
-|---------------|-----------|------|
-| #1 | 0 → 執行 NOP → cycles = 2 | 取指+執行 |
-| #2 | 2 → 1 | 等待（消耗 cycle） |
-| #3 | 1 → 0 | 等待（消耗 cycle） |
-| #4 | 0 → 執行下一條指令 | ← 實際花了 **3** cycles |
-
-**所有指令、NMI、IRQ 都多消耗了 1 個 CPU 週期**，導致：
-- 平均指令 ~3.5 cycle → 實際 ~4.5 cycle
-- CPU 吞吐量下降約 **22%**
-- VBlank 可用的 ~2273 CPU cycles 內能完成的工作大幅減少
-- **Zombie Hunter 的 VBlank handler 無法在時限內完成 scroll 更新 → 場景跳動、文字渲染不完整**
-
-### 修正方式
-
-在 `cpu_clock()` 中，每次執行指令 / NMI / IRQ 後，對 `cycles` 執行 `saturating_sub(1)` 扣除當前呼叫本身消耗的週期：
-
-```rust
-fn cpu_clock(&mut self) {
-    if self.cpu.cycles > 0 {
-        self.cpu.cycles -= 1;
-        return;
-    }
-    // ... 執行指令 / NMI / IRQ ...
-    self.execute_cpu_instruction(opcode);
-    // 扣除本次呼叫消耗的 1 cycle
-    self.cpu.cycles = self.cpu.cycles.saturating_sub(1);
-}
-```
-
-修正後 NOP 正確僅耗時 2 cycles，所有指令回到正確時序，Zombie Hunter 場景跳動問題完全解決。
-
-### 附帶功能：靜音 / 停用 APU 切換
-
-排查過程中新增的除錯功能保留為正式功能：
-- **桌機**：點擊「🔊 音頻 (M)」按鈕或按 `M` 鍵切換
-- **手機**：中間功能列的 🔊 按鈕
-- 靜音時同時停用 Rust 核心的 APU IRQ（`audio_enabled` 旗標），可作為未來除錯其他遊戲的工具
+附帶新增靜音 / 停用 APU 切換功能（桌機 `M` 鍵、手機 🔊 按鈕）。
 
 ---
 
-## �🔧 最新更新 — Phase 3: Game Gear / Master System 核心與 VDP/Z80 精度修正
+## 🔧 Phase 3: Game Gear / Master System 核心與精度修正
 
 ### 🎮 Game Gear / Master System 完整核心實作
 
-在 NES + GB 核心之外，新增完整的 Game Gear 與 Master System 模擬核心，共 2,965 行 Rust 程式碼，分為 7 個模組。
+新增完整的 Game Gear 與 Master System 模擬核心，共 2,965 行 Rust，分為 7 個模組。
 
 **核心特點**：
 - 單一核心同時支援 GG (160×144) 與 SMS (256×192) 兩種模式
@@ -389,107 +336,31 @@ fn cpu_clock(&mut self) {
 - PSG SN76489 音頻，GG 立體聲混音
 - Sega Mapper 記憶體映射 ($FFFC~$FFFF 控制暫存器)
 
-### 🎯 VDP 顯示修正 (4 項)
+### 🎯 VDP 顯示修正 (4 項) + Z80 CPU 修正 (3 項)
 
-#### 1. Line IRQ / Frame IRQ 獨立追蹤
-**問題**：部分遊戲捲軸與 HUD 閃爍或渲染位置錯誤。
-**原因**：行中斷與幀中斷共用 `irq_pending` 旗標，導致讀取狀態時互相清除。
-**處理**：新增 `line_irq_pending` 獨立追蹤行中斷，`irq_pending` 改為動態計算 `line_irq_pending | (status & 0x80 != 0)`。
+VDP：Line/Frame IRQ 獨立追蹤、CRAM 寫入邏輯重寫、掃描線時序修正、精靈 Y 座標環繞
+Z80：DAA H 旗標精確公式 (MAME/ZEXALL)、INI/IND B 遞減時序、RETN undocumented opcodes
 
-#### 2. CRAM 寫入邏輯重寫
-**問題**：色彩渲染異常，部分遊戲畫面色盤錯誤。
-**原因**：CRAM latch 狀態機過於複雜，與實際 GG 硬體行為不符。
-**處理**：移除 `cram_latch_active` 狀態機，改為直接以 VRAM 寫入位址的奇偶判斷：偶數位址暫存、奇數位址組合寫入 12-bit RGB444 色彩。
-
-#### 3. 掃描線時序重寫
-**問題**：行中斷計數器重載時機錯誤，導致 raster effect 失敗。
-**原因**：VBlank 期間行計數器未持續重載 reg[10]，V counter 更新順序不正確。
-**處理**：VBlank 期間每行重載 reg[10]；V counter 在行遞增之後更新；可見行的行計數器歸零時立即重載並設定 pending。
-
-#### 4. 精靈 Y 座標環繞
-**問題**：GG 模式下某些精靈消失或位置錯誤。
-**原因**：Y 座標 >= 0xD1 (209) 的精靈應 wrap 到畫面頂部但未處理。
-**處理**：使用 `(y_raw + 1) % 256` 計算實際 Y，精靈跨畫面頂部時正確計算行內偏移。
-
-### 🎯 Z80 CPU 修正 (3 項)
-
-#### 5. DAA H 旗標精確修正
-**問題**：部分遊戲在需要 BCD 運算的場景行為異常 (如 GG 忍開頭動畫崩潰)。
-**原因**：DAA 指令的 Half-Carry 旗標計算方式不正確。
-**處理**：採用 MAME / ZEXALL 標準公式：`H = ((original_a ^ corrected_a) & 0x10) != 0`，確保與真實 Z80 硬體行為一致。
-
-#### 6. INI/IND B 遞減時序
-**問題**：Defenders of Oasis 等遊戲無法顯示選單。
-**原因**：INI/IND 指令中 B 暫存器的遞減發生在 mem_write 之後，不符合 Z80 硬體時序。
-**處理**：調整為 read port → decrement B → write memory 的正確順序。
-
-#### 7. RETN 未文件化 opcodes
-**問題**：少數遊戲使用 0xED 前綴的未文件化 RETN 別名。
-**處理**：新增 0xED 0x5D / 0x6D / 0x7D 作為 RETN (等同 0x45)，復原 IFF1 = IFF2 並從堆疊返回。
+👉 **完整排查過程請參閱 [問題集 Q23-Q27](docs/TROUBLESHOOTING.md#game-gear--master-system--z80-cpu)**
 
 ---
 
-## 🔧 更新記錄 (2026-02-07) — Rust/WASM 核心與遊戲相容性大修
+## 🔧 更新記錄 — Rust/WASM 核心與 NES 遊戲相容性修正
 
 ### 🦀 架構遷移：TypeScript → Rust/WebAssembly
 
-將模擬器核心從 TypeScript 遷移至 Rust，編譯為 WebAssembly 執行。
+將模擬器核心從 TypeScript 遷移至 Rust/WebAssembly。WASM 提供可預測的高效能（無 GC 暫停），Rust 所有權系統在編譯期防止記憶體安全問題。前端 TypeScript UI 不變，僅替換核心運算層。支援 18 種 Mapper。
 
-**調整原因**：TypeScript 執行效能受限於 JavaScript 引擎的 JIT 編譯，大量位元運算與記憶體存取在 Rust 中能獲得接近原生的效能。
+### 🎯 NES Mapper / APU 修正
 
-**方案優點**：
-- WASM 提供可預測的高效能，無 GC 暫停問題
-- Rust 的所有權系統在編譯期防止記憶體安全問題
-- 保持前端 TypeScript UI 不變，僅替換核心運算層
-- 支援 18 種 Mapper（0, 1, 2, 3, 4, 7, 11, 15, 16, 23, 66, 71, 113, 202, 225, 227, 245, 253）
+| 問題 | 影響遊戲 |
+|------|----------|
+| Mapper 225 鏡像模式反轉 | 64 合 1 藍屏 |
+| Mapper 253 (VRC4 變體) 4 個關鍵錯誤 | 龍珠 Z 破圖 |
+| Mapper 16 (Bandai FCG) IRQ 精度 | 龍珠 Z3 破圖 |
+| DMC silence 旗標 + 音頻濾波器 | Captain Tsubasa II 爆音 |
 
-### 🎯 Mapper 225 鏡像模式修正
-
-**問題**：64 合 1 合集遊戲開啟後藍屏無反應。
-
-**原因**：FCEUX 使用 `setmirror(mirr ^ 1)` 進行異或翻轉，其中 `MI_V=0, MI_H=1`。原先實作中 bit13=0 對應 Vertical、bit13=1 對應 Horizontal，與 FCEUX 邏輯相反。
-
-**處理方案**：交換鏡像對應關係，bit13=0 → Horizontal，bit13=1 → Vertical，與 FCEUX 行為一致。
-
-### 🎯 Mapper 253 (VRC4 變體) 完整重寫
-
-**問題**：龍珠 Z 強襲賽亞人部分畫面破圖。
-
-**原因**：發現 4 個關鍵錯誤：
-1. **缺少 CHR RAM 替換**：當 `chrlo==4||5` 且 `!vlock` 時應使用 CHR RAM 而非 CHR ROM
-2. **缺少 vlock 機制**：`chrlo[0]==0xC8` 解鎖、`0x88` 鎖定的開關未實作
-3. **chrhi 儲存錯誤**：原為 `data & 0x10`，應為 `data >> 4`
-4. **地址解碼錯誤**：應使用 FCEUX 公式 `ind=(((A&8|A>>8)>>3)+2)&7`
-
-**處理方案**：
-- 以 FCEUX `253.cpp` 為權威參考，完整重寫 Mapper 253
-- PPU 新增 `chr_writable_mask` 欄位，支援混合 CHR ROM/RAM bank 映射
-- Cartridge 載入時為 Mapper 253 追加 8KB CHR RAM 到 CHR 資料末尾
-- `sync_mapper_to_ppu()` 同步傳遞 `chr_writable_mask`
-
-### 🎯 Mapper 16 (Bandai FCG) IRQ 精度改進
-
-**問題**：龍珠 Z3 烈戰人造人部分畫面破圖。
-
-**原因**：IRQ 計數器使用 `u16` 型別並以 `== 0` 判斷觸發，存在邊界條件錯失。
-
-**處理方案**：計數器改為 `i32` 型別，觸發條件改為 `< 0`，與 FCEUX `bandai.cpp` 行為一致。
-
-### 🔊 APU DMC 通道邏輯修正與音頻濾波器
-
-**問題**：Captain Tsubasa II 部分音效聽不到，且有爆音現象。
-
-**原因**：
-- DMC 缺少 `silence` 旗標，導致在沒有資料時仍錯誤修改輸出電平
-- 缺少音頻濾波器，DC 偏移與高頻雜訊直接輸出
-
-**處理方案**：
-- 新增 `silence: bool` 旗標，依據 NES 硬體規格控制輸出修改時機
-- 初始 `bits_remaining` 設為 8（非 0），修正啟動時序
-- 重寫 `clock_dmc()` 流程：silence → 輸出修改 → shift → bits 計數 → buffer → fetch
-- 新增低通濾波器（係數 0.9）消除高頻雜訊
-- 新增高通濾波器（係數 0.996）消除 DC 偏移
-- 新增軟削波（>0.95 壓縮），避免音量爆破
+👉 **完整排查過程請參閱 [問題集 Q20-Q22](docs/TROUBLESHOOTING.md#nes--mapper)**
 
 ### 🎮 遊戲列表更新 (32 款)
 
@@ -587,54 +458,46 @@ fn cpu_clock(&mut self) {
 - `snes/cartridge.rs` — LoROM/HiROM 自動偵測、SRAM 支援
 - `snes/emulator.rs` — 主模擬迴路、匯流排仲裁、H/V IRQ
 
-### 🎯 SNES 開發中遇到的主要問題與解決方案
+### 🎯 SNES 開發中遇到的問題與解決方案
 
-#### 1. RDNMI ($4210) VBlank 輪詢凍結
-**問題**：超時空之鑰 (Chrono Trigger) 在開場動畫後畫面完全凍結。
+開發 SNES 核心過程中遇到了大量硬體精度問題，涵蓋 CPU/匯流排、PPU 渲染、APU 音頻、DMA/HDMA、協處理器等各子系統。
 
-**排查**：透過 CPU 迴圈偵測，發現 CPU 停滯在 `C0:3B71: LDA $4210; BPL loop` — 即輪詢 RDNMI 暫存器的 bit 7 等待 VBlank 旗標。
+👉 **完整問題排查記錄請參閱 [問題集 (TROUBLESHOOTING)](docs/TROUBLESHOOTING.md)**
 
-**原因**：RDNMI bit 7 實作為「讀取後清除」(edge-triggered)，NMI handler 中已讀取過一次，之後的輪詢永遠看到 0。但 SNES 硬體上 RDNMI bit 7 反映的是 **VBlank 連續狀態** — 在整個 VBlank 期間 (掃描線 225-261) 保持 HIGH。
+**主要修復摘要**：
 
-**處理**：bus_read `$4210` 改為直接回傳 `ppu.vblank_flag` 狀態，VBlank 期間始終返回 `0x81`，非 VBlank 期間返回 `0x01`。
+| 子系統 | 問題 | 影響遊戲 |
+|--------|------|----------|
+| CPU/匯流排 | RDNMI ($4210) VBlank 旗標 — 讀取後清除改為連續狀態 | FF6、MMX2、超時空之鑰 |
+| CPU/匯流排 | LoROM SRAM $6000-$7FFF 寫入遺失 | LoROM 存檔遊戲 |
+| CPU/匯流排 | H-IRQ 在掃描線內不觸發 | SMK (DSP-1 Raster) |
+| PPU | Mode 5 高解析度渲染缺失 | SoM2、SD3 文字 |
+| PPU | Mode 7 byte-latch flip-flop 錯亂 | SD3 模式 7 背景 |
+| PPU | OAM Priority Rotation 未實作 | SMK 賽車精靈閃爍 |
+| PPU | 圖層優先級數值校正 | FF6 精靈被遮擋 |
+| APU | FIR 回聲濾波 per-tap >>6 精度損失 | SoM2 回聲、FF6 音效 |
+| APU | SPC700 分支 cycle 數全部錯誤 | 多款遊戲音頻時序 |
+| APU | SPC700 缺少 $B8 opcode | SPC700 PC 跑飛 |
+| APU | IPL ROM 被 RAM 覆蓋 | APU 初始化異常 |
+| APU | 分數 cycle 累積漂移 | 長時間音畫不同步 |
+| APU | Sub Screen 背景色為黑色 | SoM2 色彩數學 |
+| DMA/HDMA | HDMA 間接定址指標缺失 | SMK 光柵效果 |
+| DMA/HDMA | HDMA 掃描線 0 不應傳輸 | HDMA 首行資料錯誤 |
+| 協處理器 | DSP-1 Newton 疊代精度不符 | SMK Mode 7 地面 |
+| 協處理器 | DSP-1 Raster Output 無限迴圈 | SMK DSP-1 卡死 |
+| 協處理器 | CX4 協處理器未實作 | MMX2、MMX3 |
 
-#### 2. SPC700 缺少 $B8 指令碼
-**問題**：多款 SNES 遊戲音頻異常或 SPC700 PC 跑飛。
-
-**原因**：SPC700 APU 的指令解碼器缺少 opcode `$B8` (SBC dp, #imm)，遇到時跳過導致 PC 對齊錯誤，後續所有指令解碼錯亂。
-
-**處理**：補上 `$B8: SBC dp, #imm` — 從零頁位址讀取值，減去立即數，結果寫回零頁。
-
-#### 3. PPU 圖層優先級交錯錯誤
-**問題**：最終幻想 VI (FF6) 圖層顯示混亂，背景遮擋精靈或精靈順序不對。
-
-**原因**：Mode 0/1 的 BG 優先級數值設定過高，與 OBJ (精靈) 的優先級範圍重疊甚至超過，導致背景無條件蓋住精靈。
-
-**處理**：重新校正 Mode 0~7 所有圖層的 priority 數值，確保 BG 優先級 (low/high) 與 OBJ 優先級 (0~3) 正確交錯排列，符合 SNES 硬體規格。
-
-#### 4. HDMA 間接定址指標錯誤
-**問題**：使用 HDMA 間接模式的遊戲 (如 Super Mario Kart) 畫面光柵效果失敗。
-
-**原因**：HDMA 間接模式 (control bit 6 = 1) 需要從表格讀取 16-bit 指標到獨立的 `indirect_addr` 欄位，再從該位址傳輸資料。原實作缺少 `indirect_addr` 欄位，與 `count` 欄位混用。
-
-**處理**：DMA 通道新增獨立 `indirect_addr: u16` 欄位，HDMA init/transfer 時正確讀取間接指標並從對應位址存取資料。
-
-#### 5. SPC700 SUBW H 旗標缺失
-**問題**：部分遊戲 APU 行為異常。
-
-**原因**：SPC700 的 `SUBW YA, dp` ($9A) 指令缺少 Half-Carry (H) 旗標計算。
-
-**處理**：參照 ADDW 的做法，為 SUBW 補上低位元組的半進位計算：`H = ((ya ^ dp_val ^ result) >> 8) & 0x10 != 0`。
-
-### 🟣 SNES 遊戲列表 (5 款)
+### 🟣 SNES 遊戲列表 (10 款)
 - 🟣 超級瑪利歐世界 (Super Mario World)
 - 🟣 洛克人 X (Rockman X)
-- 🟣 超級瑪利歐賽車 (Super Mario Kart) — DSP-1 協處理器
-- 🟣 超級瑪利歐 RPG (Super Mario RPG)
+- 🟣 洛克人 X2 (Mega Man X2) — CX4 協處理器
+- 🟣 洛克人 X3 (Mega Man X3) — CX4 協處理器
 - 🟣 超時空之鑰 (Chrono Trigger)
 - 🟣 最終幻想 VI (Final Fantasy VI)
+- 🟣 聖劍傳說 2 (Secret of Mana)
 - 🟣 聖劍傳說 3 (Seiken Densetsu 3)
-- 🟣 快打旋風 II (Super Street Fighter II)
+- 🟣 大金剛國度 (Donkey Kong Country)
+- 🟣 快打旋風 II Turbo (Street Fighter II Turbo)
 
 ---
 
@@ -693,8 +556,8 @@ npm run build
 ```
 h5-NES_TS/
 ├── public/
-│   └── roms.json          # ROM 列表配置 (NES + GB + GG + SMS)
-├── roms/                   # ROM 遊戲檔案 (.nes / .gb / .gg / .sms)
+│   └── roms.json          # ROM 列表配置 (NES + GB + GG + SMS + SNES)
+├── roms/                   # ROM 遊戲檔案 (.nes / .gb / .gg / .sms / .sfc / .smc)
 ├── nes-wasm/              # Rust/WASM 核心 (單一二進位，三平台)
 │   └── src/
 │       ├── lib.rs         # WASM 入口 (EmuWasm 統一介面 + CoreType 分派)
@@ -723,6 +586,16 @@ h5-NES_TS/
 │           ├── psg.rs         # SN76489 PSG 音頻引擎 (273 行)
 │           ├── cartridge.rs   # Sega Mapper 記憶體映射 (220 行)
 │           └── joypad.rs      # Port $DC/$DD/$00 輸入 (93 行)
+│       └── snes/          # 🟣 SFC / SNES 核心
+│           ├── mod.rs         # 模組宣告
+│           ├── cpu.rs         # 65816 CPU (16-bit/8-bit 模式切換)
+│           ├── emulator.rs    # 主模擬迴路、匯流排仲裁、H/V IRQ
+│           ├── ppu.rs         # PPU 掃描線渲染 (Mode 0-7、OAM、色彩數學)
+│           ├── apu.rs         # SPC700 APU + S-DSP (BRR、FIR 回聲)
+│           ├── dma.rs         # DMA/HDMA 控制器 (8 通道、間接定址)
+│           ├── dsp1.rs        # DSP-1 協處理器 (Mode 7 3D 投影)
+│           ├── cx4.rs         # CX4 協處理器 (HLE, MMX2/X3)
+│           └── cartridge.rs   # LoROM/HiROM 自動偵測、SRAM
 ├── src/
 │   ├── main.ts            # 應用程式進入點 (多平台適配)
 │   ├── wasm/              # WASM 編譯輸出
@@ -757,6 +630,7 @@ h5-NES_TS/
 | Phase 6 | 手機版 UI | RWD 與虛擬控制器 | ✅ 完成 |
 | Phase 7 | 🟢 Game Boy DMG | GB ROM 可正常遊玩 | ✅ 完成 |
 | Phase 8 | 🟠 Game Gear / SMS | GG + SMS ROM 可正常遊玩 | ✅ 完成 |
+| Phase 9 | 🟣 SFC / SNES | SNES ROM 可正常遊玩 (65816 + PPU Mode 0-7 + SPC700 + DMA/HDMA + DSP-1 + CX4) | ✅ 完成 |
 
 ---
 
@@ -776,19 +650,19 @@ h5-NES_TS/
 │                                                               │
 │  loadRom() ─── 自動偵測 ROM 格式 (副檔名 + iNES header)       │
 │                    │                                          │
-│         ┌──────────┼──────────┐                               │
-│         ▼          ▼          ▼                               │
-│  ┌─────────────┐ ┌────────────┐ ┌──────────────┐             │
-│  │  NES 核心   │ │  GB 核心   │ │  GG/SMS 核心 │             │
-│  │  256×240    │ │  160×144   │ │ 160×144/     │             │
-│  │  60.10 fps  │ │  59.73 fps │ │  256×192     │             │
-│  ├─────────────┤ ├────────────┤ │  59.92 fps   │             │
-│  │ 6502 CPU    │ │ LR35902    │ ├──────────────┤             │
-│  │ PPU (BG+SPR)│ │ PPU(BG+W+S)│ │ Z80 CPU      │             │
-│  │ APU (5ch)   │ │ APU (4ch)  │ │ VDP Mode 4   │             │
-│  │ 18 Mappers  │ │ MBC 0/1/3/5│ │ PSG (4ch)    │             │
-│  │ Controller  │ │ Joypad     │ │ Sega Mapper  │             │
-│  └─────────────┘ └────────────┘ └──────────────┘             │
+│         ┌──────────┼──────────┬──────────┐                    │
+│         ▼          ▼          ▼          ▼                    │
+│  ┌─────────────┐ ┌────────────┐ ┌──────────────┐ ┌──────────────┐ │
+│  │  NES 核心   │ │  GB 核心   │ │  GG/SMS 核心 │ │  SNES 核心   │ │
+│  │  256×240    │ │  160×144   │ │ 160×144/     │ │  256×224     │ │
+│  │  60.10 fps  │ │  59.73 fps │ │  256×192     │ │  60.10 fps   │ │
+│  ├─────────────┤ ├────────────┤ │  59.92 fps   │ ├──────────────┤ │
+│  │ 6502 CPU    │ │ LR35902    │ ├──────────────┤ │ 65816 CPU    │ │
+│  │ PPU (BG+SPR)│ │ PPU(BG+W+S)│ │ Z80 CPU      │ │ PPU Mode 0-7 │ │
+│  │ APU (5ch)   │ │ APU (4ch)  │ │ VDP Mode 4   │ │ SPC700 (8ch) │ │
+│  │ 18 Mappers  │ │ MBC 0/1/3/5│ │ PSG (4ch)    │ │ DMA/HDMA     │ │
+│  │ Controller  │ │ Joypad     │ │ Sega Mapper  │ │ DSP-1 / CX4  │ │
+│  └─────────────┘ └────────────┘ └──────────────┘ └──────────────┘ │
 └───────────────────────────────────────────────────────────────┘
 ```
 
@@ -872,3 +746,10 @@ MIT License
 - [MAME Source](https://github.com/mamedev/mame) - MAME Z80 核心參考實作 (DAA、旗標計算)
 - [SN76489 Application Manual](https://www.smspower.org/Development/SN76489) - PSG 音頻晶片技術手冊
 - [Charles MacDonald's VDP Documentation](https://www.smspower.org/Development/VDPRegisters) - VDP 暫存器與渲染細節
+
+### SFC / SNES 參考資料
+- [fullsnes by nocash](https://problemkaputt.de/fullsnes.htm) - SNES 硬體規格最完整參考
+- [snes9x Source](https://github.com/snes9xgit/snes9x) - SNES 模擬器參考實作 (DSP-1、CX4)
+- [bsnes/higan Source](https://github.com/bsnes-emu/bsnes) - 週期精確 SNES 模擬器
+- [Super Famicom Development Wiki](https://wiki.superfamicom.org/) - SFC 開發技術 wiki
+- [Anomie's SNES Docs](https://www.romhacking.net/documents/197/) - PPU/DMA/HDMA 精確時序文件
