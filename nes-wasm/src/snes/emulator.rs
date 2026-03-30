@@ -2480,6 +2480,36 @@ impl SnesEmulator {
         result
     }
 
+    /// Debug: 取得 PPU Color Math / Window 狀態 (用於診斷黑屏)
+    pub fn debug_ppu_color_state(&self) -> String {
+        let clip_mode = (self.ppu.cgwsel >> 6) & 0x03;
+        let prevent_mode = (self.ppu.cgwsel >> 4) & 0x03;
+        let sub_screen_src = if self.ppu.cgwsel & 0x02 != 0 { "fixed" } else { "sub" };
+        let subtract = self.ppu.cgadsub & 0x80 != 0;
+        let half = self.ppu.cgadsub & 0x40 != 0;
+        let math_layers = self.ppu.cgadsub & 0x3F;
+
+        format!(
+            "CGWSEL={:02X} clip={} prevent={} src={} | CGADSUB={:02X} sub={} half={} layers={:06b}\n\
+             TM={:02X} TS={:02X} TMW={:02X} TSW={:02X}\n\
+             W12SEL={:02X} W34SEL={:02X} WOBJSEL={:02X}\n\
+             WH=[{},{},{},{}] WBGLOG={:02X} WOBJLOG={:02X}\n\
+             Brightness={} ForceBlank={} Mode={} BG3Pri={}\n\
+             FixedColor=({},{},{}) CGRAM[0]={:04X}\n\
+             Frame={}",
+            self.ppu.cgwsel, clip_mode, prevent_mode, sub_screen_src,
+            self.ppu.cgadsub, subtract, half, math_layers,
+            self.ppu.tm, self.ppu.ts, self.ppu.tmw, self.ppu.tsw,
+            self.ppu.w12sel, self.ppu.w34sel, self.ppu.wobjsel,
+            self.ppu.wh[0], self.ppu.wh[1], self.ppu.wh[2], self.ppu.wh[3],
+            self.ppu.wbglog, self.ppu.wobjlog,
+            self.ppu.brightness, self.ppu.force_blank, self.ppu.bg_mode, self.ppu.bg3_priority,
+            self.ppu.fixed_color_r, self.ppu.fixed_color_g, self.ppu.fixed_color_b,
+            self.ppu.cgram[0],
+            self.frame_count,
+        )
+    }
+
     /// Debug: 執行單步並回傳追蹤資訊
     pub fn debug_step_trace(&mut self, count: u32) -> String {
         let mut lines: Vec<String> = Vec::new();

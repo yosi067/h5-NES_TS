@@ -465,6 +465,15 @@ impl EmuWasm {
         }
     }
 
+    /// SNES PPU Color Math / Window 診斷
+    #[wasm_bindgen(js_name = "debugPpuColorState")]
+    pub fn debug_ppu_color_state(&self) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_ppu_color_state(),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
     /// SNES 單步追蹤
     #[wasm_bindgen(js_name = "debugStepTrace")]
     pub fn debug_step_trace(&mut self, count: u32) -> String {

@@ -966,6 +966,10 @@ function startEmulation(): void {
   let accumulator = 0;
   let bootDiagFrameCount = 0;
 
+  let blackFrameCount = 0;
+  let lastBlackLogFrame = 0;
+  let wasBlackScreen = false;
+
   const frameLoop = (currentTime: number): void => {
     if (!nes || !ctx || !imageData || !isRunning) return;
 
@@ -990,6 +994,52 @@ function startEmulation(): void {
           console.log(`[BOOT DIAG] Frame ${bootDiagFrameCount}:\n${state}`);
         } catch(e) { /* ignore */ }
       }
+
+      // SNES 黑屏自動偵測：採樣 framebuffer 中心區域
+      if (coreType === 'snes' && bootDiagFrameCount > 60) {
+        try {
+          const memory = nes.getWasmMemory() as WebAssembly.Memory;
+          const ptr = nes.getFrameBufferPtr();
+          const len = nes.getFrameBufferLen();
+          const fb = new Uint8Array(memory.buffer, ptr, len);
+          // 採樣畫面中央 10 行 x 32 列
+          let nonBlackPixels = 0;
+          const totalSamples = 10 * 32;
+          for (let row = 0; row < 10; row++) {
+            const y = 60 + row * 10; // 從 y=60 開始每隔 10 行取樣
+            for (let col = 0; col < 32; col++) {
+              const x = 16 + col * 7; // 從 x=16 開始每隔 7 列取樣
+              const i = (y * 256 + x) * 4;
+              if (i + 3 < len && (fb[i] > 2 || fb[i+1] > 2 || fb[i+2] > 2)) {
+                nonBlackPixels++;
+              }
+            }
+          }
+          const isBlack = nonBlackPixels < totalSamples * 0.05; // <5% 非黑像素
+          if (isBlack) {
+            blackFrameCount++;
+            // 連續 30 幀以上黑屏且距上次 log 超過 120 幀才報告
+            if (blackFrameCount >= 30 && (bootDiagFrameCount - lastBlackLogFrame) > 120) {
+              lastBlackLogFrame = bootDiagFrameCount;
+              const colorState = (nes as any).debugPpuColorState?.() || 'N/A';
+              const state = nes.debugState();
+              console.warn(`[BLACK SCREEN DETECT] Frame ${bootDiagFrameCount} (${blackFrameCount} consecutive black frames)\n${colorState}\n${state}`);
+            }
+            if (!wasBlackScreen) {
+              wasBlackScreen = true;
+              const colorState = (nes as any).debugPpuColorState?.() || 'N/A';
+              console.warn(`[BLACK SCREEN START] Frame ${bootDiagFrameCount}\n${colorState}`);
+            }
+          } else {
+            if (wasBlackScreen && blackFrameCount >= 10) {
+              console.log(`[BLACK SCREEN END] Frame ${bootDiagFrameCount} (was black for ${blackFrameCount} frames)`);
+            }
+            blackFrameCount = 0;
+            wasBlackScreen = false;
+          }
+        } catch(e) { /* ignore sampling errors */ }
+      }
+
       drainWasmAudioToRing();  // 每幀後排入環形緩衝區，防止 WASM buffer 溢出
       accumulator -= TARGET_FRAME_TIME;
     }
@@ -1490,6 +1540,7 @@ declare global {
     showRomSelector: () => void;
     debugState: () => string;
     debugSpriteInfo: () => string;
+    debugPpuColorState: () => string;
     debugStepTrace: (count: number) => string;
     debugFrameTrace: () => string;
     debugRunFrames: (n: number) => string;
@@ -1512,6 +1563,7 @@ window.showRomSelector = showRomSelector;
 // Debug functions for SNES development
 window.debugState = () => nes ? nes.debugState() : 'No emulator';
 window.debugSpriteInfo = () => nes ? nes.debugSpriteInfo() : 'No emulator';
+window.debugPpuColorState = () => nes ? (nes as any).debugPpuColorState?.() || 'Not available' : 'No emulator';
 window.debugStepTrace = (n: number) => nes ? nes.debugStepTrace(n) : 'No emulator';
 window.debugFrameTrace = () => nes ? nes.debugFrameTrace() : 'No emulator';
 window.debugRunFrames = (n: number) => nes ? nes.debugRunFrames(n) : 'No emulator';

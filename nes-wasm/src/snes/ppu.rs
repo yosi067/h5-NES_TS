@@ -1336,19 +1336,21 @@ impl Ppu {
             let in_window = self.window_mask[5][x];
 
             // Clip blacks the main screen color before color math
+            // $2130 bits 7-6: 0=Never, 1=Outside Color Window, 2=Inside Color Window, 3=Always
             let clip = match clip_mode {
                 0 => false,
-                1 => in_window,
-                2 => !in_window,
+                1 => !in_window,   // Outside color window → clip when NOT inside
+                2 => in_window,    // Inside color window → clip when inside
                 3 => true,
                 _ => false,
             };
 
             // Prevent disables color math entirely
+            // $2130 bits 5-4: 0=Never, 1=Outside Color Window, 2=Inside Color Window, 3=Always
             let prevent = match prevent_mode {
                 0 => false,
-                1 => in_window,
-                2 => !in_window,
+                1 => !in_window,   // Outside color window → prevent when NOT inside
+                2 => in_window,    // Inside color window → prevent when inside
                 3 => true,
                 _ => false,
             };
