@@ -905,81 +905,109 @@ impl Ppu {
         let tile_row_full = y_scroll / tile_h;
         let fine_y = y_scroll & (tile_h - 1);
 
+        let layer = bg_idx as u8;
+        let main_enabled = self.tm & (1 << bg_idx) != 0;
+        let sub_enabled = self.ts & (1 << bg_idx) != 0;
+        let main_win = self.tmw & (1 << bg_idx) != 0;
+        let sub_win = self.tsw & (1 << bg_idx) != 0;
+
         for screen_x in 0..256usize {
-            // Each output pixel maps to 2 hi-res pixels; take the even one
-            let hires_x = (screen_x * 2 + hscroll as usize) & h_mask;
+            // Mode 5/6 hires: sub screen gets even hires pixel, main screen gets odd hires pixel
+            let hires_even = (screen_x * 2 + hscroll as usize) & h_mask;
+            let hires_odd = (screen_x * 2 + 1 + hscroll as usize) & h_mask;
 
-            let tile_col_full = hires_x / 16; // 16 hi-res pixels per tile entry
-            let fine_x_hires = hires_x & 15;  // 0-15 within the tile
-
-            let map_col = tile_col_full & 0x1F;
-            let map_row = tile_row_full & 0x1F;
-
-            let mut map_addr = tilemap_addr;
-            if (map_size & 0x01 != 0) && (tile_col_full & 0x20) != 0 {
-                map_addr += 0x800;
-            }
-            if (map_size & 0x02 != 0) && (tile_row_full & 0x20) != 0 {
-                map_addr += if map_size & 0x01 != 0 { 0x1000 } else { 0x800 };
-            }
-
-            let entry_addr = (map_addr + (map_row * 32 + map_col) * 2) & 0xFFFF;
-            let tile_lo = self.vram[entry_addr] as u16;
-            let tile_hi = self.vram[(entry_addr + 1) & 0xFFFF] as u16;
-            let tile_entry = tile_lo | (tile_hi << 8);
-
-            let mut tile_num = (tile_entry & 0x03FF) as usize;
-            let palette = ((tile_entry >> 10) & 0x07) as usize;
-            let priority = ((tile_entry >> 13) & 0x01) as u8;
-            let flip_x = tile_entry & 0x4000 != 0;
-            let flip_y = tile_entry & 0x8000 != 0;
-
-            // Horizontal sub-tile: left char = tile N, right char = tile N+1
-            let h_sub = if flip_x {
-                if fine_x_hires >= 8 { 0 } else { 1 }
-            } else {
-                if fine_x_hires >= 8 { 1 } else { 0 }
-            };
-
-            // Vertical sub-tile for 16-pixel tall tiles
-            let v_sub = if tall {
-                if flip_y { if fine_y >= 8 { 0 } else { 1 } }
-                else { if fine_y >= 8 { 1 } else { 0 } }
-            } else {
-                0usize
-            };
-
-            tile_num = tile_num.wrapping_add(h_sub).wrapping_add(v_sub * 16);
-
-            let px_in_tile = if flip_x { 7 - (fine_x_hires & 7) } else { fine_x_hires & 7 };
-            let py_in_tile = if flip_y { 7 - (fine_y & 7) } else { fine_y & 7 };
-
-            let color_idx = self.read_tile_pixel(chr_addr, tile_num, px_in_tile, py_in_tile, bpp);
-            if color_idx == 0 { continue; }
-
-            let pal_offset = palette * (1 << bpp) + color_idx;
-            let color = self.cgram[pal_offset & 0xFF];
-            let rgba = bgr15_to_rgba(color);
-
-            let pri = if priority != 0 { pri_hi } else { pri_lo };
-            let layer = bg_idx as u8;
-
-            if self.tm & (1 << bg_idx) != 0 && pri > self.main_pri[screen_x] {
-                if !(self.tmw & (1 << bg_idx) != 0 && self.window_mask[bg_idx][screen_x]) {
-                    self.main_buf[screen_x] = rgba;
-                    self.main_pri[screen_x] = pri;
-                    self.main_src[screen_x] = layer;
+            // --- Sub screen pixel (even hires column) ---
+            if sub_enabled {
+                let pixel = self.sample_hires_pixel(tilemap_addr, chr_addr, map_size, tall,
+                    tile_h, h_mask, hires_even, tile_row_full, fine_y, bpp);
+                if let Some((rgba, priority)) = pixel {
+                    let pri = if priority != 0 { pri_hi } else { pri_lo };
+                    if pri > self.sub_pri[screen_x] {
+                        if !(sub_win && self.window_mask[bg_idx][screen_x]) {
+                            self.sub_buf[screen_x] = rgba;
+                            self.sub_pri[screen_x] = pri;
+                            self.sub_src[screen_x] = layer;
+                        }
+                    }
                 }
             }
 
-            if self.ts & (1 << bg_idx) != 0 && pri > self.sub_pri[screen_x] {
-                if !(self.tsw & (1 << bg_idx) != 0 && self.window_mask[bg_idx][screen_x]) {
-                    self.sub_buf[screen_x] = rgba;
-                    self.sub_pri[screen_x] = pri;
-                    self.sub_src[screen_x] = layer;
+            // --- Main screen pixel (odd hires column) ---
+            if main_enabled {
+                let pixel = self.sample_hires_pixel(tilemap_addr, chr_addr, map_size, tall,
+                    tile_h, h_mask, hires_odd, tile_row_full, fine_y, bpp);
+                if let Some((rgba, priority)) = pixel {
+                    let pri = if priority != 0 { pri_hi } else { pri_lo };
+                    if pri > self.main_pri[screen_x] {
+                        if !(main_win && self.window_mask[bg_idx][screen_x]) {
+                            self.main_buf[screen_x] = rgba;
+                            self.main_pri[screen_x] = pri;
+                            self.main_src[screen_x] = layer;
+                        }
+                    }
                 }
             }
         }
+    }
+
+    /// Sample a single hires pixel at the given hires X coordinate.
+    /// Returns Some((rgba, tile_priority)) if non-transparent, None otherwise.
+    fn sample_hires_pixel(&self, tilemap_addr: usize, chr_addr: usize, map_size: u8,
+        tall: bool, tile_h: usize, h_mask: usize, hires_x: usize,
+        tile_row_full: usize, fine_y: usize, bpp: u8) -> Option<(u32, u8)>
+    {
+        let tile_col_full = hires_x / 16;
+        let fine_x_hires = hires_x & 15;
+
+        let map_col = tile_col_full & 0x1F;
+        let map_row = tile_row_full & 0x1F;
+
+        let mut map_addr = tilemap_addr;
+        if (map_size & 0x01 != 0) && (tile_col_full & 0x20) != 0 {
+            map_addr += 0x800;
+        }
+        if (map_size & 0x02 != 0) && (tile_row_full & 0x20) != 0 {
+            map_addr += if map_size & 0x01 != 0 { 0x1000 } else { 0x800 };
+        }
+
+        let entry_addr = (map_addr + (map_row * 32 + map_col) * 2) & 0xFFFF;
+        let tile_lo = self.vram[entry_addr] as u16;
+        let tile_hi = self.vram[(entry_addr + 1) & 0xFFFF] as u16;
+        let tile_entry = tile_lo | (tile_hi << 8);
+
+        let mut tile_num = (tile_entry & 0x03FF) as usize;
+        let palette = ((tile_entry >> 10) & 0x07) as usize;
+        let priority = ((tile_entry >> 13) & 0x01) as u8;
+        let flip_x = tile_entry & 0x4000 != 0;
+        let flip_y = tile_entry & 0x8000 != 0;
+
+        // Horizontal sub-tile: left char = tile N, right char = tile N+1
+        let h_sub = if flip_x {
+            if fine_x_hires >= 8 { 0 } else { 1 }
+        } else {
+            if fine_x_hires >= 8 { 1 } else { 0 }
+        };
+
+        // Vertical sub-tile for 16-pixel tall tiles
+        let v_sub = if tall {
+            if flip_y { if fine_y >= 8 { 0 } else { 1 } }
+            else { if fine_y >= 8 { 1 } else { 0 } }
+        } else {
+            0usize
+        };
+
+        tile_num = tile_num.wrapping_add(h_sub).wrapping_add(v_sub * 16);
+
+        let px_in_tile = if flip_x { 7 - (fine_x_hires & 7) } else { fine_x_hires & 7 };
+        let py_in_tile = if flip_y { 7 - (fine_y & 7) } else { fine_y & 7 };
+
+        let color_idx = self.read_tile_pixel(chr_addr, tile_num, px_in_tile, py_in_tile, bpp);
+        if color_idx == 0 { return None; }
+
+        let pal_offset = palette * (1 << bpp) + color_idx;
+        let color = self.cgram[pal_offset & 0xFF];
+        let rgba = bgr15_to_rgba(color);
+        Some((rgba, priority))
     }
 
     /// 讀取 Tile 像素的色號
@@ -1364,7 +1392,8 @@ impl Ppu {
 
             let final_rgba = if color_math_enabled && !prevent {
                 // Sub screen 或固定色
-                let (sr, sg, sb) = if self.cgwsel & 0x02 != 0 {
+                let using_fixed = self.cgwsel & 0x02 != 0;
+                let (sr, sg, sb) = if using_fixed {
                     // 使用固定色
                     ((self.fixed_color_r as u32) << 3,
                      (self.fixed_color_g as u32) << 3,
@@ -1373,16 +1402,20 @@ impl Ppu {
                     (sub_rgba & 0xFF, (sub_rgba >> 8) & 0xFF, (sub_rgba >> 16) & 0xFF)
                 };
 
+                // SNES hardware: half-divide only applies when sub screen pixel is NOT backdrop
+                // (or when using fixed color source)
+                let do_half = half && (using_fixed || self.sub_src[x] != 5);
+
                 let (r, g, b) = if subtract {
                     let r = (mr as i32 - sr as i32).max(0) as u32;
                     let g = (mg as i32 - sg as i32).max(0) as u32;
                     let b = (mb as i32 - sb as i32).max(0) as u32;
-                    if half { (r >> 1, g >> 1, b >> 1) } else { (r, g, b) }
+                    if do_half { (r >> 1, g >> 1, b >> 1) } else { (r, g, b) }
                 } else {
                     let r = (mr + sr).min(255);
                     let g = (mg + sg).min(255);
                     let b = (mb + sb).min(255);
-                    if half { (r >> 1, g >> 1, b >> 1) } else { (r, g, b) }
+                    if do_half { (r >> 1, g >> 1, b >> 1) } else { (r, g, b) }
                 };
 
                 r | (g << 8) | (b << 16) | 0xFF000000

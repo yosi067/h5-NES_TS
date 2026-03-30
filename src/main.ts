@@ -1198,11 +1198,31 @@ function toggleMute(): void {
 const SAVE_STATE_PREFIX = 'emu_savestate_';
 
 /**
- * 取得帶有核心類型的存檔 key
+ * 取得帶有核心類型 + ROM 名稱的存檔 key（每個遊戲獨立存檔）
  */
 function getSaveKey(slot: number): string {
   const coreType = nes?.getCoreType() || 'nes';
-  return `${SAVE_STATE_PREFIX}${coreType}_${slot}`;
+  // Use ROM filename to isolate saves per game
+  const romId = currentRomFilename
+    ? currentRomFilename.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_').substring(0, 60)
+    : 'unknown';
+  return `${SAVE_STATE_PREFIX}${coreType}_${romId}_${slot}`;
+}
+
+/**
+ * 嘗試從舊的不含 ROM 名稱的 key 遷移存檔（向後相容）
+ */
+function migrateLegacySave(slot: number): void {
+  const coreType = nes?.getCoreType() || 'nes';
+  const oldKey = `${SAVE_STATE_PREFIX}${coreType}_${slot}`;
+  const newKey = getSaveKey(slot);
+  if (!localStorage.getItem(newKey)) {
+    const oldData = localStorage.getItem(oldKey);
+    if (oldData) {
+      // Don't auto-migrate: old key was shared across games, could be wrong game
+      console.log(`[SaveState] 發現舊格式存檔 key=${oldKey}，不自動遷移（可能屬於其他遊戲）`);
+    }
+  }
 }
 
 /**
@@ -1261,10 +1281,10 @@ function saveState(slot: number = 0): boolean {
     const saveData = nes.exportSaveState();
     const key = getSaveKey(slot);
     localStorage.setItem(key, saveData);
-    console.log(`存檔成功 (Slot ${slot})`);
+    console.log(`[SaveState] 存檔成功 ROM="${currentRomFilename}" key="${key}" slot=${slot} size=${saveData.length}`);
     return true;
   } catch (e) {
-    console.error('存檔失敗:', e);
+    console.error('[SaveState] 存檔失敗:', e);
     return false;
   }
 }
@@ -1277,17 +1297,19 @@ function loadState(slot: number = 0): boolean {
     const saveData = localStorage.getItem(key);
     
     if (!saveData) {
-      console.log(`Slot ${slot} 沒有存檔`);
+      console.log(`[SaveState] ROM="${currentRomFilename}" key="${key}" slot=${slot} 沒有存檔`);
       return false;
     }
     
     const success = nes.importSaveState(saveData);
     if (success) {
-      console.log(`讀取存檔成功 (Slot ${slot})`);
+      console.log(`[SaveState] 讀取成功 ROM="${currentRomFilename}" key="${key}" slot=${slot}`);
+    } else {
+      console.warn(`[SaveState] 讀取失敗（資料不相容）ROM="${currentRomFilename}" key="${key}"`);
     }
     return success;
   } catch (e) {
-    console.error('讀取存檔失敗:', e);
+    console.error('[SaveState] 讀取存檔失敗:', e);
     return false;
   }
 }
@@ -1366,10 +1388,11 @@ function updateControllerLayout(): void {
 }
 
 /**
- * 設定 SNES 按鈕觸控/滑鼠事件
+ * 設定 SNES 按鈕觸控/滑鼠事件 (支援多點觸控)
  */
 function setupSnesButtons(): void {
-  const btnDefs: { id: string; btn: number }[] = [
+  // --- ABXY + L/R: multi-touch aware ---
+  const faceBtnDefs: { id: string; btn: number }[] = [
     { id: 'snes-btn-a', btn: SnesButton.A },
     { id: 'snes-btn-b', btn: SnesButton.B },
     { id: 'snes-btn-x', btn: SnesButton.X },
@@ -1378,28 +1401,52 @@ function setupSnesButtons(): void {
     { id: 'snes-btn-r', btn: SnesButton.R },
   ];
 
-  for (const { id, btn } of btnDefs) {
+  // Track active touches per button for proper multi-touch
+  const activeTouches = new Map<string, Set<number>>(); // id → Set<touchId>
+
+  for (const { id, btn } of faceBtnDefs) {
     const el = document.getElementById(id);
     if (!el || el.dataset.snesWired) continue;
     el.dataset.snesWired = '1';
+    activeTouches.set(id, new Set());
 
     el.addEventListener('touchstart', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      const touches = activeTouches.get(id)!;
+      for (const t of Array.from(e.changedTouches)) {
+        touches.add(t.identifier);
+      }
       nes?.setButton(0, btn, true);
       el.classList.add('pressed');
     }, { passive: false });
+
     el.addEventListener('touchend', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      nes?.setButton(0, btn, false);
-      el.classList.remove('pressed');
+      const touches = activeTouches.get(id)!;
+      for (const t of Array.from(e.changedTouches)) {
+        touches.delete(t.identifier);
+      }
+      if (touches.size === 0) {
+        nes?.setButton(0, btn, false);
+        el.classList.remove('pressed');
+      }
     }, { passive: false });
+
     el.addEventListener('touchcancel', (e) => {
       e.preventDefault();
-      nes?.setButton(0, btn, false);
-      el.classList.remove('pressed');
+      const touches = activeTouches.get(id)!;
+      for (const t of Array.from(e.changedTouches)) {
+        touches.delete(t.identifier);
+      }
+      if (touches.size === 0) {
+        nes?.setButton(0, btn, false);
+        el.classList.remove('pressed');
+      }
     }, { passive: false });
+
+    // Mouse events (for desktop testing)
     el.addEventListener('mousedown', (e) => {
       e.preventDefault();
       nes?.setButton(0, btn, true);

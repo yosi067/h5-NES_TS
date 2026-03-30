@@ -565,7 +565,11 @@
       align-items: center;
       width: 100%;
       padding: 0 4px;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
+    }
+    #snes-controller-area {
+      justify-content: flex-start;
+      gap: 8px;
     }
     .snes-func-row {
       display: flex;
@@ -592,8 +596,8 @@
       color: #88ccff;
     }
     .snes-shoulder-btn {
-      width: 56px;
-      height: 28px;
+      width: 60px;
+      height: 30px;
       border: none;
       border-radius: 8px 8px 14px 14px;
       background: linear-gradient(180deg, #6a6a7a, #4a4a5a);
@@ -615,7 +619,7 @@
       justify-content: space-between;
       align-items: center;
       width: 100%;
-      padding: 0 8px;
+      padding: 0 4px;
     }
     .snes-right-area {
       flex: 0 0 auto;
@@ -627,23 +631,26 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
+      gap: 4px;
     }
     .snes-abxy-row {
       display: flex;
-      gap: 36px;
+      gap: 44px;
     }
     .snes-face-btn {
-      width: 52px;
-      height: 52px;
+      width: 62px;
+      height: 62px;
       border: none;
       border-radius: 50%;
-      font-size: 18px;
+      font-size: 20px;
       font-weight: bold;
       cursor: pointer;
-      transition: all 0.08s;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.4),
-                  inset 0 2px 3px rgba(255,255,255,0.15);
+      transition: transform 0.06s, box-shadow 0.06s, filter 0.06s;
+      box-shadow: 0 5px 10px rgba(0,0,0,0.5),
+                  inset 0 2px 4px rgba(255,255,255,0.2);
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
     }
     .snes-a {
       background: linear-gradient(145deg, #cc3050, #901838);
@@ -662,9 +669,28 @@
       color: rgba(255,255,255,0.9);
     }
     .snes-face-btn:active, .snes-face-btn.pressed {
-      transform: scale(0.90);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.5), inset 0 2px 5px rgba(0,0,0,0.3);
-      filter: brightness(0.8);
+      transform: scale(0.88);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5), inset 0 3px 6px rgba(0,0,0,0.4);
+      filter: brightness(0.75);
+    }
+
+    /* SNES D-Pad: larger than NES */
+    #snes-controller-area .dpad {
+      width: 160px;
+      height: 160px;
+    }
+    #snes-controller-area .dpad-visual {
+      width: 140px;
+      height: 140px;
+    }
+    #snes-controller-area .dpad-btn {
+      width: 50px;
+      height: 50px;
+      font-size: 18px;
+    }
+    #snes-controller-area .dpad-center {
+      width: 50px;
+      height: 50px;
     }
 
     /* ===== ROM 選擇器 ===== */
