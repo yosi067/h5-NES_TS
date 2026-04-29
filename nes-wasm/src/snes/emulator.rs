@@ -240,11 +240,20 @@ impl SnesEmulator {
             self.rdnmi &= !0x80;
             self.nmi_fired_this_vblank = false;
             self.ppu.frame_complete = true;
+            self.ppu.debug_2130_frame = self.ppu.debug_2130_frame.wrapping_add(1);
 
             // 允許 CPU 完成 NMI handler （DSP1 讀取、WRAM 寫入）再啟動 HDMA
             let pre_hdma = 1364u32.saturating_sub(self.cpu_cycles_this_line);
             if pre_hdma > 0 {
                 self.run_cpu_for(pre_hdma);
+            }
+            // Debug: log ch0 state at hdma_init when HDMA=$FF
+            if self.dma.hdma_enable == 0xFF {
+                let ch0 = &self.dma.channels[0];
+                self.debug_trap_log.push_str(&format!(
+                    "INIT @sl=0 ch0(ctrl={:02X} b={:02X} a={:02X}:{:04X} hdma_addr={:04X})\n",
+                    ch0.control, ch0.b_addr, ch0.a_bank, ch0.a_addr, ch0.hdma_addr,
+                ));
             }
             self.dma.hdma_init();
             self.hdma_init_read(); // Read first table entries for each channel
@@ -252,6 +261,19 @@ impl SnesEmulator {
         // HDMA 傳輸（掃描線 1-224 的 H-Blank）
         if scanline >= 1 && scanline <= 224 {
             self.run_hdma();
+            // Debug: detect CGWSEL=0x02 and log cpu state
+            if self.ppu.cgwsel == 0x02 && scanline == 1 && self.ppu.debug_2130_frame > 10 {
+                // Only log once (check if last trace entry is already 0x02)
+                let last_idx = if self.ppu.debug_2130_idx > 0 { (self.ppu.debug_2130_idx - 1) % 32 } else { 0 };
+                let (last_val, _, _, _) = self.ppu.debug_2130_log[last_idx];
+                if last_val != 0x02 || self.ppu.debug_2130_idx == 0 {
+                    // Force-log this detection
+                    let idx = self.ppu.debug_2130_idx % 256;
+                    let pc = ((self.cpu.pb as u32) << 16) | self.cpu.pc as u32;
+                    self.ppu.debug_2130_log[idx] = (0x02, 0xF000 | scanline as u16, self.ppu.debug_2130_frame, pc);
+                    self.ppu.debug_2130_idx += 1;
+                }
+            }
         }
 
         // VBlank 開始
@@ -340,6 +362,14 @@ impl SnesEmulator {
             self.irq_pending = true;
             self.timeup |= 0x80;
             self.cpu.irq_pending = true;
+            // Debug: log V-IRQ firing with $008C
+            if mode == 2 || mode == 3 {
+                let val_008c = self.read(0x7E008C);
+                self.debug_trap_log.push_str(&format!(
+                    "VIRQ @sl={} ch0(b={:02X} ctrl={:02X}) $8C={:02X}\n",
+                    scanline, self.dma.channels[0].b_addr, self.dma.channels[0].control, val_008c,
+                ));
+            }
         }
     }
 
@@ -654,6 +684,8 @@ impl SnesEmulator {
     }
 
     fn bus_write(&mut self, bank: u8, addr: u16, val: u8) {
+        // Set PC for PPU write tracing
+        self.ppu.debug_2130_pc = ((self.cpu.pb as u32) << 16) | self.cpu.pc as u32;
         // WRAM banks $7E/$7F only (NOT $FE/$FF — those are cartridge ROM)
         if bank == 0x7E || bank == 0x7F {
             let offset = ((bank as usize - 0x7E) << 16) | addr as usize;
@@ -682,7 +714,15 @@ impl SnesEmulator {
                 0x2182 => { self.wram_addr = (self.wram_addr & 0x100FF) | ((val as u32) << 8); }
                 0x2183 => { self.wram_addr = (self.wram_addr & 0x0FFFF) | ((val as u32 & 0x01) << 16); }
                 0x4200..=0x42FF => { self.write_cpu_register(addr, val); }
-                0x4300..=0x43FF => { self.dma.write_register(addr - 0x4300, val); }
+                0x4300..=0x43FF => {
+                    // Debug: log ch0 control/b_addr writes
+                    if addr == 0x4300 || addr == 0x4301 {
+                        self.debug_trap_log.push_str(&format!(
+                            "W${:04X}={:02X} @sl={}\n", addr, val, self.ppu.scanline,
+                        ));
+                    }
+                    self.dma.write_register(addr - 0x4300, val);
+                }
                 0x6000..=0x7FFF => {
                     match self.cart.map_mode {
                         crate::snes::cartridge::MapMode::HiROM => {
@@ -765,7 +805,15 @@ impl SnesEmulator {
             0x2182 => { self.wram_addr = (self.wram_addr & 0x100FF) | ((val as u32) << 8); }
             0x2183 => { self.wram_addr = (self.wram_addr & 0x0FFFF) | ((val as u32 & 0x01) << 16); }
             0x4200..=0x42FF => { self.write_cpu_register(addr, val); }
-            0x4300..=0x43FF => { self.dma.write_register(addr - 0x4300, val); }
+            0x4300..=0x43FF => {
+                    // Debug: log ch0 control/b_addr writes (bus_write path 2)
+                    if addr == 0x4300 || addr == 0x4301 {
+                        self.debug_trap_log.push_str(&format!(
+                            "W${:04X}={:02X} @sl={}\n", addr, val, self.ppu.scanline,
+                        ));
+                    }
+                    self.dma.write_register(addr - 0x4300, val);
+                }
             0x6000..=0x7FFF => {
                 // CX4: 也攔截 $40-$6F:$6000-$7FFF
                 if self.cx4.present {
@@ -866,7 +914,28 @@ impl SnesEmulator {
                     self.run_dma();
                 }
             }
-            0x420C => { self.dma.hdma_enable = val; }
+            0x420C => {
+                // HDMA enable: channels newly enabled mid-frame should NOT run until
+                // next frame's HDMA init. Mark them as completed so they're skipped this frame.
+                let newly_enabled = val & !self.dma.hdma_enable;
+                // Debug: log channel state when transitioning to $FF
+                if val == 0xFF && self.dma.hdma_enable != 0xFF {
+                    let ch0 = &self.dma.channels[0];
+                    let ch1 = &self.dma.channels[1];
+                    self.debug_trap_log.push_str(&format!(
+                        "420C->FF @sl={} ch0(ctrl={:02X} b={:02X} a={:02X}:{:04X}) ch1(ctrl={:02X} b={:02X} a={:02X}:{:04X})\n",
+                        self.ppu.scanline,
+                        ch0.control, ch0.b_addr, ch0.a_bank, ch0.a_addr,
+                        ch1.control, ch1.b_addr, ch1.a_bank, ch1.a_addr,
+                    ));
+                }
+                for i in 0..8u8 {
+                    if newly_enabled & (1 << i) != 0 {
+                        self.dma.channels[i as usize].hdma_completed = true;
+                    }
+                }
+                self.dma.hdma_enable = val;
+            }
             0x420D => {
                 // MEMSEL: FastROM enable
                 self.cart.fast_rom = val & 0x01 != 0;
@@ -900,6 +969,13 @@ impl SnesEmulator {
                 ));
             }
 
+            // Debug: detect DMA on HDMA-enabled channels
+            if self.dma.hdma_enable & (1 << i) != 0 {
+                self.debug_trap_log.push_str(&format!(
+                    "DMA-on-HDMA ch{}: a_addr {:04X}→", i, a_addr
+                ));
+            }
+
             while count > 0 {
                 for &offset in offsets {
                     if count == 0 { break; }
@@ -925,6 +1001,13 @@ impl SnesEmulator {
 
             self.dma.channels[i as usize].a_addr = a_addr;
             self.dma.channels[i as usize].count = 0;
+
+            // Debug: log final a_addr after DMA on HDMA channel
+            if self.dma.hdma_enable & (1 << i) != 0 {
+                self.debug_trap_log.push_str(&format!(
+                    "{:04X} sl={} | ", a_addr, self.ppu.scanline
+                ));
+            }
         }
         self.dma.dma_enable = 0;
     }
@@ -2480,6 +2563,11 @@ impl SnesEmulator {
         result
     }
 
+    /// Debug: 渲染後 dump 指定掃描線的 main/sub 層和優先級
+    pub fn debug_scanline_layers(&self, y: u16, x_start: u16, x_end: u16) -> String {
+        self.ppu.debug_scanline_layers(y, x_start, x_end, self.ppu.bg_mode, self.ppu.tm, self.ppu.ts, self.ppu.cgadsub, self.ppu.cgwsel)
+    }
+
     /// Debug: 取得 PPU Color Math / Window 狀態 (用於診斷黑屏)
     pub fn debug_ppu_color_state(&self) -> String {
         let clip_mode = (self.ppu.cgwsel >> 6) & 0x03;
@@ -2508,6 +2596,106 @@ impl SnesEmulator {
             self.ppu.cgram[0],
             self.frame_count,
         )
+    }
+
+    /// Debug: dump DSP voices state
+    pub fn debug_dsp_voices(&self) -> String {
+        let dsp = &self.apu.dsp;
+        let mut out = format!(
+            "DSP: mvol_l={} mvol_r={} evol_l={} evol_r={} kon={:02X} koff={:02X} flg={:02X}\n\
+             NON={:02X} PMON={:02X} EON={:02X} DIR={:02X} ESA={:02X} EDL={:02X} EFB={}\n\
+             FIR=[{},{},{},{},{},{},{},{}]\n\
+             echo_pos={} echo_length={}\n",
+            dsp.mvol_l, dsp.mvol_r, dsp.evol_l, dsp.evol_r,
+            dsp.kon, dsp.koff, dsp.flg,
+            dsp.non, dsp.pmon, dsp.eon, dsp.dir, dsp.esa, dsp.edl, dsp.efb,
+            dsp.fir[0], dsp.fir[1], dsp.fir[2], dsp.fir[3],
+            dsp.fir[4], dsp.fir[5], dsp.fir[6], dsp.fir[7],
+            dsp.echo_pos, dsp.echo_length,
+        );
+        for i in 0..8 {
+            let v = &dsp.voices[i];
+            out.push_str(&format!(
+                "V{}: active={} pitch={:04X} src={} brr_addr={:04X} vol_l={} vol_r={} env_mode={:?} env_level={} output={} noise={} pmod={} echo={}\n",
+                i, v.active, v.pitch, v.src_addr, v.brr_addr,
+                v.vol_l, v.vol_r, v.env_mode, v.env_level, v.output,
+                (dsp.non >> i) & 1, (dsp.pmon >> i) & 1, (dsp.eon >> i) & 1,
+            ));
+        }
+        out
+    }
+
+    /// Debug: dump first N CGRAM entries
+    pub fn debug_cgram(&self, count: u16) -> String {
+        let mut out = String::new();
+        let n = (count as usize).min(256);
+        for i in 0..n {
+            let c = self.ppu.cgram[i];
+            let r = (c & 0x1F) as u8;
+            let g = ((c >> 5) & 0x1F) as u8;
+            let b = ((c >> 10) & 0x1F) as u8;
+            if i % 16 == 0 { out.push_str(&format!("{:3}: ", i)); }
+            out.push_str(&format!("{:04X}({:2},{:2},{:2}) ", c, r, g, b));
+            if i % 16 == 15 { out.push('\n'); }
+        }
+        out
+    }
+
+    /// Debug: set voice mute mask (bit N = mute voice N)
+    pub fn debug_set_voice_mute(&mut self, mask: u8) {
+        self.apu.dsp.voice_mute_mask = mask;
+    }
+
+    /// Debug: enable/disable CGRAM[0] write watchpoint
+    pub fn debug_cgram0_watch(&mut self, enable: bool) {
+        self.ppu.cgram0_watch_enabled = enable;
+        if enable {
+            self.ppu.cgram0_write_log.clear();
+        }
+    }
+
+    /// Debug: get CGRAM[0] write log
+    pub fn debug_cgram0_log(&mut self) -> String {
+        let log = self.ppu.cgram0_write_log.clone();
+        self.ppu.cgram0_write_log.clear();
+        log
+    }
+
+    /// Debug: get and clear DMA trap log
+    pub fn debug_get_trap_log(&mut self) -> String {
+        let log = self.debug_trap_log.clone();
+        self.debug_trap_log.clear();
+        log
+    }
+
+    /// Debug: dump per-scanline CGWSEL/CGADSUB values from last frame
+    pub fn debug_sl_regs(&self) -> String {
+        let mut out = String::new();
+        let mut prev_cgwsel = 0xFFu8;
+        let mut prev_cgadsub = 0xFFu8;
+        for y in 0..224usize {
+            let cw = self.ppu.debug_sl_cgwsel[y];
+            let ca = self.ppu.debug_sl_cgadsub[y];
+            if cw != prev_cgwsel || ca != prev_cgadsub {
+                out.push_str(&format!("SL{:3}: CGWSEL={:02X} CGADSUB={:02X}\n", y, cw, ca));
+                prev_cgwsel = cw;
+                prev_cgadsub = ca;
+            }
+        }
+        out
+    }
+
+    /// Debug: dump $2130 write trace
+    pub fn debug_2130_trace(&self) -> String {
+        let mut out = String::new();
+        let total = self.ppu.debug_2130_idx.min(256);
+        let start = if self.ppu.debug_2130_idx > 256 { self.ppu.debug_2130_idx - 256 } else { 0 };
+        for i in start..self.ppu.debug_2130_idx {
+            let (val, sl, frame, pc) = self.ppu.debug_2130_log[i % 32];
+            out.push_str(&format!("$2130={:02X} @SL{} F{} PC={:06X}\n", val, sl, frame, pc));
+        }
+        if total == 0 { out.push_str("No writes to $2130 recorded\n"); }
+        out
     }
 
     /// Debug: 執行單步並回傳追蹤資訊

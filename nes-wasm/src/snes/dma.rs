@@ -91,6 +91,8 @@ pub struct DmaController {
     pub dma_enable: u8,
     /// $420C - HDMA 啟用
     pub hdma_enable: u8,
+    /// Debug: ch0 write log
+    pub ch0_write_log: String,
 }
 
 impl DmaController {
@@ -102,6 +104,7 @@ impl DmaController {
             ],
             dma_enable: 0,
             hdma_enable: 0,
+            ch0_write_log: String::new(),
         }
     }
 
@@ -111,6 +114,7 @@ impl DmaController {
         }
         self.dma_enable = 0;
         self.hdma_enable = 0;
+        self.ch0_write_log.clear();
     }
 
     /// 寫入 DMA 暫存器
@@ -159,14 +163,16 @@ impl DmaController {
     /// Only resets the address pointer and marks as not completed.
     /// The emulator must then call hdma_init_read() to read the first table entries.
     pub fn hdma_init(&mut self) {
+        // Initialize ALL 8 channels at frame start, not just currently enabled ones.
+        // This ensures channels that get enabled mid-frame (via $420C) start from
+        // the correct table address, preventing out-of-sync duplicate channels.
+        // (e.g. SoM uses ch0-3 and ch4-7 as duplicate HDMA sets enabled at different times)
         for i in 0..8 {
-            if self.hdma_enable & (1 << i) != 0 {
-                let ch = &mut self.channels[i];
-                ch.hdma_addr = ch.a_addr;
-                ch.hdma_line_counter = 0;
-                ch.hdma_do_transfer = false;
-                ch.hdma_completed = false;
-            }
+            let ch = &mut self.channels[i];
+            ch.hdma_addr = ch.a_addr;
+            ch.hdma_line_counter = 0;
+            ch.hdma_do_transfer = false;
+            ch.hdma_completed = if self.hdma_enable & (1 << i) != 0 { false } else { true };
         }
     }
 

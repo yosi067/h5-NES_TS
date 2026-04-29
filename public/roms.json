@@ -52,6 +52,10 @@
     {"name": "最終幻想 6 (繁體中文版)", "file": "0041 - 最終幻想6 (繁)(V1.1)(日選單)(勇者漢化組).smc"},
     {"name": "超時空之鑰 (繁體中文版)", "file": "0045 - 超時空之鑰 (繁)(Beta)(Goldegg+Emukim).smc"},
     {"name": "聖劍傳說 2 (Secret of Mana)", "file": "Secret of Mana (Reborn v2.5).sfc"},
-    {"name": "聖劍傳說 3 (Seiken Densetsu 3)", "file": "Seiken Densetsu 3 (Japan) [En by LNF+Neill Corlett+SoM2Freak v1.01].sfc"}
+    {"name": "聖劍傳說 3 (Seiken Densetsu 3)", "file": "Seiken Densetsu 3 (Japan) [En by LNF+Neill Corlett+SoM2Freak v1.01].sfc"},
+
+    {"name": "薩爾達傳說 時之笛 (N64)", "file": "Legend of Zelda, The - Ocarina of Time.z64"},
+    {"name": "瑪利歐賽車 64 (N64)", "file": "Mario Kart 64 (USA).z64"},
+    {"name": "超級瑪利歐 64 (N64)", "file": "Super Mario 64 (USA).z64"}
   ]
 }

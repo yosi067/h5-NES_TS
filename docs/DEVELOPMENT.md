@@ -12,6 +12,19 @@
 
 ## 專案概述
 
+### 專案現況
+
+H5-NES 已從最初的 NES 模擬器擴展成瀏覽器中的多平台模擬器。前端仍由 Vite/TypeScript 負責 UI、ROM 載入、輸入、Canvas 與 Web Audio；核心模擬器主要由 Rust 編譯成 WASM，另以 Mupen64Plus-web 提供 N64 後端。
+
+目前重點平台：
+
+- **NES / Famicom**：Rust/WASM 原生核心，包含 CPU、PPU、APU、Mapper。
+- **SNES / Super Famicom**：Rust/WASM 原生核心，包含 CPU、PPU、APU、DMA/HDMA 與部分協處理器支援。
+- **Game Boy / Game Gear / Master System**：Rust/WASM 原生核心。
+- **Nintendo 64**：透過 `mupen64plus-web` 啟動 WebGL 後端，使用獨立 `<canvas id="canvas">`，避免與 2D WASM canvas 共用 context。
+
+---
+
 ### 什麼是 NES 模擬器？
 
 NES 模擬器是一個在現代電腦/瀏覽器中重現 Nintendo Entertainment System (任天堂紅白機) 硬體行為的軟體。我們需要模擬以下硬體元件：
@@ -24,11 +37,27 @@ NES 模擬器是一個在現代電腦/瀏覽器中重現 Nintendo Entertainment 
 
 ### 技術棧
 
-- **語言**: TypeScript
+- **語言**: TypeScript / Rust
 - **建置工具**: Vite
 - **測試框架**: Vitest
-- **圖形輸出**: HTML5 Canvas
+- **核心輸出**: wasm-pack (`nes-wasm` → `src/wasm`)
+- **圖形輸出**: HTML5 Canvas 2D / WebGL canvas (N64)
 - **音頻輸出**: Web Audio API
+- **N64 後端**: Mupen64Plus-web + Rice video plugin
+
+### 近期修正紀錄
+
+#### N64 初次啟動畫面適配
+
+N64 模式必須使用全新的 WebGL canvas，不能沿用已建立 2D context 的 `#screen`。啟動流程中會先套用 `body.n64-mode`，等待 layout settle，再建立 Mupen 後端。因 Mupen/SDL 會在 start 後再次讀取 canvas 尺寸，`src/main.ts` 會在 start 前後執行 resize pulse，並把 WebGL backing store 維持在 `640x480`，避免首次啟動時遊戲內容縮放錯誤。
+
+#### SNES APU 音效回歸修正
+
+SNES 音效以 commit `0590b1efed1900f7270cb2934a2a4b4fa0cef541` 作為回歸基準。`nes-wasm/src/snes/apu.rs` 已同步調整 `generate_sample()` 與 `decode_next_sample()` 的 BRR/Gauss sample 尺度，避免只回退輸出路徑但保留新版 BRR ring buffer `<< 1` 導致特定樂器或音效高頻刺耳。
+
+#### SNES OBJ 透明與 color math
+
+SNES PPU 的 OBJ color math 規則已修正：OBJ palettes 0-3 不參與 color math，只有 palettes 4-7 在 `$2131 CGADSUB` OBJ bit 啟用時才參與。這項修正影響透明精靈、半透明特效與 Secret of Mana / Seiken Densetsu 3 類型遊戲的物件混合。
 
 ---
 

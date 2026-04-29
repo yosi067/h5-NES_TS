@@ -51,6 +51,9 @@ pub struct Ppu {
     pub cgram_addr: u8,
     pub cgram_latch: u8,
     pub cgram_flipflop: bool,
+    /// Debug: log of writes to CGRAM[0]
+    pub cgram0_write_log: String,
+    pub cgram0_watch_enabled: bool,
 
     // === 背景暫存器 ===
     /// 背景模式 ($2105)
@@ -162,6 +165,16 @@ pub struct Ppu {
     /// 畫面完成旗標
     pub frame_complete: bool,
 
+    // === Debug: per-scanline mode/scroll trace ===
+    pub debug_trace_frame: bool,
+    pub debug_trace_log: String,
+
+    // === Debug: $2130 write trace (ring buffer of last 32 writes) ===
+    pub debug_2130_log: [(u8, u16, u32, u32); 256], // (value, scanline, frame, pc)
+    pub debug_2130_idx: usize,
+    pub debug_2130_frame: u32,
+    pub debug_2130_pc: u32, // Set by emulator before bus writes
+
     // === 畫面緩衝區: 256×224 RGBA ===
     pub framebuffer: Vec<u8>,
 
@@ -172,7 +185,12 @@ pub struct Ppu {
     sub_pri: [u8; 256],      // Sub screen priority
     main_src: [u8; 256],     // Main screen source layer (for color math)
     sub_src: [u8; 256],      // Sub screen source layer
+    main_obj_pal: [u8; 256], // OBJ palette index (0-7) for main screen (used for color math)
     window_mask: [[bool; 256]; 6], // Window mask per layer (BG1-4, OBJ, Color)
+
+    // Debug: per-scanline register snapshots (filled during composite)
+    pub debug_sl_cgwsel: [u8; 240],
+    pub debug_sl_cgadsub: [u8; 240],
 }
 
 impl Ppu {
@@ -195,6 +213,8 @@ impl Ppu {
             cgram_addr: 0,
             cgram_latch: 0,
             cgram_flipflop: false,
+            cgram0_write_log: String::new(),
+            cgram0_watch_enabled: false,
 
             bg_mode: 0,
             bg3_priority: false,
@@ -245,6 +265,12 @@ impl Ppu {
             vblank_flag: false,
             nmi_triggered: false,
             frame_complete: false,
+            debug_trace_frame: false,
+            debug_trace_log: String::new(),
+            debug_2130_log: [(0, 0, 0, 0); 256],
+            debug_2130_idx: 0,
+            debug_2130_frame: 0,
+            debug_2130_pc: 0,
 
             framebuffer: vec![0; FRAMEBUFFER_SIZE],
 
@@ -254,8 +280,10 @@ impl Ppu {
             sub_pri: [0; 256],
             main_src: [0; 256],
             sub_src: [0; 256],
+            main_obj_pal: [0; 256],
             window_mask: [[false; 256]; 6],
-
+            debug_sl_cgwsel: [0; 240],
+            debug_sl_cgadsub: [0; 240],
 
         }
     }
@@ -454,6 +482,12 @@ impl Ppu {
                     self.cgram_latch = val;
                 } else {
                     let color = ((val as u16 & 0x7F) << 8) | self.cgram_latch as u16;
+                    if self.cgram0_watch_enabled && self.cgram_addr == 0 && color != 0 {
+                        self.cgram0_write_log.push_str(&format!(
+                            "CGRAM[0]<-{:04X} @sl={} ",
+                            color, self.scanline
+                        ));
+                    }
                     self.cgram[self.cgram_addr as usize] = color;
                     self.cgram_addr = self.cgram_addr.wrapping_add(1);
                 }
@@ -477,7 +511,12 @@ impl Ppu {
             0x212E => { self.tmw = val; }
             0x212F => { self.tsw = val; }
             // $2130-$2131 - Color Math
-            0x2130 => { self.cgwsel = val; }
+            0x2130 => {
+                // Debug: trace $2130 writes with PC
+                let idx = self.debug_2130_idx % 256;
+                self.debug_2130_log[idx] = (val, self.scanline, self.debug_2130_frame, self.debug_2130_pc);                self.debug_2130_idx += 1;
+                self.cgwsel = val;
+            }
             0x2131 => { self.cgadsub = val; }
             // $2132 - COLDATA: 固定色
             0x2132 => {
@@ -690,6 +729,20 @@ impl Ppu {
             return;
         }
 
+        // Debug: trace per-scanline state
+        if self.debug_trace_frame {
+            use core::fmt::Write;
+            let _ = write!(self.debug_trace_log,
+                "SL{:3}: mode={} hsc0={:4} hsc1={:4} vsc0={:4} vsc1={:4} tm={:02X} ts={:02X} map0={:04X}s{} map1={:04X}s{} chr0={:04X} chr1={:04X}\n",
+                scanline, self.bg_mode,
+                self.bg_hscroll[0], self.bg_hscroll[1],
+                self.bg_vscroll[0], self.bg_vscroll[1],
+                self.tm, self.ts,
+                self.bg_tilemap_addr[0], self.bg_tilemap_size[0],
+                self.bg_tilemap_addr[1], self.bg_tilemap_size[1],
+                self.bg_chr_addr[0], self.bg_chr_addr[1]);
+        }
+
         // 清除行緩衝
         let backdrop = self.cgram[0];
         let backdrop_rgba = bgr15_to_rgba(backdrop);
@@ -700,6 +753,7 @@ impl Ppu {
             self.sub_pri[x] = 0;
             self.main_src[x] = 5; // backdrop
             self.sub_src[x] = 5;
+            self.main_obj_pal[x] = 0;
         }
 
         // 計算 Window Mask
@@ -1249,6 +1303,7 @@ impl Ppu {
                         self.main_buf[sx] = rgba;
                         self.main_pri[sx] = pri;
                         self.main_src[sx] = 4; // OBJ
+                        self.main_obj_pal[sx] = palette;
                     }
                 }
                 // OBJ 到 Sub Screen
@@ -1293,7 +1348,13 @@ impl Ppu {
             let w2_enable = settings & 0x08 != 0;
             let w2_invert = settings & 0x04 != 0;
 
-            if !w1_enable && !w2_enable { continue; }
+            if !w1_enable && !w2_enable {
+                // No window configured: all pixels are outside → mask = false
+                for x in 0..256usize {
+                    self.window_mask[layer][x] = false;
+                }
+                continue;
+            }
 
             let w1_left = self.wh[0] as usize;
             let w1_right = self.wh[1] as usize;
@@ -1345,17 +1406,33 @@ impl Ppu {
         let y = (scanline - 1) as usize;
         let offset = y * SCREEN_WIDTH * 4;
 
+        // Debug: capture per-scanline register values
+        if y < 240 {
+            self.debug_sl_cgwsel[y] = self.cgwsel;
+            self.debug_sl_cgadsub[y] = self.cgadsub;
+        }
+
         let half = self.cgadsub & 0x40 != 0;
         let subtract = self.cgadsub & 0x80 != 0;
         let brightness = self.brightness as u32;
+
+        // Hires modes (5, 6) or pseudo-hires: blend main+sub for 256px output
+        let hires = self.bg_mode == 5 || self.bg_mode == 6 || (self.setini & 0x08 != 0);
 
         for x in 0..SCREEN_WIDTH {
             let main_rgba = self.main_buf[x];
             let sub_rgba = self.sub_buf[x];
             let src = self.main_src[x];
 
-            // 檢查此層是否啟用 color math
-            let color_math_enabled = self.cgadsub & (1 << src) != 0;
+            // 檢查此層是否啟用 color math。
+            // SNES OBJ 只有 palettes 4-7 會參與 color math；palettes 0-3 永遠不透明混合。
+            let color_math_enabled = if src == 4 && self.main_obj_pal[x] >= 4 {
+                self.cgadsub & 0x10 != 0
+            } else if src == 4 {
+                false
+            } else {
+                self.cgadsub & (1 << src) != 0
+            };
 
             // Color math 區域檢查 ($2130)
             let clip_mode = (self.cgwsel >> 6) & 0x03;
@@ -1394,7 +1471,6 @@ impl Ppu {
                 // Sub screen 或固定色
                 let using_fixed = self.cgwsel & 0x02 != 0;
                 let (sr, sg, sb) = if using_fixed {
-                    // 使用固定色
                     ((self.fixed_color_r as u32) << 3,
                      (self.fixed_color_g as u32) << 3,
                      (self.fixed_color_b as u32) << 3)
@@ -1411,14 +1487,25 @@ impl Ppu {
                     let g = (mg as i32 - sg as i32).max(0) as u32;
                     let b = (mb as i32 - sb as i32).max(0) as u32;
                     if do_half { (r >> 1, g >> 1, b >> 1) } else { (r, g, b) }
+                } else if do_half {
+                    // Half-add: divide before clamping (max result is 510/2=255, so no clamp needed)
+                    ((mr + sr) >> 1, (mg + sg) >> 1, (mb + sb) >> 1)
                 } else {
-                    let r = (mr + sr).min(255);
-                    let g = (mg + sg).min(255);
-                    let b = (mb + sb).min(255);
-                    if do_half { (r >> 1, g >> 1, b >> 1) } else { (r, g, b) }
+                    ((mr + sr).min(255), (mg + sg).min(255), (mb + sb).min(255))
                 };
 
                 r | (g << 8) | (b << 16) | 0xFF000000
+            } else if hires {
+                // Hires/pseudo-hires downscale: only blend when the sub screen has a real pixel.
+                // If sub is just backdrop, averaging it with main makes transparent areas look faded.
+                if self.sub_src[x] != 5 {
+                    let sr = sub_rgba & 0xFF;
+                    let sg = (sub_rgba >> 8) & 0xFF;
+                    let sb = (sub_rgba >> 16) & 0xFF;
+                    ((mr + sr) >> 1) | (((mg + sg) >> 1) << 8) | (((mb + sb) >> 1) << 16) | 0xFF000000
+                } else {
+                    mr | (mg << 8) | (mb << 16) | 0xFF000000
+                }
             } else {
                 mr | (mg << 8) | (mb << 16) | 0xFF000000
             };
@@ -1436,5 +1523,35 @@ impl Ppu {
                 self.framebuffer[i + 3] = 255;
             }
         }
+    }
+
+    /// Debug: dump main/sub layer info for a scanline range
+    pub fn debug_scanline_layers(&self, _y: u16, x_start: u16, x_end: u16,
+        bg_mode: u8, tm: u8, ts: u8, cgadsub: u8, cgwsel: u8) -> String
+    {
+        let src_names = ["BG1","BG2","BG3","BG4","OBJ","BKD"];
+        let mut out = format!("Scanline (x={}..{}) Mode={} TM={:02X} TS={:02X} CGADSUB={:02X} CGWSEL={:02X}\n",
+            x_start, x_end, bg_mode, tm, ts, cgadsub, cgwsel);
+        out += &format!("  FixedColor=({},{},{}) Half={} Sub={}\n",
+            self.fixed_color_r, self.fixed_color_g, self.fixed_color_b,
+            cgadsub & 0x40 != 0, cgadsub & 0x80 != 0);
+        for x in (x_start as usize)..(x_end as usize).min(256) {
+            let ms = self.main_src[x] as usize;
+            let ss = self.sub_src[x] as usize;
+            let mp = self.main_pri[x];
+            let sp = self.sub_pri[x];
+            let mr = self.main_buf[x] & 0xFF;
+            let mg = (self.main_buf[x] >> 8) & 0xFF;
+            let mb = (self.main_buf[x] >> 16) & 0xFF;
+            let sr = self.sub_buf[x] & 0xFF;
+            let sg = (self.sub_buf[x] >> 8) & 0xFF;
+            let sb = (self.sub_buf[x] >> 16) & 0xFF;
+            let msn = if ms < 6 { src_names[ms] } else { "???" };
+            let ssn = if ss < 6 { src_names[ss] } else { "???" };
+            let cm_en = cgadsub & (1 << ms) != 0;
+            out += &format!("  x={:3}: main={}(p{}) rgb({},{},{}) | sub={}(p{}) rgb({},{},{}) cm={}\n",
+                x, msn, mp, mr, mg, mb, ssn, sp, sr, sg, sb, cm_en);
+        }
+        out
     }
 }

@@ -53,6 +53,9 @@ pub mod gg;
 // SNES (Super Famicom) 模組
 pub mod snes;
 
+// Nintendo 64 模組
+pub mod n64;
+
 // ============================================================
 // WASM 匯出介面 - 供 JavaScript 呼叫
 // ============================================================
@@ -167,6 +170,7 @@ enum CoreType {
     Gb(gb::emulator::GbEmulator),
     Gg(gg::emulator::GgEmulator),
     Snes(snes::emulator::SnesEmulator),
+    N64(n64::emulator::N64Emulator),
 }
 
 /// 統一多平台模擬器 WASM 包裝器
@@ -196,6 +200,15 @@ impl EmuWasm {
                 return true;
             }
             return false;
+        }
+
+        // 偵測 N64 ROM 格式 (.z64/.v64/.n64 byte orders)
+        let is_n64 = matches!(
+            &rom_data[0..4],
+            [0x80, 0x37, 0x12, 0x40] | [0x37, 0x80, 0x40, 0x12] | [0x40, 0x12, 0x37, 0x80]
+        );
+        if is_n64 {
+            return self.load_n64_rom(rom_data);
         }
 
         // 預設嘗試 Game Boy
@@ -232,6 +245,18 @@ impl EmuWasm {
         false
     }
 
+    /// 載入 Nintendo 64 ROM (.z64 / .v64 / .n64)
+    #[wasm_bindgen(js_name = "loadN64Rom")]
+    pub fn load_n64_rom(&mut self, rom_data: &[u8]) -> bool {
+        if rom_data.is_empty() { return false; }
+        let mut emu = n64::emulator::N64Emulator::new();
+        if emu.load_rom(rom_data) {
+            self.core = CoreType::N64(emu);
+            return true;
+        }
+        false
+    }
+
     /// 載入 SMS ROM
     #[wasm_bindgen(js_name = "loadSmsRom")]
     pub fn load_sms_rom(&mut self, rom_data: &[u8]) -> bool {
@@ -251,6 +276,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.reset(),
             CoreType::Gg(emu) => emu.reset(),
             CoreType::Snes(emu) => emu.reset(),
+            CoreType::N64(emu) => emu.reset(),
             CoreType::None => {}
         }
     }
@@ -262,6 +288,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.frame(),
             CoreType::Gg(emu) => emu.frame(),
             CoreType::Snes(emu) => emu.frame(),
+            CoreType::N64(emu) => emu.frame(),
             CoreType::None => {}
         }
     }
@@ -274,6 +301,7 @@ impl EmuWasm {
             CoreType::Gb(_) => 160,
             CoreType::Gg(emu) => emu.screen_width(),
             CoreType::Snes(_) => 256,
+            CoreType::N64(_) => 320,
             CoreType::None => 256,
         }
     }
@@ -286,6 +314,7 @@ impl EmuWasm {
             CoreType::Gb(_) => 144,
             CoreType::Gg(emu) => emu.screen_height(),
             CoreType::Snes(_) => 224,
+            CoreType::N64(_) => 240,
             CoreType::None => 240,
         }
     }
@@ -298,6 +327,7 @@ impl EmuWasm {
             CoreType::Gb(_) => "gb".to_string(),
             CoreType::Gg(_) => "gg".to_string(),
             CoreType::Snes(_) => "snes".to_string(),
+            CoreType::N64(_) => "n64".to_string(),
             CoreType::None => "none".to_string(),
         }
     }
@@ -309,6 +339,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.get_frame_buffer_ptr(),
             CoreType::Gg(emu) => emu.get_frame_buffer_ptr(),
             CoreType::Snes(emu) => emu.get_frame_buffer_ptr(),
+            CoreType::N64(emu) => emu.get_frame_buffer_ptr(),
             CoreType::None => std::ptr::null(),
         }
     }
@@ -320,6 +351,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.get_frame_buffer_len(),
             CoreType::Gg(emu) => emu.get_frame_buffer_len(),
             CoreType::Snes(emu) => emu.get_frame_buffer_len(),
+            CoreType::N64(emu) => emu.get_frame_buffer_len(),
             CoreType::None => 0,
         }
     }
@@ -331,6 +363,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.set_button(controller, button, pressed),
             CoreType::Gg(emu) => emu.set_button(controller, button, pressed),
             CoreType::Snes(emu) => emu.set_button(controller, button, pressed),
+            CoreType::N64(emu) => emu.set_button(controller, button, pressed),
             CoreType::None => {}
         }
     }
@@ -342,6 +375,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.set_audio_sample_rate(rate),
             CoreType::Gg(emu) => emu.set_audio_sample_rate(rate),
             CoreType::Snes(emu) => emu.set_audio_sample_rate(rate),
+            CoreType::N64(emu) => emu.set_audio_sample_rate(rate),
             CoreType::None => {}
         }
     }
@@ -362,6 +396,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.get_audio_buffer_ptr(),
             CoreType::Gg(emu) => emu.get_audio_buffer_ptr(),
             CoreType::Snes(emu) => emu.get_audio_buffer_ptr(),
+            CoreType::N64(emu) => emu.get_audio_buffer_ptr(),
             CoreType::None => std::ptr::null(),
         }
     }
@@ -373,6 +408,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.get_audio_buffer_len(),
             CoreType::Gg(emu) => emu.get_audio_buffer_len(),
             CoreType::Snes(emu) => emu.get_audio_buffer_len(),
+            CoreType::N64(emu) => emu.get_audio_buffer_len(),
             CoreType::None => 0,
         }
     }
@@ -384,6 +420,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.consume_audio_samples(),
             CoreType::Gg(emu) => emu.consume_audio_samples(),
             CoreType::Snes(emu) => emu.consume_audio_samples(),
+            CoreType::N64(emu) => emu.consume_audio_samples(),
             CoreType::None => 0,
         }
     }
@@ -395,6 +432,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.export_save_state(),
             CoreType::Gg(emu) => emu.export_save_state(),
             CoreType::Snes(emu) => emu.export_save_state(),
+            CoreType::N64(emu) => emu.export_save_state(),
             CoreType::None => String::new(),
         }
     }
@@ -406,6 +444,7 @@ impl EmuWasm {
             CoreType::Gb(emu) => emu.import_save_state(json),
             CoreType::Gg(emu) => emu.import_save_state(json),
             CoreType::Snes(emu) => emu.import_save_state(json),
+            CoreType::N64(emu) => emu.import_save_state(json),
             CoreType::None => false,
         }
     }
@@ -452,6 +491,7 @@ impl EmuWasm {
     pub fn debug_state(&self) -> String {
         match &self.core {
             CoreType::Snes(emu) => emu.debug_state(),
+            CoreType::N64(emu) => emu.debug_state(),
             _ => "Not SNES".to_string(),
         }
     }
@@ -470,6 +510,55 @@ impl EmuWasm {
     pub fn debug_ppu_color_state(&self) -> String {
         match &self.core {
             CoreType::Snes(emu) => emu.debug_ppu_color_state(),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// SNES per-scanline trace (captures one frame of mode/scroll data)
+    #[wasm_bindgen(js_name = "debugTraceFrame")]
+    pub fn debug_trace_frame(&mut self) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => {
+                if !emu.ppu.debug_trace_log.is_empty() {
+                    // Return and clear existing log
+                    let log = emu.ppu.debug_trace_log.clone();
+                    emu.ppu.debug_trace_log.clear();
+                    emu.ppu.debug_trace_frame = false;
+                    log
+                } else {
+                    // Start tracing
+                    emu.ppu.debug_trace_frame = true;
+                    emu.ppu.debug_trace_log.clear();
+                    "Tracing started - call again after 1 frame to get results".to_string()
+                }
+            }
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// SNES 掃描線層級 debug
+    #[wasm_bindgen(js_name = "debugScanlineLayers")]
+    pub fn debug_scanline_layers(&self, y: u16, x_start: u16, x_end: u16) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_scanline_layers(y, x_start, x_end),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// SNES per-scanline register dump
+    #[wasm_bindgen(js_name = "debugSlRegs")]
+    pub fn debug_sl_regs(&self) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_sl_regs(),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// SNES $2130 write trace
+    #[wasm_bindgen(js_name = "debug2130Trace")]
+    pub fn debug_2130_trace(&self) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_2130_trace(),
             _ => "Not SNES".to_string(),
         }
     }
@@ -549,6 +638,57 @@ impl EmuWasm {
         match &mut self.core {
             CoreType::Snes(emu) => emu.debug_run_until_pc_in_range(target_bank, target_lo, target_hi, max_frames, trace_count),
             _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// DSP voice state dump
+    #[wasm_bindgen(js_name = "debugDspVoices")]
+    pub fn debug_dsp_voices(&self) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_dsp_voices(),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// CGRAM (palette) dump
+    #[wasm_bindgen(js_name = "debugCgram")]
+    pub fn debug_cgram(&self, count: u16) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_cgram(count),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    /// Debug: set voice mute mask (bit N = mute voice N)
+    #[wasm_bindgen(js_name = "debugSetVoiceMute")]
+    pub fn debug_set_voice_mute(&mut self, mask: u8) {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_set_voice_mute(mask),
+            _ => {}
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugCgram0Watch")]
+    pub fn debug_cgram0_watch(&mut self, enable: bool) {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_cgram0_watch(enable),
+            _ => {}
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugCgram0Log")]
+    pub fn debug_cgram0_log(&mut self) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_cgram0_log(),
+            _ => String::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugTrapLog")]
+    pub fn debug_trap_log(&mut self) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_get_trap_log(),
+            _ => String::new(),
         }
     }
 }

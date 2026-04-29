@@ -11,6 +11,7 @@
 - [SNES — APU 音頻](#snes--apu-音頻)
 - [SNES — DMA / HDMA](#snes--dma--hdma)
 - [SNES — 協處理器](#snes--協處理器)
+- [N64 — Mupen64Plus Web 後端](#n64--mupen64plus-web-後端)
 - [NES — CPU 時序](#nes--cpu-時序)
 - [NES — Mapper](#nes--mapper)
 - [NES — APU 音頻](#nes--apu-音頻)
@@ -112,9 +113,25 @@
 
 ---
 
+### Q8: OBJ 透明物件混合錯誤 — palette 0-3 / 4-7 規則反向
+
+**現象**：SNES 遊戲中部分透明物件、半透明精靈或特效看起來不正確，可能出現不該透明的 OBJ 被混合，或應該半透明的 OBJ 沒有套用 color math。
+
+**排查**：檢查 `composite_scanline()` 的 OBJ color math 條件後發現規則反向：程式把 OBJ palettes 4-7 排除 color math，卻讓 palettes 0-3 可參與混合。
+
+**原因**：SNES 硬體規則是 OBJ palettes 0-3 不參與 color math，只有 OBJ palettes 4-7 在 `$2131 CGADSUB` 的 OBJ bit 啟用時才參與主/副畫面色彩運算。
+
+**解決**：`nes-wasm/src/snes/ppu.rs` 中 OBJ source (`src == 4`) 的 color math 條件改為：
+- `main_obj_pal < 4`：永遠不做 color math
+- `main_obj_pal >= 4`：依 `CGADSUB bit 4` 決定是否做 color math
+
+**影響遊戲**：Secret of Mana、Seiken Densetsu 3，以及使用 OBJ 半透明特效的 SNES 遊戲。
+
+---
+
 ## SNES — APU 音頻
 
-### Q8: FIR 回聲濾波器精度損失 — 音效刺耳 / 回聲過大
+### Q9: FIR 回聲濾波器精度損失 — 音效刺耳 / 回聲過大
 
 **現象**：FF6 風聲 SFX 刺耳；SoM2 回聲/混響淹沒主旋律。
 
@@ -130,7 +147,24 @@
 
 ---
 
-### Q9: SPC700 分支指令 cycle 數全部錯誤
+### Q10: BRR decode 與 Gauss interpolation 尺度不一致 — 特定音色刺耳
+
+**現象**：SNES 音樂整體可接受，但某一種特定音頻、樂器或音效仍有刺耳高頻。回退到 commit `0590b1efed1900f7270cb2934a2a4b4fa0cef541` 後改善，但仍殘留部分異常。
+
+**排查**：比對 `0590b1e` 的 `nes-wasm/src/snes/apu.rs` 發現 `generate_sample()` 已回到舊版 Gauss 路徑，但 `decode_next_sample()` 仍保留較新的 BRR 輸出尺度：把 sample 推入 Gauss ring buffer 前額外 `<< 1`。舊版 Gauss interpolation 末端已經做 `>> 1`，兩種尺度混用會放大或偏移部分 BRR 樣本的高頻內容。
+
+**原因**：BRR decode 與 Gauss interpolation 需要使用一致的 sample 尺度。只回退 `generate_sample()` 而未同步回退 BRR decode，會讓某些 BRR 樣本在插值與 envelope 前後的幅度不符合參考版本。
+
+**解決**：將 BRR decode 還原為 `0590b1e` 行為：
+- filter 2/3 公式回到參考版本
+- BRR filter output 只 clamp 到 16-bit
+- Gauss ring buffer 寫入 `clamped as i16`，不再額外 `<< 1`
+
+**驗證**：`npm run build` 通過；Secret of Mana 可啟動出圖。實際音色仍需以聽感確認特定場景。
+
+---
+
+### Q11: SPC700 分支指令 cycle 數全部錯誤
 
 **現象**：多款 SNES 遊戲音頻時序異常或 APU 行為不穩定。
 
@@ -140,7 +174,7 @@
 
 ---
 
-### Q10: SPC700 缺少 $B8 opcode — PC 跑飛
+### Q12: SPC700 缺少 $B8 opcode — PC 跑飛
 
 **現象**：多款遊戲音頻異常或 SPC700 執行亂碼。
 
@@ -150,7 +184,7 @@
 
 ---
 
-### Q11: IPL ROM 被 RAM 寫入覆蓋
+### Q13: IPL ROM 被 RAM 寫入覆蓋
 
 **現象**：APU 初始化後行為異常。
 
@@ -160,7 +194,7 @@
 
 ---
 
-### Q12: APU 分數 cycle 累積漂移
+### Q14: APU 分數 cycle 累積漂移
 
 **現象**：長時間遊玩後音頻與視頻逐漸不同步。
 
@@ -170,7 +204,7 @@
 
 ---
 
-### Q13: Sub Screen 背景色為純黑 — 色彩數學異常
+### Q15: Sub Screen 背景色為純黑 — 色彩數學異常
 
 **現象**：SoM2 名字輸入 UI 不可見（色彩混合結果全黑）。
 
@@ -182,7 +216,7 @@
 
 ## SNES — DMA / HDMA
 
-### Q14: HDMA 間接定址指標欄位缺失
+### Q16: HDMA 間接定址指標欄位缺失
 
 **現象**：使用 HDMA 間接模式的遊戲（如 SMK）光柵效果失敗。
 
@@ -192,7 +226,7 @@
 
 ---
 
-### Q15: HDMA 掃描線 0 不應傳輸資料
+### Q17: HDMA 掃描線 0 不應傳輸資料
 
 **現象**：HDMA 效果第一行資料錯誤。
 
@@ -204,7 +238,7 @@
 
 ## SNES — 協處理器
 
-### Q16: DSP-1 Newton 疊代精度不符 — Mode 7 地面扭曲
+### Q18: DSP-1 Newton 疊代精度不符 — Mode 7 地面扭曲
 
 **現象**：DSP-1 Inverse 函數結果錯誤，Mode 7 地面紋理和精靈定位失準。
 
@@ -214,7 +248,7 @@
 
 ---
 
-### Q17: DSP-1 Raster Output 階段無限迴圈
+### Q19: DSP-1 Raster Output 階段無限迴圈
 
 **現象**：DSP-1 卡在 Raster Output 階段（54 commands/1800 frames），永遠不退出 Mode 7 計算迴圈。
 
@@ -231,6 +265,26 @@
 **原因**：Hitachi HG51B169 (CX4) 協處理器未實作。這兩款是唯一使用 CX4 的遊戲。
 
 **解決**：實作 HLE CX4 (`cx4.rs`)：ROM 偵測（$F3 + LoROM + 擴展標頭 $7FBF=0x10）、記憶體映射（$6000-$7FFF RAM/I/O）、命令分派（build_oam、math、wireframe 等）、匯流排路由。
+
+---
+
+## N64 — Mupen64Plus Web 後端
+
+### Q1: 第一次啟動 N64 ROM 時畫面內容尺寸錯誤
+
+**現象**：第一次啟動 N64 遊戲時，外框已置中但遊戲內容大小不正確；手動適配或重新 resize 一次後才正常。
+
+**排查**：DOM 量測顯示外層 `.screen-bezel` 與 canvas CSS 尺寸正確，但 Mupen64Plus-web / SDL 在啟動後仍會自行處理 canvas resize，導致 WebGL backing store 或 viewport 在第一幀使用到錯誤尺寸。
+
+**原因**：只在 `createMupen64PlusWeb()` / `start()` 前 dispatch `resize` 不足。Mupen 的內部 renderer 會在初始化後再讀取 canvas 尺寸，因此必須在 start 前後都強制觸發 RWD layout pulse。
+
+**解決**：`src/main.ts` 新增 N64 專用適配流程：
+- 建立全新的 `<canvas id="canvas">`，避免重用已取得 2D context 的 `#screen`
+- 套用 `body.n64-mode` 後等待兩個 animation frame
+- start 前後執行 `forceN64ResponsiveResize()` / `scheduleN64ResponsiveResize()`
+- 先送 `resize` / `orientationchange` pulse，再把 WebGL backing store 固定回 `640x480`
+
+**驗證**：初次載入 Super Mario 64 後，CSS 顯示尺寸約 `390x293`，內部 backing store 維持 `640x480`，比例為 `4:3`。
 
 ---
 

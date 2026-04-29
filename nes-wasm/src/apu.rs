@@ -966,15 +966,8 @@ impl Apu {
         self.highpass_prev = input;
         sample = self.highpass_output;
 
-        // 適度放大（mix 輸出約 0~1，高通後居中於 0）
-        sample *= 1.2;
-
-        // 軟削波防止爆音
-        if sample > 0.95 {
-            sample = 0.95 + (sample - 0.95) * 0.1;
-        } else if sample < -0.95 {
-            sample = -0.95 + (sample + 0.95) * 0.1;
-        }
+        // 保留 headroom，避免額外增益與削波改變 NESdev mixer 的聲道比例。
+        sample *= 0.95;
 
         // 最終限制在 [-1, 1] 範圍
         sample = sample.max(-1.0).min(1.0);

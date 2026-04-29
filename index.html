@@ -99,6 +99,9 @@
       box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.5),
                   0 2px 4px rgba(0, 0, 0, 0.3);
       margin-bottom: 8px;
+      width: 100%;
+      max-width: 100%;
+      align-self: center;
     }
 
     .screen-inner {
@@ -106,6 +109,9 @@
       padding: 4px;
       border-radius: 4px;
       position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     .screen-label {
@@ -137,7 +143,8 @@
                   inset 0 1px 2px rgba(255, 255, 255, 0.3);
     }
 
-    #screen {
+    #screen,
+    #canvas {
       display: block;
       width: 100%;
       max-width: 320px;
@@ -693,6 +700,269 @@
       height: 50px;
     }
 
+    /* ===== N64 Controller ===== */
+    #n64-controller-area {
+      height: 100%;
+      gap: 18px;
+      align-items: stretch;
+      justify-content: space-evenly;
+      padding: 34px 10px 26px;
+    }
+
+    .n64-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      gap: 12px;
+    }
+
+    .n64-main-row {
+      display: grid;
+      grid-template-columns: 154px 92px 104px;
+      grid-template-rows: auto auto;
+      align-items: center;
+      justify-items: center;
+      width: 100%;
+      gap: 26px 7px;
+    }
+
+    .n64-shoulder-btn,
+    .n64-start-btn,
+    .n64-system-btn {
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.42), inset 0 1px 3px rgba(255, 255, 255, 0.16);
+      transition: transform 0.06s, filter 0.06s, box-shadow 0.06s;
+      touch-action: manipulation;
+      user-select: none;
+    }
+
+    .n64-shoulder-btn {
+      width: 68px;
+      height: 36px;
+      border-radius: 8px 8px 14px 14px;
+      background: linear-gradient(180deg, #5f5f66, #34343a);
+      font-size: 13px;
+    }
+
+    .n64-trigger-btn {
+      background: linear-gradient(180deg, #49606a, #263940);
+    }
+
+    .n64-start-btn {
+      width: 70px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, #b72c42, #751425);
+      font-size: 12px;
+    }
+
+    .n64-system-btn {
+      width: 40px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, #555, #333);
+      font-size: 12px;
+    }
+
+    .n64-shoulder-btn:active,
+    .n64-shoulder-btn.pressed,
+    .n64-start-btn:active,
+    .n64-start-btn.pressed,
+    .n64-system-btn:active,
+    .n64-system-btn.pressed,
+    .n64-face-btn:active,
+    .n64-face-btn.pressed,
+    .n64-c-btn:active,
+    .n64-c-btn.pressed {
+      transform: scale(0.9);
+      filter: brightness(0.78);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 3px 6px rgba(0, 0, 0, 0.36);
+    }
+
+    .n64-stick-block,
+    .n64-dpad-block,
+    .n64-face-block,
+    .n64-c-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .n64-stick-block {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      align-self: center;
+    }
+
+    .n64-dpad-block {
+      grid-column: 2;
+      grid-row: 2;
+      justify-self: center;
+      margin-left: 0;
+    }
+
+    .n64-face-block {
+      grid-column: 2 / span 2;
+      grid-row: 1;
+      justify-self: center;
+    }
+
+    .n64-c-block {
+      grid-column: 3;
+      grid-row: 2;
+      justify-self: center;
+      margin-right: 0;
+    }
+
+    .n64-stick,
+    .n64-dpad-mini {
+      position: relative;
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.38));
+    }
+
+    .n64-stick {
+      width: 146px;
+      height: 146px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, #56565e 0 17%, #34343c 18% 36%, #202028 37% 100%);
+    }
+
+    .n64-stick-touch,
+    .n64-dpad-touch {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      z-index: 4;
+      background: transparent;
+    }
+
+    .n64-stick-knob {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 56px;
+      height: 56px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: linear-gradient(145deg, #a9a99a, #737368);
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.24), inset 0 -3px 5px rgba(0,0,0,0.38);
+      pointer-events: none;
+    }
+
+    .n64-stick-arrow,
+    .n64-dpad-mini .dpad-btn {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      color: rgba(255,255,255,0.42);
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .n64-stick-arrow.pressed {
+      color: #8bd4ff;
+      text-shadow: 0 0 8px #8bd4ff;
+    }
+
+    .n64-stick-up { top: 8px; left: 50%; transform: translateX(-50%); }
+    .n64-stick-down { bottom: 8px; left: 50%; transform: translateX(-50%); }
+    .n64-stick-left { left: 10px; top: 50%; transform: translateY(-50%); }
+    .n64-stick-right { right: 10px; top: 50%; transform: translateY(-50%); }
+
+    .n64-dpad-mini {
+      width: 100px;
+      height: 100px;
+    }
+
+    .n64-dpad-mini .dpad-visual {
+      width: 92px;
+      height: 92px;
+    }
+
+    .n64-dpad-mini .dpad-btn,
+    .n64-dpad-mini .dpad-center {
+      width: 34px;
+      height: 34px;
+      font-size: 11px;
+    }
+
+    .n64-face-row,
+    .n64-c-row {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .n64-face-btn {
+      width: 78px;
+      height: 78px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 24px;
+      font-weight: bold;
+      color: rgba(255,255,255,0.9);
+      box-shadow: 0 5px 10px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.2);
+      transition: transform 0.06s, filter 0.06s, box-shadow 0.06s;
+      touch-action: manipulation;
+    }
+
+    .n64-a-btn { background: linear-gradient(145deg, #2e9b55, #146b35); }
+    .n64-b-btn { background: linear-gradient(145deg, #2f6fd1, #17418f); }
+
+    .n64-c-btn {
+      width: 42px;
+      height: 42px;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      background: linear-gradient(145deg, #e2c53a, #aa8610);
+      color: #2b2300;
+      font-size: 14px;
+      font-weight: bold;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.42), inset 0 1px 3px rgba(255,255,255,0.3);
+      transition: transform 0.06s, filter 0.06s, box-shadow 0.06s;
+      touch-action: manipulation;
+    }
+
+    .n64-c-row {
+      gap: 10px;
+    }
+
+    .n64-label {
+      font-size: 9px;
+      color: var(--gb-dark);
+      font-weight: bold;
+      letter-spacing: 0;
+    }
+
+    @media (max-width: 420px) {
+      #n64-controller-area { gap: 14px; padding: 30px 8px 24px; }
+      .n64-top-row { gap: 7px; }
+      .n64-main-row { grid-template-columns: 146px 92px 112px; gap: 26px 7px; }
+      .n64-shoulder-btn { width: 56px; height: 34px; font-size: 12px; }
+      .n64-start-btn { width: 60px; height: 38px; font-size: 10px; }
+      .n64-system-btn { width: 34px; height: 28px; font-size: 11px; }
+      .n64-stick { width: 136px; height: 136px; }
+      .n64-stick-knob { width: 52px; height: 52px; }
+      .n64-dpad-mini { width: 86px; height: 86px; }
+      .n64-dpad-mini .dpad-visual { width: 82px; height: 82px; }
+      .n64-dpad-mini .dpad-btn, .n64-dpad-mini .dpad-center { width: 30px; height: 30px; font-size: 10px; }
+      .n64-face-row { gap: 12px; }
+      .n64-c-row { gap: 8px; }
+      .n64-face-btn { width: 66px; height: 66px; font-size: 22px; }
+      .n64-c-btn { width: 38px; height: 38px; font-size: 12px; }
+      .n64-label { font-size: 8px; }
+    }
+
     /* ===== ROM 選擇器 ===== */
     .rom-selector {
       position: fixed;
@@ -867,7 +1137,8 @@
         display: block;
       }
 
-      #screen {
+      #screen,
+      #canvas {
         width: 512px;
         height: 480px;
         max-width: none;
@@ -924,11 +1195,16 @@
       }
 
       /* 手機直版：畫面更大，邊框更小 */
-      #screen {
+      #screen,
+      #canvas {
         width: 100%;
         max-width: 95vw;
         height: auto;
         aspect-ratio: 256 / 240;
+      }
+
+      body.n64-mode #canvas {
+        aspect-ratio: 4 / 3;
       }
 
       .screen-bezel {
@@ -936,6 +1212,16 @@
         max-width: calc(95vw + 16px);
         padding: 8px;
         margin-bottom: 6px;
+      }
+
+      body.n64-mode .screen-bezel {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      body.n64-mode .screen-inner,
+      body.n64-mode #canvas {
+        width: 100%;
       }
 
       .screen-inner {
@@ -1076,7 +1362,8 @@
         order: 2;
       }
 
-      #screen {
+      #screen,
+      #canvas {
         width: auto;
         height: calc(100vh - 40px);
         max-height: 240px;
@@ -1220,7 +1507,7 @@
       <div class="rom-selector-header">
         <div class="brand-nintendo">NINTENDO</div>
         <div class="brand-name">H5-EMU</div>
-        <h2>🎮 選擇遊戲 (NES / Game Boy)</h2>
+        <h2>🎮 選擇遊戲 (NES / GB / GG / SNES / N64)</h2>
       </div>
       
       <div class="rom-list" id="rom-list">
@@ -1261,7 +1548,7 @@
     <!-- 電腦版控制按鈕 -->
     <div class="desktop-controls">
       <label for="rom-input">📁 載入 ROM</label>
-      <input type="file" id="rom-input" accept=".nes,.gb,.gbc,.gg,.sms,.smc,.sfc,.zip">
+      <input type="file" id="rom-input" accept=".nes,.gb,.gbc,.gg,.sms,.smc,.sfc,.z64,.n64,.v64,.zip">
       <button id="btn-save-state" class="save-btn">💾 存檔 (F5)</button>
       <button id="btn-load-state" class="load-btn">📂 讀取 (F7)</button>
       <button id="btn-mute">🔊 音頻 (M)</button>
@@ -1365,6 +1652,63 @@
           </div>
         </div>
       </div><!-- /snes-controller-area -->
+
+      <!-- === N64 控制器 === -->
+      <div id="n64-controller-area" style="display:none; width:100%; flex-direction:column;">
+        <div class="n64-top-row">
+          <button class="n64-shoulder-btn" data-n64-button="l">L</button>
+          <button class="n64-shoulder-btn n64-trigger-btn" data-n64-button="z">Z</button>
+          <div class="n64-face-row">
+            <button class="n64-system-btn" id="n64-mobile-save">💾</button>
+            <button class="n64-system-btn" id="n64-mobile-load">📂</button>
+            <button class="n64-system-btn" id="n64-mobile-mute">🔊</button>
+          </div>
+          <button class="n64-start-btn" data-n64-button="start">START</button>
+          <button class="n64-shoulder-btn" data-n64-button="r">R</button>
+        </div>
+        <div class="n64-main-row">
+          <div class="n64-stick-block">
+            <div class="n64-stick" id="n64-stick">
+              <div class="n64-stick-touch" id="n64-stick-touch"></div>
+              <div class="n64-stick-arrow n64-stick-up" id="n64-stick-up">▲</div>
+              <div class="n64-stick-arrow n64-stick-left" id="n64-stick-left">◀</div>
+              <div class="n64-stick-arrow n64-stick-right" id="n64-stick-right">▶</div>
+              <div class="n64-stick-arrow n64-stick-down" id="n64-stick-down">▼</div>
+              <div class="n64-stick-knob"></div>
+            </div>
+            <span class="n64-label">ANALOG</span>
+          </div>
+          <div class="n64-dpad-block">
+            <div class="n64-dpad-mini" id="n64-dpad">
+              <div class="n64-dpad-touch" id="n64-dpad-touch"></div>
+              <div class="dpad-visual">
+                <div class="dpad-btn dpad-up" id="n64-dpad-up"><span class="dpad-arrow">▲</span></div>
+                <div class="dpad-btn dpad-left" id="n64-dpad-left"><span class="dpad-arrow">◀</span></div>
+                <div class="dpad-center"></div>
+                <div class="dpad-btn dpad-right" id="n64-dpad-right"><span class="dpad-arrow">▶</span></div>
+                <div class="dpad-btn dpad-down" id="n64-dpad-down"><span class="dpad-arrow">▼</span></div>
+              </div>
+            </div>
+            <span class="n64-label">D-PAD</span>
+          </div>
+          <div class="n64-face-block">
+            <div class="n64-face-row">
+              <button class="n64-face-btn n64-b-btn" data-n64-button="b">B</button>
+              <button class="n64-face-btn n64-a-btn" data-n64-button="a">A</button>
+            </div>
+            <span class="n64-label">B / A</span>
+          </div>
+          <div class="n64-c-block">
+            <button class="n64-c-btn" data-n64-button="c-up">▲</button>
+            <div class="n64-c-row">
+              <button class="n64-c-btn" data-n64-button="c-left">◀</button>
+              <button class="n64-c-btn" data-n64-button="c-right">▶</button>
+            </div>
+            <button class="n64-c-btn" data-n64-button="c-down">▼</button>
+            <span class="n64-label">C BUTTONS</span>
+          </div>
+        </div>
+      </div><!-- /n64-controller-area -->
 
     </div>
 

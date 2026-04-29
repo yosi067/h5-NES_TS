@@ -44,11 +44,11 @@ static GAUSS_TABLE: [i16; 512] = [
 ];
 
 /// S-DSP 聲道
-struct DspVoice {
+pub(crate) struct DspVoice {
     /// BRR 起始位址 (source number)
-    src_addr: u16,
+    pub(crate) src_addr: u16,
     /// 當前 BRR 區塊位址
-    brr_addr: u16,
+    pub(crate) brr_addr: u16,
     /// BRR 解碼環形緩衝 (12 samples: keeps old samples for Gauss interpolation)
     brr_buf: [i16; 12],
     /// Ring buffer write position (0-11)
@@ -56,35 +56,35 @@ struct DspVoice {
     /// BRR block 中已解碼的 sample 數 (0-15，每個 block 有 16 samples)
     brr_block_offset: usize,
     /// 音高: 14-bit
-    pitch: u16,
+    pub(crate) pitch: u16,
     /// 16-bit pitch counter; bits 12-15 = integer part (sample step)
     pitch_counter: u16,
     /// ADSR/GAIN 包絡
     adsr1: u8,
     adsr2: u8,
     gain: u8,
-    env_mode: EnvMode,
-    env_level: i32,
+    pub(crate) env_mode: EnvMode,
+    pub(crate) env_level: i32,
     /// Internal envelope counter for rate timing
     env_counter: u16,
     /// 音量
-    vol_l: i8,
-    vol_r: i8,
+    pub(crate) vol_l: i8,
+    pub(crate) vol_r: i8,
     /// Key-on/off 狀態
     key_on: bool,
     key_off: bool,
-    active: bool,
+    pub(crate) active: bool,
     /// BRR end flag
     brr_end: bool,
     /// 輸出 (用於 pitch mod / echo)
-    output: i16,
+    pub(crate) output: i16,
     /// BRR old samples for filter (persists across blocks)
     brr_old1: i32,
     brr_old2: i32,
 }
 
-#[derive(Clone, Copy, PartialEq)]
-enum EnvMode {
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub(crate) enum EnvMode {
     Release,
     Attack,
     Decay,
@@ -122,36 +122,36 @@ impl DspVoice {
 
 /// S-DSP
 pub struct Dsp {
-    voices: [DspVoice; 8],
+    pub(crate) voices: [DspVoice; 8],
     /// 全域暫存器
-    mvol_l: i8,
-    mvol_r: i8,
-    evol_l: i8,
-    evol_r: i8,
+    pub(crate) mvol_l: i8,
+    pub(crate) mvol_r: i8,
+    pub(crate) evol_l: i8,
+    pub(crate) evol_r: i8,
     /// Key on/off 暫存器
-    kon: u8,
-    koff: u8,
+    pub(crate) kon: u8,
+    pub(crate) koff: u8,
     /// 雜訊頻率
-    flg: u8,
+    pub(crate) flg: u8,
     /// Echo 設定
-    esa: u8,
-    edl: u8,
-    efb: i8,
+    pub(crate) esa: u8,
+    pub(crate) edl: u8,
+    pub(crate) efb: i8,
     /// Echo FIR 係數
-    fir: [i8; 8],
+    pub(crate) fir: [i8; 8],
     /// 源目錄基底
-    dir: u8,
+    pub(crate) dir: u8,
     /// Pitch modulation
-    pmon: u8,
+    pub(crate) pmon: u8,
     /// Noise enable
-    non: u8,
+    pub(crate) non: u8,
     /// Echo enable
-    eon: u8,
+    pub(crate) eon: u8,
     /// End 狀態
-    endx: u8,
+    pub(crate) endx: u8,
     /// Echo 緩衝位置
-    echo_pos: usize,
-    echo_length: usize,
+    pub(crate) echo_pos: usize,
+    pub(crate) echo_length: usize,
     /// Echo 環形緩衝 (FIR filter)
     echo_hist_l: [i16; 8],
     echo_hist_r: [i16; 8],
@@ -161,6 +161,8 @@ pub struct Dsp {
     noise_counter: u16,
     /// 內部計時
     counter: u32,
+    /// Debug: voice mute mask (bit N = mute voice N)
+    pub(crate) voice_mute_mask: u8,
 }
 
 impl Dsp {
@@ -187,6 +189,7 @@ impl Dsp {
             noise_lfsr: 0x4000,
             noise_counter: 0,
             counter: 0,
+            voice_mute_mask: 0,
         }
     }
 
@@ -387,14 +390,14 @@ impl Dsp {
             _ => shifted,
         };
 
-        // Hardware clamps BRR filter output to 16-bit signed
+        // Reference commit 0590b1e: clamp BRR filter output to 16-bit signed.
         let clamped = sample.max(-32768).min(32767);
         
         // Update filter history
         v.brr_old2 = v.brr_old1;
         v.brr_old1 = clamped;
         
-        // Push into ring buffer
+        // Push into ring buffer for Gaussian interpolation.
         v.brr_buf[v.buf_pos % 12] = clamped as i16;
         v.buf_pos = (v.buf_pos + 1) % 12;
         v.brr_block_offset += 1;
@@ -508,13 +511,13 @@ impl Dsp {
         let echo_addr = (echo_base + self.echo_pos * 4) & 0xFFFF;
 
         if echo_addr + 3 < ram.len() && self.echo_length > 0 {
-            // 讀取 echo buffer (safe u16 reconstruction, then >>1 for 15-bit signed)
+            // 讀取 echo buffer (>>1 for 15-bit signed, matching bsnes echoRead)
             let raw_l = (ram[echo_addr] as u16) | ((ram[echo_addr + 1] as u16) << 8);
             let raw_r = (ram[echo_addr + 2] as u16) | ((ram[echo_addr + 3] as u16) << 8);
             let echo_in_l = ((raw_l as i16) >> 1) as i32;
             let echo_in_r = ((raw_r as i16) >> 1) as i32;
 
-            // FIR 濾波 (per-tap >>6, matching bsnes/ares)
+            // FIR 濾波 (reference commit 0590b1e: post-sum >>6 + clamp)
             self.echo_hist_l[self.echo_hist_pos] = echo_in_l as i16;
             self.echo_hist_r[self.echo_hist_pos] = echo_in_r as i16;
 
@@ -525,7 +528,6 @@ impl Dsp {
                 fir_l += self.echo_hist_l[hist_idx] as i32 * self.fir[j] as i32;
                 fir_r += self.echo_hist_r[hist_idx] as i32 * self.fir[j] as i32;
             }
-            // Post-sum >>6 + clamp (matches blargg: echo_0 = clamp16(sum >> 6))
             fir_l = (fir_l >> 6).max(-32768).min(32767);
             fir_r = (fir_r >> 6).max(-32768).min(32767);
 
@@ -555,7 +557,7 @@ impl Dsp {
             self.echo_pos = 0;
         }
 
-        // 全域音量
+        // 輸出混音
         let out_l = ((main_l * self.mvol_l as i32) >> 7).max(-32768).min(32767) as i16;
         let out_r = ((main_r * self.mvol_r as i32) >> 7).max(-32768).min(32767) as i16;
 
@@ -741,7 +743,7 @@ pub struct Apu {
     timer_enabled_prev: [bool; 3], // 用於 0→1 邊緣偵測
 
     // === DSP ===
-    dsp: Dsp,
+    pub(crate) dsp: Dsp,
     pub dsp_addr: u8,
 
     // === 控制暫存器 ===

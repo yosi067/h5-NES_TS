@@ -11,13 +11,14 @@
 
 import init, { EmuWasm } from './wasm/nes_wasm.js';
 import JSZip from 'jszip';
+import createMupen64PlusWeb, { type EmulatorControls } from 'mupen64plus-web';
 
 // ===== 型別定義 =====
 
 interface RomInfo {
   name: string;
   file: string;
-  system?: string;  // 'nes' | 'gb' | 'gg' (可選，自動偵測)
+  system?: string;  // 'nes' | 'gb' | 'gg' | 'snes' | 'n64' (可選，自動偵測)
 }
 
 interface RomListResponse {
@@ -63,11 +64,157 @@ function isSnesCore(): boolean {
 let nes: EmuWasm | null = null;
 let animationId: number | null = null;
 let canvas: HTMLCanvasElement | null = null;
+let wasmCanvas: HTMLCanvasElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
 let imageData: ImageData | null = null;
 let audioContext: AudioContext | null = null;
 let isRunning: boolean = false;
 let currentRomFilename: string = '';
+let activeBackend: 'wasm' | 'mupen64' = 'wasm';
+let n64Controls: EmulatorControls | null = null;
+let currentN64RomData: ArrayBuffer | null = null;
+
+function isN64RomName(filename: string): boolean {
+  const lower = filename.toLowerCase();
+  return lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64');
+}
+
+function isMupenN64Active(): boolean {
+  return activeBackend === 'mupen64';
+}
+
+interface N64GraphicsCapability {
+  supported: boolean;
+  message: string;
+  renderer?: string;
+}
+
+// N64 的 Mupen64Plus/Rice 後端需要瀏覽器提供 WebGL2，也就是 WebGL ES 3 等級的 context。
+function getN64GraphicsCapability(): N64GraphicsCapability {
+  if (typeof WebGL2RenderingContext === 'undefined') {
+    return { supported: false, message: '這個瀏覽器沒有提供 WebGL2 API。' };
+  }
+
+  const testCanvas = document.createElement('canvas');
+  const gl = testCanvas.getContext('webgl2', { antialias: false, alpha: false });
+  if (!gl) {
+    return { supported: false, message: '瀏覽器無法建立 WebGL2 context，常見原因是硬體加速關閉或顯示卡/驅動被瀏覽器封鎖。' };
+  }
+
+  const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+  const renderer = debugInfo
+    ? String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL))
+    : String(gl.getParameter(gl.RENDERER));
+  return { supported: true, message: 'WebGL2 可用', renderer };
+}
+
+function drawN64GraphicsError(message: string): void {
+  if (!canvas) return;
+
+  canvas.id = 'screen';
+  canvas.width = 320;
+  canvas.height = 240;
+  canvas.style.aspectRatio = '4 / 3';
+
+  const errorContext = canvas.getContext('2d');
+  if (!errorContext) return;
+
+  errorContext.fillStyle = '#20202a';
+  errorContext.fillRect(0, 0, canvas.width, canvas.height);
+  errorContext.fillStyle = '#f2e9d8';
+  errorContext.font = 'bold 18px sans-serif';
+  errorContext.fillText('N64 圖形初始化失敗', 24, 62);
+  errorContext.font = '13px sans-serif';
+  const lines = [
+    message,
+    '請使用新版 Chrome/Edge，並確認硬體加速已開啟。',
+    'chrome://gpu 可檢查 WebGL2 是否為 Hardware accelerated。',
+  ];
+  lines.forEach((line, index) => errorContext.fillText(line, 24, 102 + index * 26));
+}
+
+function activateN64Canvas(): HTMLCanvasElement {
+  if (!wasmCanvas) {
+    throw new Error('找不到可替換的 2D 畫布');
+  }
+
+  document.body.classList.add('n64-mode');
+  const n64Canvas = document.createElement('canvas');
+  n64Canvas.id = 'canvas';
+  n64Canvas.width = 640;
+  n64Canvas.height = 480;
+  n64Canvas.style.aspectRatio = '4 / 3';
+  n64Canvas.style.width = '100%';
+  n64Canvas.style.height = 'auto';
+  wasmCanvas.replaceWith(n64Canvas);
+
+  canvas = n64Canvas;
+  ctx = null;
+  imageData = null;
+  return n64Canvas;
+}
+
+function waitForNextFrame(): Promise<void> {
+  return new Promise(resolve => requestAnimationFrame(() => resolve()));
+}
+
+async function settleN64CanvasLayout(n64Canvas: HTMLCanvasElement): Promise<void> {
+  await waitForNextFrame();
+  await waitForNextFrame();
+  n64Canvas.getBoundingClientRect();
+  window.dispatchEvent(new Event('resize'));
+}
+
+function dispatchN64ResizePulse(n64Canvas: HTMLCanvasElement): void {
+  n64Canvas.dispatchEvent(new Event('resize'));
+  window.dispatchEvent(new Event('resize'));
+  window.dispatchEvent(new Event('orientationchange'));
+}
+
+async function forceN64ResponsiveResize(n64Canvas: HTMLCanvasElement): Promise<void> {
+  const originalWidth = n64Canvas.style.width || '100%';
+  n64Canvas.style.width = '99.9%';
+  await waitForNextFrame();
+  n64Canvas.style.width = originalWidth;
+  await waitForNextFrame();
+
+  dispatchN64ResizePulse(n64Canvas);
+  await waitForNextFrame();
+
+  n64Canvas.width = 640;
+  n64Canvas.height = 480;
+
+  const rect = n64Canvas.getBoundingClientRect();
+  const displayWidth = Math.max(1, Math.round(rect.width));
+  const displayHeight = Math.max(1, Math.round(rect.height));
+  if (displayWidth > 1 && displayHeight > 1) {
+    const gl = n64Canvas.getContext('webgl2') ?? n64Canvas.getContext('webgl');
+    gl?.viewport(0, 0, n64Canvas.width, n64Canvas.height);
+  }
+}
+
+function scheduleN64ResponsiveResize(n64Canvas: HTMLCanvasElement): void {
+  const runResize = () => {
+    void forceN64ResponsiveResize(n64Canvas).catch((error) => {
+      console.warn('[N64] 強制畫面適配失敗:', error);
+    });
+  };
+
+  runResize();
+  window.setTimeout(runResize, 250);
+  window.setTimeout(runResize, 750);
+  window.setTimeout(runResize, 1500);
+}
+
+function restoreWasmCanvas(): void {
+  if (!wasmCanvas || canvas === wasmCanvas) return;
+
+  canvas?.replaceWith(wasmCanvas);
+  canvas = wasmCanvas;
+  canvas.id = 'screen';
+  ctx = canvas.getContext('2d');
+  imageData = null;
+}
 
 // 需要自動重整的特殊 ROM（首次載入有問題，需重整一次才能正常）
 const AUTO_RESET_ROMS: string[] = [
@@ -117,6 +264,7 @@ async function initWasm(): Promise<void> {
     console.error('找不到畫布元素');
     return;
   }
+  wasmCanvas = canvas;
 
   ctx = canvas.getContext('2d');
   if (!ctx) {
@@ -174,8 +322,39 @@ const KEYBOARD_MAP_SNES: Record<string, number> = {
   'ArrowRight': SnesButton.Right,
 };
 
+interface N64KeyBinding {
+  key: string;
+  code: string;
+  keyCode: number;
+  location?: number;
+}
+
+const N64_KEY_BINDINGS: Record<string, N64KeyBinding> = {
+  'analog-up': { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 },
+  'analog-down': { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 },
+  'analog-left': { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 },
+  'analog-right': { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39 },
+  'dpad-up': { key: 'w', code: 'KeyW', keyCode: 87 },
+  'dpad-down': { key: 's', code: 'KeyS', keyCode: 83 },
+  'dpad-left': { key: 'a', code: 'KeyA', keyCode: 65 },
+  'dpad-right': { key: 'd', code: 'KeyD', keyCode: 68 },
+  'c-up': { key: 'i', code: 'KeyI', keyCode: 73 },
+  'c-down': { key: 'k', code: 'KeyK', keyCode: 75 },
+  'c-left': { key: 'j', code: 'KeyJ', keyCode: 74 },
+  'c-right': { key: 'l', code: 'KeyL', keyCode: 76 },
+  'a': { key: 'Shift', code: 'ShiftLeft', keyCode: 16, location: KeyboardEvent.DOM_KEY_LOCATION_LEFT },
+  'b': { key: 'Control', code: 'ControlLeft', keyCode: 17, location: KeyboardEvent.DOM_KEY_LOCATION_LEFT },
+  'start': { key: 'Enter', code: 'Enter', keyCode: 13 },
+  'z': { key: 'z', code: 'KeyZ', keyCode: 90 },
+  'l': { key: 'x', code: 'KeyX', keyCode: 88 },
+  'r': { key: 'c', code: 'KeyC', keyCode: 67 },
+};
+
+const n64PressedKeys = new Set<string>();
+
 function setupKeyboardInput(): void {
   window.addEventListener('keydown', (e) => {
+    if (isMupenN64Active()) return;
     if (!nes) return;
     if (isSnesCore()) {
       const button = KEYBOARD_MAP_SNES[e.code];
@@ -192,6 +371,7 @@ function setupKeyboardInput(): void {
     }
   });
   window.addEventListener('keyup', (e) => {
+    if (isMupenN64Active()) return;
     if (!nes) return;
     if (isSnesCore()) {
       const button = KEYBOARD_MAP_SNES[e.code];
@@ -272,17 +452,20 @@ function renderRomList(roms: RomInfo[]): void {
     const isGb = lower.endsWith('.gb') || lower.endsWith('.gbc');
     const isGg = lower.endsWith('.gg') || lower.endsWith('.sms');
     const isSnes = lower.endsWith('.smc') || lower.endsWith('.sfc');
+    const isN64 = isN64RomName(rom.file);
     const isZip = lower.endsWith('.zip');
-    const icon = isZip ? '📦' : isSnes ? '🟣' : isGg ? '🟠' : isGb ? '🟢' : '🎮';
+    const icon = isZip ? '📦' : isN64 ? '🔵' : isSnes ? '🟣' : isGg ? '🟠' : isGb ? '🟢' : '🎮';
     const systemTag = isZip
       ? '<span class="rom-system zip">ZIP</span>'
-      : isSnes
-        ? '<span class="rom-system snes">SNES</span>'
-        : isGg
-          ? '<span class="rom-system gg">GG</span>'
-          : isGb
-            ? '<span class="rom-system gb">GB</span>'
-            : '<span class="rom-system nes">NES</span>';
+      : isN64
+        ? '<span class="rom-system n64">N64</span>'
+        : isSnes
+          ? '<span class="rom-system snes">SNES</span>'
+          : isGg
+            ? '<span class="rom-system gg">GG</span>'
+            : isGb
+              ? '<span class="rom-system gb">GB</span>'
+              : '<span class="rom-system nes">NES</span>';
     return `
       <button class="rom-item" data-index="${index}" data-file="${encodeURIComponent(rom.file)}">
         <span class="rom-icon">${icon}</span>
@@ -323,7 +506,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
     if (lower.endsWith('.zip')) {
       // 解壓 ZIP
       const zip = await JSZip.loadAsync(buffer);
-      const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms'];
+      const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
       let romFile: JSZip.JSZipObject | null = null;
       let romFileName = '';
 
@@ -344,10 +527,10 @@ async function loadRomFromServer(filename: string): Promise<void> {
 
       const romBuffer = await romFile.async('arraybuffer');
       currentRomFilename = romFileName.split('/').pop() || romFileName;
-      startGame(romBuffer);
+      await startGame(romBuffer);
     } else {
       currentRomFilename = filename;
-      startGame(buffer);
+      await startGame(buffer);
     }
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
@@ -367,7 +550,7 @@ async function loadRomFromFile(file: File): Promise<void> {
     if (lower.endsWith('.zip')) {
       // 解壓 ZIP，找第一個遊戲檔案
       const zip = await JSZip.loadAsync(await file.arrayBuffer());
-      const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms'];
+      const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
       let romFile: JSZip.JSZipObject | null = null;
       let romFileName = '';
 
@@ -394,7 +577,7 @@ async function loadRomFromFile(file: File): Promise<void> {
     }
 
     currentRomFilename = romName;
-    startGame(buffer);
+    await startGame(buffer);
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
     alert('載入遊戲失敗，請重試');
@@ -404,7 +587,7 @@ async function loadRomFromFile(file: File): Promise<void> {
 /**
  * 開始遊戲
  */
-function startGame(romData: ArrayBuffer): void {
+async function startGame(romData: ArrayBuffer): Promise<void> {
   if (!nes) return;
 
   const romBytes = new Uint8Array(romData);
@@ -412,6 +595,13 @@ function startGame(romData: ArrayBuffer): void {
   // 根據副檔名選擇對應的載入方法
   const lower = currentRomFilename.toLowerCase();
   console.log(`[DEBUG] Loading ROM: "${currentRomFilename}", lower: "${lower}", size: ${romBytes.length}`);
+  if (isN64RomName(currentRomFilename)) {
+    await startN64Game(romData);
+    return;
+  }
+
+  await stopN64Backend();
+  activeBackend = 'wasm';
   let loaded = false;
   if (lower.endsWith('.gg')) {
     loaded = nes.loadGgRom(romBytes);
@@ -488,6 +678,154 @@ function startGame(romData: ArrayBuffer): void {
   }
 }
 
+async function startN64Game(romData: ArrayBuffer): Promise<void> {
+  if (!canvas) return;
+
+  stopEmulation();
+  await stopN64Backend();
+
+  const graphicsCapability = getN64GraphicsCapability();
+  if (!graphicsCapability.supported) {
+    hideRomSelector();
+    powerLed?.classList.remove('on');
+    isRunning = false;
+    currentN64RomData = null;
+    drawN64GraphicsError(graphicsCapability.message);
+    showToast('N64 圖形初始化失敗');
+    console.warn(`[N64] ${graphicsCapability.message}`);
+    return;
+  }
+
+  console.log(`[N64] WebGL2 renderer: ${graphicsCapability.renderer ?? 'unknown'}`);
+
+  try {
+    activeBackend = 'mupen64';
+    currentN64RomData = romData.slice(0);
+
+    // Mupen64Plus-web 內部 SDL/Emscripten 程式碼會尋找 id="canvas"。
+    // 原本的 #screen 已建立 2D context，瀏覽器不允許同一張 canvas 再切成 WebGL，
+    // 因此 N64 模式必須替換成全新的 WebGL canvas，否則會在 EGL 層得到 BAD_MATCH。
+    const n64Canvas = activateN64Canvas();
+
+    hideRomSelector();
+    updateControllerLayout();
+    await settleN64CanvasLayout(n64Canvas);
+    powerLed?.classList.add('on');
+    isRunning = true;
+
+    const baseUrl = import.meta.env.BASE_URL;
+    await ensureMupen64Config(baseUrl);
+    n64Controls = await createMupen64PlusWeb({
+      canvas: n64Canvas,
+      romData,
+      // 明確指定 1.5.x 中目前最能啟動的 Rice video plugin。
+      arguments: ['--gfx', '/plugins/mupen64plus-video-rice-web-netplay-web.so'],
+      coreConfig: {
+        // 2 = dynamic recompiler；N64 在瀏覽器中若使用 pure interpreter 會慢到長時間黑畫面。
+        emuMode: 2,
+        mainLoopTimingMode: 0,
+      },
+      netplayConfig: { player: 0 },
+      locateFile: (path: string, prefix: string) => {
+        if (path.endsWith('.wasm') || path.endsWith('.data')) {
+          return `${baseUrl}n64-mupen/${path}`;
+        }
+        return prefix + path;
+      },
+      setErrorStatus: (message: string) => {
+        console.error('[N64/Mupen64Plus]', message);
+      },
+    });
+
+    console.log(`[N64] Mupen64Plus-web backend ready for ${currentRomFilename}`);
+    await settleN64CanvasLayout(n64Canvas);
+    await forceN64ResponsiveResize(n64Canvas);
+    void n64Controls.start().catch((error) => {
+      console.error('[N64] Mupen64Plus start failed:', error);
+      showToast('N64 啟動失敗');
+    });
+    scheduleN64ResponsiveResize(n64Canvas);
+  } catch (error) {
+    console.error('[N64] Mupen64Plus backend failed:', error);
+    await stopN64Backend();
+    showRomSelector();
+    alert('N64 模擬器啟動失敗，請查看主控台錯誤');
+  }
+}
+
+async function ensureMupen64Config(baseUrl: string): Promise<void> {
+  const response = await fetch(`${baseUrl}n64-mupen/mupen64plus.cfg`, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`無法載入 N64 設定檔: ${response.status}`);
+  }
+
+  const configText = await response.text();
+  if (!configText.includes('mupen64plus-video-rice-web-netplay-web.so')) {
+    throw new Error('N64 設定檔沒有指定 Rice video plugin');
+  }
+
+  await putMupenIdbFile('/mupen64plus/data/mupen64plus.cfg', new TextEncoder().encode(configText));
+}
+
+function putMupenIdbFile(fileKey: string, contents: Uint8Array): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('/mupen64plus');
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('FILE_DATA')) {
+        const store = db.createObjectStore('FILE_DATA');
+        store.createIndex('timestamp', 'timestamp', { unique: false, multiEntry: false });
+        store.put({ timestamp: new Date(), mode: 16832 }, '/mupen64plus/saves');
+        store.put({ timestamp: new Date(), mode: 16832 }, '/mupen64plus/data');
+      }
+    };
+
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const transaction = db.transaction('FILE_DATA', 'readwrite');
+      const store = transaction.objectStore('FILE_DATA');
+
+      store.put({ timestamp: new Date(), mode: 16832 }, '/mupen64plus/saves');
+      store.put({ timestamp: new Date(), mode: 16832 }, '/mupen64plus/data');
+      store.put({ contents, timestamp: new Date(), mode: 33206 }, fileKey);
+
+      transaction.oncomplete = () => {
+        db.close();
+        resolve();
+      };
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error);
+      };
+    };
+  });
+}
+
+async function stopN64Backend(): Promise<void> {
+  releaseAllN64Inputs();
+  if (n64Controls) {
+    try {
+      await n64Controls.forceDumpSaveFiles?.();
+    } catch (error) {
+      console.warn('[N64] 儲存 Mupen64Plus 存檔時發生問題:', error);
+    }
+
+    try {
+      n64Controls.stop();
+    } catch (error) {
+      console.warn('[N64] 停止 Mupen64Plus 時發生問題:', error);
+    }
+    n64Controls = null;
+  }
+
+  restoreWasmCanvas();
+  if (activeBackend === 'mupen64') {
+    activeBackend = 'wasm';
+  }
+}
+
 /**
  * 隱藏 ROM 選擇器
  */
@@ -501,6 +839,7 @@ function hideRomSelector(): void {
  */
 function showRomSelector(): void {
   stopEmulation();
+  void stopN64Backend();
   powerLed?.classList.remove('on');
   if (romSelector) romSelector.style.display = 'flex';
   if (gameboyShell) gameboyShell.style.display = 'none';
@@ -881,6 +1220,48 @@ function handleButtonPress(btnType: string, pressed: boolean): void {
   }
 }
 
+function dispatchN64KeyboardEvent(bindingId: string, pressed: boolean): void {
+  const binding = N64_KEY_BINDINGS[bindingId];
+  if (!binding) return;
+  if (pressed && n64PressedKeys.has(bindingId)) return;
+  if (!pressed && !n64PressedKeys.has(bindingId)) return;
+
+  if (pressed) {
+    n64PressedKeys.add(bindingId);
+  } else {
+    n64PressedKeys.delete(bindingId);
+  }
+
+  const event = new KeyboardEvent(pressed ? 'keydown' : 'keyup', {
+    key: binding.key,
+    code: binding.code,
+    bubbles: true,
+    cancelable: true,
+    location: binding.location ?? 0,
+    repeat: false,
+  });
+
+  Object.defineProperty(event, 'keyCode', { get: () => binding.keyCode });
+  Object.defineProperty(event, 'which', { get: () => binding.keyCode });
+
+  document.getElementById('canvas')?.dispatchEvent(event);
+  document.dispatchEvent(event);
+  window.dispatchEvent(event);
+}
+
+function releaseAllN64Inputs(): void {
+  for (const bindingId of Array.from(n64PressedKeys)) {
+    dispatchN64KeyboardEvent(bindingId, false);
+  }
+  document.querySelectorAll('#n64-controller-area .pressed').forEach(el => el.classList.remove('pressed'));
+}
+
+function setN64ButtonPressed(bindingId: string, pressed: boolean, element?: HTMLElement): void {
+  if (!isMupenN64Active()) return;
+  dispatchN64KeyboardEvent(bindingId, pressed);
+  element?.classList.toggle('pressed', pressed);
+}
+
 // ===== 電腦版控制 =====
 
 /**
@@ -889,7 +1270,13 @@ function handleButtonPress(btnType: string, pressed: boolean): void {
 function setupDesktopControls(): void {
   document.getElementById('btn-pause')?.addEventListener('click', stopEmulation);
   document.getElementById('btn-resume')?.addEventListener('click', startEmulation);
-  document.getElementById('btn-reset')?.addEventListener('click', () => nes?.reset());
+  document.getElementById('btn-reset')?.addEventListener('click', async () => {
+    if (isMupenN64Active() && currentN64RomData) {
+      await startN64Game(currentN64RomData.slice(0));
+    } else {
+      nes?.reset();
+    }
+  });
   document.getElementById('btn-select-game')?.addEventListener('click', showRomSelector);
   
   // 靜音按鈕
@@ -951,6 +1338,12 @@ function setupFileInput(): void {
  * 開始模擬
  */
 function startEmulation(): void {
+  if (isMupenN64Active()) {
+    isRunning = true;
+    n64Controls?.resume();
+    return;
+  }
+
   if (animationId !== null) {
     cancelAnimationFrame(animationId);
   }
@@ -1041,6 +1434,49 @@ function startEmulation(): void {
       }
 
       drainWasmAudioToRing();  // 每幀後排入環形緩衝區，防止 WASM buffer 溢出
+
+      // === SoM diagnostic: DSP voice + CGRAM + framebuffer color monitoring ===
+      if (coreType === 'snes') {
+        // DSP voice dump every ~300 frames for audio diagnosis
+        if (bootDiagFrameCount % 300 === 1 && bootDiagFrameCount < 3000) {
+          try {
+            const dspInfo = (nes as any).debugDspVoices?.();
+            if (dspInfo) console.log(`[DSP VOICES] Frame ${bootDiagFrameCount}:\n${dspInfo}`);
+          } catch(e) { /* ignore */ }
+        }
+
+        // Detect abnormal framebuffer (green screen) every 60 frames
+        if (bootDiagFrameCount % 60 === 0 && bootDiagFrameCount > 120) {
+          try {
+            const memory = nes.getWasmMemory() as WebAssembly.Memory;
+            const ptr = nes.getFrameBufferPtr();
+            const len = nes.getFrameBufferLen();
+            const fb = new Uint8Array(memory.buffer, ptr, len);
+            let rSum = 0, gSum = 0, bSum = 0, samples = 0;
+            for (let row = 0; row < 8; row++) {
+              const y = 30 + row * 25;
+              for (let col = 0; col < 16; col++) {
+                const x = 16 + col * 14;
+                const i = (y * 256 + x) * 4;
+                if (i + 3 < len) {
+                  rSum += fb[i]; gSum += fb[i+1]; bSum += fb[i+2];
+                  samples++;
+                }
+              }
+            }
+            if (samples > 0) {
+              const avgR = rSum / samples, avgG = gSum / samples, avgB = bSum / samples;
+              // Detect green-dominant screen (green > 1.5x red and green > 1.5x blue)
+              if (avgG > 40 && avgG > avgR * 1.5 && avgG > avgB * 1.5) {
+                const colorState = (nes as any).debugPpuColorState?.() || 'N/A';
+                const cgram = (nes as any).debugCgram?.(32) || 'N/A';
+                console.warn(`[GREEN SCREEN DETECT] Frame ${bootDiagFrameCount} avgRGB=(${avgR.toFixed(1)},${avgG.toFixed(1)},${avgB.toFixed(1)})\n${colorState}\nCGRAM[0-31]:\n${cgram}`);
+              }
+            }
+          } catch(e) { /* ignore */ }
+        }
+      }
+
       accumulator -= TARGET_FRAME_TIME;
     }
 
@@ -1056,6 +1492,11 @@ function startEmulation(): void {
  */
 function stopEmulation(): void {
   isRunning = false;
+  if (isMupenN64Active()) {
+    void n64Controls?.pause().catch((error) => console.warn('[N64] 暫停失敗:', error));
+    return;
+  }
+
   if (animationId !== null) {
     cancelAnimationFrame(animationId);
     animationId = null;
@@ -1066,6 +1507,7 @@ function stopEmulation(): void {
  * 渲染一幀到畫布
  */
 function renderFrame(): void {
+  if (isMupenN64Active()) return;
   if (!nes || !ctx || !imageData) return;
 
   // 重要：每次都重新取得 WASM memory 參考
@@ -1082,6 +1524,32 @@ function renderFrame(): void {
 }
 
 // ===== 音頻系統 =====
+
+// 簡易音質診斷：為特定遊戲（目前鎖定 SoM）收集短期 RMS / 高頻能量，便於自動偵測刺耳雜訊
+const audioDiag = {
+  active: false,
+  sampleCount: 0,
+  sumSq: 0,
+  sumDiffSq: 0,
+  maxAbs: 0,
+  clipCount: 0,
+  windowsLogged: 0,
+};
+
+function shouldEnableAudioDiag(): boolean {
+  const coreType = nes?.getCoreType();
+  if (coreType !== 'snes') return false;
+  const name = (currentRomFilename || '').toLowerCase();
+  return name.includes('mana');
+}
+
+function resetAudioDiagWindow(): void {
+  audioDiag.sampleCount = 0;
+  audioDiag.sumSq = 0;
+  audioDiag.sumDiffSq = 0;
+  audioDiag.maxAbs = 0;
+  audioDiag.clipCount = 0;
+}
 
 /**
  * 將 WASM 音頻緩衝區的樣本排入 JS 環形緩衝區
@@ -1127,6 +1595,13 @@ async function initAudio(): Promise<void> {
     if (nes) {
       nes.setAudioSampleRate(audioContext.sampleRate);
     }
+    const audioSampleRate = audioContext.sampleRate;
+    audioDiag.active = shouldEnableAudioDiag();
+    if (audioDiag.active) {
+      resetAudioDiagWindow();
+      audioDiag.windowsLogged = 0;
+      console.log('[AUDIO DIAG] Enabled for current ROM');
+    }
     
     const scriptProcessor = audioContext.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 1);
     
@@ -1148,6 +1623,31 @@ async function initAudio(): Promise<void> {
           // 欠載：用最後一個有效值漸變到靜音，避免爆音
           lastAudioSample *= 0.999;
           output[i] = lastAudioSample;
+        }
+
+        if (audioDiag.active) {
+          const v = output[i];
+          audioDiag.sampleCount++;
+          audioDiag.sumSq += v * v;
+          if (i > 0) {
+            const diff = v - output[i - 1];
+            audioDiag.sumDiffSq += diff * diff;
+          }
+          const abs = Math.abs(v);
+          if (abs > audioDiag.maxAbs) audioDiag.maxAbs = abs;
+          if (abs > 0.98) audioDiag.clipCount++;
+          if (audioDiag.sampleCount >= audioSampleRate) {
+            const rms = Math.sqrt(audioDiag.sumSq / audioDiag.sampleCount);
+            const diffRms = Math.sqrt(audioDiag.sumDiffSq / Math.max(1, audioDiag.sampleCount - 1));
+            const snrLike = rms > 1e-6 ? (rms / Math.max(1e-6, diffRms)) : 0;
+            console.log(`[AUDIO DIAG] window=${audioDiag.windowsLogged + 1} rms=${rms.toFixed(4)} diffRms=${diffRms.toFixed(4)} snrLike=${snrLike.toFixed(2)} maxAbs=${audioDiag.maxAbs.toFixed(3)} clips=${audioDiag.clipCount}`);
+            audioDiag.windowsLogged++;
+            resetAudioDiagWindow();
+            if (audioDiag.windowsLogged >= 12) {
+              audioDiag.active = false;
+              console.log('[AUDIO DIAG] Completed 12 windows, auto-disabled');
+            }
+          }
         }
       }
     };
@@ -1201,7 +1701,7 @@ const SAVE_STATE_PREFIX = 'emu_savestate_';
  * 取得帶有核心類型 + ROM 名稱的存檔 key（每個遊戲獨立存檔）
  */
 function getSaveKey(slot: number): string {
-  const coreType = nes?.getCoreType() || 'nes';
+  const coreType = isMupenN64Active() ? 'n64' : (nes?.getCoreType() || 'nes');
   // Use ROM filename to isolate saves per game
   const romId = currentRomFilename
     ? currentRomFilename.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_').substring(0, 60)
@@ -1213,7 +1713,7 @@ function getSaveKey(slot: number): string {
  * 嘗試從舊的不含 ROM 名稱的 key 遷移存檔（向後相容）
  */
 function migrateLegacySave(slot: number): void {
-  const coreType = nes?.getCoreType() || 'nes';
+  const coreType = isMupenN64Active() ? 'n64' : (nes?.getCoreType() || 'nes');
   const oldKey = `${SAVE_STATE_PREFIX}${coreType}_${slot}`;
   const newKey = getSaveKey(slot);
   if (!localStorage.getItem(newKey)) {
@@ -1275,6 +1775,11 @@ function showToast(message: string): void {
 }
 
 function saveState(slot: number = 0): boolean {
+  if (isMupenN64Active()) {
+    void n64Controls?.forceDumpSaveFiles?.();
+    console.log(`[N64] Mupen64Plus 使用遊戲內建存檔/IDBFS，slot=${slot} 的即時狀態存檔尚未接入`);
+    return false;
+  }
   if (!nes) return false;
   
   try {
@@ -1290,6 +1795,10 @@ function saveState(slot: number = 0): boolean {
 }
 
 function loadState(slot: number = 0): boolean {
+  if (isMupenN64Active()) {
+    console.log(`[N64] Mupen64Plus 使用遊戲內建存檔/IDBFS，slot=${slot} 的即時狀態讀取尚未接入`);
+    return false;
+  }
   if (!nes) return false;
   
   try {
@@ -1304,6 +1813,13 @@ function loadState(slot: number = 0): boolean {
     const success = nes.importSaveState(saveData);
     if (success) {
       console.log(`[SaveState] 讀取成功 ROM="${currentRomFilename}" key="${key}" slot=${slot}`);
+      // Diagnostic: dump PPU state after loading save state (for transparency diagnosis)
+      try {
+        const colorState = (nes as any).debugPpuColorState?.() || 'N/A';
+        const dspInfo = (nes as any).debugDspVoices?.() || 'N/A';
+        const cgram = (nes as any).debugCgram?.(32) || 'N/A';
+        console.log(`[LOAD STATE DIAG] PPU Color:\n${colorState}\nDSP:\n${dspInfo}\nCGRAM[0-31]:\n${cgram}`);
+      } catch(e) { /* ignore */ }
     } else {
       console.warn(`[SaveState] 讀取失敗（資料不相容）ROM="${currentRomFilename}" key="${key}"`);
     }
@@ -1315,6 +1831,11 @@ function loadState(slot: number = 0): boolean {
 }
 
 function exportSaveToFile(): void {
+  if (isMupenN64Active()) {
+    void n64Controls?.forceDumpSaveFiles?.();
+    showToast('N64 會使用遊戲內建存檔');
+    return;
+  }
   if (!nes) return;
   
   const saveData = nes.exportSaveState();
@@ -1377,14 +1898,194 @@ function loadSram(): void {
 function updateControllerLayout(): void {
   const nesCtrl = document.getElementById('nes-controller-area');
   const snesCtrl = document.getElementById('snes-controller-area');
-  if (isSnesCore()) {
+  const n64Ctrl = document.getElementById('n64-controller-area');
+  document.body.classList.toggle('n64-mode', isMupenN64Active());
+  if (isMupenN64Active()) {
+    if (nesCtrl) nesCtrl.style.display = 'none';
+    if (snesCtrl) snesCtrl.style.display = 'none';
+    if (n64Ctrl) n64Ctrl.style.display = 'flex';
+    setupN64Buttons();
+  } else if (isSnesCore()) {
     if (nesCtrl) nesCtrl.style.display = 'none';
     if (snesCtrl) snesCtrl.style.display = 'flex';
+    if (n64Ctrl) n64Ctrl.style.display = 'none';
     setupSnesButtons();
   } else {
     if (nesCtrl) nesCtrl.style.display = 'flex';
     if (snesCtrl) snesCtrl.style.display = 'none';
+    if (n64Ctrl) n64Ctrl.style.display = 'none';
   }
+}
+
+function setupN64Buttons(): void {
+  document.querySelectorAll('#n64-controller-area [data-n64-button]').forEach((node) => {
+    const button = node as HTMLElement;
+    const bindingId = button.dataset.n64Button;
+    if (!bindingId || button.dataset.n64Wired) return;
+    button.dataset.n64Wired = '1';
+
+    const activeTouchIds = new Set<number>();
+    const press = () => setN64ButtonPressed(bindingId, true, button);
+    const release = () => setN64ButtonPressed(bindingId, false, button);
+
+    button.addEventListener('touchstart', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      for (const touch of Array.from(event.changedTouches)) activeTouchIds.add(touch.identifier);
+      press();
+    }, { passive: false });
+
+    button.addEventListener('touchend', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      for (const touch of Array.from(event.changedTouches)) activeTouchIds.delete(touch.identifier);
+      if (activeTouchIds.size === 0) release();
+    }, { passive: false });
+
+    button.addEventListener('touchcancel', (event) => {
+      event.preventDefault();
+      for (const touch of Array.from(event.changedTouches)) activeTouchIds.delete(touch.identifier);
+      if (activeTouchIds.size === 0) release();
+    }, { passive: false });
+
+    button.addEventListener('mousedown', (event) => { event.preventDefault(); press(); });
+    button.addEventListener('mouseup', (event) => { event.preventDefault(); release(); });
+    button.addEventListener('mouseleave', release);
+  });
+
+  setupN64DirectionalPad('n64-stick', 'n64-stick-touch', {
+    up: 'analog-up',
+    down: 'analog-down',
+    left: 'analog-left',
+    right: 'analog-right',
+  }, {
+    up: 'n64-stick-up',
+    down: 'n64-stick-down',
+    left: 'n64-stick-left',
+    right: 'n64-stick-right',
+  });
+
+  setupN64DirectionalPad('n64-dpad', 'n64-dpad-touch', {
+    up: 'dpad-up',
+    down: 'dpad-down',
+    left: 'dpad-left',
+    right: 'dpad-right',
+  }, {
+    up: 'n64-dpad-up',
+    down: 'n64-dpad-down',
+    left: 'n64-dpad-left',
+    right: 'n64-dpad-right',
+  });
+
+  const saveButton = document.getElementById('n64-mobile-save');
+  if (saveButton && !saveButton.dataset.n64Wired) {
+    saveButton.dataset.n64Wired = '1';
+    saveButton.addEventListener('click', async () => {
+      try {
+        await n64Controls?.forceDumpSaveFiles?.();
+        showToast('✅ N64 存檔已寫入');
+      } catch (error) {
+        console.warn('[N64] 寫入存檔失敗:', error);
+        showToast('❌ N64 存檔失敗');
+      }
+    });
+  }
+
+  const loadButton = document.getElementById('n64-mobile-load');
+  if (loadButton && !loadButton.dataset.n64Wired) {
+    loadButton.dataset.n64Wired = '1';
+    loadButton.addEventListener('click', () => showToast('N64 即時讀檔尚未支援'));
+  }
+
+  const muteButton = document.getElementById('n64-mobile-mute');
+  if (muteButton && !muteButton.dataset.n64Wired) {
+    muteButton.dataset.n64Wired = '1';
+    muteButton.addEventListener('click', toggleMute);
+  }
+}
+
+function setupN64DirectionalPad(
+  padId: string,
+  touchAreaId: string,
+  bindings: Record<keyof DpadState, string>,
+  visualIds: Record<keyof DpadState, string>,
+): void {
+  const pad = document.getElementById(padId);
+  const touchArea = document.getElementById(touchAreaId);
+  if (!pad || !touchArea || touchArea.dataset.n64Wired) return;
+  touchArea.dataset.n64Wired = '1';
+
+  let currentState: DpadState = { up: false, down: false, left: false, right: false };
+  let mouseDown = false;
+
+  const applyState = (newState: DpadState) => {
+    for (const direction of ['up', 'down', 'left', 'right'] as Array<keyof DpadState>) {
+      if (newState[direction] !== currentState[direction]) {
+        setN64ButtonPressed(bindings[direction], newState[direction]);
+      }
+      document.getElementById(visualIds[direction])?.classList.toggle('pressed', newState[direction]);
+    }
+    currentState = { ...newState };
+  };
+
+  const clearState = () => applyState({ up: false, down: false, left: false, right: false });
+
+  const calculateState = (clientX: number, clientY: number): DpadState => {
+    const rect = pad.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const deadZone = rect.width / 2 * 0.15;
+    const state: DpadState = { up: false, down: false, left: false, right: false };
+
+    if (distance > deadZone) {
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (angle >= -22.5 && angle < 22.5) state.right = true;
+      else if (angle >= 22.5 && angle < 67.5) { state.right = true; state.down = true; }
+      else if (angle >= 67.5 && angle < 112.5) state.down = true;
+      else if (angle >= 112.5 && angle < 157.5) { state.left = true; state.down = true; }
+      else if (angle >= 157.5 || angle < -157.5) state.left = true;
+      else if (angle >= -157.5 && angle < -112.5) { state.left = true; state.up = true; }
+      else if (angle >= -112.5 && angle < -67.5) state.up = true;
+      else if (angle >= -67.5 && angle < -22.5) { state.right = true; state.up = true; }
+    }
+
+    return state;
+  };
+
+  touchArea.addEventListener('touchstart', (event) => {
+    event.preventDefault();
+    const touch = event.changedTouches[0];
+    if (touch) applyState(calculateState(touch.clientX, touch.clientY));
+  }, { passive: false });
+
+  touchArea.addEventListener('touchmove', (event) => {
+    event.preventDefault();
+    const touch = event.changedTouches[0];
+    if (touch) applyState(calculateState(touch.clientX, touch.clientY));
+  }, { passive: false });
+
+  touchArea.addEventListener('touchend', (event) => { event.preventDefault(); clearState(); }, { passive: false });
+  touchArea.addEventListener('touchcancel', (event) => { event.preventDefault(); clearState(); }, { passive: false });
+
+  touchArea.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    mouseDown = true;
+    applyState(calculateState(event.clientX, event.clientY));
+  });
+
+  document.addEventListener('mousemove', (event) => {
+    if (mouseDown) applyState(calculateState(event.clientX, event.clientY));
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (mouseDown) {
+      mouseDown = false;
+      clearState();
+    }
+  });
 }
 
 /**
@@ -1588,6 +2289,8 @@ declare global {
     debugState: () => string;
     debugSpriteInfo: () => string;
     debugPpuColorState: () => string;
+    debugScanlineLayers: (y: number, xs: number, xe: number) => string;
+    debugTraceFrame: () => string;
     debugStepTrace: (count: number) => string;
     debugFrameTrace: () => string;
     debugRunFrames: (n: number) => string;
@@ -1611,6 +2314,8 @@ window.showRomSelector = showRomSelector;
 window.debugState = () => nes ? nes.debugState() : 'No emulator';
 window.debugSpriteInfo = () => nes ? nes.debugSpriteInfo() : 'No emulator';
 window.debugPpuColorState = () => nes ? (nes as any).debugPpuColorState?.() || 'Not available' : 'No emulator';
+window.debugScanlineLayers = (y: number, xs: number, xe: number) => nes ? (nes as any).debugScanlineLayers?.(y, xs, xe) || 'Not available' : 'No emulator';
+window.debugTraceFrame = () => nes ? (nes as any).debugTraceFrame?.() || 'Not available' : 'No emulator';
 window.debugStepTrace = (n: number) => nes ? nes.debugStepTrace(n) : 'No emulator';
 window.debugFrameTrace = () => nes ? nes.debugFrameTrace() : 'No emulator';
 window.debugRunFrames = (n: number) => nes ? nes.debugRunFrames(n) : 'No emulator';

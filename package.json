@@ -6,7 +6,7 @@
   "scripts": {
     "wasm:build": "cd nes-wasm && wasm-pack build --target web --out-dir ../src/wasm",
     "dev": "vite",
-    "build": "npm run wasm:build && tsc && vite build",
+    "build": "npm run wasm:build && tsc --noEmit && node -e \"require('fs').rm('dist',{recursive:true,force:true},e=>{if(e)throw e})\" && vite build",
     "preview": "vite preview",
     "test": "vitest",
     "test:cpu": "vitest run --testPathPattern=cpu",
@@ -33,6 +33,7 @@
     "html5"
   ],
   "dependencies": {
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "mupen64plus-web": "^1.5.7"
   }
 }
