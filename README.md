@@ -1,6 +1,6 @@
 # H5-EMU 多平台復古遊戲模擬器
 
-一個使用 HTML5 Canvas + TypeScript 前端搭配 Rust/WebAssembly 核心開發的多平台復古遊戲模擬器，目前支援 **NES (FC)**、**Game Boy (DMG)**、**Game Gear / Master System** 與 **SFC / SNES (超級任天堂)**。
+一個使用 HTML5 Canvas + TypeScript 前端搭配 Rust/WebAssembly 核心開發的多平台復古遊戲模擬器，目前支援 **NES (FC)**、**Game Boy (DMG)**、**Game Gear / Master System**、**SFC / SNES (超級任天堂)**、**N64** 與 **FBNeo Arcade**。
 
 ---
 
@@ -13,6 +13,7 @@
 | **Game Gear** | 160×144 (內部 256×192) | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊, GG 立體聲) | ✅ 新增支援 |
 | **Master System** | 256×192 | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊) | ✅ 新增支援 |
 | **SFC / SNES** | 256×224 | 65816 (3.58 MHz) + SPC700 (1.024 MHz) | 60.0988 fps | 8 (S-DSP 8 聲道 BRR) | 🟣 新增支援 |
+| **FBNeo Arcade** | 動態解析度 | 多種街機硬體 | 依遊戲 | Web Audio 混音 | ✅ Raiden / Warriors of Fate |
 
 ### 自動偵測 ROM 格式
 
@@ -21,6 +22,7 @@
 - 副檔名 `.gg` → **Game Gear 核心** (160×144 GG 視窗裁切)
 - 副檔名 `.sms` → **Master System 核心** (256×192 全畫面)
 - 副檔名 `.sfc` / `.smc` → **SNES 核心** (256×224)
+- 檔名 `raiden.zip` / `wof.zip` → **FBNeo Arcade 核心**（完整 zip ROM set）
 - 其他 (`.gb` / `.gbc`) → **Game Boy 核心**
 
 無需手動選擇平台，選擇對應副檔名的遊戲即可直接開始。

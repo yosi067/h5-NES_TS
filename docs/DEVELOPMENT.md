@@ -22,6 +22,7 @@ H5-NES 已從最初的 NES 模擬器擴展成瀏覽器中的多平台模擬器�
 - **SNES / Super Famicom**：Rust/WASM 原生核心，包含 CPU、PPU、APU、DMA/HDMA 與部分協處理器支援。
 - **Game Boy / Game Gear / Master System**：Rust/WASM 原生核心。
 - **Nintendo 64**：透過 `mupen64plus-web` 啟動 WebGL 後端，使用獨立 `<canvas id="canvas">`，避免與 2D WASM canvas 共用 context。
+- **FBNeo Arcade**：透過 `@mantou/fbneo` 的 FinalBurn Neo arcade WebAssembly runtime 支援 `raiden.zip` 與 `wof.zip`，沿用現有 Canvas/Web Audio/game loop 外殼。
 
 ---
 
@@ -44,8 +45,19 @@ NES 模擬器是一個在現代電腦/瀏覽器中重現 Nintendo Entertainment 
 - **圖形輸出**: HTML5 Canvas 2D / WebGL canvas (N64)
 - **音頻輸出**: Web Audio API
 - **N64 後端**: Mupen64Plus-web + Rice video plugin
+- **Arcade 後端**: `@mantou/fbneo` + FBNeo arcade WASM
 
 ### 近期修正紀錄
+
+#### FBNeo Arcade：Raiden / Warriors of Fate 支援
+
+新增 FBNeo arcade backend，`raiden.zip` 與 `wof.zip` 會從 ROM 選單或檔案上傳直接進入 arcade 路徑，而不再被一般 ZIP 解包流程當作主機 ROM 處理。前端以 `JSZip` 在記憶體中解壓 ROM set，將原始 zip 寫入 MEMFS `/roms/<game>.zip`，並同時把 chip 檔寫入 `/roms/<game>/` 供診斷；FBNeo 載入時會收集 stdout/stderr 與 missing/CRC 訊息回傳 UI。
+
+Arcade 畫面尺寸由 FBNeo runtime 回報並動態設定 Canvas。《吞食天地二 / Warriors of Fate》以 `384x224` 顯示；《雷電》原始 framebuffer 為 `256x224`，前端渲染時向左旋轉 90 度，輸出為直向 `224x256`，符合手機直向遊玩的觀感。
+
+Arcade 輸入以 32-bit bitmask 作為前端抽象：方向鍵佔 bit 0-3，A-F 六鍵佔 bit 4-7、10-11，Coin/Start 佔 bit 8-9。鍵盤映射為方向鍵、`Z/X/A/S/Q/W`、`5` 投幣、`1` 或 Enter 開始；手機控制器切換為街機版十字鍵加 COIN/START/MUTE 和 A-F 六顆圓形按鈕。
+
+CI/CD 方面，`package-lock.json` 已包含 `@mantou/fbneo`，GitHub Pages workflow 使用 `npm ci` 與 `npm run build`，Vite production build 會把 `fbneo-arcade-*.wasm` 打進 `dist/assets/`，並透過 `copyRomsPlugin()` 複製 `.zip` arcade ROM 到 `dist/roms/`。
 
 #### N64 初次啟動畫面適配
 

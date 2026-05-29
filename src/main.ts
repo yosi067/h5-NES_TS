@@ -12,6 +12,13 @@
 import init, { EmuWasm } from './wasm/nes_wasm.js';
 import JSZip from 'jszip';
 import createMupen64PlusWeb, { type EmulatorControls } from 'mupen64plus-web';
+import {
+  ArcadeInputBit,
+  FbNeoArcadeCore,
+  extractFbNeoRomSet,
+  getFbNeoGameName,
+  type FbNeoRomSet,
+} from './arcade/fbneo-core';
 
 // ===== 型別定義 =====
 
@@ -70,9 +77,16 @@ let imageData: ImageData | null = null;
 let audioContext: AudioContext | null = null;
 let isRunning: boolean = false;
 let currentRomFilename: string = '';
-let activeBackend: 'wasm' | 'mupen64' = 'wasm';
+let activeBackend: 'wasm' | 'mupen64' | 'fbneo' = 'wasm';
 let n64Controls: EmulatorControls | null = null;
 let currentN64RomData: ArrayBuffer | null = null;
+let fbneoCore: FbNeoArcadeCore | null = null;
+let currentFbNeoRomSet: FbNeoRomSet | null = null;
+let arcadeInputP1 = 0;
+let arcadeInputP2 = 0;
+let arcadeSourceWidth = 320;
+let arcadeSourceHeight = 240;
+let arcadeRotateLeft = false;
 
 function isN64RomName(filename: string): boolean {
   const lower = filename.toLowerCase();
@@ -81,6 +95,14 @@ function isN64RomName(filename: string): boolean {
 
 function isMupenN64Active(): boolean {
   return activeBackend === 'mupen64';
+}
+
+function isFbNeoActive(): boolean {
+  return activeBackend === 'fbneo';
+}
+
+function isFbNeoArcadeRomName(filename: string): boolean {
+  return filename.toLowerCase().endsWith('.zip') && getFbNeoGameName(filename) !== null;
 }
 
 interface N64GraphicsCapability {
@@ -352,9 +374,73 @@ const N64_KEY_BINDINGS: Record<string, N64KeyBinding> = {
 
 const n64PressedKeys = new Set<string>();
 
+const ARCADE_KEYBOARD_MAP: Record<string, number> = {
+  'ArrowUp': ArcadeInputBit.Up,
+  'ArrowDown': ArcadeInputBit.Down,
+  'ArrowLeft': ArcadeInputBit.Left,
+  'ArrowRight': ArcadeInputBit.Right,
+  'KeyZ': ArcadeInputBit.ButtonA,
+  'KeyX': ArcadeInputBit.ButtonB,
+  'KeyA': ArcadeInputBit.ButtonC,
+  'KeyS': ArcadeInputBit.ButtonD,
+  'KeyQ': ArcadeInputBit.ButtonE,
+  'KeyW': ArcadeInputBit.ButtonF,
+  'Digit5': ArcadeInputBit.Coin,
+  'Numpad5': ArcadeInputBit.Coin,
+  'Digit1': ArcadeInputBit.Start,
+  'Numpad1': ArcadeInputBit.Start,
+  'Enter': ArcadeInputBit.Start,
+};
+
+function setArcadeInputBit(bit: number, pressed: boolean, player: 1 | 2 = 1): void {
+  if (player === 1) {
+    arcadeInputP1 = pressed ? (arcadeInputP1 | bit) : (arcadeInputP1 & ~bit);
+  } else {
+    arcadeInputP2 = pressed ? (arcadeInputP2 | bit) : (arcadeInputP2 & ~bit);
+  }
+}
+
+function setArcadeKeyboardInput(code: string, pressed: boolean): boolean {
+  const bit = ARCADE_KEYBOARD_MAP[code];
+  if (bit === undefined) return false;
+  setArcadeInputBit(bit, pressed);
+  return true;
+}
+
+function pollArcadeGamepads(): void {
+  const pads = navigator.getGamepads?.() ?? [];
+  const pad = pads[0];
+  if (!pad) return;
+
+  const pressed = (index: number) => pad.buttons[index]?.pressed ?? false;
+  const axisPressed = (index: number, direction: -1 | 1) => {
+    const value = pad.axes[index] ?? 0;
+    return direction < 0 ? value < -0.45 : value > 0.45;
+  };
+
+  let mask = arcadeInputP1 & (ArcadeInputBit.Coin | ArcadeInputBit.Start);
+  if (pressed(12) || axisPressed(1, -1)) mask |= ArcadeInputBit.Up;
+  if (pressed(13) || axisPressed(1, 1)) mask |= ArcadeInputBit.Down;
+  if (pressed(14) || axisPressed(0, -1)) mask |= ArcadeInputBit.Left;
+  if (pressed(15) || axisPressed(0, 1)) mask |= ArcadeInputBit.Right;
+  if (pressed(0)) mask |= ArcadeInputBit.ButtonA;
+  if (pressed(1)) mask |= ArcadeInputBit.ButtonB;
+  if (pressed(2)) mask |= ArcadeInputBit.ButtonC;
+  if (pressed(3)) mask |= ArcadeInputBit.ButtonD;
+  if (pressed(4)) mask |= ArcadeInputBit.ButtonE;
+  if (pressed(5)) mask |= ArcadeInputBit.ButtonF;
+  if (pressed(8)) mask |= ArcadeInputBit.Coin;
+  if (pressed(9)) mask |= ArcadeInputBit.Start;
+  arcadeInputP1 = mask;
+}
+
 function setupKeyboardInput(): void {
   window.addEventListener('keydown', (e) => {
     if (isMupenN64Active()) return;
+    if (isFbNeoActive()) {
+      if (setArcadeKeyboardInput(e.code, true)) e.preventDefault();
+      return;
+    }
     if (!nes) return;
     if (isSnesCore()) {
       const button = KEYBOARD_MAP_SNES[e.code];
@@ -372,6 +458,10 @@ function setupKeyboardInput(): void {
   });
   window.addEventListener('keyup', (e) => {
     if (isMupenN64Active()) return;
+    if (isFbNeoActive()) {
+      if (setArcadeKeyboardInput(e.code, false)) e.preventDefault();
+      return;
+    }
     if (!nes) return;
     if (isSnesCore()) {
       const button = KEYBOARD_MAP_SNES[e.code];
@@ -503,6 +593,12 @@ async function loadRomFromServer(filename: string): Promise<void> {
     const buffer = await response.arrayBuffer();
     const lower = filename.toLowerCase();
 
+    if (isFbNeoArcadeRomName(filename)) {
+      currentRomFilename = filename;
+      await startFbNeoGame(filename, buffer);
+      return;
+    }
+
     if (lower.endsWith('.zip')) {
       // 解壓 ZIP
       const zip = await JSZip.loadAsync(buffer);
@@ -548,6 +644,13 @@ async function loadRomFromFile(file: File): Promise<void> {
     let romName = file.name;
 
     if (lower.endsWith('.zip')) {
+      if (isFbNeoArcadeRomName(file.name)) {
+        const zipBuffer = await file.arrayBuffer();
+        currentRomFilename = file.name;
+        await startFbNeoGame(file.name, zipBuffer);
+        return;
+      }
+
       // 解壓 ZIP，找第一個遊戲檔案
       const zip = await JSZip.loadAsync(await file.arrayBuffer());
       const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
@@ -581,6 +684,66 @@ async function loadRomFromFile(file: File): Promise<void> {
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
     alert('載入遊戲失敗，請重試');
+  }
+}
+
+async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promise<void> {
+  if (!canvas || !ctx) return;
+
+  stopEmulation();
+  await stopN64Backend();
+  activeBackend = 'fbneo';
+  arcadeInputP1 = 0;
+  arcadeInputP2 = 0;
+  ringW = 0;
+  ringR = 0;
+  ringCount = 0;
+  lastAudioSample = 0;
+
+  try {
+    fbneoCore = new FbNeoArcadeCore();
+    const romSet = await extractFbNeoRomSet(archiveName, zipData);
+    currentFbNeoRomSet = romSet;
+    currentRomFilename = archiveName;
+
+    const validity = await fbneoCore.checkRomValidity(romSet);
+    if (!validity.ok) {
+      activeBackend = 'wasm';
+      console.error(`[FBNeo] ROM 校驗失敗:\n${validity.log}`);
+      alert(`FBNeo 無法識別 ${archiveName}\n\n${validity.log}`);
+      return;
+    }
+
+    const loaded = await fbneoCore.loadGame(romSet.gameName);
+    if (!loaded) {
+      activeBackend = 'wasm';
+      const log = fbneoCore.getLog();
+      alert(`FBNeo 載入 ${archiveName} 失敗\n\n${log}`);
+      return;
+    }
+
+    const { width, height } = fbneoCore.getResolution();
+    arcadeSourceWidth = width;
+    arcadeSourceHeight = height;
+    arcadeRotateLeft = romSet.gameName === 'raiden';
+    const canvasWidth = arcadeRotateLeft ? height : width;
+    const canvasHeight = arcadeRotateLeft ? width : height;
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    canvas.style.aspectRatio = `${canvasWidth} / ${canvasHeight}`;
+    imageData = ctx.createImageData(canvasWidth, canvasHeight);
+
+    hideRomSelector();
+    updateControllerLayout();
+    powerLed?.classList.add('on');
+    console.log(`[FBNeo] ${romSet.gameName} loaded: ${width}x${height}${arcadeRotateLeft ? ' rotated-left' : ''}`);
+    showToast(`FBNeo: ${romSet.gameName} OK`);
+    startEmulation();
+  } catch (error) {
+    activeBackend = 'wasm';
+    currentFbNeoRomSet = null;
+    console.error('[FBNeo] 啟動失敗:', error);
+    alert(error instanceof Error ? error.message : 'FBNeo 啟動失敗');
   }
 }
 
@@ -1066,17 +1229,24 @@ function setupDpad(): void {
  * 套用 D-Pad 狀態並更新視覺
  */
 function applyDpadState(newState: DpadState): void {
+  if (isFbNeoActive()) {
+    setArcadeInputBit(ArcadeInputBit.Up, newState.up);
+    setArcadeInputBit(ArcadeInputBit.Down, newState.down);
+    setArcadeInputBit(ArcadeInputBit.Left, newState.left);
+    setArcadeInputBit(ArcadeInputBit.Right, newState.right);
+  }
+
   // 更新控制器（透過 WASM 介面）
-  if (newState.up !== currentDpadState.up) {
+  if (!isFbNeoActive() && newState.up !== currentDpadState.up) {
     nes?.setButton(0, ControllerButton.Up, newState.up);
   }
-  if (newState.down !== currentDpadState.down) {
+  if (!isFbNeoActive() && newState.down !== currentDpadState.down) {
     nes?.setButton(0, ControllerButton.Down, newState.down);
   }
-  if (newState.left !== currentDpadState.left) {
+  if (!isFbNeoActive() && newState.left !== currentDpadState.left) {
     nes?.setButton(0, ControllerButton.Left, newState.left);
   }
-  if (newState.right !== currentDpadState.right) {
+  if (!isFbNeoActive() && newState.right !== currentDpadState.right) {
     nes?.setButton(0, ControllerButton.Right, newState.right);
   }
   
@@ -1098,6 +1268,13 @@ function setupABButtons(): void {
   
   const setupButton = (btn: HTMLElement | null, buttonType: ControllerButton, elementId: string) => {
     if (!btn) return;
+    const setPressed = (pressed: boolean) => {
+      if (isFbNeoActive()) {
+        setArcadeInputBit(buttonType === ControllerButton.A ? ArcadeInputBit.ButtonA : ArcadeInputBit.ButtonB, pressed);
+      } else {
+        nes?.setButton(0, buttonType, pressed);
+      }
+    };
     
     btn.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -1105,7 +1282,7 @@ function setupABButtons(): void {
       for (const touch of Array.from(e.changedTouches)) {
         activeTouches.set(touch.identifier, { identifier: touch.identifier, element: elementId });
       }
-      nes?.setButton(0, buttonType, true);
+      setPressed(true);
       btn.classList.add('pressed');
     }, { passive: false });
 
@@ -1115,7 +1292,7 @@ function setupABButtons(): void {
       for (const touch of Array.from(e.changedTouches)) {
         activeTouches.delete(touch.identifier);
       }
-      nes?.setButton(0, buttonType, false);
+      setPressed(false);
       btn.classList.remove('pressed');
     }, { passive: false });
 
@@ -1124,25 +1301,25 @@ function setupABButtons(): void {
       for (const touch of Array.from(e.changedTouches)) {
         activeTouches.delete(touch.identifier);
       }
-      nes?.setButton(0, buttonType, false);
+      setPressed(false);
       btn.classList.remove('pressed');
     }, { passive: false });
 
     // 滑鼠事件
     btn.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      nes?.setButton(0, buttonType, true);
+      setPressed(true);
       btn.classList.add('pressed');
     });
 
     btn.addEventListener('mouseup', (e) => {
       e.preventDefault();
-      nes?.setButton(0, buttonType, false);
+      setPressed(false);
       btn.classList.remove('pressed');
     });
 
     btn.addEventListener('mouseleave', () => {
-      nes?.setButton(0, buttonType, false);
+      setPressed(false);
       btn.classList.remove('pressed');
     });
   };
@@ -1161,39 +1338,46 @@ function setupFunctionButtons(): void {
     const button = btn as HTMLElement;
     const btnType = button.dataset.btn;
     const buttonEnum = btnType === 'start' ? ControllerButton.Start : ControllerButton.Select;
+    const setPressed = (pressed: boolean) => {
+      if (isFbNeoActive()) {
+        setArcadeInputBit(btnType === 'start' ? ArcadeInputBit.Start : ArcadeInputBit.Coin, pressed);
+      } else {
+        nes?.setButton(0, buttonEnum, pressed);
+      }
+    };
 
     button.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      nes?.setButton(0, buttonEnum, true);
+      setPressed(true);
       button.classList.add('pressed');
     }, { passive: false });
 
     button.addEventListener('touchend', (e) => {
       e.preventDefault();
-      nes?.setButton(0, buttonEnum, false);
+      setPressed(false);
       button.classList.remove('pressed');
     }, { passive: false });
 
     button.addEventListener('touchcancel', (e) => {
       e.preventDefault();
-      nes?.setButton(0, buttonEnum, false);
+      setPressed(false);
       button.classList.remove('pressed');
     }, { passive: false });
 
     button.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      nes?.setButton(0, buttonEnum, true);
+      setPressed(true);
       button.classList.add('pressed');
     });
 
     button.addEventListener('mouseup', (e) => {
       e.preventDefault();
-      nes?.setButton(0, buttonEnum, false);
+      setPressed(false);
       button.classList.remove('pressed');
     });
 
     button.addEventListener('mouseleave', () => {
-      nes?.setButton(0, buttonEnum, false);
+      setPressed(false);
       button.classList.remove('pressed');
     });
   });
@@ -1203,6 +1387,27 @@ function setupFunctionButtons(): void {
  * 處理按鈕按下/釋放 (保留給其他用途)
  */
 function handleButtonPress(btnType: string, pressed: boolean): void {
+  if (isFbNeoActive()) {
+    const arcadeButtonMap: Record<string, number> = {
+      'up': ArcadeInputBit.Up,
+      'down': ArcadeInputBit.Down,
+      'left': ArcadeInputBit.Left,
+      'right': ArcadeInputBit.Right,
+      'a': ArcadeInputBit.ButtonA,
+      'b': ArcadeInputBit.ButtonB,
+      'c': ArcadeInputBit.ButtonC,
+      'd': ArcadeInputBit.ButtonD,
+      'e': ArcadeInputBit.ButtonE,
+      'f': ArcadeInputBit.ButtonF,
+      'start': ArcadeInputBit.Start,
+      'select': ArcadeInputBit.Coin,
+      'coin': ArcadeInputBit.Coin,
+    };
+    const arcadeBit = arcadeButtonMap[btnType];
+    if (arcadeBit !== undefined) setArcadeInputBit(arcadeBit, pressed);
+    return;
+  }
+
   const buttonMap: Record<string, ControllerButton> = {
     'up': ControllerButton.Up,
     'down': ControllerButton.Down,
@@ -1341,6 +1546,11 @@ function startEmulation(): void {
   if (isMupenN64Active()) {
     isRunning = true;
     n64Controls?.resume();
+    return;
+  }
+
+  if (isFbNeoActive()) {
+    startFbNeoEmulation();
     return;
   }
 
@@ -1487,6 +1697,38 @@ function startEmulation(): void {
   animationId = requestAnimationFrame(frameLoop);
 }
 
+function startFbNeoEmulation(): void {
+  if (!fbneoCore || !ctx || !imageData) return;
+  if (animationId !== null) {
+    cancelAnimationFrame(animationId);
+  }
+
+  isRunning = true;
+  const targetFrameTime = 1000 / 60;
+  let lastFrameTime = performance.now();
+  let accumulator = 0;
+
+  const frameLoop = (currentTime: number): void => {
+    if (!fbneoCore || !ctx || !imageData || !isRunning || !isFbNeoActive()) return;
+
+    const deltaTime = currentTime - lastFrameTime;
+    lastFrameTime = currentTime;
+    accumulator = Math.min(accumulator + deltaTime, targetFrameTime * 3);
+
+    while (accumulator >= targetFrameTime) {
+      pollArcadeGamepads();
+      fbneoCore.stepFrame(arcadeInputP1, arcadeInputP2);
+      enqueueAudioSamples(fbneoCore.consumeAudioSamples());
+      accumulator -= targetFrameTime;
+    }
+
+    renderFrame();
+    animationId = requestAnimationFrame(frameLoop);
+  };
+
+  animationId = requestAnimationFrame(frameLoop);
+}
+
 /**
  * 停止模擬
  */
@@ -1508,6 +1750,10 @@ function stopEmulation(): void {
  */
 function renderFrame(): void {
   if (isMupenN64Active()) return;
+  if (isFbNeoActive()) {
+    renderFbNeoFrame();
+    return;
+  }
   if (!nes || !ctx || !imageData) return;
 
   // 重要：每次都重新取得 WASM memory 參考
@@ -1520,6 +1766,29 @@ function renderFrame(): void {
   const frameBuffer = new Uint8Array(memory.buffer, ptr, len);
   
   imageData.data.set(frameBuffer);
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function renderFbNeoFrame(): void {
+  if (!fbneoCore || !ctx || !imageData) return;
+  const frameBuffer = fbneoCore.getFrameBufferView();
+  if (arcadeRotateLeft) {
+    const output = imageData.data;
+    for (let sourceY = 0; sourceY < arcadeSourceHeight; sourceY++) {
+      for (let sourceX = 0; sourceX < arcadeSourceWidth; sourceX++) {
+        const sourceIndex = (sourceY * arcadeSourceWidth + sourceX) * 4;
+        const destX = sourceY;
+        const destY = arcadeSourceWidth - 1 - sourceX;
+        const destIndex = (destY * arcadeSourceHeight + destX) * 4;
+        output[destIndex] = frameBuffer[sourceIndex];
+        output[destIndex + 1] = frameBuffer[sourceIndex + 1];
+        output[destIndex + 2] = frameBuffer[sourceIndex + 2];
+        output[destIndex + 3] = frameBuffer[sourceIndex + 3];
+      }
+    }
+  } else {
+    imageData.data.set(frameBuffer);
+  }
   ctx.putImageData(imageData, 0, 0);
 }
 
@@ -1551,6 +1820,20 @@ function resetAudioDiagWindow(): void {
   audioDiag.clipCount = 0;
 }
 
+function enqueueAudioSamples(samples: Float32Array): void {
+  if (audioMuted || samples.length === 0) return;
+
+  for (let i = 0; i < samples.length; i++) {
+    jsRing[ringW] = samples[i];
+    ringW = (ringW + 1) % JS_RING_SIZE;
+    if (ringCount < JS_RING_SIZE) {
+      ringCount++;
+    } else {
+      ringR = (ringR + 1) % JS_RING_SIZE;
+    }
+  }
+}
+
 /**
  * 將 WASM 音頻緩衝區的樣本排入 JS 環形緩衝區
  * 在每次 frame() 後呼叫，確保所有樣本都被捕獲
@@ -1570,17 +1853,7 @@ function drainWasmAudioToRing(): void {
   const memory = nes.getWasmMemory() as WebAssembly.Memory;
   const ptr = nes.getAudioBufferPtr();
   const samples = new Float32Array(memory.buffer, ptr, available);
-
-  for (let i = 0; i < available; i++) {
-    jsRing[ringW] = samples[i];
-    ringW = (ringW + 1) % JS_RING_SIZE;
-    if (ringCount < JS_RING_SIZE) {
-      ringCount++;
-    } else {
-      // 環形緩衝區已滿：覆蓋最舊的樣本
-      ringR = (ringR + 1) % JS_RING_SIZE;
-    }
-  }
+  enqueueAudioSamples(samples);
 
   nes.consumeAudioSamples();
 }
@@ -1689,6 +1962,8 @@ function toggleMute(): void {
   if (btn) btn.textContent = audioMuted ? '🔇 靜音 (M)' : '🔊 音頻 (M)';
   const mobileBtn = document.getElementById('mobile-mute');
   if (mobileBtn) mobileBtn.textContent = audioMuted ? '🔇' : '🔊';
+  const arcadeMobileBtn = document.getElementById('arcade-mobile-mute');
+  if (arcadeMobileBtn) arcadeMobileBtn.textContent = audioMuted ? '🔇' : '🔊';
 
   showToast(audioMuted ? '🔇 音頻已關閉（APU IRQ 同時停用）' : '🔊 音頻已開啟');
 }
@@ -1701,7 +1976,7 @@ const SAVE_STATE_PREFIX = 'emu_savestate_';
  * 取得帶有核心類型 + ROM 名稱的存檔 key（每個遊戲獨立存檔）
  */
 function getSaveKey(slot: number): string {
-  const coreType = isMupenN64Active() ? 'n64' : (nes?.getCoreType() || 'nes');
+  const coreType = isMupenN64Active() ? 'n64' : isFbNeoActive() ? 'fbneo' : (nes?.getCoreType() || 'nes');
   // Use ROM filename to isolate saves per game
   const romId = currentRomFilename
     ? currentRomFilename.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_').substring(0, 60)
@@ -1775,6 +2050,10 @@ function showToast(message: string): void {
 }
 
 function saveState(slot: number = 0): boolean {
+  if (isFbNeoActive()) {
+    console.log(`[FBNeo] 即時狀態存檔尚未接入，slot=${slot}`);
+    return false;
+  }
   if (isMupenN64Active()) {
     void n64Controls?.forceDumpSaveFiles?.();
     console.log(`[N64] Mupen64Plus 使用遊戲內建存檔/IDBFS，slot=${slot} 的即時狀態存檔尚未接入`);
@@ -1795,6 +2074,10 @@ function saveState(slot: number = 0): boolean {
 }
 
 function loadState(slot: number = 0): boolean {
+  if (isFbNeoActive()) {
+    console.log(`[FBNeo] 即時狀態讀取尚未接入，slot=${slot}`);
+    return false;
+  }
   if (isMupenN64Active()) {
     console.log(`[N64] Mupen64Plus 使用遊戲內建存檔/IDBFS，slot=${slot} 的即時狀態讀取尚未接入`);
     return false;
@@ -1831,6 +2114,10 @@ function loadState(slot: number = 0): boolean {
 }
 
 function exportSaveToFile(): void {
+  if (isFbNeoActive()) {
+    showToast('FBNeo 即時存檔尚未支援');
+    return;
+  }
   if (isMupenN64Active()) {
     void n64Controls?.forceDumpSaveFiles?.();
     showToast('N64 會使用遊戲內建存檔');
@@ -1898,23 +2185,186 @@ function loadSram(): void {
 function updateControllerLayout(): void {
   const nesCtrl = document.getElementById('nes-controller-area');
   const snesCtrl = document.getElementById('snes-controller-area');
+  const arcadeCtrl = document.getElementById('arcade-controller-area');
   const n64Ctrl = document.getElementById('n64-controller-area');
   document.body.classList.toggle('n64-mode', isMupenN64Active());
   if (isMupenN64Active()) {
     if (nesCtrl) nesCtrl.style.display = 'none';
     if (snesCtrl) snesCtrl.style.display = 'none';
+    if (arcadeCtrl) arcadeCtrl.style.display = 'none';
     if (n64Ctrl) n64Ctrl.style.display = 'flex';
     setupN64Buttons();
+  } else if (isFbNeoActive()) {
+    if (nesCtrl) nesCtrl.style.display = 'none';
+    if (snesCtrl) snesCtrl.style.display = 'none';
+    if (arcadeCtrl) arcadeCtrl.style.display = 'flex';
+    if (n64Ctrl) n64Ctrl.style.display = 'none';
+    setupArcadeButtons();
   } else if (isSnesCore()) {
     if (nesCtrl) nesCtrl.style.display = 'none';
     if (snesCtrl) snesCtrl.style.display = 'flex';
+    if (arcadeCtrl) arcadeCtrl.style.display = 'none';
     if (n64Ctrl) n64Ctrl.style.display = 'none';
     setupSnesButtons();
   } else {
     if (nesCtrl) nesCtrl.style.display = 'flex';
     if (snesCtrl) snesCtrl.style.display = 'none';
+    if (arcadeCtrl) arcadeCtrl.style.display = 'none';
     if (n64Ctrl) n64Ctrl.style.display = 'none';
   }
+}
+
+function setupArcadeButtons(): void {
+  const buttonBits: Record<string, number> = {
+    up: ArcadeInputBit.Up,
+    down: ArcadeInputBit.Down,
+    left: ArcadeInputBit.Left,
+    right: ArcadeInputBit.Right,
+    a: ArcadeInputBit.ButtonA,
+    b: ArcadeInputBit.ButtonB,
+    c: ArcadeInputBit.ButtonC,
+    d: ArcadeInputBit.ButtonD,
+    e: ArcadeInputBit.ButtonE,
+    f: ArcadeInputBit.ButtonF,
+    coin: ArcadeInputBit.Coin,
+    start: ArcadeInputBit.Start,
+  };
+
+  document.querySelectorAll('#arcade-controller-area [data-arcade-bit]').forEach((node) => {
+    const button = node as HTMLElement;
+    const bitName = button.dataset.arcadeBit;
+    if (!bitName || button.dataset.arcadeWired) return;
+    const bit = buttonBits[bitName];
+    if (bit === undefined) return;
+    button.dataset.arcadeWired = '1';
+
+    const activeTouchIds = new Set<number>();
+    const press = () => {
+      setArcadeInputBit(bit, true);
+      button.classList.add('pressed');
+    };
+    const release = () => {
+      setArcadeInputBit(bit, false);
+      button.classList.remove('pressed');
+    };
+
+    button.addEventListener('touchstart', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      for (const touch of Array.from(event.changedTouches)) activeTouchIds.add(touch.identifier);
+      press();
+    }, { passive: false });
+
+    button.addEventListener('touchend', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      for (const touch of Array.from(event.changedTouches)) activeTouchIds.delete(touch.identifier);
+      if (activeTouchIds.size === 0) release();
+    }, { passive: false });
+
+    button.addEventListener('touchcancel', (event) => {
+      event.preventDefault();
+      for (const touch of Array.from(event.changedTouches)) activeTouchIds.delete(touch.identifier);
+      if (activeTouchIds.size === 0) release();
+    }, { passive: false });
+
+    button.addEventListener('mousedown', (event) => { event.preventDefault(); press(); });
+    button.addEventListener('mouseup', (event) => { event.preventDefault(); release(); });
+    button.addEventListener('mouseleave', release);
+  });
+
+  setupArcadeDpad();
+
+  const muteButton = document.getElementById('arcade-mobile-mute');
+  if (muteButton && !muteButton.dataset.arcadeWired) {
+    muteButton.dataset.arcadeWired = '1';
+    muteButton.addEventListener('click', toggleMute);
+  }
+}
+
+function setupArcadeDpad(): void {
+  const dpad = document.getElementById('arcade-dpad');
+  const touchArea = document.getElementById('arcade-dpad-touch-area');
+  if (!dpad || !touchArea || touchArea.dataset.arcadeWired) return;
+  touchArea.dataset.arcadeWired = '1';
+
+  let currentState: DpadState = { up: false, down: false, left: false, right: false };
+  let mouseDown = false;
+
+  const applyState = (newState: DpadState) => {
+    for (const direction of ['up', 'down', 'left', 'right'] as Array<keyof DpadState>) {
+      if (newState[direction] !== currentState[direction]) {
+        const bit = direction === 'up'
+          ? ArcadeInputBit.Up
+          : direction === 'down'
+            ? ArcadeInputBit.Down
+            : direction === 'left'
+              ? ArcadeInputBit.Left
+              : ArcadeInputBit.Right;
+        setArcadeInputBit(bit, newState[direction]);
+      }
+      document.getElementById(`arcade-dpad-${direction}`)?.classList.toggle('pressed', newState[direction]);
+    }
+    currentState = { ...newState };
+  };
+
+  const clearState = () => applyState({ up: false, down: false, left: false, right: false });
+
+  const calculateState = (clientX: number, clientY: number): DpadState => {
+    const rect = dpad.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const dx = clientX - centerX;
+    const dy = clientY - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const deadZone = rect.width / 2 * 0.15;
+    const state: DpadState = { up: false, down: false, left: false, right: false };
+
+    if (distance > deadZone) {
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (angle >= -22.5 && angle < 22.5) state.right = true;
+      else if (angle >= 22.5 && angle < 67.5) { state.right = true; state.down = true; }
+      else if (angle >= 67.5 && angle < 112.5) state.down = true;
+      else if (angle >= 112.5 && angle < 157.5) { state.left = true; state.down = true; }
+      else if (angle >= 157.5 || angle < -157.5) state.left = true;
+      else if (angle >= -157.5 && angle < -112.5) { state.left = true; state.up = true; }
+      else if (angle >= -112.5 && angle < -67.5) state.up = true;
+      else if (angle >= -67.5 && angle < -22.5) { state.right = true; state.up = true; }
+    }
+    return state;
+  };
+
+  touchArea.addEventListener('touchstart', (event) => {
+    event.preventDefault();
+    const touch = event.changedTouches[0];
+    if (touch) applyState(calculateState(touch.clientX, touch.clientY));
+  }, { passive: false });
+
+  touchArea.addEventListener('touchmove', (event) => {
+    event.preventDefault();
+    const touch = event.changedTouches[0];
+    if (touch) applyState(calculateState(touch.clientX, touch.clientY));
+  }, { passive: false });
+
+  touchArea.addEventListener('touchend', (event) => { event.preventDefault(); clearState(); }, { passive: false });
+  touchArea.addEventListener('touchcancel', (event) => { event.preventDefault(); clearState(); }, { passive: false });
+
+  touchArea.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    mouseDown = true;
+    applyState(calculateState(event.clientX, event.clientY));
+  });
+
+  document.addEventListener('mousemove', (event) => {
+    if (mouseDown) applyState(calculateState(event.clientX, event.clientY));
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (mouseDown) {
+      mouseDown = false;
+      clearState();
+    }
+  });
 }
 
 function setupN64Buttons(): void {

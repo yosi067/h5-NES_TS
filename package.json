@@ -33,6 +33,7 @@
     "html5"
   ],
   "dependencies": {
+    "@mantou/fbneo": "^0.0.4",
     "jszip": "^3.10.1",
     "mupen64plus-web": "^1.5.7"
   }

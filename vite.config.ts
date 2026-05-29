@@ -25,9 +25,9 @@ function copyRomsPlugin() {
         
         const files = readdirSync(romsDir);
         files.forEach(file => {
-          // 支援 .nes, .NES, .gb, .gbc, .gg, .sms, .smc, .sfc, .z64 副檔名
+          // 支援 .nes, .NES, .gb, .gbc, .gg, .sms, .smc, .sfc, .z64, .zip 副檔名
           const lower = file.toLowerCase();
-          if (lower.endsWith('.nes') || lower.endsWith('.gb') || lower.endsWith('.gbc') || lower.endsWith('.gg') || lower.endsWith('.sms') || lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64')) {
+          if (lower.endsWith('.nes') || lower.endsWith('.gb') || lower.endsWith('.gbc') || lower.endsWith('.gg') || lower.endsWith('.sms') || lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64') || lower.endsWith('.zip')) {
             copyFileSync(
               resolve(romsDir, file),
               resolve(distRomsDir, file)
@@ -49,7 +49,7 @@ function serveRomBinaryPlugin() {
       server.middlewares.use((req: any, res: any, next: any) => {
         const url = decodeURIComponent(req.url || '');
         const lower = url.toLowerCase();
-        if (lower.startsWith('/roms/') && (lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64'))) {
+        if (lower.startsWith('/roms/') && (lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64') || lower.endsWith('.zip'))) {
           const filePath = resolve(__dirname, url.slice(1)); // 去掉開頭的 /
           if (existsSync(filePath)) {
             const data = readFileSync(filePath);
@@ -141,7 +141,7 @@ export default defineConfig({
     exclude: ['nes-wasm']
   },
   // 將 WASM 及 ROM 檔案視為靜態資源
-  assetsInclude: ['**/*.wasm', '**/*.smc', '**/*.sfc', '**/*.z64', '**/*.n64', '**/*.v64'],
+  assetsInclude: ['**/*.wasm', '**/*.smc', '**/*.sfc', '**/*.z64', '**/*.n64', '**/*.v64', '**/*.zip'],
   // 將 public 目錄設為根目錄
   publicDir: 'public',
   build: {

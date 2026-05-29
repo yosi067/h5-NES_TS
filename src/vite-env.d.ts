@@ -11,3 +11,13 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare module '@mantou/fbneo/fbneo-arcade' {
+  const initFbNeo: unknown;
+  export default initFbNeo;
+}
+
+declare module '@mantou/fbneo/fbneo-arcade.wasm?url' {
+  const url: string;
+  export default url;
+}
