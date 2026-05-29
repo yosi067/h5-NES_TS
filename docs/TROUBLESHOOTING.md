@@ -12,12 +12,51 @@
 - [SNES — DMA / HDMA](#snes--dma--hdma)
 - [SNES — 協處理器](#snes--協處理器)
 - [N64 — Mupen64Plus Web 後端](#n64--mupen64plus-web-後端)
+- [FBNeo Arcade — Raiden / Warriors of Fate](#fbneo-arcade--raiden--warriors-of-fate)
 - [NES — CPU 時序](#nes--cpu-時序)
 - [NES — Mapper](#nes--mapper)
 - [NES — APU 音頻](#nes--apu-音頻)
 - [Game Gear / Master System — Z80 CPU](#game-gear--master-system--z80-cpu)
 - [Game Gear / Master System — VDP](#game-gear--master-system--vdp)
 - [Game Boy — Joypad](#game-boy--joypad)
+
+---
+
+## FBNeo Arcade — Raiden / Warriors of Fate
+
+### Q1: `raiden.zip` / `wof.zip` 被當成一般 ZIP ROM，無法由 FBNeo 載入
+
+**現象**：Arcade zip 上傳或從清單選取後，原流程會嘗試在 zip 內尋找 `.nes/.sfc/.gb` 等單一主機 ROM，導致 FBNeo 無法收到完整 ROM set。
+
+**原因**：街機 ROM set 是多個 chip 檔組成的 zip，FBNeo 需要依遊戲名稱與檔名/CRC 檢查整包內容，不能只抽出第一個檔案。
+
+**解決**：`src/main.ts` 先以檔名辨識 `raiden.zip` / `wof.zip`，直接切到 FBNeo backend。`src/arcade/fbneo-core.ts` 使用 JSZip 解包，寫入 `/roms/<game>.zip` 與 `/roms/<game>/`，再啟動 `@mantou/fbneo` runtime。若缺檔或 CRC 不符，stdout/stderr 會回傳給前端提示。
+
+---
+
+### Q2: 從一款 FBNeo 遊戲切換到另一款時發生 `memory access out of bounds`
+
+**現象**：先玩《雷電》再切到《吞食天地二》時，FBNeo 已列出所有 chip `(OK)`，但 Emscripten runtime 仍可能丟出 `memory access out of bounds`。
+
+**原因**：Mantou FBNeo runtime 不適合在同一個 module instance 內反覆切換大型 arcade 遊戲，前一款遊戲的內部狀態可能殘留。
+
+**解決**：每次載入 FBNeo arcade ROM 都建立新的 `FbNeoArcadeCore` instance，避免共用舊的 Emscripten memory 與 native 狀態。
+
+---
+
+### Q3: 《雷電》畫面方向不符合直向街機玩法
+
+**現象**：《雷電》原始 framebuffer 是橫向資料排列，直接貼到 Canvas 時不符合直向射擊遊戲的操作觀感。
+
+**解決**：只對 `raiden` 啟用前端 framebuffer 左轉 90 度：Canvas 尺寸由 `256x224` 轉成 `224x256`，渲染時逐像素 remap，不影響 `wof` 的 `384x224` 橫向畫面。
+
+---
+
+### Q4: 手機觸控只提供 A/B，街機遊戲操作不夠
+
+**現象**：原本 NES/SNES 觸控配置不適合 FBNeo arcade，尤其是格鬥或清版動作遊戲可能需要更多按鍵。
+
+**解決**：新增 `#arcade-controller-area`，保留十字鍵，右側提供 COIN、START、MUTE 與 A-F 六顆街機常用圓形按鈕。前端仍使用 32-bit bitmask，再轉成 Mantou FBNeo `_setEmInput(playerIndex, state, alx, aly, arx, ary)`。
 
 ---
 
