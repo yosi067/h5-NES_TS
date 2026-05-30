@@ -32,6 +32,30 @@ interface RomListResponse {
   roms: RomInfo[];
 }
 
+type SystemKey = 'nes' | 'gb' | 'gg' | 'sms' | 'snes' | 'n64' | 'arcade';
+
+interface MachineInfo {
+  key: SystemKey;
+  title: string;
+  label: string;
+  artClass: string;
+}
+
+interface KeyboardBindingView {
+  action: string;
+  keys: string[];
+}
+
+const MACHINES: MachineInfo[] = [
+  { key: 'nes', title: '紅白機 FC / NES', label: '8-bit 客廳回憶', artClass: 'nes' },
+  { key: 'gb', title: 'Game Boy', label: '掌機綠幕角落', artClass: 'gb' },
+  { key: 'gg', title: 'Game Gear', label: '彩色掌機台', artClass: 'gg' },
+  { key: 'sms', title: 'Master System', label: 'SEGA 家用機', artClass: 'sms' },
+  { key: 'snes', title: '超級任天堂 SFC', label: '16-bit 黃金年代', artClass: 'snes' },
+  { key: 'n64', title: 'Nintendo 64', label: '3D 包廂機台', artClass: 'n64' },
+  { key: 'arcade', title: 'FBNeo 街機', label: '投幣大型機台', artClass: 'arcade' },
+];
+
 // 控制器按鈕編號（與 Rust 端一致 - NES）
 const ControllerButton = {
   A: 0,
@@ -103,6 +127,102 @@ function isFbNeoActive(): boolean {
 
 function isFbNeoArcadeRomName(filename: string): boolean {
   return filename.toLowerCase().endsWith('.zip') && getFbNeoGameName(filename) !== null;
+}
+
+function detectRomSystem(rom: RomInfo): SystemKey {
+  const normalized = rom.system?.toLowerCase();
+  if (normalized === 'fbneo' || normalized === 'arcade') return 'arcade';
+  if (normalized === 'nes' || normalized === 'gb' || normalized === 'gg' || normalized === 'sms' || normalized === 'snes' || normalized === 'n64') {
+    return normalized;
+  }
+
+  const lower = rom.file.toLowerCase();
+  if (isFbNeoArcadeRomName(rom.file)) return 'arcade';
+  if (isN64RomName(rom.file)) return 'n64';
+  if (lower.endsWith('.sfc') || lower.endsWith('.smc')) return 'snes';
+  if (lower.endsWith('.sms')) return 'sms';
+  if (lower.endsWith('.gg')) return 'gg';
+  if (lower.endsWith('.gb') || lower.endsWith('.gbc')) return 'gb';
+  return 'nes';
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>'"]/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    "'": '&#39;',
+    '"': '&quot;',
+  }[char] ?? char));
+}
+
+function renderKeyboardBindings(bindings: KeyboardBindingView[]): string {
+  return bindings.map((binding) => `
+    <div class="keyboard-binding">
+      <span class="keyboard-action">${escapeHtml(binding.action)}</span>
+      <span class="key-row">${binding.keys.map((key) => `<kbd>${escapeHtml(key)}</kbd>`).join('')}</span>
+    </div>
+  `).join('');
+}
+
+function updateKeyboardGuide(): void {
+  const titleEl = document.getElementById('keyboard-guide-title');
+  const noteEl = document.getElementById('keyboard-guide-note');
+  const bindingsEl = document.getElementById('keyboard-bindings');
+  if (!titleEl || !noteEl || !bindingsEl) return;
+
+  let title = 'NES / GB / GG / SMS 鍵盤控制';
+  let note = '這組按鍵適用於二鍵家用主機與掌機。';
+  let bindings: KeyboardBindingView[] = [
+    { action: '方向', keys: ['↑', '↓', '←', '→'] },
+    { action: 'A', keys: ['Z'] },
+    { action: 'B', keys: ['X'] },
+    { action: 'Start', keys: ['Enter'] },
+    { action: 'Select', keys: ['Right Shift'] },
+  ];
+
+  if (isMupenN64Active()) {
+    title = 'Nintendo 64 鍵盤控制';
+    note = 'N64 使用方向鍵當類比搖桿，WASD 保留給 D-Pad，右側 C 鍵用 IJKL。';
+    bindings = [
+      { action: 'Analog Stick', keys: ['↑', '↓', '←', '→'] },
+      { action: 'D-Pad', keys: ['W', 'A', 'S', 'D'] },
+      { action: 'A / B', keys: ['Left Shift', 'Left Ctrl'] },
+      { action: 'C Buttons', keys: ['I', 'J', 'K', 'L'] },
+      { action: 'Z / L / R', keys: ['Z', 'X', 'C'] },
+      { action: 'Start', keys: ['Enter'] },
+    ];
+  } else if (isFbNeoActive()) {
+    title = 'FBNeo Arcade 鍵盤控制';
+    note = '街機模式含投幣與 1P Start，A-F 六鍵對應左手鍵位。';
+    bindings = [
+      { action: '方向', keys: ['↑', '↓', '←', '→'] },
+      { action: 'A / B / C', keys: ['Z', 'X', 'A'] },
+      { action: 'D / E / F', keys: ['S', 'Q', 'W'] },
+      { action: 'Coin', keys: ['5'] },
+      { action: '1P Start', keys: ['1', 'Enter'] },
+    ];
+  } else if (isSnesCore()) {
+    title = 'SFC / SNES 鍵盤控制';
+    note = 'SNES 使用四顆正面按鈕與 L/R 肩鍵，和二鍵主機配置不同。';
+    bindings = [
+      { action: '方向', keys: ['↑', '↓', '←', '→'] },
+      { action: 'A / B', keys: ['Z', 'X'] },
+      { action: 'Y / X', keys: ['A', 'S'] },
+      { action: 'L / R', keys: ['Q', 'W'] },
+      { action: 'Start', keys: ['Enter'] },
+      { action: 'Select', keys: ['Right Shift'] },
+    ];
+  }
+
+  bindings.push(
+    { action: '存檔 / 讀檔', keys: ['F5', 'F7'] },
+    { action: '音頻', keys: ['M'] },
+  );
+
+  titleEl.textContent = title;
+  noteEl.textContent = note;
+  bindingsEl.innerHTML = renderKeyboardBindings(bindings);
 }
 
 interface N64GraphicsCapability {
@@ -249,6 +369,7 @@ const AUTO_RESET_ROMS: string[] = [
 let romSelector: HTMLElement | null = null;
 let gameboyShell: HTMLElement | null = null;
 let powerLed: HTMLElement | null = null;
+let romCatalog: RomInfo[] = [];
 
 // ===== 音頻設定 =====
 const AUDIO_BUFFER_SIZE = 2048;  // ScriptProcessor 緩衝區大小（~46ms）
@@ -304,6 +425,7 @@ async function initWasm(): Promise<void> {
 
   // 設定電腦版控制按鈕
   setupDesktopControls();
+  updateKeyboardGuide();
 
   // 設定 ROM 選擇器
   setupRomSelector();
@@ -486,6 +608,8 @@ function setupKeyboardInput(): void {
  */
 function setupRomSelector(): void {
   loadRomList();
+
+  document.getElementById('rom-back-btn')?.addEventListener('click', renderMachineSelector);
   
   // 設定檔案上傳
   const fileInput = document.getElementById('rom-file-input') as HTMLInputElement;
@@ -502,6 +626,7 @@ function setupRomSelector(): void {
  */
 async function loadRomList(): Promise<void> {
   const romListEl = document.getElementById('rom-list');
+  const machineGridEl = document.getElementById('machine-grid');
   if (!romListEl) return;
 
   try {
@@ -513,12 +638,17 @@ async function loadRomList(): Promise<void> {
     }
     
     const data: RomListResponse = await response.json();
-    renderRomList(data.roms);
+    romCatalog = data.roms;
+    renderMachineSelector();
   } catch (error) {
     console.error('載入 ROM 列表失敗:', error);
+    if (machineGridEl) machineGridEl.style.display = 'none';
+    const browserHeader = document.getElementById('rom-browser-header');
+    if (browserHeader) browserHeader.style.display = 'none';
+    romListEl.style.display = 'block';
     romListEl.innerHTML = `
       <div class="rom-error">
-        <p>⚠️ 無法載入遊戲列表</p>
+        <p>無法載入遊戲列表</p>
         <p>請使用下方按鈕選擇 ROM 檔案</p>
       </div>
     `;
@@ -526,11 +656,63 @@ async function loadRomList(): Promise<void> {
 }
 
 /**
+ * 渲染機台選擇畫面
+ */
+function renderMachineSelector(): void {
+  const machineGridEl = document.getElementById('machine-grid');
+  const romListEl = document.getElementById('rom-list');
+  const browserHeader = document.getElementById('rom-browser-header');
+  if (!machineGridEl || !romListEl) return;
+
+  if (romCatalog.length === 0) {
+    machineGridEl.innerHTML = '<div class="rom-empty">沒有可用的遊戲</div>';
+    return;
+  }
+
+  if (browserHeader) browserHeader.style.display = 'none';
+  romListEl.style.display = 'none';
+  machineGridEl.style.display = 'grid';
+
+  machineGridEl.innerHTML = MACHINES.map((machine) => {
+    const count = romCatalog.filter((rom) => detectRomSystem(rom) === machine.key).length;
+    const disabled = count === 0 ? 'disabled aria-disabled="true"' : '';
+    return `
+      <button class="machine-card" type="button" data-system="${machine.key}" ${disabled}>
+        <span class="machine-art ${machine.artClass}" aria-hidden="true"></span>
+        <span class="machine-title">${escapeHtml(machine.title)}</span>
+        <span class="machine-meta">
+          <span>${escapeHtml(machine.label)}</span>
+          <span class="machine-count">${count}</span>
+        </span>
+      </button>
+    `;
+  }).join('');
+
+  machineGridEl.querySelectorAll('.machine-card').forEach((item) => {
+    item.addEventListener('click', () => {
+      const system = (item as HTMLElement).dataset.system as SystemKey | undefined;
+      if (system) renderRomList(system);
+    });
+  });
+}
+
+/**
  * 渲染 ROM 列表
  */
-function renderRomList(roms: RomInfo[]): void {
+function renderRomList(system: SystemKey): void {
+  const machineGridEl = document.getElementById('machine-grid');
   const romListEl = document.getElementById('rom-list');
+  const browserHeader = document.getElementById('rom-browser-header');
+  const browserTitle = document.getElementById('rom-browser-title');
   if (!romListEl) return;
+
+  const roms = romCatalog.filter((rom) => detectRomSystem(rom) === system);
+  const machine = MACHINES.find((item) => item.key === system);
+
+  if (machineGridEl) machineGridEl.style.display = 'none';
+  if (browserHeader) browserHeader.style.display = 'flex';
+  if (browserTitle) browserTitle.textContent = `${machine?.title ?? '遊戲列表'} (${roms.length})`;
+  romListEl.style.display = 'block';
 
   if (roms.length === 0) {
     romListEl.innerHTML = '<div class="rom-empty">沒有可用的遊戲</div>';
@@ -538,29 +720,14 @@ function renderRomList(roms: RomInfo[]): void {
   }
 
   romListEl.innerHTML = roms.map((rom, index) => {
-    const lower = rom.file.toLowerCase();
-    const isGb = lower.endsWith('.gb') || lower.endsWith('.gbc');
-    const isGg = lower.endsWith('.gg') || lower.endsWith('.sms');
-    const isSnes = lower.endsWith('.smc') || lower.endsWith('.sfc');
-    const isN64 = isN64RomName(rom.file);
-    const isZip = lower.endsWith('.zip');
-    const icon = isZip ? '📦' : isN64 ? '🔵' : isSnes ? '🟣' : isGg ? '🟠' : isGb ? '🟢' : '🎮';
-    const systemTag = isZip
-      ? '<span class="rom-system zip">ZIP</span>'
-      : isN64
-        ? '<span class="rom-system n64">N64</span>'
-        : isSnes
-          ? '<span class="rom-system snes">SNES</span>'
-          : isGg
-            ? '<span class="rom-system gg">GG</span>'
-            : isGb
-              ? '<span class="rom-system gb">GB</span>'
-              : '<span class="rom-system nes">NES</span>';
+    const systemKey = detectRomSystem(rom);
+    const label = systemKey === 'arcade' ? 'FBNeo' : systemKey.toUpperCase();
+    const tagClass = systemKey === 'arcade' ? 'zip' : systemKey;
     return `
       <button class="rom-item" data-index="${index}" data-file="${encodeURIComponent(rom.file)}">
-        <span class="rom-icon">${icon}</span>
-        <span class="rom-name">${rom.name}</span>
-        ${systemTag}
+        <span class="rom-icon" aria-hidden="true">▣</span>
+        <span class="rom-name">${escapeHtml(rom.name)}</span>
+        <span class="rom-system ${tagClass}">${label}</span>
         <span class="rom-arrow">▶</span>
       </button>
     `;
@@ -1004,6 +1171,7 @@ function showRomSelector(): void {
   stopEmulation();
   void stopN64Backend();
   powerLed?.classList.remove('on');
+  if (romCatalog.length > 0) renderMachineSelector();
   if (romSelector) romSelector.style.display = 'flex';
   if (gameboyShell) gameboyShell.style.display = 'none';
 }
@@ -1473,6 +1641,31 @@ function setN64ButtonPressed(bindingId: string, pressed: boolean, element?: HTML
  * 設定電腦版控制按鈕
  */
 function setupDesktopControls(): void {
+  const controlToggle = document.getElementById('btn-toggle-controls');
+  controlToggle?.addEventListener('click', () => {
+    const isOpen = document.body.classList.toggle('controls-open');
+    controlToggle.setAttribute('aria-expanded', String(isOpen));
+  });
+
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch((error) => console.warn('離開全螢幕失敗:', error));
+      return;
+    }
+
+    const target = gameboyShell ?? document.documentElement;
+    const request = target.requestFullscreen?.();
+    void request?.catch((error) => console.warn('進入全螢幕失敗:', error));
+  };
+
+  const syncFullscreenState = () => {
+    document.body.classList.toggle('fullscreen-active', Boolean(document.fullscreenElement));
+  };
+
+  document.getElementById('btn-fullscreen')?.addEventListener('click', toggleFullscreen);
+  document.getElementById('btn-fullscreen-overlay')?.addEventListener('click', toggleFullscreen);
+  document.addEventListener('fullscreenchange', syncFullscreenState);
+
   document.getElementById('btn-pause')?.addEventListener('click', stopEmulation);
   document.getElementById('btn-resume')?.addEventListener('click', startEmulation);
   document.getElementById('btn-reset')?.addEventListener('click', async () => {
@@ -2188,6 +2381,8 @@ function updateControllerLayout(): void {
   const arcadeCtrl = document.getElementById('arcade-controller-area');
   const n64Ctrl = document.getElementById('n64-controller-area');
   document.body.classList.toggle('n64-mode', isMupenN64Active());
+  document.body.classList.toggle('arcade-mode', isFbNeoActive());
+  document.body.classList.toggle('snes-mode', !isMupenN64Active() && !isFbNeoActive() && isSnesCore());
   if (isMupenN64Active()) {
     if (nesCtrl) nesCtrl.style.display = 'none';
     if (snesCtrl) snesCtrl.style.display = 'none';
@@ -2212,6 +2407,7 @@ function updateControllerLayout(): void {
     if (arcadeCtrl) arcadeCtrl.style.display = 'none';
     if (n64Ctrl) n64Ctrl.style.display = 'none';
   }
+  updateKeyboardGuide();
 }
 
 function setupArcadeButtons(): void {

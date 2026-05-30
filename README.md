@@ -1,6 +1,21 @@
 # H5-EMU 多平台復古遊戲模擬器
 
-一個使用 HTML5 Canvas + TypeScript 前端搭配 Rust/WebAssembly 核心開發的多平台復古遊戲模擬器，目前支援 **NES (FC)**、**Game Boy (DMG)**、**Game Gear / Master System**、**SFC / SNES (超級任天堂)**、**N64** 與 **FBNeo Arcade**。
+一個使用 HTML5 Canvas + TypeScript 前端搭配 Rust/WebAssembly 核心開發的多平台復古遊戲模擬器。目前支援 **NES / FC**、**Game Boy**、**Game Gear / Master System**、**SFC / SNES**、**N64** 與 **FBNeo Arcade**，並提供桌機鍵盤、手機觸控、橫向全螢幕與快速存檔等遊玩體驗。
+
+---
+
+## 快速導覽
+
+H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到同一個入口，讓使用者可以像走進一間電玩店一樣，先選擇主機或街機，再進入對應遊戲列表開始遊玩。
+
+目前主要能力：
+
+- 多平台核心：NES / FC、Game Boy、Game Gear、Master System、SFC / SNES、N64、FBNeo Arcade。
+- 單一前端入口：依主機分類的遊戲選擇畫面，支援內建 ROM 清單與本機 ROM 上傳。
+- 自動 ROM 路由：依副檔名、iNES 標頭或 FBNeo 檔名選擇正確後端。
+- 響應式介面：桌機街機櫃視覺、手機直向虛擬控制器、手機橫向全螢幕透明控制覆蓋。
+- 控制方式：桌機鍵盤提示會依目前主機切換，手機端會依 NES/SNES/N64/Arcade 顯示不同控制器。
+- 遊玩功能：快速存檔/讀檔、SRAM 電池存檔、音頻開關、暫停/繼續、重置與全螢幕。
 
 ---
 
@@ -10,20 +25,60 @@
 |------|--------|-----|------|----------|------|
 | **NES / FC** | 256×240 | 6502 (1.789 MHz) | 60.0988 fps | 5 (2 方波 + 三角 + 雜訊 + DMC) | ✅ 完整支援 |
 | **Game Boy (DMG)** | 160×144 | LR35902 (4.194 MHz) | 59.7275 fps | 4 (2 方波 + 波形 + 雜訊) | ✅ 完整支援 |
-| **Game Gear** | 160×144 (內部 256×192) | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊, GG 立體聲) | ✅ 新增支援 |
-| **Master System** | 256×192 | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊) | ✅ 新增支援 |
-| **SFC / SNES** | 256×224 | 65816 (3.58 MHz) + SPC700 (1.024 MHz) | 60.0988 fps | 8 (S-DSP 8 聲道 BRR) | 🟣 新增支援 |
+| **Game Gear** | 160×144 (內部 256×192) | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊, GG 立體聲) | ✅ 支援 |
+| **Master System** | 256×192 | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊) | ✅ 支援 |
+| **SFC / SNES** | 256×224 | 65816 (3.58 MHz) + SPC700 (1.024 MHz) | 60.0988 fps | 8 (S-DSP 8 聲道 BRR) | ✅ 支援 |
+| **N64** | 320×240 起，依遊戲/外掛 | VR4300 / Mupen64Plus Web | 依遊戲 | Runtime 混音 | 🧪 WebGL2 後端 |
 | **FBNeo Arcade** | 動態解析度 | 多種街機硬體 | 依遊戲 | Web Audio 混音 | ✅ Raiden / Warriors of Fate (完整 ZIP ROM set) |
+
+---
+
+## 近期大範圍新增功能
+
+### 電玩店式 UI 與 RWD
+
+- 首頁從單層 ROM 清單改成主機/街機選擇入口，先選 NES、GB、GG、SMS、SNES、N64 或 FBNeo，再進入該系統遊戲列表。
+- 主視覺改為紅白機與街機店風格，桌機版呈現機台外觀，手機版保留高可玩性的觸控布局。
+- 桌機操作選單預設關閉，可用 `MENU` 展開；全螢幕模式維持畫面比例並保留黑邊。
+- 手機橫向全螢幕時，畫面置中，方向鍵在左、動作按鈕在右，控制器以半透明方式覆蓋在畫面周圍。
+- 鍵盤控制說明會依目前核心切換，例如 SNES 會顯示四鍵與 L/R，N64 會顯示 Analog / D-Pad / C Buttons，Arcade 會顯示 Coin / Start / A-F。
+
+### 多平台核心與後端整合
+
+- Rust/WASM 單一核心整合 NES、GB、GG/SMS、SNES，前端透過統一 `EmuWasm` API 操作。
+- N64 透過 `mupen64plus-web` 與 WebGL2 canvas 啟動，和 WASM 2D canvas 互斥時會自動切換畫布。
+- FBNeo Arcade 透過 `@mantou/fbneo` 載入完整 ZIP ROM set，支援 Raiden 與 Warriors of Fate，並處理 Emscripten FS、音視頻與街機輸入橋接。
+
+### 模擬精度與相容性努力
+
+- NES：修正 CPU cycle off-by-one、Mapper 16/225/253、DMC 初始 sample fetch、`$4017` frame counter 延遲等問題，改善多款 FC 遊戲的畫面與音樂差異。
+- Game Gear / Master System：補齊 Z80 前綴指令、VDP line/frame IRQ、CRAM 寫入、掃描線時序、PSG 與 Sega Mapper。
+- SNES：實作 65816、PPU Mode 0-7、SPC700/S-DSP、DMA/HDMA、DSP-1、CX4，並修正透明度、Direct Color、Mode 5 高解析度、Mode 7 latch、OAM priority rotation、APU echo/FIR 與多項匯流排時序問題。
+- 存檔：支援快速存檔/讀檔與 SRAM 電池存檔，依核心與遊戲隔離資料。
+
+---
+
+## 作者做了哪些努力
+
+這個專案不只是把多個 library 接起來，而是長時間處理「瀏覽器環境 + 多硬體世代 + 觸控介面」交會後的細節問題：
+
+- 從 TypeScript NES 原型遷移到 Rust/WebAssembly，以取得更穩定的效能與更清晰的核心邊界。
+- 逐步實作多個硬體核心，包含 CPU、PPU/VDP、APU/PSG、Mapper/MBC、DMA/HDMA、協處理器與存檔系統。
+- 針對實際遊戲逐項排查，將問題整理到 [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)，保留可追溯的修復脈絡。
+- 在前端補齊桌機、手機直向、手機橫向與全螢幕場景，而不是只提供最基本的 canvas 輸出。
+- 為 FBNeo 與 N64 這類外部 runtime 建立前端路由、資源複製、畫布切換、輸入橋接與錯誤診斷流程。
 
 ### 自動偵測 ROM 格式
 
 載入 ROM 檔案時，模擬器會根據副檔名與檔案標頭自動判別格式：
 - 檔案開頭為 `NES\x1A` (iNES 標頭) → **NES 核心**
+- 副檔名 `.gb` / `.gbc` → **Game Boy 核心**
 - 副檔名 `.gg` → **Game Gear 核心** (160×144 GG 視窗裁切)
 - 副檔名 `.sms` → **Master System 核心** (256×192 全畫面)
 - 副檔名 `.sfc` / `.smc` → **SNES 核心** (256×224)
+- 副檔名 `.z64` / `.n64` / `.v64` → **N64 後端**
 - 檔名 `raiden.zip` / `wof.zip` → **FBNeo Arcade 核心**（完整 zip ROM set）
-- 其他 (`.gb` / `.gbc`) → **Game Boy 核心**
+- 其他 `.zip` → 會嘗試解包並尋找其中第一個支援的家用主機 ROM
 
 無需手動選擇平台，選擇對應副檔名的遊戲即可直接開始。
 

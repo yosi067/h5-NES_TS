@@ -53,11 +53,24 @@
       --glow-dpad: rgba(100, 180, 255, 0.6);
       --glow-ab: rgba(255, 100, 100, 0.6);
       --glow-func: rgba(200, 200, 200, 0.4);
+
+      /* Famicom + arcade cabinet theme */
+      --fc-red: #b51f2c;
+      --fc-red-dark: #7f1420;
+      --fc-cream: #f3ead8;
+      --fc-gold: #d2a646;
+      --arcade-black: #17171c;
+      --arcade-panel: #25252d;
+      --arcade-blue: #2b6fb6;
+      --store-floor: #272022;
     }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(180deg, #8a8a78 0%, #6a6a5a 100%);
+      background:
+        radial-gradient(circle at 50% -10%, rgba(210, 166, 70, 0.22), transparent 34%),
+        linear-gradient(135deg, rgba(181, 31, 44, 0.2) 0 12%, transparent 12% 24%, rgba(243, 234, 216, 0.08) 24% 36%, transparent 36% 100%),
+        linear-gradient(180deg, #3b2b2f 0%, #1b1b21 54%, var(--store-floor) 100%);
       color: #1a1a1a;
       display: flex;
       flex-direction: column;
@@ -71,10 +84,52 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      position: relative;
       width: 100%;
       height: 100%;
       max-width: 430px;
       padding: 10px;
+    }
+
+    .cabinet-toolbar {
+      display: none;
+      width: 100%;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 10px;
+    }
+
+    .cabinet-toggle,
+    .fullscreen-btn {
+      border: 0;
+      background: linear-gradient(180deg, var(--fc-red) 0%, var(--fc-red-dark) 100%);
+      color: var(--fc-cream);
+      min-width: 42px;
+      height: 36px;
+      border-radius: 6px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #4e0c12, 0 8px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    .cabinet-toggle {
+      padding: 0 14px;
+      letter-spacing: 1px;
+    }
+
+    .fullscreen-btn {
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .fullscreen-screen-btn {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      z-index: 5;
+      display: none;
+      opacity: 0.88;
     }
 
     /* ===== 頂部裝飾線 ===== */
@@ -112,6 +167,16 @@
       display: flex;
       justify-content: center;
       align-items: center;
+    }
+
+    .screen-inner::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      border-radius: inherit;
+      background: linear-gradient(120deg, rgba(255,255,255,0.08), transparent 35% 65%, rgba(255,255,255,0.05));
+      mix-blend-mode: screen;
     }
 
     .screen-label {
@@ -242,18 +307,56 @@
     /* ===== 鍵盤指南 (電腦版) ===== */
     .keyboard-guide {
       display: none;
-      background: linear-gradient(180deg, var(--gb-darker) 0%, var(--gb-darkest) 100%);
-      padding: 20px;
+      width: min(100%, 560px);
+      max-height: min(42vh, 360px);
+      overflow-y: auto;
+      background: linear-gradient(180deg, rgba(36, 36, 44, 0.96) 0%, rgba(18, 18, 24, 0.98) 100%);
+      padding: 14px;
       border-radius: 8px;
-      max-width: 500px;
       color: #eee;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(243, 234, 216, 0.12);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
     }
 
     .keyboard-guide h3 {
-      margin-bottom: 10px;
+      margin-bottom: 4px;
       color: var(--gb-accent);
       font-size: 14px;
+    }
+
+    .keyboard-guide-note {
+      color: rgba(238, 238, 238, 0.68);
+      font-size: 11px;
+      line-height: 1.4;
+      margin-bottom: 10px;
+    }
+
+    .keyboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
+      gap: 8px;
+    }
+
+    .keyboard-binding {
+      min-width: 0;
+      background: rgba(255, 255, 255, 0.055);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 8px;
+    }
+
+    .keyboard-action {
+      color: rgba(255, 255, 255, 0.7);
+      display: block;
+      font-size: 11px;
+      margin-bottom: 6px;
+    }
+
+    .key-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      align-items: center;
     }
 
     .keyboard-guide table {
@@ -279,6 +382,7 @@
       font-family: monospace;
       font-size: 12px;
       box-shadow: 0 2px 0 #333;
+      white-space: nowrap;
     }
 
     /* ===== 虛擬控制器 ===== */
@@ -1067,32 +1171,38 @@
       .n64-label { font-size: 8px; }
     }
 
-    /* ===== ROM 選擇器 ===== */
+    /* ===== ROM / Machine 選擇器 ===== */
     .rom-selector {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.95);
+      background:
+        radial-gradient(circle at 20% 10%, rgba(210, 166, 70, 0.24), transparent 28%),
+        radial-gradient(circle at 80% 0%, rgba(43, 111, 182, 0.16), transparent 30%),
+        linear-gradient(180deg, rgba(14, 14, 18, 0.96) 0%, rgba(31, 20, 24, 0.98) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 1000;
+      padding: 16px;
     }
 
     .rom-selector-content {
       width: 100%;
-      max-width: 400px;
+      max-width: 920px;
       max-height: 90vh;
-      background: linear-gradient(180deg, var(--gb-body) 0%, var(--gb-body-dark) 100%);
-      border-radius: 20px;
-      padding: 20px;
+      background:
+        linear-gradient(180deg, rgba(243, 234, 216, 0.96) 0%, rgba(214, 200, 176, 0.96) 100%);
+      border: 8px solid var(--arcade-black);
+      border-radius: 18px;
+      padding: 18px;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
-                  inset 0 2px 4px rgba(255, 255, 255, 0.2);
-      margin: 10px;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.62),
+                  inset 0 0 0 4px rgba(181, 31, 44, 0.22);
+      overflow: hidden;
     }
 
     .rom-selector-header {
@@ -1101,19 +1211,145 @@
     }
 
     .rom-selector-header h2 {
-      font-size: 16px;
-      color: #2a2a2a;
+      font-size: 18px;
+      color: var(--arcade-black);
       margin: 10px 0;
-      font-weight: normal;
+      font-weight: 800;
+    }
+
+    .rom-selector-header .brand-name {
+      color: var(--fc-red);
+      text-shadow: 2px 2px 0 rgba(23, 23, 28, 0.16);
+    }
+
+    .selector-subtitle {
+      color: #5a4f4f;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .machine-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      overflow-y: auto;
+      padding: 4px 2px 10px;
+    }
+
+    .machine-card {
+      min-height: 190px;
+      border: 0;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #2b2b33 0%, #17171c 100%);
+      color: var(--fc-cream);
+      cursor: pointer;
+      padding: 14px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 7px 0 #0b0b0f, 0 12px 24px rgba(0,0,0,0.36);
+      transition: transform 0.16s ease, filter 0.16s ease;
+    }
+
+    .machine-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent 38% 100%);
+      pointer-events: none;
+    }
+
+    .machine-card:hover,
+    .machine-card:focus-visible {
+      transform: translateY(-4px);
+      filter: brightness(1.08);
+      outline: none;
+    }
+
+    .machine-art {
+      height: 92px;
+      border-radius: 8px;
+      background: #111;
+      position: relative;
+      box-shadow: inset 0 0 0 4px rgba(255,255,255,0.08);
+    }
+
+    .machine-art::before,
+    .machine-art::after {
+      content: '';
+      position: absolute;
+      display: block;
+    }
+
+    .machine-art.nes {
+      background: linear-gradient(180deg, var(--fc-cream) 0 62%, #c9c1b5 62% 100%);
+    }
+    .machine-art.nes::before { width: 58%; height: 18px; left: 18px; top: 28px; background: var(--fc-red); border-radius: 3px; }
+    .machine-art.nes::after { width: 36px; height: 36px; right: 22px; top: 24px; background: #222; border-radius: 50%; box-shadow: -42px 4px 0 -9px var(--fc-red); }
+
+    .machine-art.gb { background: linear-gradient(180deg, #d7d5bd 0%, #a8a88e 100%); }
+    .machine-art.gb::before { inset: 16px 34px 30px; background: #52605c; border-radius: 5px; box-shadow: inset 0 0 0 8px #353844; }
+    .machine-art.gb::after { width: 20px; height: 20px; right: 28px; bottom: 14px; background: #8b1d46; border-radius: 50%; box-shadow: -28px 8px 0 #8b1d46; }
+
+    .machine-art.gg { background: linear-gradient(180deg, #22252b 0%, #0d0e12 100%); }
+    .machine-art.gg::before { inset: 18px 34px 24px; background: #7e9670; border-radius: 50% / 12%; box-shadow: inset 0 0 0 7px #3b3e48; }
+    .machine-art.gg::after { width: 28px; height: 28px; left: 18px; bottom: 16px; background: #343844; border-radius: 50%; box-shadow: 120px 0 0 -4px #b31f3d; }
+
+    .machine-art.sms { background: linear-gradient(180deg, #f4f4f4 0 48%, #cc2d34 48% 58%, #25252b 58% 100%); }
+    .machine-art.sms::before { width: 64px; height: 22px; left: 20px; top: 20px; background: #222; border-radius: 2px; }
+    .machine-art.sms::after { width: 32px; height: 32px; right: 22px; bottom: 14px; background: #2b6fb6; border-radius: 50%; }
+
+    .machine-art.snes { background: linear-gradient(180deg, #cbc7d2 0%, #8d879a 100%); }
+    .machine-art.snes::before { width: 68px; height: 32px; left: 22px; top: 30px; background: #656070; border-radius: 14px; }
+    .machine-art.snes::after { width: 22px; height: 22px; right: 34px; top: 27px; background: #7355a6; border-radius: 50%; box-shadow: 28px 0 0 #4b75b9, 14px 24px 0 #c33c58, 42px 24px 0 #3e9a62; }
+
+    .machine-art.n64 { background: linear-gradient(180deg, #2d3039 0%, #121318 100%); }
+    .machine-art.n64::before { width: 88px; height: 42px; left: 35px; top: 26px; background: #333844; border-radius: 8px 8px 22px 22px; }
+    .machine-art.n64::after { width: 20px; height: 20px; right: 42px; top: 28px; background: #2f7ed8; border-radius: 50%; box-shadow: 24px 0 0 #e2aa28, 12px 24px 0 #2b9b57, 36px 24px 0 #c43746; }
+
+    .machine-art.arcade { background: linear-gradient(180deg, #2c2c34 0 58%, #b51f2c 58% 100%); }
+    .machine-art.arcade::before { inset: 12px 34px 34px; background: #121820; border-radius: 5px; box-shadow: inset 0 0 0 5px #3b3f4a; }
+    .machine-art.arcade::after { width: 16px; height: 16px; right: 48px; bottom: 12px; background: #d2a646; border-radius: 50%; box-shadow: 26px 0 0 #2b6fb6, 52px 0 0 #2b9b57, -74px -2px 0 2px #111; }
+
+    .machine-title { font-size: 18px; font-weight: 900; letter-spacing: 0.5px; }
+    .machine-meta { display: flex; justify-content: space-between; align-items: center; color: #d8d0c5; font-size: 12px; }
+    .machine-count { background: var(--fc-red); color: #fff; padding: 3px 8px; border-radius: 999px; font-weight: 800; }
+
+    .rom-browser-header {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .rom-back-btn {
+      border: 0;
+      border-radius: 6px;
+      background: linear-gradient(180deg, var(--arcade-panel), var(--arcade-black));
+      color: var(--fc-cream);
+      padding: 9px 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .rom-browser-title {
+      flex: 1;
+      font-weight: 900;
+      color: var(--arcade-black);
     }
 
     .rom-list {
       flex: 1;
       overflow-y: auto;
-      background: var(--gb-screen-inner);
+      background: var(--arcade-black);
       border-radius: 8px;
       padding: 10px;
       max-height: 50vh;
+      display: none;
     }
 
     .rom-item {
@@ -1138,8 +1374,8 @@
     }
 
     .rom-item:hover, .rom-item:active {
-      background: linear-gradient(180deg, var(--gb-dark) 0%, var(--gb-darker) 100%);
-      transform: translateX(5px);
+      background: linear-gradient(180deg, #3b3b45 0%, var(--gb-darker) 100%);
+      transform: translateX(4px);
     }
 
     .rom-icon {
@@ -1179,6 +1415,11 @@
       color: #fff;
     }
 
+    .rom-system.sms { background: #2b6fb6; color: #fff; }
+    .rom-system.snes { background: #7355a6; color: #fff; }
+    .rom-system.n64 { background: #34495e; color: #fff; }
+    .rom-system.zip { background: #b51f2c; color: #fff; }
+
     .rom-loading, .rom-empty, .rom-error {
       text-align: center;
       color: #888;
@@ -1214,19 +1455,39 @@
     /* 電腦版 (寬螢幕) */
     @media (min-width: 769px) {
       body {
-        background: linear-gradient(180deg, #4a4a4a 0%, #2a2a2a 100%);
+        background:
+          linear-gradient(90deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 100%),
+          linear-gradient(180deg, #3a2429 0%, #17171c 58%, #2a2020 100%);
+        background-size: 34px 100%, auto;
       }
 
       .gameboy-shell {
-        background: linear-gradient(180deg, var(--gb-body) 0%, var(--gb-body-dark) 50%, #9a9a88 100%);
-        max-width: 600px;
-        border-radius: 30px 30px 80px 80px;
-        padding: 30px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
-                    inset 0 2px 4px rgba(255, 255, 255, 0.2),
-                    inset 0 -4px 8px rgba(0, 0, 0, 0.1);
+        background:
+          linear-gradient(180deg, var(--fc-red) 0 58px, var(--fc-cream) 58px 72px, #26262f 72px 100%);
+        max-width: 680px;
+        border-radius: 14px 14px 42px 42px;
+        padding: 22px 28px 26px;
+        box-shadow: 0 18px 55px rgba(0, 0, 0, 0.62),
+                    inset 0 0 0 8px rgba(0,0,0,0.18),
+                    inset 0 -18px 0 rgba(0,0,0,0.18);
         height: auto;
         max-height: 95vh;
+      }
+
+      .gameboy-shell::before {
+        content: 'H5-EMU ARCADE';
+        position: absolute;
+        top: 18px;
+        left: 32px;
+        color: var(--fc-cream);
+        font-weight: 900;
+        letter-spacing: 2px;
+        font-size: 13px;
+      }
+
+      .cabinet-toolbar {
+        display: flex;
+        margin-top: 44px;
       }
 
       .virtual-controller {
@@ -1234,10 +1495,23 @@
       }
 
       .desktop-controls {
+        display: none;
+        background: rgba(12, 12, 16, 0.78);
+        border: 1px solid rgba(243, 234, 216, 0.14);
+        border-radius: 10px;
+        padding: 12px;
+        width: 100%;
+      }
+
+      body.controls-open .desktop-controls {
         display: flex;
       }
 
       .keyboard-guide {
+        display: none;
+      }
+
+      body.controls-open .keyboard-guide {
         display: block;
       }
 
@@ -1249,8 +1523,11 @@
       }
 
       .screen-bezel {
-        padding: 20px;
+        padding: 18px 22px 22px;
         margin-bottom: 15px;
+        background: linear-gradient(180deg, #30303a 0%, #121217 100%);
+        border-radius: 10px;
+        border: 4px solid #0d0d12;
       }
 
       .screen-inner {
@@ -1269,11 +1546,16 @@
       }
 
       .brand-name {
-        font-size: 28px;
+        font-size: 26px;
+        color: var(--fc-cream);
       }
 
       .brand-area {
         margin-bottom: 20px;
+        background: linear-gradient(90deg, var(--fc-red-dark), var(--fc-red));
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
       }
     }
 
@@ -1296,6 +1578,10 @@
 
       .virtual-controller {
         display: flex;
+      }
+
+      .fullscreen-screen-btn {
+        display: none;
       }
 
       /* 手機直版：畫面更大，邊框更小 */
@@ -1447,32 +1733,46 @@
     /* ===== 手機橫向模式 ===== */
     @media (max-width: 932px) and (orientation: landscape) {
       body {
-        background: linear-gradient(180deg, #5a5a4a 0%, #3a3a2a 100%);
+        background: #050507;
       }
 
       .gameboy-shell {
         flex-direction: row;
-        justify-content: center;
+        justify-content: space-between;
         align-items: center;
-        gap: 0;
-        padding: 8px;
+        gap: 12px;
+        padding: 8px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
         max-width: 100%;
         height: 100%;
         background: transparent;
       }
 
+      .cabinet-toolbar,
+      .desktop-controls,
+      .keyboard-guide {
+        display: none !important;
+      }
+
       .screen-bezel {
         margin: 0;
         order: 2;
+        flex: 0 1 auto;
+        max-width: 58vw;
+        background: #000;
+        border-radius: 10px;
       }
 
       #screen,
       #canvas {
         width: auto;
-        height: calc(100vh - 40px);
-        max-height: 240px;
+        height: min(calc(100vh - 24px), 58vw);
+        max-height: calc(100vh - 24px);
         max-width: none;
         aspect-ratio: 4 / 3;
+      }
+
+      .fullscreen-screen-btn {
+        display: block;
       }
 
       .brand-area {
@@ -1485,6 +1785,58 @@
 
       .virtual-controller {
         display: contents;
+      }
+
+      body:not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area,
+      body.snes-mode #snes-controller-area,
+      body.arcade-mode #arcade-controller-area,
+      body.n64-mode #n64-controller-area,
+      body.snes-mode .snes-main-row,
+      body.n64-mode .n64-main-row {
+        display: contents !important;
+      }
+
+      .snes-top-row,
+      .n64-top-row {
+        position: absolute;
+        top: 8px;
+        right: 70px;
+        width: auto;
+        gap: 7px;
+        opacity: 0.72;
+      }
+
+      .snes-right-area,
+      .arcade-panel,
+      .n64-face-block,
+      .n64-c-block {
+        order: 3;
+        margin-left: 10px;
+      }
+
+      .n64-stick-block,
+      .n64-dpad-block {
+        order: 1;
+        margin-right: 10px;
+      }
+
+      .n64-dpad-block {
+        display: none;
+      }
+
+      body.fullscreen-active .dpad,
+      body.fullscreen-active .ab-container,
+      body.fullscreen-active .center-btns,
+      body.fullscreen-active .snes-main-row,
+      body.fullscreen-active .snes-top-row,
+      body.fullscreen-active .arcade-panel,
+      body.fullscreen-active .n64-main-row,
+      body.fullscreen-active .n64-top-row {
+        opacity: 0.58;
+      }
+
+      body.fullscreen-active .screen-bezel {
+        max-width: 64vw;
       }
 
       /* 左側：D-Pad */
@@ -1550,6 +1902,61 @@
       }
     }
 
+    body.fullscreen-active {
+      background: #000;
+    }
+
+    body.fullscreen-active .gameboy-shell {
+      max-width: none;
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    body.fullscreen-active .screen-inner {
+      background: #000;
+    }
+
+    body.fullscreen-active #screen,
+    body.fullscreen-active #canvas {
+      object-fit: contain;
+      background: #000;
+    }
+
+    @media (min-width: 769px) {
+      body.fullscreen-active .gameboy-shell {
+        justify-content: center;
+        background: #000;
+      }
+
+      body.fullscreen-active .screen-bezel {
+        max-width: min(94vw, calc(94vh * 4 / 3));
+        width: min(94vw, calc(94vh * 4 / 3));
+        background: #000;
+        border: 0;
+        box-shadow: none;
+      }
+
+      body.fullscreen-active #screen,
+      body.fullscreen-active #canvas {
+        width: 100%;
+        height: auto;
+      }
+
+      body.fullscreen-active .brand-area,
+      body.fullscreen-active .top-decoration,
+      body.fullscreen-active .desktop-controls,
+      body.fullscreen-active .keyboard-guide,
+      body.fullscreen-active .cabinet-toolbar {
+        display: none !important;
+      }
+
+      body.fullscreen-active .fullscreen-screen-btn {
+        display: block;
+      }
+    }
+
     /* 較大的橫向螢幕 */
     @media (min-width: 600px) and (max-width: 932px) and (orientation: landscape) {
       #screen {
@@ -1611,7 +2018,17 @@
       <div class="rom-selector-header">
         <div class="brand-nintendo">NINTENDO</div>
         <div class="brand-name">H5-EMU</div>
-        <h2>🎮 選擇遊戲 (NES / GB / GG / SNES / N64)</h2>
+        <h2>電玩店機台選擇</h2>
+        <div class="selector-subtitle">先選一台主機或街機，再挑選今天要投入硬幣的遊戲。</div>
+      </div>
+
+      <div class="machine-grid" id="machine-grid" aria-label="選擇主機">
+        <div class="rom-loading">載入機台中...</div>
+      </div>
+
+      <div class="rom-browser-header" id="rom-browser-header">
+        <button class="rom-back-btn" id="rom-back-btn" type="button">← 機台</button>
+        <div class="rom-browser-title" id="rom-browser-title">遊戲列表</div>
       </div>
       
       <div class="rom-list" id="rom-list">
@@ -1620,15 +2037,20 @@
       
       <div class="rom-selector-footer">
         <label class="upload-btn" for="rom-file-input">
-          📁 從裝置選擇 ROM (.nes / .gb / .smc)
+          從裝置選擇 ROM (.nes / .gb / .smc / .z64 / .zip)
         </label>
-        <input type="file" id="rom-file-input" accept=".nes,.gb,.gbc,.gg,.sms,.smc,.sfc,.zip" style="display: none;">
+        <input type="file" id="rom-file-input" accept=".nes,.gb,.gbc,.gg,.sms,.smc,.sfc,.z64,.n64,.v64,.zip" style="display: none;">
       </div>
     </div>
   </div>
 
   <!-- GameBoy 外殼 -->
   <div class="gameboy-shell" id="gameboy-shell" style="display: none;">
+    <div class="cabinet-toolbar">
+      <button id="btn-toggle-controls" class="cabinet-toggle" type="button" aria-expanded="false">MENU</button>
+      <button id="btn-fullscreen" class="fullscreen-btn" type="button" aria-label="全螢幕">⛶</button>
+    </div>
+
     <!-- 頂部裝飾 -->
     <div class="top-decoration">
       <div class="decoration-line"></div>
@@ -1639,6 +2061,7 @@
     <div class="screen-bezel">
       <div class="screen-inner">
         <div class="power-led" id="power-led"></div>
+        <button id="btn-fullscreen-overlay" class="fullscreen-btn fullscreen-screen-btn" type="button" aria-label="全螢幕">⛶</button>
         <canvas id="screen" width="256" height="240"></canvas>
       </div>
     </div>
@@ -1849,20 +2272,9 @@
 
     <!-- 鍵盤指南 (電腦版) -->
     <div class="keyboard-guide">
-      <h3>⌨️ 鍵盤控制</h3>
-      <table>
-        <tr><td>方向鍵</td><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></td></tr>
-        <tr><td>A 按鈕</td><td><kbd>Z</kbd></td></tr>
-        <tr><td>B 按鈕</td><td><kbd>X</kbd></td></tr>
-        <tr><td>Y 按鈕 (SNES)</td><td><kbd>A</kbd></td></tr>
-        <tr><td>X 按鈕 (SNES)</td><td><kbd>S</kbd></td></tr>
-        <tr><td>L 肩鍵 (SNES)</td><td><kbd>Q</kbd></td></tr>
-        <tr><td>R 肩鍵 (SNES)</td><td><kbd>W</kbd></td></tr>
-        <tr><td>Start</td><td><kbd>Enter</kbd></td></tr>
-        <tr><td>Select</td><td><kbd>Shift (右)</kbd></td></tr>
-        <tr><td>存檔</td><td><kbd>F5</kbd></td></tr>
-        <tr><td>讀檔</td><td><kbd>F7</kbd></td></tr>
-      </table>
+      <h3 id="keyboard-guide-title">鍵盤控制</h3>
+      <div class="keyboard-guide-note" id="keyboard-guide-note">載入遊戲後會依目前主機顯示對應按鍵。</div>
+      <div class="keyboard-grid" id="keyboard-bindings"></div>
     </div>
   </div>
 
