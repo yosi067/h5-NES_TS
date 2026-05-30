@@ -29,7 +29,7 @@ H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到�
 | **Master System** | 256×192 | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊) | ✅ 支援 |
 | **SFC / SNES** | 256×224 | 65816 (3.58 MHz) + SPC700 (1.024 MHz) | 60.0988 fps | 8 (S-DSP 8 聲道 BRR) | ✅ 支援 |
 | **N64** | 320×240 起，依遊戲/外掛 | VR4300 / Mupen64Plus Web | 依遊戲 | Runtime 混音 | 🧪 WebGL2 後端 |
-| **FBNeo Arcade** | 動態解析度 | 多種街機硬體 | 依遊戲 | Web Audio 混音 | ✅ Raiden / Warriors of Fate (完整 ZIP ROM set) |
+| **FBNeo Arcade** | 動態解析度 | 多種街機硬體 | 依遊戲 | Web Audio 混音 | ✅ 17 款完整 ZIP ROM set |
 
 ---
 
@@ -47,7 +47,7 @@ H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到�
 
 - Rust/WASM 單一核心整合 NES、GB、GG/SMS、SNES，前端透過統一 `EmuWasm` API 操作。
 - N64 透過 `mupen64plus-web` 與 WebGL2 canvas 啟動，和 WASM 2D canvas 互斥時會自動切換畫布。
-- FBNeo Arcade 透過 `@mantou/fbneo` 載入完整 ZIP ROM set，支援 Raiden 與 Warriors of Fate，並處理 Emscripten FS、音視頻與街機輸入橋接。
+- FBNeo Arcade 透過 `@mantou/fbneo` 載入完整 ZIP ROM set，支援 Raiden、Warriors of Fate、Final Fight、恐龍快打、名將、忍者龜、Street Fighter II 等 17 款街機，並處理 Emscripten FS、音視頻與街機輸入橋接。
 
 ### 模擬精度與相容性努力
 
@@ -77,7 +77,7 @@ H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到�
 - 副檔名 `.sms` → **Master System 核心** (256×192 全畫面)
 - 副檔名 `.sfc` / `.smc` → **SNES 核心** (256×224)
 - 副檔名 `.z64` / `.n64` / `.v64` → **N64 後端**
-- 檔名 `raiden.zip` / `wof.zip` → **FBNeo Arcade 核心**（完整 zip ROM set）
+- 檔名符合支援清單的街機 `.zip`，例如 `raiden.zip`、`wof.zip`、`ffight.zip`、`dino.zip`、`sf2.zip` → **FBNeo Arcade 核心**（完整 zip ROM set）
 - 其他 `.zip` → 會嘗試解包並尋找其中第一個支援的家用主機 ROM
 
 無需手動選擇平台，選擇對應副檔名的遊戲即可直接開始。
@@ -165,7 +165,7 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 ### FBNeo Arcade — 🕹️ 街機後端
 - 透過 `@mantou/fbneo` WebAssembly runtime 載入 FBNeo arcade driver
 - 支援完整 ZIP ROM set，不拆成單一主機 ROM
-- 目前支援 `raiden.zip`（雷電）與 `wof.zip`（吞食天地二 / Warriors of Fate）
+- 目前支援 17 款完整 ZIP ROM set，包含 `raiden.zip`、`wof.zip`、`ffight.zip`、`dino.zip`、`captcomm.zip`、`punisher.zip`、`tmnt.zip`、`simpsons.zip`、`ssriders.zip`、`snowbros.zip`、`bublbobl.zip`、`pang.zip`、`sf2.zip`、`1943.zip`、`area88.zip`、`rtype.zip`、`parodius.zip`
 - 每次切換 arcade 遊戲都建立新的 FBNeo instance，避免 Emscripten memory / native 狀態殘留
 - 雷電啟用直向畫面旋轉，清版動作遊戲維持原橫向 framebuffer
 - 手機版提供街機專用 COIN、START、MUTE 與 A-F 六鍵控制器
@@ -356,7 +356,7 @@ GB 方向鍵無法操作 — `result` 低 4 位初始為 0x0 等同所有方向�
 - **HTML** (`index.html`)：檔案上傳接受 `.gb/.gbc/.gg/.sms`、ROM 系統標籤 CSS、品牌名更新為 H5-EMU
 - **WASM 建置**：`wasm-pack build --target web --out-dir ../src/wasm` 同時輸出到 `src/wasm/` 與 `pkg/`
 
-### 🎮 遊戲列表更新（含 FBNeo Arcade 2 款街機）
+### 🎮 遊戲列表更新（含 FBNeo Arcade 17 款街機）
 
 NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛克人 6 / FF III / 薩爾達傳說 / 雙截龍 3 / 聖鈴傳說 / 冒險島 1~3 / 迷宮組曲 / Captain Tsubasa II / 熱血系列 ×9 / 龍珠 Z 系列 ×4 / Zombie Hunter / 五子棋 / 台灣麻將 / 150 合 1 / 1200 合 1
 
@@ -376,9 +376,24 @@ NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛
 🔵 Master System (1 款新增)：
 - Sonic The Hedgehog 2 音速小子 2
 
-🕹️ FBNeo Arcade (2 款新增)：
+🕹️ FBNeo Arcade (17 款)：
 - Raiden / 雷電 (`raiden.zip`) — 直向射擊，前端左轉 90 度顯示
 - Warriors of Fate / 吞食天地二 (`wof.zip`) — 橫向清版動作，384×224 framebuffer
+- Final Fight / 快打旋風快打 (`ffight.zip`)
+- Cadillacs and Dinosaurs / 恐龍快打 (`dino.zip`)
+- Captain Commando / 名將 (`captcomm.zip`)
+- The Punisher / 制裁者 (`punisher.zip`)
+- Teenage Mutant Ninja Turtles / 忍者龜 (`tmnt.zip`)
+- The Simpsons / 辛普森家庭 (`simpsons.zip`)
+- Sunset Riders / 西部牛仔 (`ssriders.zip`)
+- Snow Bros. / 雪人兄弟 (`snowbros.zip`)
+- Bubble Bobble / 泡泡龍 (`bublbobl.zip`)
+- Pang / Buster Bros. (`pang.zip`)
+- Street Fighter II / 快打旋風 II (`sf2.zip`)
+- 1943: The Battle of Midway (`1943.zip`)
+- U.N. Squadron / Area 88 (`area88.zip`)
+- R-Type (`rtype.zip`)
+- Parodius Da! (`parodius.zip`)
 
 ---
 
@@ -432,12 +447,12 @@ Z80：DAA H 旗標精確公式 (MAME/ZEXALL)、INI/IND B 遞減時序、RETN und
 
 ## 🕹️ 最新更新 — FBNeo Arcade 後端
 
-### Raiden / Warriors of Fate 街機 ROM set 支援
+### FBNeo 街機 ROM set 支援
 
-新增 FBNeo Arcade 後端，用於載入需要完整 ZIP ROM set 的街機遊戲。與家用主機 ROM 不同，FBNeo driver 會依遊戲名稱檢查 zip 內多個 chip 檔案與 CRC，因此 `raiden.zip` / `wof.zip` 會在前端路由時直接交給 `FbNeoArcadeCore`，不再走一般 ZIP 解包尋找 `.nes/.sfc/.gb` 的流程。
+新增 FBNeo Arcade 後端，用於載入需要完整 ZIP ROM set 的街機遊戲。與家用主機 ROM 不同，FBNeo driver 會依遊戲名稱檢查 zip 內多個 chip 檔案與 CRC，因此支援清單內的街機 ZIP 會在前端路由時直接交給 `FbNeoArcadeCore`，不再走一般 ZIP 解包尋找 `.nes/.sfc/.gb` 的流程。
 
 **核心流程**：
-- `src/main.ts` 以檔名辨識 `raiden.zip` / `wof.zip`，切換到 FBNeo backend
+- `src/main.ts` 以檔名辨識支援清單內的街機 ZIP，切換到 FBNeo backend
 - `src/arcade/fbneo-core.ts` 透過 JSZip 解包，寫入 Emscripten FS 的 `/roms/<game>.zip` 與 `/roms/<game>/`
 - 每次載入 arcade ROM 都建立新的 `FbNeoArcadeCore` instance，避免切換大型遊戲時共用舊 memory 導致 `memory access out of bounds`
 - stdout/stderr 會回傳前端，缺檔或 CRC mismatch 時可直接從畫面診斷
@@ -743,7 +758,7 @@ h5-NES_TS/
 | Phase 7 | 🟢 Game Boy DMG | GB ROM 可正常遊玩 | ✅ 完成 |
 | Phase 8 | 🟠 Game Gear / SMS | GG + SMS ROM 可正常遊玩 | ✅ 完成 |
 | Phase 9 | 🟣 SFC / SNES | SNES ROM 可正常遊玩 (65816 + PPU Mode 0-7 + SPC700 + DMA/HDMA + DSP-1 + CX4) | ✅ 完成 |
-| Phase 10 | 🕹️ FBNeo Arcade | Raiden / Warriors of Fate 完整 ZIP ROM set 可遊玩 | ✅ 完成 |
+| Phase 10 | 🕹️ FBNeo Arcade | 17 款完整 ZIP ROM set 可進入 FBNeo 後端 | ✅ 完成 |
 
 ---
 

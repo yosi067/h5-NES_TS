@@ -11,14 +11,8 @@
 
 import init, { EmuWasm } from './wasm/nes_wasm.js';
 import JSZip from 'jszip';
-import createMupen64PlusWeb, { type EmulatorControls } from 'mupen64plus-web';
-import {
-  ArcadeInputBit,
-  FbNeoArcadeCore,
-  extractFbNeoRomSet,
-  getFbNeoGameName,
-  type FbNeoRomSet,
-} from './arcade/fbneo-core';
+import type { EmulatorControls } from 'mupen64plus-web';
+import type { FbNeoArcadeCore, FbNeoRomSet } from './arcade/fbneo-core';
 
 // ===== 型別定義 =====
 
@@ -44,6 +38,48 @@ interface MachineInfo {
 interface KeyboardBindingView {
   action: string;
   keys: string[];
+}
+
+const FBNEO_SUPPORTED_GAMES = [
+  'raiden',
+  'wof',
+  'ffight',
+  'dino',
+  'captcomm',
+  'punisher',
+  'tmnt',
+  'simpsons',
+  'ssriders',
+  'snowbros',
+  'bublbobl',
+  'pang',
+  'sf2',
+  '1943',
+  'area88',
+  'rtype',
+  'parodius',
+] as const;
+
+type FbNeoGameName = typeof FBNEO_SUPPORTED_GAMES[number];
+
+const ArcadeInputBit = {
+  Up: 1 << 0,
+  Down: 1 << 1,
+  Left: 1 << 2,
+  Right: 1 << 3,
+  ButtonA: 1 << 4,
+  ButtonB: 1 << 5,
+  ButtonC: 1 << 6,
+  ButtonD: 1 << 7,
+  Coin: 1 << 8,
+  Start: 1 << 9,
+  ButtonE: 1 << 10,
+  ButtonF: 1 << 11,
+} as const;
+
+function getFbNeoGameName(filename: string): FbNeoGameName | null {
+  const baseName = filename.split(/[\\/]/).pop()?.toLowerCase().replace(/\.zip$/, '') ?? '';
+  return (FBNEO_SUPPORTED_GAMES as readonly string[]).includes(baseName) ? baseName as FbNeoGameName : null;
 }
 
 const MACHINES: MachineInfo[] = [
@@ -387,32 +423,26 @@ let ringCount = 0; // 目前可用樣本數
 // ===== 初始化 =====
 
 /**
- * 初始化模擬器（載入 WASM 模組）
+ * 初始化應用程式外殼。ROM 清單必須先於 WASM runtime 顯示，避免手機首次載入核心失敗時卡在占位文字。
  */
-async function initWasm(): Promise<void> {
-  // 初始化 WASM 模組
-  await init();
-  
-  // 建立統一模擬器實例（支援 NES 及 Game Boy）
-  nes = new EmuWasm();
-
+function setupAppShell(): boolean {
   // 取得 UI 元素
   romSelector = document.getElementById('rom-selector');
   gameboyShell = document.getElementById('gameboy-shell');
   powerLed = document.getElementById('power-led');
-  
+
   // 建立畫布
   canvas = document.getElementById('screen') as HTMLCanvasElement;
   if (!canvas) {
     console.error('找不到畫布元素');
-    return;
+    return false;
   }
   wasmCanvas = canvas;
 
   ctx = canvas.getContext('2d');
   if (!ctx) {
     console.error('無法取得 Canvas 2D 上下文');
-    return;
+    return false;
   }
 
   imageData = ctx.createImageData(256, 240);  // 預設 NES 尺寸，載入 ROM 後會更新
@@ -435,6 +465,23 @@ async function initWasm(): Promise<void> {
 
   // 設定檔案選擇器
   setupFileInput();
+
+  return true;
+}
+
+/**
+ * 初始化模擬器（載入 WASM 模組）
+ */
+async function initWasm(): Promise<void> {
+  // 初始化 WASM 模組
+  await init();
+
+  // 建立統一模擬器實例（支援 NES 及 Game Boy）
+  nes = new EmuWasm();
+
+  if (audioContext) {
+    nes.setAudioSampleRate(audioContext.sampleRate);
+  }
 
   console.log('H5-NES 模擬器已初始化（WASM 核心）');
 }
@@ -892,6 +939,7 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
   lastAudioSample = 0;
 
   try {
+    const { FbNeoArcadeCore, extractFbNeoRomSet } = await import('./arcade/fbneo-core');
     fbneoCore = new FbNeoArcadeCore();
     const romSet = await extractFbNeoRomSet(archiveName, zipData);
     currentFbNeoRomSet = romSet;
@@ -942,7 +990,10 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
  * 開始遊戲
  */
 async function startGame(romData: ArrayBuffer): Promise<void> {
-  if (!nes) return;
+  if (!nes) {
+    alert('模擬器核心尚未初始化完成，請稍候再試。');
+    return;
+  }
 
   const romBytes = new Uint8Array(romData);
   
@@ -1069,6 +1120,7 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
 
     const baseUrl = import.meta.env.BASE_URL;
     await ensureMupen64Config(baseUrl);
+    const { default: createMupen64PlusWeb } = await import('mupen64plus-web');
     n64Controls = await createMupen64PlusWeb({
       canvas: n64Canvas,
       romData,
@@ -2998,8 +3050,21 @@ window.debugRunUntilPcInRange = (b: number, lo: number, hi: number, mf: number, 
 // ===== 啟動 =====
 
 document.addEventListener('DOMContentLoaded', async () => {
-  await initWasm();
-  await initAudio();
+  if (!setupAppShell()) return;
+
+  try {
+    await initWasm();
+  } catch (error) {
+    console.error('WASM 核心初始化失敗:', error);
+    showToast('核心初始化失敗，仍可瀏覽遊戲列表或使用 FBNeo 遊戲');
+  }
+
+  try {
+    await initAudio();
+  } catch (error) {
+    console.warn('音頻初始化失敗:', error);
+  }
+
   setupKeyboardShortcuts();
   window.nes = nes;
   

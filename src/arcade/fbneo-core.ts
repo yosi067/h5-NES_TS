@@ -2,7 +2,25 @@ import JSZip from 'jszip';
 import initFbNeo from '@mantou/fbneo/fbneo-arcade';
 import fbneoWasmUrl from '@mantou/fbneo/fbneo-arcade.wasm?url';
 
-export const FBNEO_SUPPORTED_GAMES = ['raiden', 'wof'] as const;
+export const FBNEO_SUPPORTED_GAMES = [
+  'raiden',
+  'wof',
+  'ffight',
+  'dino',
+  'captcomm',
+  'punisher',
+  'tmnt',
+  'simpsons',
+  'ssriders',
+  'snowbros',
+  'bublbobl',
+  'pang',
+  'sf2',
+  '1943',
+  'area88',
+  'rtype',
+  'parodius',
+] as const;
 export type FbNeoGameName = typeof FBNEO_SUPPORTED_GAMES[number];
 
 export const ArcadeInputBit = {
@@ -94,7 +112,7 @@ export function getFbNeoGameName(filename: string): FbNeoGameName | null {
 export async function extractFbNeoRomSet(archiveName: string, zipData: ArrayBuffer): Promise<FbNeoRomSet> {
   const gameName = getFbNeoGameName(archiveName);
   if (!gameName) {
-    throw new Error('目前 FBNeo arcade backend 僅允許 raiden.zip 與 wof.zip');
+    throw new Error(`目前 FBNeo arcade backend 僅允許 ${FBNEO_SUPPORTED_GAMES.map((name) => `${name}.zip`).join(' / ')}`);
   }
 
   const archiveData = new Uint8Array(zipData.slice(0));
