@@ -425,6 +425,9 @@ async function initWasm(): Promise<void> {
 
   // 設定電腦版控制按鈕
   setupDesktopControls();
+
+  // 設定觸控裝置 RWD 狀態（iPhone Safari 橫版可能仍落在桌機寬度斷點）
+  setupResponsiveModeDetection();
   updateKeyboardGuide();
 
   // 設定 ROM 選擇器
@@ -434,6 +437,27 @@ async function initWasm(): Promise<void> {
   setupFileInput();
 
   console.log('H5-NES 模擬器已初始化（WASM 核心）');
+}
+
+function setupResponsiveModeDetection(): void {
+  const updateResponsiveMode = () => {
+    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const isLandscape = viewportWidth > viewportHeight;
+    const isTouchDevice = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+    const isCompressedLandscape = isLandscape && viewportHeight <= 560;
+    const shouldUseMobileLandscape = isTouchDevice && isLandscape && (viewportWidth <= 1180 || isCompressedLandscape);
+
+    document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+    document.body.classList.toggle('touch-device-mode', isTouchDevice);
+    document.body.classList.toggle('mobile-landscape-mode', shouldUseMobileLandscape);
+  };
+
+  updateResponsiveMode();
+  window.addEventListener('resize', updateResponsiveMode, { passive: true });
+  window.addEventListener('orientationchange', updateResponsiveMode, { passive: true });
+  window.visualViewport?.addEventListener('resize', updateResponsiveMode, { passive: true });
+  window.visualViewport?.addEventListener('scroll', updateResponsiveMode, { passive: true });
 }
 
 // ===== 鍵盤輸入 =====

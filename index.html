@@ -1731,8 +1731,8 @@
     }
 
     /* ===== 手機橫向模式 ===== */
-        @media (max-width: 932px) and (orientation: landscape),
-          (max-height: 520px) and (orientation: landscape) {
+    @media (max-width: 932px) and (orientation: landscape),
+           (max-height: 520px) and (orientation: landscape) {
       body {
         background: #050507;
         overflow: hidden;
@@ -2009,8 +2009,8 @@
       }
     }
 
-        @media (max-width: 932px) and (orientation: landscape) and (max-height: 430px),
-          (max-height: 430px) and (orientation: landscape) {
+    @media (max-width: 932px) and (orientation: landscape) and (max-height: 430px),
+           (max-height: 430px) and (orientation: landscape) {
       .gameboy-shell {
         gap: 6px;
       }
@@ -2036,6 +2036,419 @@
       .n64-top-row {
         transform: scale(0.9);
         transform-origin: top right;
+      }
+    }
+
+    /* iPhone Safari / Chrome on iOS: 橫版時可能仍被判成桌機寬度，改用 JS 偵測觸控橫版後強制套用 */
+    body.mobile-landscape-mode {
+      background: #050507;
+      overflow: hidden;
+      padding: 0;
+    }
+
+    body.mobile-landscape-mode .rom-selector {
+      align-items: stretch;
+      justify-content: stretch;
+      padding: max(4px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+      overflow: hidden;
+    }
+
+    body.mobile-landscape-mode .rom-selector-content {
+      max-width: none;
+      width: 100%;
+      height: calc(var(--app-height, 100dvh) - max(8px, env(safe-area-inset-top)) - max(8px, env(safe-area-inset-bottom)));
+      max-height: none;
+      border-width: 4px;
+      border-radius: 8px;
+      padding: 8px;
+      min-height: 0;
+    }
+
+    body.mobile-landscape-mode .rom-selector-header {
+      margin-bottom: 6px;
+      flex: 0 0 auto;
+    }
+
+    body.mobile-landscape-mode .rom-selector-header .brand-nintendo,
+    body.mobile-landscape-mode .selector-subtitle {
+      display: none;
+    }
+
+    body.mobile-landscape-mode .rom-selector-header .brand-name {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    body.mobile-landscape-mode .rom-selector-header h2 {
+      font-size: 14px;
+      margin: 4px 0 0;
+    }
+
+    body.mobile-landscape-mode .machine-grid {
+      grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+      gap: 8px;
+      min-height: 0;
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding: 2px 2px 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    body.mobile-landscape-mode .machine-card {
+      min-height: 88px;
+      padding: 8px;
+      gap: 5px;
+      border-radius: 8px;
+      box-shadow: 0 4px 0 #0b0b0f, 0 8px 16px rgba(0,0,0,0.34);
+    }
+
+    body.mobile-landscape-mode .machine-art {
+      height: 34px;
+      border-radius: 6px;
+    }
+
+    body.mobile-landscape-mode .machine-art::before,
+    body.mobile-landscape-mode .machine-art::after {
+      transform: scale(0.62);
+      transform-origin: center;
+    }
+
+    body.mobile-landscape-mode .machine-title {
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    body.mobile-landscape-mode .machine-meta {
+      font-size: 10px;
+      gap: 4px;
+    }
+
+    body.mobile-landscape-mode .machine-count {
+      padding: 2px 6px;
+    }
+
+    body.mobile-landscape-mode .rom-browser-header {
+      flex: 0 0 auto;
+      margin-bottom: 6px;
+    }
+
+    body.mobile-landscape-mode .rom-back-btn {
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    body.mobile-landscape-mode .rom-browser-title {
+      font-size: 13px;
+    }
+
+    body.mobile-landscape-mode .rom-list {
+      max-height: none;
+      min-height: 0;
+      flex: 1 1 auto;
+      padding: 7px;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    body.mobile-landscape-mode .rom-item {
+      padding: 10px 11px;
+      margin-bottom: 6px;
+      font-size: 12px;
+    }
+
+    body.mobile-landscape-mode .rom-selector-footer {
+      flex: 0 0 auto;
+      margin-top: 7px;
+    }
+
+    body.mobile-landscape-mode .upload-btn {
+      padding: 9px 14px;
+      font-size: 12px;
+      max-width: 100%;
+    }
+
+    body.mobile-landscape-mode .gameboy-shell {
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      gap: clamp(6px, 1.5vw, 14px);
+      padding: max(5px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(5px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      max-width: none;
+      width: 100vw;
+      height: var(--app-height, 100dvh);
+      min-height: 0;
+      background: transparent;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    body.mobile-landscape-mode .gameboy-shell::before,
+    body.mobile-landscape-mode .cabinet-toolbar,
+    body.mobile-landscape-mode .desktop-controls,
+    body.mobile-landscape-mode .keyboard-guide,
+    body.mobile-landscape-mode .brand-area,
+    body.mobile-landscape-mode .top-decoration {
+      display: none !important;
+    }
+
+    body.mobile-landscape-mode .virtual-controller {
+      display: contents !important;
+    }
+
+    body.mobile-landscape-mode:not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area,
+    body.mobile-landscape-mode.snes-mode #snes-controller-area,
+    body.mobile-landscape-mode.arcade-mode #arcade-controller-area,
+    body.mobile-landscape-mode.n64-mode #n64-controller-area,
+    body.mobile-landscape-mode.snes-mode .snes-main-row,
+    body.mobile-landscape-mode.n64-mode .n64-main-row {
+      display: contents !important;
+    }
+
+    body.mobile-landscape-mode .screen-bezel {
+      order: 2;
+      flex: 0 1 min(58vw, calc((var(--app-height, 100dvh) - 14px) * 4 / 3));
+      width: min(58vw, calc((var(--app-height, 100dvh) - 14px) * 4 / 3));
+      max-width: 58vw;
+      max-height: calc(var(--app-height, 100dvh) - 10px);
+      margin: 0;
+      padding: clamp(3px, 0.9vw, 7px);
+      background: #000;
+      border: 0;
+      border-radius: 8px;
+    }
+
+    body.mobile-landscape-mode .screen-inner {
+      padding: 0;
+      background: #000;
+    }
+
+    body.mobile-landscape-mode #screen,
+    body.mobile-landscape-mode #canvas {
+      width: 100%;
+      height: auto;
+      max-width: 100%;
+      max-height: calc(var(--app-height, 100dvh) - 18px);
+      aspect-ratio: 4 / 3;
+      object-fit: contain;
+      background: #000;
+    }
+
+    body.mobile-landscape-mode .fullscreen-screen-btn {
+      display: block;
+      right: 6px;
+      bottom: 6px;
+      width: 34px;
+      height: 30px;
+      min-width: 34px;
+      opacity: 0.7;
+    }
+
+    body.mobile-landscape-mode .dpad-container,
+    body.mobile-landscape-mode .ab-container,
+    body.mobile-landscape-mode .snes-right-area,
+    body.mobile-landscape-mode .arcade-panel,
+    body.mobile-landscape-mode .n64-stick-block,
+    body.mobile-landscape-mode .n64-face-block {
+      flex: 0 0 clamp(96px, 19vw, 158px);
+      width: clamp(96px, 19vw, 158px);
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    body.mobile-landscape-mode .dpad-container,
+    body.mobile-landscape-mode .n64-stick-block {
+      order: 1;
+    }
+
+    body.mobile-landscape-mode .ab-container,
+    body.mobile-landscape-mode .snes-right-area,
+    body.mobile-landscape-mode .arcade-panel,
+    body.mobile-landscape-mode .n64-face-block {
+      order: 3;
+    }
+
+    body.mobile-landscape-mode .dpad {
+      width: clamp(96px, 17vw, 126px);
+      height: clamp(96px, 17vw, 126px);
+    }
+
+    body.mobile-landscape-mode .dpad-visual {
+      width: clamp(82px, 14.5vw, 108px);
+      height: clamp(82px, 14.5vw, 108px);
+    }
+
+    body.mobile-landscape-mode .dpad-btn,
+    body.mobile-landscape-mode .dpad-center {
+      width: clamp(30px, 5.3vw, 40px);
+      height: clamp(30px, 5.3vw, 40px);
+      font-size: 13px;
+    }
+
+    body.mobile-landscape-mode .ab-touch-area {
+      width: clamp(50px, 8.7vw, 64px);
+      height: clamp(50px, 8.7vw, 64px);
+    }
+
+    body.mobile-landscape-mode .ab-buttons {
+      gap: clamp(6px, 1.1vw, 10px);
+    }
+
+    body.mobile-landscape-mode .btn-label {
+      display: none;
+    }
+
+    body.mobile-landscape-mode .center-btns,
+    body.mobile-landscape-mode .snes-top-row,
+    body.mobile-landscape-mode .n64-top-row {
+      position: absolute;
+      top: max(5px, env(safe-area-inset-top));
+      right: max(8px, env(safe-area-inset-right));
+      width: auto;
+      gap: 5px;
+      z-index: 8;
+      opacity: 0.76;
+      transform: none;
+      transform-origin: top right;
+    }
+
+    body.mobile-landscape-mode .center-btns {
+      flex-direction: row;
+      order: 3;
+    }
+
+    body.mobile-landscape-mode .func-btn {
+      width: clamp(44px, 7.4vw, 56px);
+      height: clamp(21px, 3.6vw, 27px);
+      font-size: 8px;
+      transform: rotate(0deg);
+    }
+
+    body.mobile-landscape-mode .func-btn:active,
+    body.mobile-landscape-mode .func-btn.pressed {
+      transform: scale(0.95);
+    }
+
+    body.mobile-landscape-mode .snes-face-btn {
+      width: clamp(42px, 7.2vw, 56px);
+      height: clamp(42px, 7.2vw, 56px);
+      font-size: 16px;
+    }
+
+    body.mobile-landscape-mode .snes-abxy-row {
+      gap: clamp(26px, 4.6vw, 40px);
+    }
+
+    body.mobile-landscape-mode .arcade-panel {
+      gap: 6px;
+      min-width: 0;
+    }
+
+    body.mobile-landscape-mode .arcade-system-row {
+      grid-template-columns: repeat(3, clamp(32px, 5.6vw, 42px));
+      gap: 5px;
+    }
+
+    body.mobile-landscape-mode .arcade-system-btn {
+      width: clamp(32px, 5.6vw, 42px);
+      height: clamp(23px, 3.8vw, 29px);
+      font-size: 8px;
+    }
+
+    body.mobile-landscape-mode .arcade-face-grid {
+      grid-template-columns: repeat(3, clamp(38px, 6.8vw, 50px));
+      grid-auto-rows: clamp(38px, 6.8vw, 50px);
+      gap: 6px;
+    }
+
+    body.mobile-landscape-mode .arcade-face-btn {
+      width: clamp(38px, 6.8vw, 50px);
+      height: clamp(38px, 6.8vw, 50px);
+      font-size: 15px;
+    }
+
+    body.mobile-landscape-mode .n64-stick {
+      width: clamp(78px, 14vw, 108px);
+      height: clamp(78px, 14vw, 108px);
+    }
+
+    body.mobile-landscape-mode .n64-dpad-block {
+      display: none !important;
+    }
+
+    body.mobile-landscape-mode .n64-face-btn {
+      width: clamp(48px, 8vw, 62px);
+      height: clamp(48px, 8vw, 62px);
+      font-size: 17px;
+    }
+
+    body.mobile-landscape-mode .n64-c-block {
+      position: absolute;
+      right: max(8px, env(safe-area-inset-right));
+      bottom: max(6px, env(safe-area-inset-bottom));
+      width: auto;
+      flex-basis: auto;
+      opacity: 0.82;
+    }
+
+    body.mobile-landscape-mode .n64-c-btn {
+      width: clamp(28px, 4.8vw, 36px);
+      height: clamp(28px, 4.8vw, 36px);
+    }
+
+    body.mobile-landscape-mode.fullscreen-active .dpad,
+    body.mobile-landscape-mode.fullscreen-active .ab-container,
+    body.mobile-landscape-mode.fullscreen-active .center-btns,
+    body.mobile-landscape-mode.fullscreen-active .snes-main-row,
+    body.mobile-landscape-mode.fullscreen-active .snes-top-row,
+    body.mobile-landscape-mode.fullscreen-active .arcade-panel,
+    body.mobile-landscape-mode.fullscreen-active .n64-main-row,
+    body.mobile-landscape-mode.fullscreen-active .n64-top-row {
+      opacity: 0.58;
+    }
+
+    @media (orientation: landscape) and (max-height: 430px) {
+      body.mobile-landscape-mode .rom-selector-content {
+        padding: 6px;
+      }
+
+      body.mobile-landscape-mode .machine-grid {
+        grid-template-columns: repeat(auto-fit, minmax(106px, 1fr));
+        gap: 6px;
+      }
+
+      body.mobile-landscape-mode .machine-card {
+        min-height: 74px;
+      }
+
+      body.mobile-landscape-mode .machine-art {
+        display: none;
+      }
+
+      body.mobile-landscape-mode .gameboy-shell {
+        gap: 5px;
+      }
+
+      body.mobile-landscape-mode .screen-bezel {
+        width: min(60vw, calc((var(--app-height, 100dvh) - 10px) * 4 / 3));
+        max-width: 60vw;
+      }
+
+      body.mobile-landscape-mode .dpad-container,
+      body.mobile-landscape-mode .ab-container,
+      body.mobile-landscape-mode .snes-right-area,
+      body.mobile-landscape-mode .arcade-panel,
+      body.mobile-landscape-mode .n64-stick-block,
+      body.mobile-landscape-mode .n64-face-block {
+        flex-basis: clamp(88px, 17vw, 132px);
+        width: clamp(88px, 17vw, 132px);
+      }
+
+      body.mobile-landscape-mode .center-btns,
+      body.mobile-landscape-mode .snes-top-row,
+      body.mobile-landscape-mode .n64-top-row {
+        transform: scale(0.88);
       }
     }
 
