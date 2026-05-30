@@ -390,7 +390,7 @@ NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛
 - Bubble Bobble / 泡泡龍 (`bublbobl.zip`)
 - Pang / Buster Bros. (`pang.zip`)
 - Street Fighter II / 快打旋風 II (`sf2.zip`)
-- 1943: The Battle of Midway (`1943.zip`)
+- 1943: The Battle of Midway (`1943.zip`) — 直向射擊，前端左轉 90 度顯示
 - U.N. Squadron / Area 88 (`area88.zip`)
 - R-Type (`rtype.zip`)
 - Parodius Da! (`parodius.zip`)
@@ -458,7 +458,7 @@ Z80：DAA H 旗標精確公式 (MAME/ZEXALL)、INI/IND B 遞減時序、RETN und
 - stdout/stderr 會回傳前端，缺檔或 CRC mismatch 時可直接從畫面診斷
 
 **顯示與控制**：
-- `raiden` 啟用 framebuffer 左轉 90 度，符合直向街機射擊玩法
+- `raiden` / `1943` 啟用 framebuffer 左轉 90 度，符合直向街機射擊玩法
 - `wof` 維持 384×224 橫向畫面
 - 手機版新增 arcade controller area，含 COIN、START、MUTE 與 A-F 六鍵
 - 前端使用 32-bit bitmask，再轉為 Mantou FBNeo `_setEmInput(playerIndex, state, alx, aly, arx, ary)`
@@ -611,7 +611,7 @@ Z80：DAA H 旗標精確公式 (MAME/ZEXALL)、INI/IND B 遞減時序、RETN und
 | 協處理器 | DSP-1 Raster Output 無限迴圈 | SMK DSP-1 卡死 |
 | 協處理器 | CX4 協處理器未實作 | MMX2、MMX3 |
 
-### 🟣 SNES 遊戲列表 (10 款)
+### 🟣 SNES 遊戲列表 (9 款)
 - 🟣 超級瑪利歐世界 (Super Mario World)
 - 🟣 洛克人 X (Rockman X)
 - 🟣 洛克人 X2 (Mega Man X2) — CX4 協處理器
@@ -621,7 +621,6 @@ Z80：DAA H 旗標精確公式 (MAME/ZEXALL)、INI/IND B 遞減時序、RETN und
 - 🟣 聖劍傳說 2 (Secret of Mana)
 - 🟣 聖劍傳說 3 (Seiken Densetsu 3)
 - 🟣 大金剛國度 (Donkey Kong Country)
-- 🟣 快打旋風 II Turbo (Street Fighter II Turbo)
 
 ---
 

@@ -964,7 +964,7 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
     const { width, height } = fbneoCore.getResolution();
     arcadeSourceWidth = width;
     arcadeSourceHeight = height;
-    arcadeRotateLeft = romSet.gameName === 'raiden';
+    arcadeRotateLeft = romSet.gameName === 'raiden' || romSet.gameName === '1943';
     const canvasWidth = arcadeRotateLeft ? height : width;
     const canvasHeight = arcadeRotateLeft ? width : height;
     canvas.width = canvasWidth;
