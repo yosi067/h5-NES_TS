@@ -168,6 +168,26 @@
 
 ---
 
+### Q8.1: Color Math 來源判斷錯誤 — 透明物件失去半透明 / 聖劍傳說 2 開頭色彩異常
+
+**現象**：SFC 遊戲中不少透明物件看起來變成不透明或色彩混合錯誤；Secret of Mana / 聖劍傳說 2 開頭畫面與部分 256 色背景顯示不自然。
+
+**排查**：追蹤 `composite_scanline()` 發現 `$2130 CGWSEL` bit 1 被解讀成「使用 fixed color」。實際硬體語意是 bit 1 控制是否使用 sub screen 作為 color math 第二來源：bit=0 使用 fixed color，bit=1 使用 sub screen。原實作剛好反向，導致多數依賴主/副畫面加減法的半透明效果套到錯誤來源。
+
+同時檢查 Mode 3/4 的 8bpp BG1 渲染，發現 `$2130` bit 0 啟用 direct color 時仍從 CGRAM 查色。部分開場或特效畫面會用 direct color 直接由 tile palette bits + pixel bits 產生 RGB，缺少這條路徑會造成色彩不符。
+
+**原因**：
+1. `$2130` bit 1 的 sub screen / fixed color 選擇邏輯反向。
+2. BG1 8bpp direct color 模式未實作，Mode 3/4 仍一律查 CGRAM。
+
+**解決**：
+1. `using_fixed` 改為 `self.cgwsel & 0x02 == 0`，bit 1 設定時改用 `sub_buf`。
+2. 新增 `direct_color_to_rgba()` 與 `uses_direct_color()`，在一般 BG 與 Mode 5/6 hires sampler 中支援 BG1 8bpp direct color。
+
+**影響遊戲**：Secret of Mana / 聖劍傳說 2、Seiken Densetsu 3，以及依賴 sub screen 半透明、fixed color 加減法或 direct color 的 SFC 遊戲。
+
+---
+
 ## SNES — APU 音頻
 
 ### Q9: FIR 回聲濾波器精度損失 — 音效刺耳 / 回聲過大
@@ -376,6 +396,24 @@
 **原因**：DMC 缺少 `silence` 旗標，無資料時仍修改輸出電平。缺少音頻濾波器導致 DC 偏移與高頻雜訊。
 
 **解決**：新增 silence 旗標、初始 bits_remaining=8、低通/高通濾波器、軟削波。
+
+---
+
+### Q22.1: APU Frame Counter / DMC 啟動時序偏差 — FC 音樂細微差異
+
+**現象**：部分 FC 遊戲音樂與參考模擬器相比有些微節奏、包絡或音效進入時機差異。
+
+**排查**：檢查 `$4017` frame counter 寫入流程，原實作在 CPU 寫入當下立即重置 frame counter 並在 5-step 模式立即 clock quarter/half frame。NES APU 硬體會依 CPU cycle 奇偶延遲 3 或 4 CPU cycles 才套用 `$4017` 寫入，因此 envelope、length counter、sweep、linear counter 的 clock 邊界可能提早。另檢查 `$4015` 啟用 DMC 時，restart 後沒有立即安排初始 sample fetch，會讓 DMC 第一個 sample 進入時機偏晚。
+
+**原因**：
+1. `$4017` frame counter 寫入缺少 3/4 CPU cycle 延遲。
+2. DMC bytes_remaining 從 0 重新啟用時，未立即觸發第一次 sample fetch request。
+
+**解決**：
+1. 新增 `pending_frame_counter_write`，根據 `cycle & 1` 延遲 3 或 4 CPU cycles 後才套用 `$4017` 的 mode / IRQ inhibit / immediate quarter+half frame clock。
+2. `$4015` 啟用 DMC 且 sample 需要 restart 時，呼叫 `fetch_dmc_sample()` 產生初始讀取請求。
+
+**影響遊戲**：使用精細 envelope / sweep / DMC 音效時序的 FC 遊戲，包含音樂與短音效差異較容易被聽出的作品。
 
 ---
 

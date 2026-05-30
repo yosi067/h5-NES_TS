@@ -13,7 +13,7 @@
 | **Game Gear** | 160×144 (內部 256×192) | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊, GG 立體聲) | ✅ 新增支援 |
 | **Master System** | 256×192 | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊) | ✅ 新增支援 |
 | **SFC / SNES** | 256×224 | 65816 (3.58 MHz) + SPC700 (1.024 MHz) | 60.0988 fps | 8 (S-DSP 8 聲道 BRR) | 🟣 新增支援 |
-| **FBNeo Arcade** | 動態解析度 | 多種街機硬體 | 依遊戲 | Web Audio 混音 | ✅ Raiden / Warriors of Fate |
+| **FBNeo Arcade** | 動態解析度 | 多種街機硬體 | 依遊戲 | Web Audio 混音 | ✅ Raiden / Warriors of Fate (完整 ZIP ROM set) |
 
 ### 自動偵測 ROM 格式
 
@@ -106,6 +106,14 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 - DSP-1 協處理器 (Mode 7 3D 變換、投影、光柵運算)
 - LoROM / HiROM 卡帶映射自動偵測
 - 128KB WRAM + SRAM 存檔支援
+
+### FBNeo Arcade — 🕹️ 街機後端
+- 透過 `@mantou/fbneo` WebAssembly runtime 載入 FBNeo arcade driver
+- 支援完整 ZIP ROM set，不拆成單一主機 ROM
+- 目前支援 `raiden.zip`（雷電）與 `wof.zip`（吞食天地二 / Warriors of Fate）
+- 每次切換 arcade 遊戲都建立新的 FBNeo instance，避免 Emscripten memory / native 狀態殘留
+- 雷電啟用直向畫面旋轉，清版動作遊戲維持原橫向 framebuffer
+- 手機版提供街機專用 COIN、START、MUTE 與 A-F 六鍵控制器
 
 ---
 
@@ -293,7 +301,7 @@ GB 方向鍵無法操作 — `result` 低 4 位初始為 0x0 等同所有方向�
 - **HTML** (`index.html`)：檔案上傳接受 `.gb/.gbc/.gg/.sms`、ROM 系統標籤 CSS、品牌名更新為 H5-EMU
 - **WASM 建置**：`wasm-pack build --target web --out-dir ../src/wasm` 同時輸出到 `src/wasm/` 與 `pkg/`
 
-### 🎮 遊戲列表更新 (49 款：NES 30 + GB 4 + GG 5 + SMS 1 + SNES 10)
+### 🎮 遊戲列表更新（含 FBNeo Arcade 2 款街機）
 
 NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛克人 6 / FF III / 薩爾達傳說 / 雙截龍 3 / 聖鈴傳說 / 冒險島 1~3 / 迷宮組曲 / Captain Tsubasa II / 熱血系列 ×9 / 龍珠 Z 系列 ×4 / Zombie Hunter / 五子棋 / 台灣麻將 / 150 合 1 / 1200 合 1
 
@@ -312,6 +320,26 @@ NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛
 
 🔵 Master System (1 款新增)：
 - Sonic The Hedgehog 2 音速小子 2
+
+🕹️ FBNeo Arcade (2 款新增)：
+- Raiden / 雷電 (`raiden.zip`) — 直向射擊，前端左轉 90 度顯示
+- Warriors of Fate / 吞食天地二 (`wof.zip`) — 橫向清版動作，384×224 framebuffer
+
+---
+
+## 🔧 最新修正 — SFC 透明度 / 聖劍傳說 2 / FC APU 音樂差異
+
+### SFC PPU Color Math 與 Direct Color
+
+修正 `$2130 CGWSEL` bit 1 的來源判斷：bit=0 使用 fixed color，bit=1 使用 sub screen。原先反向會讓半透明物件、加減法混色與部分透明特效套到錯誤來源。另補上 BG1 8bpp direct color，讓 Mode 3/4 這類 256 色畫面能依 tile palette bits + pixel bits 直接產生 RGB。
+
+**影響**：改善 SFC 透明物件失去透明度、Secret of Mana / 聖劍傳說 2 開頭畫面色彩異常，以及依賴 sub screen / direct color 的場景。
+
+### FC APU Frame Counter / DMC 啟動時序
+
+修正 `$4017` frame counter 寫入缺少 3/4 CPU cycle 延遲的問題，讓 envelope、length counter、sweep 與 triangle linear counter 的時機更接近硬體。同時在 DMC 由 `$4015` 重新啟用時立即安排初始 sample fetch，降低短音效與音樂進入點的細微差異。
+
+👉 **完整排查過程請參閱 [問題集 Q8.1 / Q22.1](docs/TROUBLESHOOTING.md)**
 
 ---
 
@@ -347,6 +375,28 @@ Z80：DAA H 旗標精確公式 (MAME/ZEXALL)、INI/IND B 遞減時序、RETN und
 
 ---
 
+## 🕹️ 最新更新 — FBNeo Arcade 後端
+
+### Raiden / Warriors of Fate 街機 ROM set 支援
+
+新增 FBNeo Arcade 後端，用於載入需要完整 ZIP ROM set 的街機遊戲。與家用主機 ROM 不同，FBNeo driver 會依遊戲名稱檢查 zip 內多個 chip 檔案與 CRC，因此 `raiden.zip` / `wof.zip` 會在前端路由時直接交給 `FbNeoArcadeCore`，不再走一般 ZIP 解包尋找 `.nes/.sfc/.gb` 的流程。
+
+**核心流程**：
+- `src/main.ts` 以檔名辨識 `raiden.zip` / `wof.zip`，切換到 FBNeo backend
+- `src/arcade/fbneo-core.ts` 透過 JSZip 解包，寫入 Emscripten FS 的 `/roms/<game>.zip` 與 `/roms/<game>/`
+- 每次載入 arcade ROM 都建立新的 `FbNeoArcadeCore` instance，避免切換大型遊戲時共用舊 memory 導致 `memory access out of bounds`
+- stdout/stderr 會回傳前端，缺檔或 CRC mismatch 時可直接從畫面診斷
+
+**顯示與控制**：
+- `raiden` 啟用 framebuffer 左轉 90 度，符合直向街機射擊玩法
+- `wof` 維持 384×224 橫向畫面
+- 手機版新增 arcade controller area，含 COIN、START、MUTE 與 A-F 六鍵
+- 前端使用 32-bit bitmask，再轉為 Mantou FBNeo `_setEmInput(playerIndex, state, alx, aly, arx, ary)`
+
+👉 **完整排查過程請參閱 [問題集 FBNeo Arcade](docs/TROUBLESHOOTING.md#fbneo-arcade--raiden--warriors-of-fate)**
+
+---
+
 ## 🔧 更新記錄 — Rust/WASM 核心與 NES 遊戲相容性修正
 
 ### 🦀 架構遷移：TypeScript → Rust/WebAssembly
@@ -361,6 +411,7 @@ Z80：DAA H 旗標精確公式 (MAME/ZEXALL)、INI/IND B 遞減時序、RETN und
 | Mapper 253 (VRC4 變體) 4 個關鍵錯誤 | 龍珠 Z 破圖 |
 | Mapper 16 (Bandai FCG) IRQ 精度 | 龍珠 Z3 破圖 |
 | DMC silence 旗標 + 音頻濾波器 | Captain Tsubasa II 爆音 |
+| `$4017` frame counter 延遲 + DMC 初始 fetch | FC 音樂/音效細微時序差異 |
 
 👉 **完整排查過程請參閱 [問題集 Q20-Q22](docs/TROUBLESHOOTING.md#nes--mapper)**
 
@@ -477,6 +528,7 @@ Z80：DAA H 旗標精確公式 (MAME/ZEXALL)、INI/IND B 遞減時序、RETN und
 | PPU | Mode 7 byte-latch flip-flop 錯亂 | SD3 模式 7 背景 |
 | PPU | OAM Priority Rotation 未實作 | SMK 賽車精靈閃爍 |
 | PPU | 圖層優先級數值校正 | FF6 精靈被遮擋 |
+| PPU | CGWSEL sub screen/fixed color 判斷 + BG1 direct color | SFC 半透明特效、SoM2 開頭畫面 |
 | APU | FIR 回聲濾波 per-tap >>6 精度損失 | SoM2 回聲、FF6 音效 |
 | APU | SPC700 分支 cycle 數全部錯誤 | 多款遊戲音頻時序 |
 | APU | SPC700 缺少 $B8 opcode | SPC700 PC 跑飛 |
@@ -558,9 +610,10 @@ npm run build
 ```
 h5-NES_TS/
 ├── public/
-│   └── roms.json          # ROM 列表配置 (NES + GB + GG + SMS + SNES)
-├── roms/                   # ROM 遊戲檔案 (.nes / .gb / .gg / .sms / .sfc / .smc)
-├── nes-wasm/              # Rust/WASM 核心 (單一二進位，三平台)
+│   ├── fbneo/             # FBNeo runtime assets
+│   └── roms.json          # ROM 列表配置 (NES + GB + GG + SMS + SNES + FBNeo)
+├── roms/                   # ROM 遊戲檔案 (.nes / .gb / .gg / .sms / .sfc / .smc / .zip)
+├── nes-wasm/              # Rust/WASM 核心 (單一二進位，多平台)
 │   └── src/
 │       ├── lib.rs         # WASM 入口 (EmuWasm 統一介面 + CoreType 分派)
 │       ├── emulator.rs    # NES 模擬器主迴圈
@@ -600,6 +653,8 @@ h5-NES_TS/
 │           └── cartridge.rs   # LoROM/HiROM 自動偵測、SRAM
 ├── src/
 │   ├── main.ts            # 應用程式進入點 (多平台適配)
+│   ├── arcade/            # FBNeo Arcade 後端整合
+│   │   └── fbneo-core.ts  # ROM set 解包、Emscripten FS、輸入/音視頻橋接
 │   ├── wasm/              # WASM 編譯輸出
 │   ├── core/              # NES 核心模擬器 (TS 版，備用)
 │   │   ├── cpu/           # 6502 CPU
@@ -633,6 +688,7 @@ h5-NES_TS/
 | Phase 7 | 🟢 Game Boy DMG | GB ROM 可正常遊玩 | ✅ 完成 |
 | Phase 8 | 🟠 Game Gear / SMS | GG + SMS ROM 可正常遊玩 | ✅ 完成 |
 | Phase 9 | 🟣 SFC / SNES | SNES ROM 可正常遊玩 (65816 + PPU Mode 0-7 + SPC700 + DMA/HDMA + DSP-1 + CX4) | ✅ 完成 |
+| Phase 10 | 🕹️ FBNeo Arcade | Raiden / Warriors of Fate 完整 ZIP ROM set 可遊玩 | ✅ 完成 |
 
 ---
 

@@ -613,6 +613,8 @@ pub struct Apu {
     frame_irq_inhibit: bool,
     /// 幀 IRQ 旗標
     frame_irq: bool,
+    /// 延遲套用的 $4017 frame counter 寫入
+    pending_frame_counter_write: Option<(u8, u8)>,
 
     // 時序
     /// CPU 週期計數
@@ -656,6 +658,7 @@ impl Apu {
             frame_value: 0,
             frame_irq_inhibit: false,
             frame_irq: false,
+            pending_frame_counter_write: None,
             cycle: 0,
             sample_rate: 44100.0,
             sample_counter: 0.0,
@@ -679,6 +682,7 @@ impl Apu {
         self.frame_step = 0;
         self.frame_value = 0;
         self.frame_irq = false;
+        self.pending_frame_counter_write = None;
         self.cycle = 0;
         self.sample_counter = 0.0;
         self.buffer_write_pos = 0;
@@ -737,6 +741,7 @@ impl Apu {
                 if self.dmc.enabled {
                     if self.dmc.bytes_remaining == 0 {
                         self.dmc.restart();
+                        self.fetch_dmc_sample();
                     }
                 } else {
                     self.dmc.bytes_remaining = 0;
@@ -745,17 +750,10 @@ impl Apu {
             }
             // 幀計數器
             0x4017 => {
-                self.frame_mode = data & 0x80 != 0;
-                self.frame_irq_inhibit = data & 0x40 != 0;
-                if self.frame_irq_inhibit {
+                let delay = if self.cycle & 1 == 0 { 3 } else { 4 };
+                self.pending_frame_counter_write = Some((data, delay));
+                if data & 0x40 != 0 {
                     self.frame_irq = false;
-                }
-                self.frame_step = 0;
-                self.frame_value = 0;
-                // 5 步模式下立即時鐘半幀和全幀
-                if self.frame_mode {
-                    self.clock_half_frame();
-                    self.clock_quarter_frame();
                 }
             }
             _ => {}
@@ -811,6 +809,29 @@ impl Apu {
         }
 
         self.cycle += 1;
+        self.clock_pending_frame_counter_write();
+    }
+
+    fn clock_pending_frame_counter_write(&mut self) {
+        if let Some((data, delay)) = self.pending_frame_counter_write {
+            if delay > 1 {
+                self.pending_frame_counter_write = Some((data, delay - 1));
+                return;
+            }
+
+            self.pending_frame_counter_write = None;
+            self.frame_mode = data & 0x80 != 0;
+            self.frame_irq_inhibit = data & 0x40 != 0;
+            if self.frame_irq_inhibit {
+                self.frame_irq = false;
+            }
+            self.frame_step = 0;
+            self.frame_value = 0;
+            if self.frame_mode {
+                self.clock_quarter_frame();
+                self.clock_half_frame();
+            }
+        }
     }
 
     /// DMC 時鐘
