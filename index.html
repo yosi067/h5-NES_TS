@@ -1731,19 +1731,23 @@
     }
 
     /* ===== 手機橫向模式 ===== */
-    @media (max-width: 932px) and (orientation: landscape) {
+        @media (max-width: 932px) and (orientation: landscape),
+          (max-height: 520px) and (orientation: landscape) {
       body {
         background: #050507;
+        overflow: hidden;
       }
 
       .gameboy-shell {
         flex-direction: row;
-        justify-content: space-between;
+        justify-content: center;
         align-items: center;
-        gap: 12px;
-        padding: 8px max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+        gap: clamp(8px, 1.8vw, 18px);
+        padding: max(6px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
         max-width: 100%;
-        height: 100%;
+        width: 100vw;
+        height: 100dvh;
+        min-height: 100vh;
         background: transparent;
       }
 
@@ -1756,19 +1760,23 @@
       .screen-bezel {
         margin: 0;
         order: 2;
-        flex: 0 1 auto;
+        flex: 0 1 min(58vw, calc((100dvh - 18px) * 4 / 3));
+        width: min(58vw, calc((100dvh - 18px) * 4 / 3));
         max-width: 58vw;
+        max-height: calc(100dvh - 12px);
         background: #000;
         border-radius: 10px;
+        padding: clamp(4px, 1.1vw, 8px);
       }
 
       #screen,
       #canvas {
-        width: auto;
-        height: min(calc(100vh - 24px), 58vw);
-        max-height: calc(100vh - 24px);
-        max-width: none;
+        width: 100%;
+        height: auto;
+        max-height: calc(100dvh - 28px);
+        max-width: 100%;
         aspect-ratio: 4 / 3;
+        object-fit: contain;
       }
 
       .fullscreen-screen-btn {
@@ -1799,11 +1807,12 @@
       .snes-top-row,
       .n64-top-row {
         position: absolute;
-        top: 8px;
-        right: 70px;
+        top: max(6px, env(safe-area-inset-top));
+        right: max(10px, env(safe-area-inset-right));
         width: auto;
         gap: 7px;
         opacity: 0.72;
+        z-index: 8;
       }
 
       .snes-right-area,
@@ -1811,17 +1820,36 @@
       .n64-face-block,
       .n64-c-block {
         order: 3;
-        margin-left: 10px;
+        flex: 0 0 clamp(112px, 20vw, 168px);
+        width: clamp(112px, 20vw, 168px);
+        margin-left: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
 
       .n64-stick-block,
       .n64-dpad-block {
         order: 1;
-        margin-right: 10px;
+        flex: 0 0 clamp(112px, 20vw, 168px);
+        width: clamp(112px, 20vw, 168px);
+        margin-right: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
 
       .n64-dpad-block {
         display: none;
+      }
+
+      .n64-c-block {
+        position: absolute;
+        right: max(10px, env(safe-area-inset-right));
+        bottom: max(8px, env(safe-area-inset-bottom));
+        width: auto;
+        flex-basis: auto;
+        opacity: 0.82;
       }
 
       body.fullscreen-active .dpad,
@@ -1836,44 +1864,55 @@
       }
 
       body.fullscreen-active .screen-bezel {
-        max-width: 64vw;
+        max-width: 62vw;
+        width: min(62vw, calc((100dvh - 12px) * 4 / 3));
       }
 
       /* 左側：D-Pad */
       .dpad-container {
         order: 1;
-        margin-right: 15px;
+        flex: 0 0 clamp(112px, 20vw, 168px);
+        width: clamp(112px, 20vw, 168px);
+        margin-right: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
 
       .dpad {
-        width: 120px;
-        height: 120px;
+        width: clamp(104px, 18vw, 132px);
+        height: clamp(104px, 18vw, 132px);
       }
 
       .dpad-visual {
-        width: 100px;
-        height: 100px;
+        width: clamp(88px, 15.5vw, 112px);
+        height: clamp(88px, 15.5vw, 112px);
       }
 
       .dpad-btn, .dpad-center {
-        width: 36px;
-        height: 36px;
+        width: clamp(32px, 5.8vw, 42px);
+        height: clamp(32px, 5.8vw, 42px);
         font-size: 14px;
       }
 
       /* 右側：AB 按鈕 */
       .ab-container {
         order: 3;
-        margin-left: 15px;
+        flex: 0 0 clamp(112px, 20vw, 168px);
+        width: clamp(112px, 20vw, 168px);
+        margin-left: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .ab-touch-area {
-        width: 60px;
-        height: 60px;
+        width: clamp(52px, 9.5vw, 66px);
+        height: clamp(52px, 9.5vw, 66px);
       }
 
       .ab-buttons {
-        gap: 8px;
+        gap: clamp(6px, 1.3vw, 10px);
       }
 
       .btn-label {
@@ -1884,21 +1923,119 @@
       .center-btns {
         order: 3;
         flex-direction: row;
-        gap: 8px;
+        gap: 6px;
         position: absolute;
-        right: 15px;
-        top: 8px;
+        right: max(10px, env(safe-area-inset-right));
+        top: max(6px, env(safe-area-inset-top));
+        z-index: 8;
+        opacity: 0.78;
       }
 
       .func-btn {
-        width: 55px;
-        height: 22px;
+        width: clamp(48px, 8vw, 58px);
+        height: clamp(22px, 4vw, 28px);
         font-size: 8px;
         transform: rotate(0deg);
       }
 
+      #arcade-controller-area .dpad,
+      #snes-controller-area .dpad {
+        width: clamp(106px, 18vw, 134px);
+        height: clamp(106px, 18vw, 134px);
+      }
+
+      #arcade-controller-area .dpad-visual,
+      #snes-controller-area .dpad-visual {
+        width: clamp(90px, 15.5vw, 116px);
+        height: clamp(90px, 15.5vw, 116px);
+      }
+
+      .snes-face-btn {
+        width: clamp(46px, 8vw, 58px);
+        height: clamp(46px, 8vw, 58px);
+        font-size: 17px;
+      }
+
+      .snes-abxy-row {
+        gap: clamp(30px, 5vw, 42px);
+      }
+
+      .arcade-panel {
+        gap: 7px;
+        min-width: 0;
+      }
+
+      .arcade-system-row {
+        grid-template-columns: repeat(3, clamp(34px, 6vw, 44px));
+        gap: 6px;
+      }
+
+      .arcade-system-btn {
+        width: clamp(34px, 6vw, 44px);
+        height: clamp(24px, 4vw, 30px);
+        font-size: 9px;
+      }
+
+      .arcade-face-grid {
+        grid-template-columns: repeat(3, clamp(42px, 7.4vw, 52px));
+        grid-auto-rows: clamp(42px, 7.4vw, 52px);
+        gap: 7px;
+      }
+
+      .arcade-face-btn {
+        width: clamp(42px, 7.4vw, 52px);
+        height: clamp(42px, 7.4vw, 52px);
+        font-size: 16px;
+      }
+
+      .n64-stick {
+        width: clamp(86px, 15vw, 112px);
+        height: clamp(86px, 15vw, 112px);
+      }
+
+      .n64-face-btn {
+        width: clamp(52px, 8.6vw, 66px);
+        height: clamp(52px, 8.6vw, 66px);
+        font-size: 18px;
+      }
+
+      .n64-c-btn {
+        width: clamp(30px, 5vw, 38px);
+        height: clamp(30px, 5vw, 38px);
+      }
+
       .func-btn:active, .func-btn.pressed {
         transform: rotate(0deg) scale(0.95);
+      }
+    }
+
+        @media (max-width: 932px) and (orientation: landscape) and (max-height: 430px),
+          (max-height: 430px) and (orientation: landscape) {
+      .gameboy-shell {
+        gap: 6px;
+      }
+
+      .screen-bezel {
+        width: min(60vw, calc((100dvh - 10px) * 4 / 3));
+        max-width: 60vw;
+        padding: 3px;
+      }
+
+      .dpad-container,
+      .ab-container,
+      .snes-right-area,
+      .arcade-panel,
+      .n64-stick-block,
+      .n64-face-block {
+        flex-basis: clamp(96px, 18vw, 136px);
+        width: clamp(96px, 18vw, 136px);
+      }
+
+      .center-btns,
+      .snes-top-row,
+      .n64-top-row {
+        transform: scale(0.9);
+        transform-origin: top right;
       }
     }
 
