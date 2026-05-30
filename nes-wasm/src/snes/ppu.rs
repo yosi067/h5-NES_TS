@@ -15,6 +15,14 @@ fn bgr15_to_rgba(bgr: u16) -> u32 {
     r | (g << 8) | (b << 16) | 0xFF000000
 }
 
+#[inline]
+fn direct_color_to_rgba(palette: usize, color_idx: usize) -> u32 {
+    let r = (((color_idx & 0x07) << 2) | ((palette & 0x01) << 1)) as u32;
+    let g = ((((color_idx >> 3) & 0x07) << 2) | (palette & 0x02)) as u32;
+    let b = ((((color_idx >> 6) & 0x03) << 3) | (palette & 0x04)) as u32;
+    (r << 3) | ((g << 3) << 8) | ((b << 3) << 16) | 0xFF000000
+}
+
 /// PPU 螢幕寬高
 pub const SCREEN_WIDTH: usize = 256;
 pub const SCREEN_HEIGHT: usize = 224;
@@ -906,9 +914,13 @@ impl Ppu {
             let color_idx = self.read_tile_pixel(chr_addr, tile_num, px_in_tile, py_in_tile, bpp);
             if color_idx == 0 { continue; } // 透明
 
-            let pal_offset = palette * (1 << bpp) + color_idx;
-            let color = self.cgram[pal_offset & 0xFF];
-            let rgba = bgr15_to_rgba(color);
+            let rgba = if self.uses_direct_color(bg_idx, bpp) {
+                direct_color_to_rgba(palette, color_idx)
+            } else {
+                let pal_offset = palette * (1 << bpp) + color_idx;
+                let color = self.cgram[pal_offset & 0xFF];
+                bgr15_to_rgba(color)
+            };
 
             // Priority: use the per-layer priority mapping
             let pri = if priority != 0 { pri_hi } else { pri_lo };
@@ -972,8 +984,8 @@ impl Ppu {
 
             // --- Sub screen pixel (even hires column) ---
             if sub_enabled {
-                let pixel = self.sample_hires_pixel(tilemap_addr, chr_addr, map_size, tall,
-                    tile_h, h_mask, hires_even, tile_row_full, fine_y, bpp);
+                let pixel = self.sample_hires_pixel(bg_idx, tilemap_addr, chr_addr, map_size, tall,
+                    hires_even, tile_row_full, fine_y, bpp);
                 if let Some((rgba, priority)) = pixel {
                     let pri = if priority != 0 { pri_hi } else { pri_lo };
                     if pri > self.sub_pri[screen_x] {
@@ -988,8 +1000,8 @@ impl Ppu {
 
             // --- Main screen pixel (odd hires column) ---
             if main_enabled {
-                let pixel = self.sample_hires_pixel(tilemap_addr, chr_addr, map_size, tall,
-                    tile_h, h_mask, hires_odd, tile_row_full, fine_y, bpp);
+                let pixel = self.sample_hires_pixel(bg_idx, tilemap_addr, chr_addr, map_size, tall,
+                    hires_odd, tile_row_full, fine_y, bpp);
                 if let Some((rgba, priority)) = pixel {
                     let pri = if priority != 0 { pri_hi } else { pri_lo };
                     if pri > self.main_pri[screen_x] {
@@ -1006,8 +1018,8 @@ impl Ppu {
 
     /// Sample a single hires pixel at the given hires X coordinate.
     /// Returns Some((rgba, tile_priority)) if non-transparent, None otherwise.
-    fn sample_hires_pixel(&self, tilemap_addr: usize, chr_addr: usize, map_size: u8,
-        tall: bool, tile_h: usize, h_mask: usize, hires_x: usize,
+    fn sample_hires_pixel(&self, bg_idx: usize, tilemap_addr: usize, chr_addr: usize, map_size: u8,
+        tall: bool, hires_x: usize,
         tile_row_full: usize, fine_y: usize, bpp: u8) -> Option<(u32, u8)>
     {
         let tile_col_full = hires_x / 16;
@@ -1058,10 +1070,19 @@ impl Ppu {
         let color_idx = self.read_tile_pixel(chr_addr, tile_num, px_in_tile, py_in_tile, bpp);
         if color_idx == 0 { return None; }
 
-        let pal_offset = palette * (1 << bpp) + color_idx;
-        let color = self.cgram[pal_offset & 0xFF];
-        let rgba = bgr15_to_rgba(color);
+        let rgba = if self.uses_direct_color(bg_idx, bpp) {
+            direct_color_to_rgba(palette, color_idx)
+        } else {
+            let pal_offset = palette * (1 << bpp) + color_idx;
+            let color = self.cgram[pal_offset & 0xFF];
+            bgr15_to_rgba(color)
+        };
         Some((rgba, priority))
+    }
+
+    #[inline]
+    fn uses_direct_color(&self, bg_idx: usize, bpp: u8) -> bool {
+        bpp == 8 && bg_idx == 0 && (self.cgwsel & 0x01) != 0
     }
 
     /// 讀取 Tile 像素的色號
@@ -1469,7 +1490,7 @@ impl Ppu {
 
             let final_rgba = if color_math_enabled && !prevent {
                 // Sub screen 或固定色
-                let using_fixed = self.cgwsel & 0x02 != 0;
+                let using_fixed = self.cgwsel & 0x02 == 0;
                 let (sr, sg, sb) = if using_fixed {
                     ((self.fixed_color_r as u32) << 3,
                      (self.fixed_color_g as u32) << 3,
