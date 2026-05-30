@@ -73,6 +73,14 @@ impl Emulator {
             // 同步 Mapper 的 CHR bank 映射和鏡像模式
             self.sync_mapper_to_ppu();
             self.reset();
+
+            if self.cartridge.header.mapper_id == 4 {
+                // 部分 MMC3 遊戲需要先經過 power-on 暖機，再按 RESET 才會進入正常啟動路徑。
+                for _ in 0..10 {
+                    self.frame();
+                }
+                self.reset();
+            }
         }
         success
     }
