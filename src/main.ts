@@ -135,6 +135,7 @@ let wasmCanvas: HTMLCanvasElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
 let imageData: ImageData | null = null;
 let audioContext: AudioContext | null = null;
+let wasmInitPromise: Promise<void> | null = null;
 let isRunning: boolean = false;
 let currentRomFilename: string = '';
 let activeBackend: 'wasm' | 'mupen64' | 'fbneo' = 'wasm';
@@ -394,12 +395,6 @@ function restoreWasmCanvas(): void {
   imageData = null;
 }
 
-// 需要自動重整的特殊 ROM（首次載入有問題，需重整一次才能正常）
-const AUTO_RESET_ROMS: string[] = [
-  'Captain Tsubasa II - Super Striker (Japan).nes',
-  'SuperMarioBros3.nes',
-];
-
 // ===== UI 元素 =====
 
 let romSelector: HTMLElement | null = null;
@@ -484,6 +479,20 @@ async function initWasm(): Promise<void> {
   }
 
   console.log('H5-NES 模擬器已初始化（WASM 核心）');
+}
+
+async function waitForWasmCore(): Promise<boolean> {
+  if (nes) return true;
+
+  try {
+    if (wasmInitPromise) {
+      await wasmInitPromise;
+    }
+  } catch (error) {
+    console.error('WASM 核心初始化失敗:', error);
+  }
+
+  return nes !== null;
 }
 
 function setupResponsiveModeDetection(): void {
@@ -990,11 +999,6 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
  * 開始遊戲
  */
 async function startGame(romData: ArrayBuffer): Promise<void> {
-  if (!nes) {
-    alert('模擬器核心尚未初始化完成，請稍候再試。');
-    return;
-  }
-
   const romBytes = new Uint8Array(romData);
   
   // 根據副檔名選擇對應的載入方法
@@ -1002,6 +1006,11 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
   console.log(`[DEBUG] Loading ROM: "${currentRomFilename}", lower: "${lower}", size: ${romBytes.length}`);
   if (isN64RomName(currentRomFilename)) {
     await startN64Game(romData);
+    return;
+  }
+
+  if (!(await waitForWasmCore()) || !nes) {
+    alert('模擬器核心尚未初始化完成，請稍候再試。');
     return;
   }
 
@@ -1067,16 +1076,6 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
     // 載入 SRAM（遊戲內建電池存檔）
     loadSram();
 
-    // 特殊 ROM 自動重整：部分遊戲首次載入有問題，需自動 reset 一次
-    if (AUTO_RESET_ROMS.some(name => currentRomFilename === name)) {
-      console.log(`[Auto-Reset] 偵測到特殊 ROM「${currentRomFilename}」，將自動重整...`);
-      setTimeout(() => {
-        if (nes && isRunning) {
-          nes.reset();
-          console.log('[Auto-Reset] 重整完成');
-        }
-      }, 500);
-    }
   } else {
     console.error('ROM 載入失敗');
     alert('無法載入此 ROM 檔案');
@@ -3052,11 +3051,16 @@ window.debugRunUntilPcInRange = (b: number, lo: number, hi: number, mf: number, 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!setupAppShell()) return;
 
-  try {
-    await initWasm();
-  } catch (error) {
+  wasmInitPromise = initWasm().catch((error) => {
     console.error('WASM 核心初始化失敗:', error);
     showToast('核心初始化失敗，仍可瀏覽遊戲列表或使用 FBNeo 遊戲');
+    throw error;
+  });
+
+  try {
+    await wasmInitPromise;
+  } catch {
+    // waitForWasmCore() logs the same failure for ROM launch attempts.
   }
 
   try {
