@@ -76,12 +76,11 @@ impl Joypad {
     /// Bit 5-1: 未使用 (pulled high)
     /// Bit 0: 模式 (0 = Game Gear, 1 = Master System)
     pub fn read_gg_port_00(&self) -> u8 {
-        // 預設值: 0xFE = 1111_1110
+        // 預設值: 0x80 = 1000_0000
         //   bit 7 = 1 (Start 未按下)
-        //   bit 6 = 1 (Export 區域)
-        //   bit 5-1 = 11111 (pulled high)
+        //   bit 6-1 = 0 (GG port $00 reads back only Start in this model)
         //   bit 0 = 0 (Game Gear 模式 ← 關鍵！)
-        let mut val: u8 = 0xFE;
+        let mut val: u8 = 0x80;
 
         // Start 按鈕 (active low: 按下時 bit 7 = 0)
         if self.buttons & (1 << 3) != 0 {

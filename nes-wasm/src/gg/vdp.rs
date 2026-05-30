@@ -173,6 +173,7 @@ impl Vdp {
     /// 寫入資料埠 ($BE)
     pub fn write_data(&mut self, val: u8) {
         self.control_latch = false;
+        self.read_buffer = val;
 
         match self.code {
             3 => {
@@ -237,23 +238,6 @@ impl Vdp {
             // 渲染當前行
             self.render_line();
 
-            // --- Line counter / Line IRQ 邏輯 ---
-            // 在活動區域和第一行 VBlank (line 192) 中遞減
-            if self.line <= SCREEN_HEIGHT {
-                if self.line_counter == 0 {
-                    self.line_counter = self.regs[10];
-                    // 只在活動掃描區觸發 line interrupt
-                    if self.line < SCREEN_HEIGHT {
-                        self.line_irq_pending = true;
-                    }
-                } else {
-                    self.line_counter -= 1;
-                }
-            } else {
-                // VBlank 期間持續 reload line counter
-                self.line_counter = self.regs[10];
-            }
-
             // --- Frame IRQ 邏輯 ---
             if self.line == SCREEN_HEIGHT {
                 // VBlank 開始
@@ -262,6 +246,20 @@ impl Vdp {
                 // 輸出幀
                 self.output_frame();
                 self.frame_complete = true;
+            }
+
+            // --- Line counter / Line IRQ 邏輯 ---
+            // SMS/GG decrements after advancing to the next line, including line 192.
+            let next_line = self.line + 1;
+            if next_line <= SCREEN_HEIGHT {
+                self.line_counter = self.line_counter.wrapping_sub(1);
+                if self.line_counter == 0xFF {
+                    self.line_counter = self.regs[10];
+                    self.line_irq_pending = true;
+                }
+            } else {
+                // VBlank 期間持續 reload line counter
+                self.line_counter = self.regs[10];
             }
 
             // --- 更新 IRQ pending ---
