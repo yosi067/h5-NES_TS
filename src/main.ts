@@ -84,13 +84,13 @@ function getFbNeoGameName(filename: string): FbNeoGameName | null {
 }
 
 const MACHINES: MachineInfo[] = [
-  { key: 'nes', title: 'FC/NES', label: '紅白機經典起點，卡帶與雙手把回憶。', artClass: 'nes', artFile: 'nes.svg' },
-  { key: 'gb', title: 'Game Boy', label: '掌上綠幕電影院，口袋裡的冒險。', artClass: 'gb', artFile: 'gb.svg' },
-  { key: 'gg', title: 'Game Gear', label: '彩色掌機寬螢幕，隨時開戰。', artClass: 'gg', artFile: 'gg.svg' },
-  { key: 'sms', title: 'Master System', label: 'SEGA 方正家用機，黑紅線條派。', artClass: 'sms', artFile: 'sms.svg' },
-  { key: 'snes', title: 'SFC 超任', label: '日式超任灰白機身，四色按鍵手把。', artClass: 'snes', artFile: 'snes.svg' },
-  { key: 'n64', title: 'Nintendo 64', label: '三握把控制器，3D 旋轉新時代。', artClass: 'n64', artFile: 'n64.svg' },
-  { key: 'arcade', title: 'FBNeo 街機', label: '大型框體，搖桿按鈕，投幣上場。', artClass: 'arcade', artFile: 'arcade.svg' },
+  { key: 'nes', title: 'FC/NES', label: '經典中的經典，傳說的紅白機。', artClass: 'nes', artFile: 'nes.svg' },
+  { key: 'gb', title: 'Game Boy', label: '最想帶去學校還有躲在棉被裡玩的好東西。', artClass: 'gb', artFile: 'gb.svg' },
+  { key: 'snes', title: 'SFC 超任', label: '無數經典的超任，是你爸媽最想藏起來不讓你碰的東西。', artClass: 'snes', artFile: 'snes.svg' },
+  { key: 'arcade', title: '大型電玩', label: '雜貨店外面那些有搖桿的街機，要投錢幣的那種。', artClass: 'arcade', artFile: 'arcade.svg' },
+  { key: 'gg', title: 'Game Gear', label: '經典的彩色掌機還可以看電視，一次吃你六顆鹼性電池的小怪物。', artClass: 'gg', artFile: 'gg.svg' },
+  { key: 'sms', title: 'Master System', label: '電動店總是會放這台讓音速小子跑一整天。', artClass: 'sms', artFile: 'sms.svg' },
+  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，不過手機還跑不動，可以先在電腦上玩。', artClass: 'n64', artFile: 'n64.svg' },
 ];
 
 function getPublicAssetUrl(path: string): string {

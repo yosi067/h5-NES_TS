@@ -499,16 +499,33 @@
     }
 
     /* ===== 中間按鈕 (SELECT/START) ===== */
+    #nes-controller-area {
+      position: relative;
+      min-height: 180px;
+      padding-bottom: 42px;
+      align-items: flex-start !important;
+    }
+
     .center-btns {
       display: flex;
-      flex-direction: column;
-      gap: 12px;
+      flex-direction: row;
+      gap: 8px;
       align-items: center;
+      justify-content: center;
+    }
+
+    #nes-controller-area .center-btns {
+      position: absolute;
+      left: 50%;
+      bottom: 2px;
+      transform: translateX(-50%);
+      z-index: 6;
+      width: min(100%, 292px);
     }
 
     .func-btn {
-      width: 75px;
-      height: 30px;
+      width: 64px;
+      height: 28px;
       border: none;
       border-radius: 15px;
       background: linear-gradient(180deg, var(--gb-btn-func) 0%, #5a5a5a 100%);
@@ -517,7 +534,7 @@
       font-weight: bold;
       letter-spacing: 1px;
       cursor: pointer;
-      transform: rotate(-25deg);
+      transform: none;
       transition: all 0.08s ease-out;
       box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4),
                   inset 0 1px 1px rgba(255, 255, 255, 0.2);
@@ -545,7 +562,7 @@
     .func-btn:active, .func-btn.pressed {
       background: linear-gradient(180deg, var(--gb-btn-func-pressed) 0%, #4a4a4a 100%);
       color: #fff;
-      transform: rotate(-25deg) scale(0.95);
+      transform: scale(0.95);
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4),
                   inset 0 1px 2px rgba(0, 0, 0, 0.2);
     }
@@ -1849,14 +1866,18 @@
       .gameboy-shell {
         background:
           linear-gradient(180deg, var(--gb-body-light) 0%, var(--gb-body) 58%, var(--gb-body-dark) 100%);
-        max-width: 680px;
+        width: min(680px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
         border-radius: 14px 14px 42px 42px;
-        padding: 22px 28px 26px;
+        padding: clamp(14px, 2.4vw, 22px) clamp(16px, 3vw, 28px) clamp(16px, 2.8vw, 26px);
         box-shadow: 0 18px 55px rgba(0, 0, 0, 0.62),
                     inset 0 0 0 8px rgba(255,255,255,0.18),
                     inset 0 -18px 0 rgba(0,0,0,0.08);
         height: auto;
-        max-height: 95vh;
+        max-height: calc(var(--app-height, 100vh) - 16px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: thin;
       }
 
       .gameboy-shell::before {
@@ -1872,7 +1893,8 @@
 
       .cabinet-toolbar {
         display: flex;
-        margin-top: 44px;
+        margin-top: clamp(34px, 5.5vh, 44px);
+        flex: 0 0 auto;
       }
 
       .virtual-controller {
@@ -1902,17 +1924,25 @@
 
       #screen,
       #canvas {
-        width: 512px;
-        height: 480px;
-        max-width: none;
+        width: min(512px, calc(100vw - 112px), calc((var(--app-height, 100vh) - 218px) * 1.0667));
+        height: auto;
+        max-width: 100%;
+        max-height: calc(var(--app-height, 100vh) - 218px);
       }
 
       .screen-bezel {
-        padding: 18px 22px 22px;
-        margin-bottom: 15px;
+        padding: clamp(10px, 2vh, 18px) clamp(12px, 2.4vh, 22px) clamp(12px, 2.4vh, 22px);
+        margin-bottom: clamp(8px, 1.8vh, 15px);
         background: linear-gradient(180deg, #30303a 0%, #121217 100%);
         border-radius: 10px;
         border: 4px solid #0d0d12;
+        flex: 0 1 auto;
+      }
+
+      body.controls-open #screen,
+      body.controls-open #canvas {
+        width: min(512px, calc(100vw - 112px), calc((var(--app-height, 100vh) - 362px) * 1.0667));
+        max-height: calc(var(--app-height, 100vh) - 362px);
       }
 
       .screen-inner {
@@ -2124,7 +2154,10 @@
     @media (max-width: 932px) and (orientation: landscape),
            (max-height: 520px) and (orientation: landscape) {
       body {
-        background: #050507;
+        background:
+          radial-gradient(circle at 50% -10%, rgba(210, 166, 70, 0.22), transparent 34%),
+          linear-gradient(135deg, rgba(181, 31, 44, 0.2) 0 12%, transparent 12% 24%, rgba(243, 234, 216, 0.08) 24% 36%, transparent 36% 100%),
+          linear-gradient(180deg, #3b2b2f 0%, #1b1b21 54%, var(--store-floor) 100%);
         overflow: hidden;
       }
 
@@ -2138,7 +2171,9 @@
         width: 100vw;
         height: 100dvh;
         min-height: 100vh;
-        background: transparent;
+        background:
+          linear-gradient(180deg, var(--gb-body-light) 0%, var(--gb-body) 58%, var(--gb-body-dark) 100%);
+        border-radius: 0;
       }
 
       .cabinet-toolbar,
@@ -2456,6 +2491,7 @@
       .machine-grid {
         grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
         gap: 7px;
+        align-items: start;
         min-height: 0;
         flex: 1 1 auto;
         overflow-y: auto;
@@ -2463,25 +2499,45 @@
         -webkit-overflow-scrolling: touch;
       }
 
+      .machine-card-shell {
+        min-height: 70px;
+        padding: 8px 8px 0 0;
+        align-self: start;
+      }
+
       .machine-card {
+        height: auto;
         min-height: 78px;
-        padding: 8px;
-        gap: 5px;
+        grid-template-columns: 58px minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+        padding: 7px 8px 7px 6px;
+        gap: 3px 8px;
         border-radius: 8px;
+        align-items: center;
       }
 
       .machine-art {
-        display: none;
+        display: block;
+        grid-row: 1 / 3;
+        width: 58px;
+        height: 48px;
+        border-width: 2px;
+        border-radius: 4px;
       }
 
       .machine-title {
         font-size: 12px;
         line-height: 1.2;
+        align-self: end;
+        padding-right: 20px;
       }
 
       .machine-meta {
         font-size: 10px;
-        gap: 4px;
+        line-height: 1.18;
+        max-height: 2.36em;
+        overflow: hidden;
+        padding-right: 6px;
       }
 
       .machine-count {
@@ -2532,7 +2588,10 @@
 
     /* iPhone Safari / Chrome on iOS: 橫版時可能仍被判成桌機寬度，改用 JS 偵測觸控橫版後強制套用 */
     body.mobile-landscape-mode {
-      background: #050507;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(210, 166, 70, 0.22), transparent 34%),
+        linear-gradient(135deg, rgba(181, 31, 44, 0.2) 0 12%, transparent 12% 24%, rgba(243, 234, 216, 0.08) 24% 36%, transparent 36% 100%),
+        linear-gradient(180deg, #3b2b2f 0%, #1b1b21 54%, var(--store-floor) 100%);
       overflow: hidden;
       padding: 0;
     }
@@ -2578,6 +2637,7 @@
     body.mobile-landscape-mode .machine-grid {
       grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
       gap: 8px;
+      align-items: start;
       min-height: 0;
       flex: 1 1 auto;
       overflow-y: auto;
@@ -2585,17 +2645,31 @@
       -webkit-overflow-scrolling: touch;
     }
 
+    body.mobile-landscape-mode .machine-card-shell {
+      min-height: 78px;
+      padding: 8px 8px 0 0;
+      align-self: start;
+    }
+
     body.mobile-landscape-mode .machine-card {
+      height: auto;
       min-height: 88px;
-      padding: 8px;
-      gap: 5px;
+      grid-template-columns: 62px minmax(0, 1fr);
+      grid-template-rows: auto 1fr;
+      padding: 7px 8px 7px 6px;
+      gap: 3px 8px;
       border-radius: 8px;
+      align-items: center;
       box-shadow: 0 4px 0 #0b0b0f, 0 8px 16px rgba(0,0,0,0.34);
     }
 
     body.mobile-landscape-mode .machine-art {
-      height: 34px;
-      border-radius: 6px;
+      display: block;
+      grid-row: 1 / 3;
+      width: 62px;
+      height: 52px;
+      border-width: 2px;
+      border-radius: 5px;
     }
 
     body.mobile-landscape-mode .machine-art::before,
@@ -2607,11 +2681,16 @@
     body.mobile-landscape-mode .machine-title {
       font-size: 12px;
       line-height: 1.2;
+      align-self: end;
+      padding-right: 20px;
     }
 
     body.mobile-landscape-mode .machine-meta {
       font-size: 10px;
-      gap: 4px;
+      line-height: 1.18;
+      max-height: 2.36em;
+      overflow: hidden;
+      padding-right: 6px;
     }
 
     body.mobile-landscape-mode .machine-count {
@@ -2668,7 +2747,8 @@
       width: 100vw;
       height: var(--app-height, 100dvh);
       min-height: 0;
-      background: transparent;
+      background:
+        linear-gradient(180deg, var(--gb-body-light) 0%, var(--gb-body) 58%, var(--gb-body-dark) 100%);
       border-radius: 0;
       box-shadow: none;
     }
@@ -2936,13 +3016,32 @@
       body.mobile-landscape-mode .machine-grid {
         grid-template-columns: repeat(auto-fit, minmax(106px, 1fr));
         gap: 6px;
+        align-items: start;
+      }
+
+      body.mobile-landscape-mode .machine-card-shell {
+        min-height: 64px;
       }
 
       body.mobile-landscape-mode .machine-card {
-        min-height: 74px;
+        height: auto;
+        min-height: 60px;
+        grid-template-columns: 48px minmax(0, 1fr);
+        grid-template-rows: 1fr;
       }
 
       body.mobile-landscape-mode .machine-art {
+        display: block;
+        width: 48px;
+        height: 38px;
+        grid-row: 1;
+      }
+
+      body.mobile-landscape-mode .machine-title {
+        align-self: center;
+      }
+
+      body.mobile-landscape-mode .machine-meta {
         display: none;
       }
 
@@ -3144,6 +3243,130 @@
         width: min(604px, calc(100% - 140px));
         padding: 13px 22px;
         font-size: 23px;
+      }
+    }
+
+    #nes-controller-area .center-btns,
+    body.mobile-landscape-mode #nes-controller-area .center-btns {
+      position: absolute;
+      left: 50%;
+      right: auto;
+      top: auto;
+      bottom: max(2px, env(safe-area-inset-bottom));
+      width: min(100%, 292px);
+      flex-direction: row;
+      justify-content: center;
+      gap: 8px;
+      opacity: 1;
+      transform: translateX(-50%);
+      transform-origin: center bottom;
+    }
+
+    body.mobile-landscape-mode #nes-controller-area {
+      position: relative;
+      min-height: clamp(138px, 30dvh, 178px);
+      padding-bottom: 34px;
+      align-items: flex-start !important;
+    }
+
+    #nes-controller-area .func-btn,
+    body.mobile-landscape-mode #nes-controller-area .func-btn {
+      width: clamp(52px, 15vw, 64px);
+      height: clamp(23px, 6vw, 28px);
+      font-size: 8px;
+      transform: none;
+    }
+
+    #nes-controller-area .func-btn:active,
+    #nes-controller-area .func-btn.pressed,
+    body.mobile-landscape-mode #nes-controller-area .func-btn:active,
+    body.mobile-landscape-mode #nes-controller-area .func-btn.pressed {
+      transform: scale(0.95);
+    }
+
+    @media (min-width: 769px) {
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell {
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        width: min(680px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+        height: auto;
+        min-height: 0;
+        max-height: calc(var(--app-height, 100vh) - 16px);
+        padding: clamp(14px, 2.4vw, 22px) clamp(16px, 3vw, 28px) clamp(16px, 2.8vw, 26px);
+        background: linear-gradient(180deg, var(--gb-body-light) 0%, var(--gb-body) 58%, var(--gb-body-dark) 100%);
+        border-radius: 14px 14px 42px 42px;
+        box-shadow: 0 18px 55px rgba(0, 0, 0, 0.62),
+                    inset 0 0 0 8px rgba(255,255,255,0.18),
+                    inset 0 -18px 0 rgba(0,0,0,0.08);
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell::before {
+        display: block;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .cabinet-toolbar {
+        display: flex !important;
+        position: static;
+        width: 100%;
+        margin-top: clamp(34px, 5.5vh, 44px);
+        margin-bottom: 10px;
+        opacity: 1;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .fullscreen-screen-btn {
+        display: none;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .desktop-controls {
+        width: 100%;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open .desktop-controls {
+        display: flex !important;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .keyboard-guide {
+        display: none;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open .keyboard-guide {
+        display: block !important;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .virtual-controller {
+        display: none !important;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .screen-bezel {
+        order: 0;
+        flex: 0 1 auto;
+        width: auto;
+        max-width: 100%;
+        max-height: none;
+        padding: clamp(10px, 2vh, 18px) clamp(12px, 2.4vh, 22px) clamp(12px, 2.4vh, 22px);
+        margin: 0 0 clamp(8px, 1.8vh, 15px);
+        background: linear-gradient(180deg, #30303a 0%, #121217 100%);
+        border-radius: 10px;
+        border: 4px solid #0d0d12;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) #screen,
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) #canvas {
+        width: min(512px, calc(100vw - 112px), calc((var(--app-height, 100vh) - 218px) * 1.0667));
+        height: auto;
+        max-width: 100%;
+        max-height: calc(var(--app-height, 100vh) - 218px);
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #screen,
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #canvas {
+        width: min(512px, calc(100vw - 112px), calc((var(--app-height, 100vh) - 362px) * 1.0667));
+        max-height: calc(var(--app-height, 100vh) - 362px);
       }
     }
 
