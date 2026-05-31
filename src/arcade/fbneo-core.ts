@@ -65,6 +65,7 @@ export interface FbNeoResolution {
 interface EmscriptenFs {
   mkdir(path: string): void;
   analyzePath(path: string): { exists: boolean };
+  readFile(path: string): Uint8Array;
   writeFile(path: string, data: Uint8Array): void;
   unlink(path: string): void;
   readdir(path: string): string[];
@@ -82,6 +83,7 @@ interface MantouFbNeoModule {
   _collectGameInputs(): void;
   _doLoop(): void;
   _setEmInput(playerIndex: number, state: number, alx: number, aly: number, arx: number, ary: number): void;
+  _saveAllState(save: number): void;
   _getFireButtonCount?(): number;
 }
 
@@ -150,6 +152,7 @@ export class FbNeoArcadeCore {
   private frameBuffer = new Uint8Array(this.width * this.height * 4);
   private audioSamples = new Float32Array();
   private romReadyResolve: (() => void) | null = null;
+  private statePath = '';
 
   async init(): Promise<void> {
     await this.loadModule();
@@ -214,6 +217,24 @@ export class FbNeoArcadeCore {
     return samples;
   }
 
+  saveState(): Uint8Array {
+    const module = this.requireModule();
+    if (!this.statePath) {
+      throw new Error('FBNeo 尚未建立狀態存檔路徑');
+    }
+    module._saveAllState(1);
+    return module.FS.readFile(this.statePath);
+  }
+
+  loadState(state: Uint8Array): void {
+    const module = this.requireModule();
+    if (!this.statePath) {
+      throw new Error('FBNeo 尚未建立狀態存檔路徑');
+    }
+    module.FS.writeFile(this.statePath, state);
+    module._saveAllState(0);
+  }
+
   getLog(): string {
     return [...this.stdout, ...this.stderr].join('\n').trim();
   }
@@ -223,6 +244,10 @@ export class FbNeoArcadeCore {
     await this.mountRomSet(romSet);
     this.pendingGameName = romSet.gameName;
     this.loadedGameName = null;
+    this.ensureDir('/libsdl');
+    this.ensureDir('/libsdl/fbneo');
+    this.ensureDir('/libsdl/fbneo/states');
+    this.statePath = `/libsdl/fbneo/states/${romSet.gameName}.fs.all`;
 
     const romReady = new Promise<void>((resolve) => {
       this.romReadyResolve = resolve;

@@ -33,6 +33,7 @@ interface MachineInfo {
   title: string;
   label: string;
   artClass: string;
+  artFile: string;
 }
 
 interface KeyboardBindingView {
@@ -83,14 +84,18 @@ function getFbNeoGameName(filename: string): FbNeoGameName | null {
 }
 
 const MACHINES: MachineInfo[] = [
-  { key: 'nes', title: '紅白機 FC / NES', label: '8-bit 客廳回憶', artClass: 'nes' },
-  { key: 'gb', title: 'Game Boy', label: '掌機綠幕角落', artClass: 'gb' },
-  { key: 'gg', title: 'Game Gear', label: '彩色掌機台', artClass: 'gg' },
-  { key: 'sms', title: 'Master System', label: 'SEGA 家用機', artClass: 'sms' },
-  { key: 'snes', title: '超級任天堂 SFC', label: '16-bit 黃金年代', artClass: 'snes' },
-  { key: 'n64', title: 'Nintendo 64', label: '3D 包廂機台', artClass: 'n64' },
-  { key: 'arcade', title: 'FBNeo 街機', label: '投幣大型機台', artClass: 'arcade' },
+  { key: 'nes', title: 'FC/NES', label: '紅白機經典起點，卡帶與雙手把回憶。', artClass: 'nes', artFile: 'nes.svg' },
+  { key: 'gb', title: 'Game Boy', label: '掌上綠幕電影院，口袋裡的冒險。', artClass: 'gb', artFile: 'gb.svg' },
+  { key: 'gg', title: 'Game Gear', label: '彩色掌機寬螢幕，隨時開戰。', artClass: 'gg', artFile: 'gg.svg' },
+  { key: 'sms', title: 'Master System', label: 'SEGA 方正家用機，黑紅線條派。', artClass: 'sms', artFile: 'sms.svg' },
+  { key: 'snes', title: 'SFC 超任', label: '日式超任灰白機身，四色按鍵手把。', artClass: 'snes', artFile: 'snes.svg' },
+  { key: 'n64', title: 'Nintendo 64', label: '三握把控制器，3D 旋轉新時代。', artClass: 'n64', artFile: 'n64.svg' },
+  { key: 'arcade', title: 'FBNeo 街機', label: '大型框體，搖桿按鈕，投幣上場。', artClass: 'arcade', artFile: 'arcade.svg' },
 ];
+
+function getPublicAssetUrl(path: string): string {
+  return `${import.meta.env.BASE_URL}${path}`;
+}
 
 // 控制器按鈕編號（與 Rust 端一致 - NES）
 const ControllerButton = {
@@ -193,6 +198,12 @@ function escapeHtml(value: string): string {
   }[char] ?? char));
 }
 
+function getRomDisplayName(rom: RomInfo): string {
+  return rom.name
+    .replace(/\s*\((?:NES|FC|GB|GBC|GG|SMS|SFC|SNES|N64|FBNeo\s+Arcade|Arcade)\)\s*$/i, '')
+    .trim();
+}
+
 function renderKeyboardBindings(bindings: KeyboardBindingView[]): string {
   return bindings.map((binding) => `
     <div class="keyboard-binding">
@@ -254,7 +265,6 @@ function updateKeyboardGuide(): void {
 
   bindings.push(
     { action: '存檔 / 讀檔', keys: ['F5', 'F7'] },
-    { action: '音頻', keys: ['M'] },
   );
 
   titleEl.textContent = title;
@@ -757,14 +767,16 @@ function renderMachineSelector(): void {
     const count = romCatalog.filter((rom) => detectRomSystem(rom) === machine.key).length;
     const disabled = count === 0 ? 'disabled aria-disabled="true"' : '';
     return `
-      <button class="machine-card" type="button" data-system="${machine.key}" ${disabled}>
-        <span class="machine-art ${machine.artClass}" aria-hidden="true"></span>
-        <span class="machine-title">${escapeHtml(machine.title)}</span>
-        <span class="machine-meta">
-          <span>${escapeHtml(machine.label)}</span>
-          <span class="machine-count">${count}</span>
-        </span>
-      </button>
+      <div class="machine-card-shell">
+        <button class="machine-card" type="button" data-system="${machine.key}" ${disabled}>
+          <span class="machine-art ${machine.artClass}" aria-hidden="true">
+            <img class="machine-art-img" src="${getPublicAssetUrl(`assets/machines/${machine.artFile}`)}" alt="" loading="eager" decoding="async">
+          </span>
+          <span class="machine-title">${escapeHtml(machine.title)}</span>
+          <span class="machine-meta">${escapeHtml(machine.label)}</span>
+        </button>
+        <span class="machine-count" aria-hidden="true">${count}</span>
+      </div>
     `;
   }).join('');
 
@@ -800,14 +812,10 @@ function renderRomList(system: SystemKey): void {
   }
 
   romListEl.innerHTML = roms.map((rom, index) => {
-    const systemKey = detectRomSystem(rom);
-    const label = systemKey === 'arcade' ? 'FBNeo' : systemKey.toUpperCase();
-    const tagClass = systemKey === 'arcade' ? 'zip' : systemKey;
     return `
       <button class="rom-item" data-index="${index}" data-file="${encodeURIComponent(rom.file)}">
-        <span class="rom-icon" aria-hidden="true">▣</span>
-        <span class="rom-name">${escapeHtml(rom.name)}</span>
-        <span class="rom-system ${tagClass}">${label}</span>
+        <span class="rom-icon ${system}" aria-hidden="true"></span>
+        <span class="rom-name">${escapeHtml(getRomDisplayName(rom))}</span>
         <span class="rom-arrow">▶</span>
       </button>
     `;
@@ -1752,9 +1760,6 @@ function setupDesktopControls(): void {
   });
   document.getElementById('btn-select-game')?.addEventListener('click', showRomSelector);
   
-  // 靜音按鈕
-  document.getElementById('btn-mute')?.addEventListener('click', toggleMute);
-
   // 存檔/讀取按鈕 (電腦版)
   document.getElementById('btn-save-state')?.addEventListener('click', () => {
     if (saveState(0)) {
@@ -1786,7 +1791,6 @@ function setupDesktopControls(): void {
       showToast('❌ 沒有存檔');
     }
   });
-  document.getElementById('mobile-mute')?.addEventListener('click', toggleMute);
 }
 
 /**
@@ -2225,20 +2229,52 @@ function toggleMute(): void {
     lastAudioSample = 0;
   }
 
-  // 更新按鈕文字
-  const btn = document.getElementById('btn-mute');
-  if (btn) btn.textContent = audioMuted ? '🔇 靜音 (M)' : '🔊 音頻 (M)';
-  const mobileBtn = document.getElementById('mobile-mute');
-  if (mobileBtn) mobileBtn.textContent = audioMuted ? '🔇' : '🔊';
-  const arcadeMobileBtn = document.getElementById('arcade-mobile-mute');
-  if (arcadeMobileBtn) arcadeMobileBtn.textContent = audioMuted ? '🔇' : '🔊';
-
   showToast(audioMuted ? '🔇 音頻已關閉（APU IRQ 同時停用）' : '🔊 音頻已開啟');
 }
 
 // ===== 存檔系統 =====
 
 const SAVE_STATE_PREFIX = 'emu_savestate_';
+const N64_INTERNAL_HOTKEY = '__h5N64SaveLoadHotkey';
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
+function base64ToBytes(base64: string): Uint8Array {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function dispatchN64SaveLoadHotkey(key: 'F5' | 'F7'): void {
+  const keyCode = key === 'F5' ? 116 : 118;
+  const targets: EventTarget[] = [document.getElementById('canvas'), document, window].filter(Boolean) as EventTarget[];
+
+  for (const eventType of ['keydown', 'keyup']) {
+    for (const target of targets) {
+      const event = new KeyboardEvent(eventType, {
+        key,
+        code: key,
+        bubbles: true,
+        cancelable: true,
+        repeat: false,
+      });
+      Object.defineProperty(event, 'keyCode', { get: () => keyCode });
+      Object.defineProperty(event, 'which', { get: () => keyCode });
+      Object.defineProperty(event, N64_INTERNAL_HOTKEY, { value: true });
+      target.dispatchEvent(event);
+    }
+  }
+}
 
 /**
  * 取得帶有核心類型 + ROM 名稱的存檔 key（每個遊戲獨立存檔）
@@ -2319,13 +2355,22 @@ function showToast(message: string): void {
 
 function saveState(slot: number = 0): boolean {
   if (isFbNeoActive()) {
-    console.log(`[FBNeo] 即時狀態存檔尚未接入，slot=${slot}`);
-    return false;
+    if (!fbneoCore) return false;
+    try {
+      const saveData = fbneoCore.saveState();
+      localStorage.setItem(getSaveKey(slot), bytesToBase64(saveData));
+      console.log(`[FBNeo] 即時存檔成功 ROM="${currentRomFilename}" slot=${slot} size=${saveData.length}`);
+      return true;
+    } catch (error) {
+      console.error('[FBNeo] 即時存檔失敗:', error);
+      return false;
+    }
   }
   if (isMupenN64Active()) {
+    dispatchN64SaveLoadHotkey('F5');
     void n64Controls?.forceDumpSaveFiles?.();
-    console.log(`[N64] Mupen64Plus 使用遊戲內建存檔/IDBFS，slot=${slot} 的即時狀態存檔尚未接入`);
-    return false;
+    console.log(`[N64] 已送出 Mupen64Plus 即時存檔快捷鍵，slot=${slot}`);
+    return true;
   }
   if (!nes) return false;
   
@@ -2343,12 +2388,25 @@ function saveState(slot: number = 0): boolean {
 
 function loadState(slot: number = 0): boolean {
   if (isFbNeoActive()) {
-    console.log(`[FBNeo] 即時狀態讀取尚未接入，slot=${slot}`);
-    return false;
+    if (!fbneoCore) return false;
+    try {
+      const saveData = localStorage.getItem(getSaveKey(slot));
+      if (!saveData) {
+        console.log(`[FBNeo] ROM="${currentRomFilename}" slot=${slot} 沒有存檔`);
+        return false;
+      }
+      fbneoCore.loadState(base64ToBytes(saveData));
+      console.log(`[FBNeo] 即時讀檔成功 ROM="${currentRomFilename}" slot=${slot}`);
+      return true;
+    } catch (error) {
+      console.error('[FBNeo] 即時讀檔失敗:', error);
+      return false;
+    }
   }
   if (isMupenN64Active()) {
-    console.log(`[N64] Mupen64Plus 使用遊戲內建存檔/IDBFS，slot=${slot} 的即時狀態讀取尚未接入`);
-    return false;
+    dispatchN64SaveLoadHotkey('F7');
+    console.log(`[N64] 已送出 Mupen64Plus 即時讀檔快捷鍵，slot=${slot}`);
+    return true;
   }
   if (!nes) return false;
   
@@ -2546,10 +2604,20 @@ function setupArcadeButtons(): void {
 
   setupArcadeDpad();
 
-  const muteButton = document.getElementById('arcade-mobile-mute');
-  if (muteButton && !muteButton.dataset.arcadeWired) {
-    muteButton.dataset.arcadeWired = '1';
-    muteButton.addEventListener('click', toggleMute);
+  const saveButton = document.getElementById('arcade-mobile-save');
+  if (saveButton && !saveButton.dataset.arcadeWired) {
+    saveButton.dataset.arcadeWired = '1';
+    saveButton.addEventListener('click', () => {
+      if (saveState(0)) showToast('✅ 存檔成功'); else showToast('❌ 存檔失敗');
+    });
+  }
+
+  const loadButton = document.getElementById('arcade-mobile-load');
+  if (loadButton && !loadButton.dataset.arcadeWired) {
+    loadButton.dataset.arcadeWired = '1';
+    loadButton.addEventListener('click', () => {
+      if (loadState(0)) showToast('✅ 讀取成功'); else showToast('❌ 沒有存檔');
+    });
   }
 }
 
@@ -2701,28 +2769,19 @@ function setupN64Buttons(): void {
   const saveButton = document.getElementById('n64-mobile-save');
   if (saveButton && !saveButton.dataset.n64Wired) {
     saveButton.dataset.n64Wired = '1';
-    saveButton.addEventListener('click', async () => {
-      try {
-        await n64Controls?.forceDumpSaveFiles?.();
-        showToast('✅ N64 存檔已寫入');
-      } catch (error) {
-        console.warn('[N64] 寫入存檔失敗:', error);
-        showToast('❌ N64 存檔失敗');
-      }
+    saveButton.addEventListener('click', () => {
+      if (saveState(0)) showToast('✅ 存檔成功'); else showToast('❌ 存檔失敗');
     });
   }
 
   const loadButton = document.getElementById('n64-mobile-load');
   if (loadButton && !loadButton.dataset.n64Wired) {
     loadButton.dataset.n64Wired = '1';
-    loadButton.addEventListener('click', () => showToast('N64 即時讀檔尚未支援'));
+    loadButton.addEventListener('click', () => {
+      if (loadState(0)) showToast('✅ 讀取成功'); else showToast('❌ 沒有存檔');
+    });
   }
 
-  const muteButton = document.getElementById('n64-mobile-mute');
-  if (muteButton && !muteButton.dataset.n64Wired) {
-    muteButton.dataset.n64Wired = '1';
-    muteButton.addEventListener('click', toggleMute);
-  }
 }
 
 function setupN64DirectionalPad(
@@ -2953,20 +3012,20 @@ function setupSnesButtons(): void {
     document.addEventListener('mousemove', (e) => { if (md) applySnesDpad(calcDpad(e)); });
     document.addEventListener('mouseup', () => { if (md) { md = false; clearSnesDpad(); } });
   }
-  // SNES Save/Load/Mute buttons
+  // SNES Save/Load buttons
   document.getElementById('snes-mobile-save')?.addEventListener('click', () => {
     if (saveState(0)) showToast('✅ 存檔成功'); else showToast('❌ 存檔失敗');
   });
   document.getElementById('snes-mobile-load')?.addEventListener('click', () => {
     if (loadState(0)) showToast('✅ 讀取成功'); else showToast('❌ 沒有存檔');
   });
-  document.getElementById('snes-mobile-mute')?.addEventListener('click', toggleMute);
 }
 
 // ===== 鍵盤快捷鍵 =====
 
 function setupKeyboardShortcuts(): void {
   document.addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent & Record<string, unknown>)[N64_INTERNAL_HOTKEY]) return;
     if (e.key === 'F5') {
       e.preventDefault();
       saveState(0);
@@ -2988,10 +3047,6 @@ function setupKeyboardShortcuts(): void {
     // ESC 鍵返回選擇畫面
     if (e.key === 'Escape') {
       showRomSelector();
-    }
-    // M 鍵切換靜音
-    if (e.key === 'm' || e.key === 'M') {
-      toggleMute();
     }
   });
 }
