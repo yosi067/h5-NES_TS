@@ -13,6 +13,11 @@ import init, { EmuWasm } from './wasm/nes_wasm.js';
 import JSZip from 'jszip';
 import type { EmulatorControls } from 'mupen64plus-web';
 import type { FbNeoArcadeCore, FbNeoRomSet } from './arcade/fbneo-core';
+import {
+  applyN64PerformanceProfile,
+  selectN64PerformanceProfile,
+  type N64PerformanceProfile,
+} from './n64/performance';
 
 // ===== 型別定義 =====
 
@@ -90,7 +95,7 @@ const MACHINES: MachineInfo[] = [
   { key: 'arcade', title: '大型電玩', label: '雜貨店外面那些有搖桿的街機，要投錢幣的那種。', artClass: 'arcade', artFile: 'arcade.svg' },
   { key: 'gg', title: 'Game Gear', label: '經典的彩色掌機還可以看電視，一次吃你六顆鹼性電池的小怪物。', artClass: 'gg', artFile: 'gg.svg' },
   { key: 'sms', title: 'Master System', label: '電動店總是會放這台讓音速小子跑一整天。', artClass: 'sms', artFile: 'sms.svg' },
-  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，不過手機還跑不動，可以先在電腦上玩。', artClass: 'n64', artFile: 'n64.svg' },
+  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，手機會自動使用低負載效能模式。', artClass: 'n64', artFile: 'n64.svg' },
 ];
 
 function getPublicAssetUrl(path: string): string {
@@ -146,6 +151,7 @@ let currentRomFilename: string = '';
 let activeBackend: 'wasm' | 'mupen64' | 'fbneo' = 'wasm';
 let n64Controls: EmulatorControls | null = null;
 let currentN64RomData: ArrayBuffer | null = null;
+let n64PerformanceProfile: N64PerformanceProfile = selectN64PerformanceProfile();
 let fbneoCore: FbNeoArcadeCore | null = null;
 let currentFbNeoRomSet: FbNeoRomSet | null = null;
 let arcadeInputP1 = 0;
@@ -322,7 +328,7 @@ function drawN64GraphicsError(message: string): void {
   lines.forEach((line, index) => errorContext.fillText(line, 24, 102 + index * 26));
 }
 
-function activateN64Canvas(): HTMLCanvasElement {
+function activateN64Canvas(profile: N64PerformanceProfile): HTMLCanvasElement {
   if (!wasmCanvas) {
     throw new Error('找不到可替換的 2D 畫布');
   }
@@ -330,8 +336,8 @@ function activateN64Canvas(): HTMLCanvasElement {
   document.body.classList.add('n64-mode');
   const n64Canvas = document.createElement('canvas');
   n64Canvas.id = 'canvas';
-  n64Canvas.width = 640;
-  n64Canvas.height = 480;
+  n64Canvas.width = profile.width;
+  n64Canvas.height = profile.height;
   n64Canvas.style.aspectRatio = '4 / 3';
   n64Canvas.style.width = '100%';
   n64Canvas.style.height = 'auto';
@@ -360,7 +366,10 @@ function dispatchN64ResizePulse(n64Canvas: HTMLCanvasElement): void {
   window.dispatchEvent(new Event('orientationchange'));
 }
 
-async function forceN64ResponsiveResize(n64Canvas: HTMLCanvasElement): Promise<void> {
+async function forceN64ResponsiveResize(
+  n64Canvas: HTMLCanvasElement,
+  profile: N64PerformanceProfile,
+): Promise<void> {
   const originalWidth = n64Canvas.style.width || '100%';
   n64Canvas.style.width = '99.9%';
   await waitForNextFrame();
@@ -370,8 +379,8 @@ async function forceN64ResponsiveResize(n64Canvas: HTMLCanvasElement): Promise<v
   dispatchN64ResizePulse(n64Canvas);
   await waitForNextFrame();
 
-  n64Canvas.width = 640;
-  n64Canvas.height = 480;
+  n64Canvas.width = profile.width;
+  n64Canvas.height = profile.height;
 
   const rect = n64Canvas.getBoundingClientRect();
   const displayWidth = Math.max(1, Math.round(rect.width));
@@ -382,9 +391,12 @@ async function forceN64ResponsiveResize(n64Canvas: HTMLCanvasElement): Promise<v
   }
 }
 
-function scheduleN64ResponsiveResize(n64Canvas: HTMLCanvasElement): void {
+function scheduleN64ResponsiveResize(
+  n64Canvas: HTMLCanvasElement,
+  profile: N64PerformanceProfile,
+): void {
   const runResize = () => {
-    void forceN64ResponsiveResize(n64Canvas).catch((error) => {
+    void forceN64ResponsiveResize(n64Canvas, profile).catch((error) => {
       console.warn('[N64] 強制畫面適配失敗:', error);
     });
   };
@@ -1112,12 +1124,18 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
 
   try {
     activeBackend = 'mupen64';
-    currentN64RomData = romData.slice(0);
+    currentN64RomData = romData;
+    n64PerformanceProfile = selectN64PerformanceProfile();
+    console.log(
+      `[N64] performance profile: ${n64PerformanceProfile.name} ` +
+      `(${n64PerformanceProfile.width}x${n64PerformanceProfile.height}, ` +
+      `frame skip: ${n64PerformanceProfile.skipFrame ? 'on' : 'off'})`,
+    );
 
     // Mupen64Plus-web 內部 SDL/Emscripten 程式碼會尋找 id="canvas"。
     // 原本的 #screen 已建立 2D context，瀏覽器不允許同一張 canvas 再切成 WebGL，
     // 因此 N64 模式必須替換成全新的 WebGL canvas，否則會在 EGL 層得到 BAD_MATCH。
-    const n64Canvas = activateN64Canvas();
+    const n64Canvas = activateN64Canvas(n64PerformanceProfile);
 
     hideRomSelector();
     updateControllerLayout();
@@ -1126,7 +1144,7 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
     isRunning = true;
 
     const baseUrl = import.meta.env.BASE_URL;
-    await ensureMupen64Config(baseUrl);
+    await ensureMupen64Config(baseUrl, n64PerformanceProfile);
     const { default: createMupen64PlusWeb } = await import('mupen64plus-web');
     n64Controls = await createMupen64PlusWeb({
       canvas: n64Canvas,
@@ -1136,7 +1154,9 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
       coreConfig: {
         // 2 = dynamic recompiler；N64 在瀏覽器中若使用 pure interpreter 會慢到長時間黑畫面。
         emuMode: 2,
-        mainLoopTimingMode: 0,
+        // 高更新率手機若綁定 requestAnimationFrame，可能每秒執行 90/120 次 VI。
+        // 1ms timer 讓模擬器依 N64 自身節流，不跟著螢幕更新率增加 CPU 負載。
+        mainLoopTimingMode: n64PerformanceProfile.mainLoopTimingMode,
       },
       netplayConfig: { player: 0 },
       locateFile: (path: string, prefix: string) => {
@@ -1152,12 +1172,12 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
 
     console.log(`[N64] Mupen64Plus-web backend ready for ${currentRomFilename}`);
     await settleN64CanvasLayout(n64Canvas);
-    await forceN64ResponsiveResize(n64Canvas);
+    await forceN64ResponsiveResize(n64Canvas, n64PerformanceProfile);
     void n64Controls.start().catch((error) => {
       console.error('[N64] Mupen64Plus start failed:', error);
       showToast('N64 啟動失敗');
     });
-    scheduleN64ResponsiveResize(n64Canvas);
+    scheduleN64ResponsiveResize(n64Canvas, n64PerformanceProfile);
   } catch (error) {
     console.error('[N64] Mupen64Plus backend failed:', error);
     await stopN64Backend();
@@ -1166,13 +1186,16 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
   }
 }
 
-async function ensureMupen64Config(baseUrl: string): Promise<void> {
+async function ensureMupen64Config(
+  baseUrl: string,
+  profile: N64PerformanceProfile,
+): Promise<void> {
   const response = await fetch(`${baseUrl}n64-mupen/mupen64plus.cfg`, { cache: 'no-store' });
   if (!response.ok) {
     throw new Error(`無法載入 N64 設定檔: ${response.status}`);
   }
 
-  const configText = await response.text();
+  const configText = applyN64PerformanceProfile(await response.text(), profile);
   if (!configText.includes('mupen64plus-video-rice-web-netplay-web.so')) {
     throw new Error('N64 設定檔沒有指定 Rice video plugin');
   }
@@ -1753,7 +1776,7 @@ function setupDesktopControls(): void {
   document.getElementById('btn-resume')?.addEventListener('click', startEmulation);
   document.getElementById('btn-reset')?.addEventListener('click', async () => {
     if (isMupenN64Active() && currentN64RomData) {
-      await startN64Game(currentN64RomData.slice(0));
+      await startN64Game(currentN64RomData);
     } else {
       nes?.reset();
     }
