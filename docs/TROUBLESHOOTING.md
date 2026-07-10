@@ -341,15 +341,17 @@
 - 建立全新的 `<canvas id="canvas">`，避免重用已取得 2D context 的 `#screen`
 - 套用 `body.n64-mode` 後等待兩個 animation frame
 - start 前後執行 `forceN64ResponsiveResize()` / `scheduleN64ResponsiveResize()`
-- 先送 `resize` / `orientationchange` pulse，再把 WebGL backing store 固定回桌機 `640x480` 或手機 `320x240`
+- 先送 `resize` / `orientationchange` pulse，再把 WebGL backing store 固定回桌機 `640x480`、高階 iOS `480x360` 或一般手機 `320x240`
 
-**驗證**：初次載入 Super Mario 64 後，CSS 顯示維持 `4:3`；桌機 backing store 為 `640x480`，手機為 `320x240`。
+**驗證**：初次載入 Super Mario 64 後，CSS 顯示維持 `4:3`；桌機 backing store 為 `640x480`，高階 iOS 為 `480x360`，一般手機為 `320x240`。
 
 ### Q2: N64 在手機上嚴重掉幀與音頻爆音
 
 **原因**：舊流程在所有裝置固定繪製 `640x480`，Rice 使用精確材質映射、mipmap 與 sinc resampler；高更新率手機還會讓 `requestAnimationFrame` 主迴圈以 90/120 Hz 喚醒。重設遊戲時額外複製完整 ROM，也會造成行動裝置記憶體尖峰與 GC 壓力。
 
-**解決**：新增自動效能 profile。所有手機改用 N64 原生級 `320x240` backing store、快速材質載入、16-bit texture、trivial resampler、較大的音頻緩衝與 timer 主迴圈；CPU/RAM 較弱的手機另啟用每隔一幀繪製。桌機仍保留 `640x480` 與完整繪製。ROM reset 改為共用原始 buffer。
+**解決**：新增自動效能 profile。一般手機使用 N64 原生級 `320x240` backing store、快速材質載入、16-bit texture、trivial resampler 與 timer 主迴圈；6 核心以上 iPhone/iPad 改用 `480x360`、rAF 同步與較低延遲的 3072/1024 audio buffers，避免 Safari 的 1ms timer 抖動餓死主執行緒音頻回呼。CPU/RAM 較弱的手機另啟用每隔一幀繪製。ROM reset 改為共用原始 buffer。
+
+**量測**：開啟瀏覽器遠端主控台，搜尋 `[N64 perf]`。每五秒會顯示 VI/s、VI avg/max、long VI 與 recompiles。NTSC 遊戲穩定低於約 56 VI/s 表示核心本身未達 real-time；若 long VI 與 recompiles 同時偏高，啟動初期的 Wasm 動態重編譯是主要卡點。若 recompiles 已降到 0 但仍低於 real-time，才需要進一步降低 Rice 負載或使用不同核心。
 
 **限制**：這個後端仍是單執行緒 Mupen64Plus/Rice WebAssembly。遊戲相容性與最終速度仍受手機 SoC、瀏覽器 WebGL 驅動及遊戲本身負載影響；低階裝置會以畫面更新率換取穩定遊戲速度。
 

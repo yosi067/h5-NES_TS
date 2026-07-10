@@ -79,6 +79,77 @@
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
 
+    /* ===== 遊戲載入覆蓋層 ===== */
+    .game-loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 2000;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(12, 10, 14, 0.78);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+    }
+
+    .game-loading-overlay[hidden] {
+      display: none;
+    }
+
+    .game-loading-card {
+      width: min(320px, calc(100vw - 48px));
+      padding: 28px 24px 24px;
+      border: 2px solid rgba(210, 166, 70, 0.75);
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(48, 48, 58, 0.98), rgba(22, 22, 28, 0.98));
+      color: var(--fc-cream);
+      text-align: center;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .game-loading-spinner {
+      width: 54px;
+      height: 54px;
+      margin: 0 auto 18px;
+      border: 5px solid rgba(243, 234, 216, 0.18);
+      border-top-color: var(--fc-gold);
+      border-right-color: var(--fc-red);
+      border-radius: 50%;
+      animation: game-loading-spin 0.85s linear infinite;
+    }
+
+    .game-loading-title {
+      margin-bottom: 8px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .game-loading-name {
+      overflow: hidden;
+      margin-bottom: 10px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .game-loading-status {
+      color: rgba(243, 234, 216, 0.72);
+      font-size: 13px;
+    }
+
+    @keyframes game-loading-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .game-loading-spinner {
+        animation-duration: 1.8s;
+      }
+    }
+
     /* ===== GameBoy 外殼 ===== */
     .gameboy-shell {
       display: flex;
@@ -3404,6 +3475,15 @@
   </style>
 </head>
 <body>
+  <div class="game-loading-overlay" id="game-loading-overlay" role="status" aria-live="polite" aria-busy="true" hidden>
+    <div class="game-loading-card">
+      <div class="game-loading-spinner" aria-hidden="true"></div>
+      <div class="game-loading-title">遊戲讀取中</div>
+      <div class="game-loading-name" id="game-loading-name"></div>
+      <div class="game-loading-status" id="game-loading-status">正在下載遊戲檔案…</div>
+    </div>
+  </div>
+
   <!-- ROM 選擇器 (初始顯示) -->
   <div class="rom-selector" id="rom-selector">
     <div class="rom-selector-content">

@@ -1,9 +1,11 @@
 export interface N64PerformanceProfile {
-  name: 'desktop' | 'mobile' | 'mobile-low-end';
+  name: 'desktop' | 'ios-high-end' | 'mobile' | 'mobile-low-end';
   width: number;
   height: number;
   skipFrame: boolean;
   mainLoopTimingMode: number;
+  primaryAudioTarget: number;
+  secondaryAudioBuffer: number;
 }
 
 interface NavigatorHardwareInfo extends Navigator {
@@ -21,14 +23,31 @@ export function selectN64PerformanceProfile(
   const memory = nav.deviceMemory;
   const cores = nav.hardwareConcurrency ?? 4;
   const lowEnd = mobile && ((memory !== undefined && memory <= 4) || cores <= 4);
+  const highEndIos = /iPhone|iPad|iPod/i.test(nav.userAgent) && cores >= 6;
 
   if (lowEnd) {
-    return { name: 'mobile-low-end', width: 320, height: 240, skipFrame: true, mainLoopTimingMode: 1 };
+    return {
+      name: 'mobile-low-end', width: 320, height: 240, skipFrame: true,
+      mainLoopTimingMode: 1, primaryAudioTarget: 4096, secondaryAudioBuffer: 2048,
+    };
+  }
+  if (highEndIos) {
+    return {
+      name: 'ios-high-end', width: 480, height: 360, skipFrame: false,
+      // iOS 對極短 setTimeout 的節流與抖動較明顯；rAF 能讓 WebGL 呈現和音訊回呼取得公平的主執行緒時間。
+      mainLoopTimingMode: 0, primaryAudioTarget: 3072, secondaryAudioBuffer: 1024,
+    };
   }
   if (mobile) {
-    return { name: 'mobile', width: 320, height: 240, skipFrame: false, mainLoopTimingMode: 1 };
+    return {
+      name: 'mobile', width: 320, height: 240, skipFrame: false,
+      mainLoopTimingMode: 1, primaryAudioTarget: 4096, secondaryAudioBuffer: 2048,
+    };
   }
-  return { name: 'desktop', width: 640, height: 480, skipFrame: false, mainLoopTimingMode: 0 };
+  return {
+    name: 'desktop', width: 640, height: 480, skipFrame: false,
+    mainLoopTimingMode: 0, primaryAudioTarget: 2048, secondaryAudioBuffer: 1024,
+  };
 }
 
 function setIniValue(config: string, section: string, key: string, value: string): string {
@@ -76,8 +95,8 @@ export function applyN64PerformanceProfile(
   result = setIniValue(result, 'Video-General', 'ScreenHeight', String(profile.height));
 
   if (profile.name !== 'desktop') {
-    result = setIniValue(result, 'Audio-SDL', 'PRIMARY_BUFFER_TARGET', '4096');
-    result = setIniValue(result, 'Audio-SDL', 'SECONDARY_BUFFER_SIZE', '2048');
+    result = setIniValue(result, 'Audio-SDL', 'PRIMARY_BUFFER_TARGET', String(profile.primaryAudioTarget));
+    result = setIniValue(result, 'Audio-SDL', 'SECONDARY_BUFFER_SIZE', String(profile.secondaryAudioBuffer));
     result = setIniValue(result, 'Audio-SDL', 'RESAMPLE', '"trivial"');
     result = setIniValue(result, 'Video-Rice', 'FastTextureLoading', 'True');
     result = setIniValue(result, 'Video-Rice', 'AccurateTextureMapping', 'False');

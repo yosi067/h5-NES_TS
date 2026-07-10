@@ -49,10 +49,12 @@ describe('N64 mobile performance profiles', () => {
       height: 240,
       skipFrame: true,
       mainLoopTimingMode: 1,
+      primaryAudioTarget: 4096,
+      secondaryAudioBuffer: 2048,
     });
   });
 
-  it('keeps frame skipping off on higher-end phones', () => {
+  it('uses display-synchronised pacing and more detail on high-end iOS', () => {
     const profile = selectN64PerformanceProfile(navigatorInfo({
       userAgent: 'Mozilla/5.0 iPhone Mobile',
       hardwareConcurrency: 8,
@@ -60,9 +62,12 @@ describe('N64 mobile performance profiles', () => {
       maxTouchPoints: 5,
     }), 430);
 
-    expect(profile.name).toBe('mobile');
+    expect(profile.name).toBe('ios-high-end');
     expect(profile.skipFrame).toBe(false);
-    expect(profile.width).toBe(320);
+    expect(profile.width).toBe(480);
+    expect(profile.height).toBe(360);
+    expect(profile.mainLoopTimingMode).toBe(0);
+    expect(profile.secondaryAudioBuffer).toBe(1024);
   });
 
   it('rewrites only the intended Mupen sections for mobile', () => {
@@ -72,6 +77,8 @@ describe('N64 mobile performance profiles', () => {
       height: 240,
       skipFrame: true,
       mainLoopTimingMode: 1,
+      primaryAudioTarget: 4096,
+      secondaryAudioBuffer: 2048,
     };
     const config = applyN64PerformanceProfile(BASE_CONFIG, profile);
 

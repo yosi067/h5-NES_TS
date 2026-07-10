@@ -46,7 +46,7 @@ H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到�
 ### 多平台核心與後端整合
 
 - Rust/WASM 單一核心整合 NES、GB、GG/SMS、SNES，前端透過統一 `EmuWasm` API 操作。
-- N64 透過 `mupen64plus-web` 與 WebGL2 canvas 啟動，和 WASM 2D canvas 互斥時會自動切換畫布；手機會自動降至 320×240、使用低成本音頻重採樣與 Rice 快速材質路徑，低階裝置另啟用隔幀繪製。
+- N64 透過 `mupen64plus-web` 與 WebGL2 canvas 啟動，和 WASM 2D canvas 互斥時會自動切換畫布；一般手機使用 320×240，6 核心以上 iPhone/iPad 使用 480×360 與 rAF 畫面同步，並共用低成本音頻重採樣及 Rice 快速材質路徑；低階裝置另啟用隔幀繪製。
 - FBNeo Arcade 透過 `@mantou/fbneo` 載入完整 ZIP ROM set，支援 Raiden、Warriors of Fate、Final Fight、恐龍快打、名將、忍者龜、Street Fighter II 等 17 款街機，並處理 Emscripten FS、音視頻與街機輸入橋接。
 
 ### 模擬精度與相容性努力

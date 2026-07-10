@@ -18,6 +18,7 @@ import {
   selectN64PerformanceProfile,
   type N64PerformanceProfile,
 } from './n64/performance';
+import { createN64Telemetry } from './n64/telemetry';
 
 // ===== 型別定義 =====
 
@@ -152,6 +153,16 @@ let activeBackend: 'wasm' | 'mupen64' | 'fbneo' = 'wasm';
 let n64Controls: EmulatorControls | null = null;
 let currentN64RomData: ArrayBuffer | null = null;
 let n64PerformanceProfile: N64PerformanceProfile = selectN64PerformanceProfile();
+let n64Telemetry = createN64Telemetry({
+  onReport: report => {
+    const speed = report.viPerSecond >= 56 ? 'real-time' : 'below real-time';
+    console.info(
+      `[N64 perf] ${report.viPerSecond.toFixed(1)} VI/s (${speed}), ` +
+      `VI avg/max ${report.averageViMs.toFixed(1)}/${report.longestViMs.toFixed(1)} ms, ` +
+      `long VI ${report.longVis}, recompiles ${report.recompiles}`,
+    );
+  },
+});
 let fbneoCore: FbNeoArcadeCore | null = null;
 let currentFbNeoRomSet: FbNeoRomSet | null = null;
 let arcadeInputP1 = 0;
@@ -705,6 +716,35 @@ function setupKeyboardInput(): void {
 
 // ===== ROM 選擇器 =====
 
+let gameLoadingSequence = 0;
+
+async function showGameLoading(gameName: string, status: string): Promise<number> {
+  const sequence = ++gameLoadingSequence;
+  const overlay = document.getElementById('game-loading-overlay');
+  const nameElement = document.getElementById('game-loading-name');
+  const statusElement = document.getElementById('game-loading-status');
+
+  if (nameElement) nameElement.textContent = gameName;
+  if (statusElement) statusElement.textContent = status;
+  if (overlay) overlay.hidden = false;
+
+  // 先讓瀏覽器畫出動畫，再開始 fetch、解壓縮或核心初始化等較重工作。
+  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  return sequence;
+}
+
+function updateGameLoading(sequence: number, status: string): void {
+  if (sequence !== gameLoadingSequence) return;
+  const statusElement = document.getElementById('game-loading-status');
+  if (statusElement) statusElement.textContent = status;
+}
+
+function hideGameLoading(sequence: number): void {
+  if (sequence !== gameLoadingSequence) return;
+  const overlay = document.getElementById('game-loading-overlay');
+  if (overlay) overlay.hidden = true;
+}
+
 /**
  * 設定 ROM 選擇器
  */
@@ -849,6 +889,7 @@ function renderRomList(system: SystemKey): void {
  * 從伺服器載入 ROM（支援 ZIP）
  */
 async function loadRomFromServer(filename: string): Promise<void> {
+  const loadingSequence = await showGameLoading(filename, '正在下載遊戲檔案…');
   try {
     // 使用 Vite 的 BASE_URL 確保在 GitHub Pages 等子目錄部署時路徑正確
     const baseUrl = import.meta.env.BASE_URL;
@@ -859,6 +900,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
     
     const buffer = await response.arrayBuffer();
     const lower = filename.toLowerCase();
+    updateGameLoading(loadingSequence, '正在啟動模擬器…');
 
     if (isFbNeoArcadeRomName(filename)) {
       currentRomFilename = filename;
@@ -868,6 +910,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
 
     if (lower.endsWith('.zip')) {
       // 解壓 ZIP
+      updateGameLoading(loadingSequence, '正在解壓縮遊戲檔案…');
       const zip = await JSZip.loadAsync(buffer);
       const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
       let romFile: JSZip.JSZipObject | null = null;
@@ -890,6 +933,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
 
       const romBuffer = await romFile.async('arraybuffer');
       currentRomFilename = romFileName.split('/').pop() || romFileName;
+      updateGameLoading(loadingSequence, '正在啟動模擬器…');
       await startGame(romBuffer);
     } else {
       currentRomFilename = filename;
@@ -898,6 +942,8 @@ async function loadRomFromServer(filename: string): Promise<void> {
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
     alert('載入遊戲失敗，請重試');
+  } finally {
+    hideGameLoading(loadingSequence);
   }
 }
 
@@ -905,6 +951,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
  * 從檔案載入 ROM（支援 ZIP）
  */
 async function loadRomFromFile(file: File): Promise<void> {
+  const loadingSequence = await showGameLoading(file.name, '正在讀取遊戲檔案…');
   try {
     const lower = file.name.toLowerCase();
     let buffer: ArrayBuffer;
@@ -914,11 +961,13 @@ async function loadRomFromFile(file: File): Promise<void> {
       if (isFbNeoArcadeRomName(file.name)) {
         const zipBuffer = await file.arrayBuffer();
         currentRomFilename = file.name;
+        updateGameLoading(loadingSequence, '正在啟動模擬器…');
         await startFbNeoGame(file.name, zipBuffer);
         return;
       }
 
       // 解壓 ZIP，找第一個遊戲檔案
+      updateGameLoading(loadingSequence, '正在解壓縮遊戲檔案…');
       const zip = await JSZip.loadAsync(await file.arrayBuffer());
       const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
       let romFile: JSZip.JSZipObject | null = null;
@@ -947,10 +996,13 @@ async function loadRomFromFile(file: File): Promise<void> {
     }
 
     currentRomFilename = romName;
+    updateGameLoading(loadingSequence, '正在啟動模擬器…');
     await startGame(buffer);
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
     alert('載入遊戲失敗，請重試');
+  } finally {
+    hideGameLoading(loadingSequence);
   }
 }
 
@@ -1149,6 +1201,8 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
     n64Controls = await createMupen64PlusWeb({
       canvas: n64Canvas,
       romData,
+      beginStats: () => n64Telemetry.beginStats(),
+      endStats: (numberOfRecompiles: number) => n64Telemetry.endStats(numberOfRecompiles),
       // 明確指定 1.5.x 中目前最能啟動的 Rice video plugin。
       arguments: ['--gfx', '/plugins/mupen64plus-video-rice-web-netplay-web.so'],
       coreConfig: {
@@ -1241,6 +1295,7 @@ function putMupenIdbFile(fileKey: string, contents: Uint8Array): Promise<void> {
 
 async function stopN64Backend(): Promise<void> {
   releaseAllN64Inputs();
+  n64Telemetry.reset();
   if (n64Controls) {
     try {
       await n64Controls.forceDumpSaveFiles?.();
