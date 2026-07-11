@@ -10,6 +10,10 @@
 - 伺服器提供 `Content-Length` 時顯示真實下載百分比，ZIP 解壓顯示 JSZip 實際進度；無可靠資料時不顯示百分比。
 - NES 未實作 mapper、NES 2.0 與 GB 未實作 MBC 不再靜默降級，改為明確拒絕載入。
 - 修正 SNES 65816 16-bit decimal ADC 無法設定 carry，並加入 `9999 + 1` 回歸測試。
+- 音訊輸出從 deprecated `ScriptProcessorNode` 遷移到 AudioWorklet，模擬開始、停止與靜音狀態會同步到音訊執行緒。
+- SPC700 的 256 個 opcode 已由 exhaustive match 強制覆蓋；移除 unknown-as-NOP fallback。
+- SNES CPU 已將 slow ROM、FastROM、WRAM/I/O bus access penalty 接入每條指令的 master clock 計算。
+- NES 正式 Rust 核心已加入 NTSC frame PPU clock 基線測試。
 
 ## N64 最終評估
 
@@ -58,11 +62,11 @@
 ### SFC / SNES
 
 - **現況**：已有 65816、PPU Mode 0-7、SPC700/S-DSP、DMA/HDMA、DSP-1 與 CX4。
-- **已知風險**：SPC700 未涵蓋的 opcode 目前當 NOP；記憶體速度函式未接入；特殊晶片只支援 DSP-1/CX4。
-- **P0**：建立 SPC700 全 256 opcode、cycle 與旗標測試，移除 unknown-as-NOP；修正後跑 Secret of Mana、Chrono Trigger、FF6 音訊回歸。
+- **已知風險**：SPC700 雖已明確覆蓋全部 opcode，但 cycle 與旗標的自動測試仍不足；特殊晶片只支援 DSP-1/CX4。
+- **P0**：建立 SPC700 全 256 opcode 的 cycle 與旗標測試；跑 Secret of Mana、Chrono Trigger、FF6 音訊回歸。
 - **已完成一部分**：修正 16-bit decimal ADC carry 並加入邊界回歸測試；後續仍需補 binary/decimal ADC/SBC 表格測試及 NMI/IRQ、WAI/STP、emulation/native mode 測試。
 - **P0**：建立 PPU screenshot/hash suite，涵蓋 Mode 5/7、window/color math、OAM priority、HDMA 與 overscan/interlace。
-- **P1**：接入 slow/fast ROM 與 I/O bus timing，使用 CPU/PPU/APU 同步測試驗證，避免只靠單款遊戲調參。
+- **P1（進行中）**：slow/fast ROM 與 I/O bus penalty 已接入一般 CPU 指令；後續補 NMI/IRQ、WAI 與 DMA/HDMA 邊界同步測試。
 - **P2**：特殊晶片按 ROM 需求選擇成熟核心整合或個別實作。SA-1、SuperFX、S-DD1、SPC7110 遊戲在完成前明確標示不支援。
 
 ### Game Boy / Game Boy Color

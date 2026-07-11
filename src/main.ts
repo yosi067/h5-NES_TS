@@ -146,6 +146,7 @@ let wasmCanvas: HTMLCanvasElement | null = null;
 let ctx: CanvasRenderingContext2D | null = null;
 let imageData: ImageData | null = null;
 let audioContext: AudioContext | null = null;
+let audioWorkletNode: AudioWorkletNode | null = null;
 let wasmInitPromise: Promise<void> | null = null;
 let isRunning: boolean = false;
 let currentRomFilename: string = '';
@@ -436,17 +437,7 @@ let powerLed: HTMLElement | null = null;
 let romCatalog: RomInfo[] = [];
 
 // ===== 音頻設定 =====
-const AUDIO_BUFFER_SIZE = 2048;  // ScriptProcessor 緩衝區大小（~46ms）
-let lastAudioSample: number = 0;  // 上一個有效取樣值，用於平滑填充
 let audioMuted: boolean = false;    // 靜音旗標（同時停用 APU IRQ）
-
-// ===== 音頻環形緩衝區 =====
-// 解耦 WASM 音頻產生與 ScriptProcessor 消費的時序差異
-const JS_RING_SIZE = 16384;       // 可容納 ~22 幀的音頻資料
-const jsRing = new Float32Array(JS_RING_SIZE);
-let ringW = 0;   // 寫入位置
-let ringR = 0;   // 讀取位置
-let ringCount = 0; // 目前可用樣本數
 
 // ===== 初始化 =====
 
@@ -1155,10 +1146,7 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
   activeBackend = 'fbneo';
   arcadeInputP1 = 0;
   arcadeInputP2 = 0;
-  ringW = 0;
-  ringR = 0;
-  ringCount = 0;
-  lastAudioSample = 0;
+  clearAudioQueue();
 
   try {
     const { FbNeoArcadeCore, extractFbNeoRomSet } = await import('./arcade/fbneo-core');
@@ -1278,10 +1266,7 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
     powerLed?.classList.add('on');
     
     // 重置音頻環形緩衝區（避免上一局殘留音頻）
-    ringW = 0;
-    ringR = 0;
-    ringCount = 0;
-    lastAudioSample = 0;
+    clearAudioQueue();
     
     // 開始模擬
     startEmulation();
@@ -2046,6 +2031,7 @@ function setupFileInput(): void {
 function startEmulation(): void {
   if (isMupenN64Active()) {
     isRunning = true;
+    syncAudioWorkletState();
     n64Controls?.resume();
     return;
   }
@@ -2060,6 +2046,7 @@ function startEmulation(): void {
   }
 
   isRunning = true;
+  syncAudioWorkletState();
 
   // 根據核心類型選擇幀率
   // NES NTSC: 60.0988 fps, Game Boy: 59.7275 fps, Game Gear: 59.92 fps (3579545 / 228 / 262)
@@ -2144,7 +2131,7 @@ function startEmulation(): void {
         } catch(e) { /* ignore sampling errors */ }
       }
 
-      drainWasmAudioToRing();  // 每幀後排入環形緩衝區，防止 WASM buffer 溢出
+      drainWasmAudioToWorklet();
 
       // === SoM diagnostic: DSP voice + CGRAM + framebuffer color monitoring ===
       if (coreType === 'snes') {
@@ -2205,6 +2192,7 @@ function startFbNeoEmulation(): void {
   }
 
   isRunning = true;
+  syncAudioWorkletState();
   const targetFrameTime = 1000 / 60;
   let lastFrameTime = performance.now();
   let accumulator = 0;
@@ -2235,6 +2223,7 @@ function startFbNeoEmulation(): void {
  */
 function stopEmulation(): void {
   isRunning = false;
+  syncAudioWorkletState();
   if (isMupenN64Active()) {
     void n64Controls?.pause().catch((error) => console.warn('[N64] 暫停失敗:', error));
     return;
@@ -2322,24 +2311,52 @@ function resetAudioDiagWindow(): void {
 }
 
 function enqueueAudioSamples(samples: Float32Array): void {
-  if (audioMuted || samples.length === 0) return;
+  if (audioMuted || samples.length === 0 || !audioWorkletNode) return;
 
-  for (let i = 0; i < samples.length; i++) {
-    jsRing[ringW] = samples[i];
-    ringW = (ringW + 1) % JS_RING_SIZE;
-    if (ringCount < JS_RING_SIZE) {
-      ringCount++;
-    } else {
-      ringR = (ringR + 1) % JS_RING_SIZE;
+  if (audioDiag.active && audioContext) {
+    for (let index = 0; index < samples.length; index++) {
+      const value = samples[index];
+      audioDiag.sampleCount++;
+      audioDiag.sumSq += value * value;
+      if (index > 0) {
+        const difference = value - samples[index - 1];
+        audioDiag.sumDiffSq += difference * difference;
+      }
+      const absolute = Math.abs(value);
+      if (absolute > audioDiag.maxAbs) audioDiag.maxAbs = absolute;
+      if (absolute > 0.98) audioDiag.clipCount++;
+      if (audioDiag.sampleCount >= audioContext.sampleRate) {
+        const rms = Math.sqrt(audioDiag.sumSq / audioDiag.sampleCount);
+        const diffRms = Math.sqrt(audioDiag.sumDiffSq / Math.max(1, audioDiag.sampleCount - 1));
+        const snrLike = rms > 1e-6 ? rms / Math.max(1e-6, diffRms) : 0;
+        console.log(`[AUDIO DIAG] window=${audioDiag.windowsLogged + 1} rms=${rms.toFixed(4)} diffRms=${diffRms.toFixed(4)} snrLike=${snrLike.toFixed(2)} maxAbs=${audioDiag.maxAbs.toFixed(3)} clips=${audioDiag.clipCount}`);
+        audioDiag.windowsLogged++;
+        resetAudioDiagWindow();
+        if (audioDiag.windowsLogged >= 12) audioDiag.active = false;
+      }
     }
   }
+
+  const transferableSamples = samples.slice();
+  audioWorkletNode.port.postMessage(
+    { type: 'samples', samples: transferableSamples },
+    [transferableSamples.buffer],
+  );
+}
+
+function clearAudioQueue(): void {
+  audioWorkletNode?.port.postMessage({ type: 'clear' });
+}
+
+function syncAudioWorkletState(): void {
+  audioWorkletNode?.port.postMessage({ type: 'state', running: isRunning, muted: audioMuted });
 }
 
 /**
  * 將 WASM 音頻緩衝區的樣本排入 JS 環形緩衝區
  * 在每次 frame() 後呼叫，確保所有樣本都被捕獲
  */
-function drainWasmAudioToRing(): void {
+function drainWasmAudioToWorklet(): void {
   if (!nes) return;
   const available = nes.getAudioBufferLen();
   if (available === 0) return;
@@ -2365,11 +2382,17 @@ function drainWasmAudioToRing(): void {
 async function initAudio(): Promise<void> {
   try {
     audioContext = new AudioContext({ sampleRate: 44100 });
+    await audioContext.audioWorklet.addModule(`${import.meta.env.BASE_URL}audio-worklet.js`);
+    audioWorkletNode = new AudioWorkletNode(audioContext, 'emulator-audio-processor', {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [1],
+    });
+    audioWorkletNode.connect(audioContext.destination);
     
     if (nes) {
       nes.setAudioSampleRate(audioContext.sampleRate);
     }
-    const audioSampleRate = audioContext.sampleRate;
     audioDiag.active = shouldEnableAudioDiag();
     if (audioDiag.active) {
       resetAudioDiagWindow();
@@ -2377,57 +2400,8 @@ async function initAudio(): Promise<void> {
       console.log('[AUDIO DIAG] Enabled for current ROM');
     }
     
-    const scriptProcessor = audioContext.createScriptProcessor(AUDIO_BUFFER_SIZE, 0, 1);
-    
-    scriptProcessor.onaudioprocess = (e) => {
-      const output = e.outputBuffer.getChannelData(0);
-      if (!isRunning || audioMuted) {
-        output.fill(0);
-        return;
-      }
-
-      // 從環形緩衝區讀取樣本
-      for (let i = 0; i < output.length; i++) {
-        if (ringCount > 0) {
-          output[i] = jsRing[ringR];
-          lastAudioSample = output[i];
-          ringR = (ringR + 1) % JS_RING_SIZE;
-          ringCount--;
-        } else {
-          // 欠載：用最後一個有效值漸變到靜音，避免爆音
-          lastAudioSample *= 0.999;
-          output[i] = lastAudioSample;
-        }
-
-        if (audioDiag.active) {
-          const v = output[i];
-          audioDiag.sampleCount++;
-          audioDiag.sumSq += v * v;
-          if (i > 0) {
-            const diff = v - output[i - 1];
-            audioDiag.sumDiffSq += diff * diff;
-          }
-          const abs = Math.abs(v);
-          if (abs > audioDiag.maxAbs) audioDiag.maxAbs = abs;
-          if (abs > 0.98) audioDiag.clipCount++;
-          if (audioDiag.sampleCount >= audioSampleRate) {
-            const rms = Math.sqrt(audioDiag.sumSq / audioDiag.sampleCount);
-            const diffRms = Math.sqrt(audioDiag.sumDiffSq / Math.max(1, audioDiag.sampleCount - 1));
-            const snrLike = rms > 1e-6 ? (rms / Math.max(1e-6, diffRms)) : 0;
-            console.log(`[AUDIO DIAG] window=${audioDiag.windowsLogged + 1} rms=${rms.toFixed(4)} diffRms=${diffRms.toFixed(4)} snrLike=${snrLike.toFixed(2)} maxAbs=${audioDiag.maxAbs.toFixed(3)} clips=${audioDiag.clipCount}`);
-            audioDiag.windowsLogged++;
-            resetAudioDiagWindow();
-            if (audioDiag.windowsLogged >= 12) {
-              audioDiag.active = false;
-              console.log('[AUDIO DIAG] Completed 12 windows, auto-disabled');
-            }
-          }
-        }
-      }
-    };
-    
-    scriptProcessor.connect(audioContext.destination);
-    console.log('音頻系統已初始化，取樣率:', audioContext.sampleRate);
+    syncAudioWorkletState();
+    console.log('AudioWorklet 音頻系統已初始化，取樣率:', audioContext.sampleRate);
   } catch (e) {
     console.error('音頻初始化失敗:', e);
   }
@@ -2452,11 +2426,9 @@ function toggleMute(): void {
 
   // 靜音時清空環形緩衝區，避免殘留聲音
   if (audioMuted) {
-    ringW = 0;
-    ringR = 0;
-    ringCount = 0;
-    lastAudioSample = 0;
+    clearAudioQueue();
   }
+  syncAudioWorkletState();
 
   showToast(audioMuted ? '🔇 音頻已關閉（APU IRQ 同時停用）' : '🔊 音頻已開啟');
 }

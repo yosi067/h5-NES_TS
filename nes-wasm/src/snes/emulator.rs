@@ -80,6 +80,9 @@ pub struct SnesEmulator {
     master_clock: u64,
     /// 當前掃描線的 CPU 週期消耗
     cpu_cycles_this_line: u32,
+    /// Current instruction's bus penalty above the 6-master-clock baseline.
+    cpu_bus_penalty: u32,
+    track_cpu_bus_timing: bool,
     /// 當前掃描線已執行的 APU 週期
     apu_cycles_this_scanline: u32,
     /// APU master clock 餘數累加器 (每掃描線 1364 % 21 = 20 的殘餘)
@@ -137,6 +140,8 @@ impl SnesEmulator {
 
             master_clock: 0,
             cpu_cycles_this_line: 0,
+            cpu_bus_penalty: 0,
+            track_cpu_bus_timing: false,
             apu_cycles_this_scanline: 0,
             apu_master_remainder: 0,
             open_bus: 0,
@@ -173,6 +178,8 @@ impl SnesEmulator {
         self.wram_addr = 0;
         self.master_clock = 0;
         self.cpu_cycles_this_line = 0;
+        self.cpu_bus_penalty = 0;
+        self.track_cpu_bus_timing = false;
         self.apu_cycles_this_scanline = 0;
         self.apu_master_remainder = 0;
         self.nmitimen = 0;
@@ -440,6 +447,8 @@ impl SnesEmulator {
             // 執行一條指令
             let prev_pb = self.cpu.pb;
             let prev_pc = self.cpu.pc;
+            self.cpu_bus_penalty = 0;
+            self.track_cpu_bus_timing = true;
             let opcode = self.fetch_pc();
 
             // Debug trap: catch first BRK execution anywhere
@@ -463,10 +472,12 @@ impl SnesEmulator {
             }
 
             self.execute_instruction(opcode);
+            self.track_cpu_bus_timing = false;
             self.debug_prev_pb_pc = (prev_pb, prev_pc);
 
-            // 指令週期轉換為 master clocks (CPU 約 3.58 MHz = 6 master clocks/cycle)
-            self.cpu.cycles *= CPU_FAST_DIV;
+            // Cycle tables use a 6-master-clock baseline. Slow bus accesses add
+            // their per-access difference (8 or 12 clocks) to the instruction.
+            self.cpu.cycles = self.cpu.cycles * CPU_FAST_DIV + self.cpu_bus_penalty;
 
             if remaining >= self.cpu.cycles {
                 remaining -= self.cpu.cycles;
@@ -513,7 +524,7 @@ impl SnesEmulator {
             match addr {
                 0x0000..=0x1FFF => CPU_SLOW_DIV,
                 0x2000..=0x3FFF => CPU_FAST_DIV,  // Internal registers
-                0x4000..=0x41FF => CPU_SLOW_DIV + 6, // 12 cycles for joypad
+                0x4000..=0x41FF => 12, // Extra-slow CPU I/O (joypad ports)
                 0x4200..=0x5FFF => CPU_FAST_DIV,
                 0x6000..=0x7FFF => CPU_SLOW_DIV,
                 _ => {
@@ -544,6 +555,10 @@ impl SnesEmulator {
     }
 
     fn bus_read(&mut self, bank: u8, addr: u16) -> u8 {
+        if self.track_cpu_bus_timing {
+            self.cpu_bus_penalty += self.get_memory_speed(bank, addr) - CPU_FAST_DIV;
+        }
+
         // WRAM banks $7E/$7F only (NOT $FE/$FF — those are cartridge ROM)
         if bank == 0x7E || bank == 0x7F {
             let offset = ((bank as usize - 0x7E) << 16) | addr as usize;
@@ -684,6 +699,10 @@ impl SnesEmulator {
     }
 
     fn bus_write(&mut self, bank: u8, addr: u16, val: u8) {
+        if self.track_cpu_bus_timing {
+            self.cpu_bus_penalty += self.get_memory_speed(bank, addr) - CPU_FAST_DIV;
+        }
+
         // Set PC for PPU write tracing
         self.ppu.debug_2130_pc = ((self.cpu.pb as u32) << 16) | self.cpu.pc as u32;
         // WRAM banks $7E/$7F only (NOT $FE/$FF — those are cartridge ROM)
@@ -3067,5 +3086,27 @@ mod tests {
         assert_eq!(emulator.cpu.a_val(), 0x0000);
         assert!(emulator.cpu.flag_c());
         assert!(emulator.cpu.flag_z());
+    }
+
+    #[test]
+    fn memory_speed_distinguishes_slow_fast_rom_and_joypad() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.fast_rom = true;
+
+        assert_eq!(emulator.get_memory_speed(0x00, 0x8000), CPU_SLOW_DIV);
+        assert_eq!(emulator.get_memory_speed(0x80, 0x8000), CPU_FAST_DIV);
+        assert_eq!(emulator.get_memory_speed(0x00, 0x4016), 12);
+    }
+
+    #[test]
+    fn cpu_instruction_accumulates_slow_bus_penalty() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cpu.pb = 0;
+        emulator.cpu.pc = 0;
+        emulator.wram[0] = 0xEA; // NOP: two CPU cycles plus one slow fetch.
+
+        emulator.run_cpu_for(1);
+
+        assert_eq!(emulator.cpu.cycles, 13);
     }
 }

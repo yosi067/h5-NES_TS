@@ -1662,9 +1662,6 @@ impl Apu {
             0xEF => { self.pc = self.pc.wrapping_sub(1); 3 }
             // === STOP ===
             0xFF => { self.pc = self.pc.wrapping_sub(1); 3 }
-
-            // 其他未實作的 opcode 當作 NOP
-            _ => { 2 }
         }
     }
 

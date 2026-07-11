@@ -1002,3 +1002,19 @@ impl Emulator {
         true
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn frame_runs_exact_ntsc_ppu_clock_count_when_rendering_is_disabled() {
+        let mut emulator = Emulator::new();
+        emulator.reset();
+        let start_clock = emulator.system_clock;
+
+        emulator.frame();
+
+        assert_eq!(emulator.system_clock - start_clock, 262 * 341);
+    }
+}
