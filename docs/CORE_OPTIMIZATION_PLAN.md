@@ -14,6 +14,9 @@
 - SPC700 的 256 個 opcode 已由 exhaustive match 強制覆蓋；移除 unknown-as-NOP fallback。
 - SNES CPU 已將 slow ROM、FastROM、WRAM/I/O bus access penalty 接入每條指令的 master clock 計算。
 - NES 正式 Rust 核心已加入 NTSC frame PPU clock 基線測試。
+- NES IRQ 改為由 APU/Mapper 當前 level 重算；MMC3 IRQ 只在 `$E000` acknowledge 後解除，修正 Captain Tsubasa II 的幽靈 IRQ/stack frame 損壞。
+- NES 2.0 已安全接受既有 mapper、submapper 0 與標準容量編碼；擴充 mapper/submapper/容量仍明確拒絕。
+- SNES BG1-BG4 水平捲動各自保留 fine offset，修正 Mode 5 英文字形 0-7 px 位移。
 
 ## N64 最終評估
 
@@ -53,9 +56,10 @@
 ### FC / NES
 
 - **現況**：正式路徑是 Rust/Wasm；支援 mapper 0、1、2、3、4、7、11、15、16、23、66、71、113、202、225、227、245、253。
-- **已知風險**：NES 2.0 submapper/擴充容量尚未解析；正式 Rust CPU/PPU/APU 的自動測試覆蓋仍低。
-- **已完成一部分**：不支援的 mapper 與 NES 2.0 不再靜默使用 Mapper 0，會顯示統一的不支援錯誤；後續再增加 mapper/submapper 精確編號。
-- **P0**：建立 Rust/Wasm conformance runner，加入 nestest、blargg CPU/PPU/APU、MMC3 IRQ 與 sprite hit 測試。
+- **已知風險**：NES 2.0 擴充 mapper/submapper/容量尚未實作；正式 Rust CPU/PPU/APU 的自動測試覆蓋仍低。
+- **已完成一部分**：不支援的 mapper 與 NES 2.0 擴充格式不再靜默使用 Mapper 0；既有 mapper 的 NES 2.0 submapper 0 可載入，錯誤會顯示統一的不支援訊息。
+- **已完成一部分**：MMC3 IRQ 已改為 level-sensitive 並加入 acknowledge 回歸測試；Captain Tsubasa II 與 Super Mario Bros. 3 已通過瀏覽器啟動畫面驗證。
+- **P0**：建立 Rust/Wasm conformance runner，加入 nestest、blargg CPU/PPU/APU、MMC3 A12 edge timing 與 sprite hit 測試。
 - **P1**：依實際 ROM 清單統計缺少 mapper，再按遊戲覆蓋率實作，不按 mapper 編號順序盲目增加。
 - **P1**：補 APU golden audio/hash 測試，涵蓋 frame counter、DMC DMA/IRQ、sweep 與 region timing。
 
@@ -66,6 +70,7 @@
 - **P0**：建立 SPC700 全 256 opcode 的 cycle 與旗標測試；跑 Secret of Mana、Chrono Trigger、FF6 音訊回歸。
 - **已完成一部分**：修正 16-bit decimal ADC carry 並加入邊界回歸測試；後續仍需補 binary/decimal ADC/SBC 表格測試及 NMI/IRQ、WAI/STP、emulation/native mode 測試。
 - **P0**：建立 PPU screenshot/hash suite，涵蓋 Mode 5/7、window/color math、OAM priority、HDMA 與 overscan/interlace。
+- **已完成一部分**：BG1-BG4 水平捲動 latch 不再共用 fine offset，並有 register-level 回歸測試；仍需在 Secret of Mana 與 Seiken Densetsu 3 的英文對話畫面做 screenshot 驗證。
 - **P1（進行中）**：slow/fast ROM 與 I/O bus penalty 已接入一般 CPU 指令；後續補 NMI/IRQ、WAI 與 DMA/HDMA 邊界同步測試。
 - **P2**：特殊晶片按 ROM 需求選擇成熟核心整合或個別實作。SA-1、SuperFX、S-DD1、SPC7110 遊戲在完成前明確標示不支援。
 

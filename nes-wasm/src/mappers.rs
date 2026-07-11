@@ -605,9 +605,7 @@ impl MapperTrait for Mapper4 {
     }
 
     fn check_irq(&mut self) -> bool {
-        let pending = self.irq_pending;
-        self.irq_pending = false;
-        pending
+        self.irq_pending
     }
 }
 
@@ -926,9 +924,7 @@ impl MapperTrait for Mapper16 {
     }
 
     fn check_irq(&mut self) -> bool {
-        let pending = self.irq_pending;
-        self.irq_pending = false;
-        pending
+        self.irq_pending
     }
 }
 
@@ -1086,9 +1082,7 @@ impl MapperTrait for Mapper23 {
     }
 
     fn check_irq(&mut self) -> bool {
-        let p = self.irq_pending;
-        self.irq_pending = false;
-        p
+        self.irq_pending
     }
 }
 
@@ -1639,7 +1633,7 @@ impl MapperTrait for Mapper245 {
     }
 
     fn check_irq(&mut self) -> bool {
-        let p = self.irq_pending; self.irq_pending = false; p
+        self.irq_pending
     }
 }
 
@@ -1842,7 +1836,7 @@ impl MapperTrait for Mapper253 {
     }
 
     fn check_irq(&mut self) -> bool {
-        let p = self.irq_pending; self.irq_pending = false; p
+        self.irq_pending
     }
 
     fn chr_writable_mask(&self) -> u8 {
@@ -1888,5 +1882,24 @@ pub fn create_mapper(mapper_id: u8, prg_banks: u8, chr_banks: u8) -> Box<dyn Map
         _   => {
             Box::new(Mapper0::new(prg_banks, chr_banks))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Mapper4, MapperTrait};
+
+    #[test]
+    fn mmc3_irq_remains_asserted_until_acknowledged() {
+        let mut mapper = Mapper4::new(16, 16);
+        mapper.cpu_write(0xC000, 0);
+        mapper.cpu_write(0xE001, 0);
+        mapper.scanline();
+
+        assert!(mapper.check_irq());
+        assert!(mapper.check_irq());
+
+        mapper.cpu_write(0xE000, 0);
+        assert!(!mapper.check_irq());
     }
 }

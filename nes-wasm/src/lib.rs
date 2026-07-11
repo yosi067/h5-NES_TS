@@ -490,9 +490,10 @@ impl EmuWasm {
     #[wasm_bindgen(js_name = "debugState")]
     pub fn debug_state(&self) -> String {
         match &self.core {
+            CoreType::Nes(emu) => emu.debug_state(),
             CoreType::Snes(emu) => emu.debug_state(),
             CoreType::N64(emu) => emu.debug_state(),
-            _ => "Not SNES".to_string(),
+            _ => "Debug state unavailable".to_string(),
         }
     }
 

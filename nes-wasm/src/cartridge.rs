@@ -89,9 +89,17 @@ impl Cartridge {
         let flags6 = data[6];
         let flags7 = data[7];
 
-        // NES 2.0 需要額外解析 submapper 與擴充容量欄位，目前不能當成 iNES 安全降級。
-        if flags7 & 0x0C == 0x08 {
-            return false;
+        let is_nes2 = flags7 & 0x0C == 0x08;
+
+        // The current mapper API uses 8-bit mapper IDs and iNES-sized bank counts.
+        // NES 2.0 submapper 0 ROMs fitting those limits are otherwise identical here.
+        if is_nes2 {
+            let extended_mapper = data[8] & 0x0F;
+            let submapper = data[8] >> 4;
+            let extended_sizes = data[9];
+            if extended_mapper != 0 || submapper != 0 || extended_sizes != 0 {
+                return false;
+            }
         }
 
         // Mapper 編號（低 4 位元在 flags6，高 4 位元在 flags7）
@@ -282,11 +290,25 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unknown_mapper_and_nes2_header() {
+    fn accepts_supported_nes2_submapper_zero() {
+        let mut nes2 = ines_rom(4);
+        nes2[7] |= 0x08;
+        nes2[15] = 1;
+
+        assert!(Cartridge::new().load_rom(&nes2));
+    }
+
+    #[test]
+    fn rejects_unknown_mapper_and_unsupported_nes2_extensions() {
         assert!(!Cartridge::new().load_rom(&ines_rom(5)));
 
         let mut nes2 = ines_rom(0);
         nes2[7] |= 0x08;
+        nes2[8] = 0x10;
+        assert!(!Cartridge::new().load_rom(&nes2));
+
+        nes2[8] = 0;
+        nes2[9] = 1;
         assert!(!Cartridge::new().load_rom(&nes2));
     }
 }

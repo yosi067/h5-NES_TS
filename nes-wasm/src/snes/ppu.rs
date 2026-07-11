@@ -1,3 +1,4 @@
+            // H-scroll preserves the target BG's existing low 3 bits.
 // ============================================================
 // SNES PPU - Picture Processing Unit
 // ============================================================
@@ -388,12 +389,12 @@ impl Ppu {
                 self.bg_chr_addr[3] = (val as u16 >> 4) << 13;
             }
             // $210D-$2114 - BG 捲軸
-            // H-scroll uses two latches: value = (data << 8) | (scroll_latch & ~7) | (scroll_latch2 & 7)
+            // H-scroll preserves the target BG's existing low 3 bits:
+            // value = (data << 8) | (shared_latch & ~7) | (BGnHOFS & 7)
             // V-scroll uses one latch:    value = (data << 8) | scroll_latch
             0x210D => { // BG1 H Scroll (also M7HOFS)
-                self.bg_hscroll[0] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | ((self.scroll_latch2 as u16) & 7);
+                self.bg_hscroll[0] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | (self.bg_hscroll[0] & 7);
                 self.scroll_latch = val;
-                self.scroll_latch2 = val;
                 // Mode 7
                 self.m7hofs = (((val as u16) << 8) | (self.m7_latch as u16)) as i16;
                 self.m7_latch = val;
@@ -404,11 +405,11 @@ impl Ppu {
                 self.m7vofs = (((val as u16) << 8) | (self.m7_latch as u16)) as i16;
                 self.m7_latch = val;
             }
-            0x210F => { self.bg_hscroll[1] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | ((self.scroll_latch2 as u16) & 7); self.scroll_latch = val; self.scroll_latch2 = val; }
+            0x210F => { self.bg_hscroll[1] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | (self.bg_hscroll[1] & 7); self.scroll_latch = val; }
             0x2110 => { self.bg_vscroll[1] = ((val as u16) << 8) | (self.scroll_latch as u16); self.scroll_latch = val; }
-            0x2111 => { self.bg_hscroll[2] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | ((self.scroll_latch2 as u16) & 7); self.scroll_latch = val; self.scroll_latch2 = val; }
+            0x2111 => { self.bg_hscroll[2] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | (self.bg_hscroll[2] & 7); self.scroll_latch = val; }
             0x2112 => { self.bg_vscroll[2] = ((val as u16) << 8) | (self.scroll_latch as u16); self.scroll_latch = val; }
-            0x2113 => { self.bg_hscroll[3] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | ((self.scroll_latch2 as u16) & 7); self.scroll_latch = val; self.scroll_latch2 = val; }
+            0x2113 => { self.bg_hscroll[3] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | (self.bg_hscroll[3] & 7); self.scroll_latch = val; }
             0x2114 => { self.bg_vscroll[3] = ((val as u16) << 8) | (self.scroll_latch as u16); self.scroll_latch = val; }
             // $2115 - VMAIN: VRAM 位址設定
             0x2115 => {
@@ -1574,5 +1575,25 @@ impl Ppu {
                 x, msn, mp, mr, mg, mb, ssn, sp, sr, sg, sb, cm_en);
         }
         out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn horizontal_scroll_preserves_each_background_fine_offset() {
+        let mut ppu = Ppu::new();
+        ppu.bg_hscroll[0] = 5;
+        ppu.bg_hscroll[1] = 2;
+
+        ppu.write_register(0x210D, 0x3B);
+        ppu.write_register(0x210D, 0x01);
+        ppu.write_register(0x210F, 0x64);
+        ppu.write_register(0x210F, 0x02);
+
+        assert_eq!(ppu.bg_hscroll[0], 0x013D);
+        assert_eq!(ppu.bg_hscroll[1], 0x0262);
     }
 }

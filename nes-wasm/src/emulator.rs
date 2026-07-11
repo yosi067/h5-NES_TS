@@ -73,14 +73,6 @@ impl Emulator {
             // 同步 Mapper 的 CHR bank 映射和鏡像模式
             self.sync_mapper_to_ppu();
             self.reset();
-
-            if self.cartridge.header.mapper_id == 4 {
-                // 部分 MMC3 遊戲需要先經過 power-on 暖機，再按 RESET 才會進入正常啟動路徑。
-                for _ in 0..10 {
-                    self.frame();
-                }
-                self.reset();
-            }
         }
         success
     }
@@ -146,11 +138,6 @@ impl Emulator {
                 self.apu.dmc_provide_sample(data);
             }
 
-            // APU IRQ → CPU（音頻停用時不產生 IRQ）
-            if self.audio_enabled && self.apu.check_irq() {
-                self.cpu.irq_pending = true;
-            }
-
             // Mapper CPU 週期計時（用於 Bandai FCG 等）
             self.cartridge.cpu_clock();
         }
@@ -167,10 +154,9 @@ impl Emulator {
             self.sync_mapper_to_ppu();
         }
 
-        // === Mapper IRQ → CPU ===
-        if self.cartridge.check_irq() {
-            self.cpu.irq_pending = true;
-        }
+        // IRQ 是 level-sensitive：source acknowledge 後必須立即解除 CPU IRQ line。
+        self.cpu.irq_pending = (self.audio_enabled && self.apu.check_irq())
+            || self.cartridge.check_irq();
 
         self.system_clock += 1;
     }
@@ -922,6 +908,15 @@ impl Emulator {
     /// 消耗音頻取樣
     pub fn consume_audio_samples(&mut self) -> usize { self.apu.consume_samples() }
 
+    pub fn debug_state(&self) -> String {
+        format!(
+            "NES PC={:04X} SP={:02X} P={:02X} PPU=({}, {}) CTRL={:02X} MASK={:02X} STATUS={:02X} DMA={} page={:02X} addr={:02X} dummy={}",
+            self.cpu.pc, self.cpu.sp, self.cpu.status,
+            self.ppu.scanline, self.ppu.cycle, self.ppu.ctrl, self.ppu.mask, self.ppu.status,
+            self.bus.dma_transfer, self.bus.dma_page, self.bus.dma_address, self.bus.dma_dummy,
+        )
+    }
+
     /// 匯出存檔（hex 編碼）
     pub fn export_save_state(&self) -> String {
         self.export_state_binary().iter().map(|b| format!("{:02x}", b)).collect()
@@ -1007,6 +1002,17 @@ impl Emulator {
 mod tests {
     use super::*;
 
+    fn nrom_with_program(program: &[u8]) -> Vec<u8> {
+        let mut rom = vec![0; 16 + 16 * 1024 + 8 * 1024];
+        rom[0..4].copy_from_slice(b"NES\x1A");
+        rom[4] = 1;
+        rom[5] = 1;
+        rom[16..16 + program.len()].copy_from_slice(program);
+        rom[16 + 0x3FFC] = 0x00;
+        rom[16 + 0x3FFD] = 0x80;
+        rom
+    }
+
     #[test]
     fn frame_runs_exact_ntsc_ppu_clock_count_when_rendering_is_disabled() {
         let mut emulator = Emulator::new();
@@ -1017,4 +1023,29 @@ mod tests {
 
         assert_eq!(emulator.system_clock - start_clock, 262 * 341);
     }
+
+    #[test]
+    fn cpu_can_poll_two_consecutive_vblanks() {
+        let program = [
+            0x78,                         // SEI
+            0xA9, 0x00,                   // LDA #$00
+            0x8D, 0x00, 0x20,             // STA $2000
+            0xAD, 0x02, 0x20,             // first: LDA $2002
+            0x10, 0xFB,                   // BPL first
+            0xAD, 0x02, 0x20,             // second: LDA $2002
+            0x10, 0xFB,                   // BPL second
+            0xA9, 0x01,                   // LDA #$01
+            0x85, 0x00,                   // STA $00
+            0x4C, 0x14, 0x80,             // JMP $8014
+        ];
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&nrom_with_program(&program)));
+
+        for _ in 0..3 {
+            emulator.frame();
+        }
+
+        assert_eq!(emulator.bus.ram[0], 1);
+    }
+
 }
