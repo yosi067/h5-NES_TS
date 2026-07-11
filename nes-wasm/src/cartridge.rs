@@ -16,6 +16,10 @@
 use crate::ppu::MirrorMode;
 use crate::mappers::*;
 
+fn is_supported_mapper(mapper_id: u8) -> bool {
+    matches!(mapper_id, 0 | 1 | 2 | 3 | 4 | 7 | 11 | 15 | 16 | 23 | 66 | 71 | 113 | 202 | 225 | 227 | 245 | 253)
+}
+
 /// iNES 標頭結構
 pub struct CartridgeHeader {
     /// PRG ROM 大小（16KB 為單位）
@@ -85,8 +89,16 @@ impl Cartridge {
         let flags6 = data[6];
         let flags7 = data[7];
 
+        // NES 2.0 需要額外解析 submapper 與擴充容量欄位，目前不能當成 iNES 安全降級。
+        if flags7 & 0x0C == 0x08 {
+            return false;
+        }
+
         // Mapper 編號（低 4 位元在 flags6，高 4 位元在 flags7）
         let mapper_id = (flags7 & 0xF0) | (flags6 >> 4);
+        if !is_supported_mapper(mapper_id) {
+            return false;
+        }
 
         // 鏡像模式
         let mirror_mode = if flags6 & 0x08 != 0 {
@@ -245,5 +257,36 @@ impl Cartridge {
     /// 取得目前的鏡像模式
     pub fn mirror_mode(&self) -> MirrorMode {
         self.header.mirror_mode
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ines_rom(mapper_id: u8) -> Vec<u8> {
+        let mut rom = vec![0; 16 + 16 * 1024 + 8 * 1024];
+        rom[0..4].copy_from_slice(b"NES\x1A");
+        rom[4] = 1;
+        rom[5] = 1;
+        rom[6] = (mapper_id & 0x0F) << 4;
+        rom[7] = mapper_id & 0xF0;
+        rom
+    }
+
+    #[test]
+    fn accepts_implemented_mappers() {
+        for mapper_id in [0, 1, 2, 3, 4, 7, 11, 15, 16, 23, 66, 71, 113, 202, 225, 227, 245, 253] {
+            assert!(Cartridge::new().load_rom(&ines_rom(mapper_id)), "mapper {mapper_id}");
+        }
+    }
+
+    #[test]
+    fn rejects_unknown_mapper_and_nes2_header() {
+        assert!(!Cartridge::new().load_rom(&ines_rom(5)));
+
+        let mut nes2 = ines_rom(0);
+        nes2[7] |= 0x08;
+        assert!(!Cartridge::new().load_rom(&nes2));
     }
 }

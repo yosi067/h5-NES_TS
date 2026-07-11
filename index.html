@@ -140,6 +140,70 @@
       font-size: 13px;
     }
 
+    .game-loading-progress {
+      height: 8px;
+      margin-top: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(210, 166, 70, 0.5);
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .game-loading-progress[hidden] {
+      display: none;
+    }
+
+    .game-loading-progress-bar {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--fc-red), var(--fc-gold));
+      transition: width 120ms linear;
+    }
+
+    .app-dialog-overlay {
+      z-index: 2100;
+    }
+
+    .app-dialog-message {
+      max-height: min(42vh, 280px);
+      overflow: auto;
+      color: rgba(243, 234, 216, 0.82);
+      font-size: 14px;
+      line-height: 1.55;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .app-dialog-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .app-dialog-button {
+      min-width: 96px;
+      min-height: 42px;
+      border: 2px solid rgba(210, 166, 70, 0.72);
+      border-radius: 6px;
+      background: #292932;
+      color: var(--fc-cream);
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .app-dialog-button-primary {
+      border-color: var(--fc-gold);
+      background: var(--fc-red);
+      color: #fff;
+    }
+
+    .app-dialog-button:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: 2px;
+    }
+
     @keyframes game-loading-spin {
       to { transform: rotate(360deg); }
     }
@@ -313,6 +377,15 @@
       font-style: italic;
       color: #2a2a6a;
       text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    #game-home-link {
+      cursor: pointer;
+    }
+
+    #game-home-link:focus-visible {
+      outline: 3px solid currentColor;
+      outline-offset: 4px;
     }
 
     /* ===== 電腦版控制區 ===== */
@@ -2828,9 +2901,33 @@
     body.mobile-landscape-mode .cabinet-toolbar,
     body.mobile-landscape-mode .desktop-controls,
     body.mobile-landscape-mode .keyboard-guide,
-    body.mobile-landscape-mode .brand-area,
     body.mobile-landscape-mode .top-decoration {
       display: none !important;
+    }
+
+    body.mobile-landscape-mode .brand-area,
+    body.fullscreen-active .brand-area {
+      position: absolute;
+      top: max(5px, env(safe-area-inset-top));
+      left: 50%;
+      z-index: 12;
+      display: block !important;
+      margin: 0;
+      transform: translateX(-50%);
+      opacity: 0.76;
+    }
+
+    body.mobile-landscape-mode .brand-nintendo,
+    body.fullscreen-active .brand-nintendo {
+      display: none;
+    }
+
+    body.mobile-landscape-mode #game-home-link,
+    body.fullscreen-active #game-home-link {
+      color: #fff;
+      font-size: 13px;
+      line-height: 1;
+      text-shadow: 0 2px 3px #000;
     }
 
     body.mobile-landscape-mode .virtual-controller {
@@ -3194,7 +3291,6 @@
         height: auto;
       }
 
-      body.fullscreen-active .brand-area,
       body.fullscreen-active .top-decoration,
       body.fullscreen-active .desktop-controls,
       body.fullscreen-active .keyboard-guide,
@@ -3481,6 +3577,20 @@
       <div class="game-loading-title">遊戲讀取中</div>
       <div class="game-loading-name" id="game-loading-name"></div>
       <div class="game-loading-status" id="game-loading-status">正在下載遊戲檔案…</div>
+      <div class="game-loading-progress" id="game-loading-progress" role="progressbar" aria-label="遊戲讀取進度" hidden>
+        <div class="game-loading-progress-bar" id="game-loading-progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-loading-overlay app-dialog-overlay" id="app-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="app-dialog-title" aria-describedby="app-dialog-message" hidden>
+    <div class="game-loading-card">
+      <div class="game-loading-title" id="app-dialog-title">提示</div>
+      <div class="app-dialog-message" id="app-dialog-message"></div>
+      <div class="app-dialog-actions">
+        <button class="app-dialog-button" id="app-dialog-cancel" type="button">否</button>
+        <button class="app-dialog-button app-dialog-button-primary" id="app-dialog-confirm" type="button">是</button>
+      </div>
     </div>
   </div>
 
@@ -3541,7 +3651,7 @@
     <!-- 品牌 -->
     <div class="brand-area">
       <div class="brand-nintendo">NINTENDO</div>
-      <div class="brand-name">H5-NES</div>
+      <div class="brand-name" id="game-home-link" role="button" tabindex="0" aria-label="返回遊戲主機選單">H5-NES</div>
     </div>
 
     <!-- 電腦版控制按鈕 -->

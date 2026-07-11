@@ -33,14 +33,14 @@ export function selectN64PerformanceProfile(
   }
   if (highEndIos) {
     return {
-      name: 'ios-high-end', width: 480, height: 360, skipFrame: false,
+      name: 'ios-high-end', width: 320, height: 240, skipFrame: true,
       // iOS 對極短 setTimeout 的節流與抖動較明顯；rAF 能讓 WebGL 呈現和音訊回呼取得公平的主執行緒時間。
       mainLoopTimingMode: 0, primaryAudioTarget: 3072, secondaryAudioBuffer: 1024,
     };
   }
   if (mobile) {
     return {
-      name: 'mobile', width: 320, height: 240, skipFrame: false,
+      name: 'mobile', width: 320, height: 240, skipFrame: true,
       mainLoopTimingMode: 1, primaryAudioTarget: 4096, secondaryAudioBuffer: 2048,
     };
   }

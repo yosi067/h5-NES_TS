@@ -61,9 +61,9 @@ CI/CD 方面，`package-lock.json` 已包含 `@mantou/fbneo`，GitHub Pages work
 
 #### N64 初次啟動畫面適配
 
-N64 模式必須使用全新的 WebGL canvas，不能沿用已建立 2D context 的 `#screen`。啟動流程中會先套用 `body.n64-mode`，等待 layout settle，再建立 Mupen 後端。因 Mupen/SDL 會在 start 後再次讀取 canvas 尺寸，`src/main.ts` 會在 start 前後執行 resize pulse，並依效能 profile 把 WebGL backing store 維持在桌機 `640x480`、高階 iOS `480x360` 或一般手機 `320x240`，避免首次啟動時遊戲內容縮放錯誤。
+N64 模式必須使用全新的 WebGL canvas，不能沿用已建立 2D context 的 `#screen`。啟動流程中會先套用 `body.n64-mode`，等待 layout settle，再建立 Mupen 後端。因 Mupen/SDL 會在 start 後再次讀取 canvas 尺寸，`src/main.ts` 會在 start 前後執行 resize pulse，並依效能 profile 把 WebGL backing store 維持在桌機 `640x480` 或手機 `320x240`，避免首次啟動時遊戲內容縮放錯誤。
 
-`src/n64/performance.ts` 會依 user agent、觸控能力、CPU 邏輯核心數與可用記憶體選擇 desktop / ios-high-end / mobile / mobile-low-end profile。高階 iOS 使用 rAF，避免 Safari 對 1ms timer 的排程抖動持續搶占主執行緒，並把音頻次級緩衝降回 1024 samples 以減少延遲；其他手機仍用 timer。所有手機套用 trivial audio resampler、快速材質 CRC、16-bit texture、關閉 mipmap 與 OSD；低階手機再啟用 Rice `SkipFrame`。ROM buffer 由重設流程共用，不再為 32-64 MB ROM 額外複製完整 `ArrayBuffer`。
+`src/n64/performance.ts` 會依 user agent、觸控能力、CPU 邏輯核心數與可用記憶體選擇 desktop / ios-high-end / mobile / mobile-low-end profile。高階 iOS 使用 rAF，避免 Safari 對 1ms timer 的排程抖動持續搶占主執行緒，並把音頻次級緩衝降回 1024 samples 以減少延遲；其他手機仍用 timer。所有手機固定 `320x240`、啟用 Rice `SkipFrame`，並套用 trivial audio resampler、快速材質 CRC、16-bit texture、關閉 mipmap 與 OSD。ROM buffer 由重設流程共用，不再為 32-64 MB ROM 額外複製完整 `ArrayBuffer`。
 
 `src/n64/telemetry.ts` 透過 Mupen 的 `beginStats` / `endStats` hook 每五秒在主控台輸出 VI/s、平均/最長 VI 時間、長 VI 數量與動態重編譯次數。約 56 VI/s 以上代表 NTSC 遊戲接近 real-time；大量 recompiles 與單次長 VI 同時發生，表示卡頓主要來自 runtime Wasm 編譯，而不是畫面解析度。
 

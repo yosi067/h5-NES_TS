@@ -1414,13 +1414,13 @@ impl SnesEmulator {
         } else {
             // 16-bit
             if self.cpu.flag_d() {
-                let mut result = (a & 0x000F) + (val & 0x000F) + c;
+                let mut result = ((a & 0x000F) + (val & 0x000F) + c) as u32;
                 if result > 0x0009 { result += 0x0006; }
-                result += (a & 0x00F0) + (val & 0x00F0);
+                result += ((a & 0x00F0) + (val & 0x00F0)) as u32;
                 if result > 0x009F { result += 0x0060; }
-                result += (a & 0x0F00) + (val & 0x0F00);
+                result += ((a & 0x0F00) + (val & 0x0F00)) as u32;
                 if result > 0x09FF { result += 0x0600; }
-                result += (a & 0xF000) + (val & 0xF000);
+                result += ((a & 0xF000) + (val & 0xF000)) as u32;
                 if result > 0x9FFF { result += 0x6000; }
                 self.cpu.set_flag(flags::CARRY, result > 0xFFFF);
                 let r16 = result as u16;
@@ -3046,5 +3046,26 @@ impl SnesEmulator {
         );
         let trace = self.debug_step_trace(trace_count);
         format!("{}{}", header, trace)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn decimal_adc_16_bit_sets_carry_after_9999() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cpu.emulation = false;
+        emulator.cpu.set_flag(flags::MEM8, false);
+        emulator.cpu.set_flag(flags::DECIMAL, true);
+        emulator.cpu.set_flag(flags::CARRY, false);
+        emulator.cpu.set_a(0x9999);
+
+        emulator.op_adc(0x0001);
+
+        assert_eq!(emulator.cpu.a_val(), 0x0000);
+        assert!(emulator.cpu.flag_c());
+        assert!(emulator.cpu.flag_z());
     }
 }

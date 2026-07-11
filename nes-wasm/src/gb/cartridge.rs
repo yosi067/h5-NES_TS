@@ -67,6 +67,15 @@ impl Cartridge {
             return false;
         }
 
+        let cart_type = data[0x147];
+        let mbc = match cart_type {
+            0x00 | 0x08 | 0x09 => MbcType::NoMbc,
+            0x01..=0x03 => MbcType::Mbc1,
+            0x0F..=0x13 => MbcType::Mbc3,
+            0x19..=0x1E => MbcType::Mbc5,
+            _ => return false,
+        };
+
         self.rom = data.to_vec();
 
         // 解析標題 ($0134-$0143)
@@ -78,14 +87,7 @@ impl Cartridge {
         self.title = String::from_utf8_lossy(&title_bytes).to_string();
 
         // 解析 MBC 類型 ($0147)
-        let cart_type = data[0x147];
-        self.mbc = match cart_type {
-            0x00 | 0x08 | 0x09 => MbcType::NoMbc,
-            0x01..=0x03 => MbcType::Mbc1,
-            0x0F..=0x13 => MbcType::Mbc3,
-            0x19..=0x1E => MbcType::Mbc5,
-            _ => MbcType::NoMbc, // 不支援的類型降級為 NoMbc
-        };
+        self.mbc = mbc;
 
         self.has_battery = matches!(cart_type, 0x03 | 0x06 | 0x09 | 0x0F | 0x10 | 0x13 | 0x1B | 0x1E);
         self.has_rtc = matches!(cart_type, 0x0F | 0x10);
@@ -276,5 +278,29 @@ impl Cartridge {
             }
             _ => {}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn gb_rom(cart_type: u8) -> Vec<u8> {
+        let mut rom = vec![0; 32 * 1024];
+        rom[0x147] = cart_type;
+        rom
+    }
+
+    #[test]
+    fn accepts_implemented_mbc_types() {
+        for cart_type in [0x00, 0x01, 0x03, 0x0F, 0x13, 0x19, 0x1E] {
+            assert!(Cartridge::new().load(&gb_rom(cart_type)), "cartridge type {cart_type:#04x}");
+        }
+    }
+
+    #[test]
+    fn rejects_unimplemented_mbc_types() {
+        assert!(!Cartridge::new().load(&gb_rom(0x05)));
+        assert!(!Cartridge::new().load(&gb_rom(0x22)));
     }
 }

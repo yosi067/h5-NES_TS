@@ -96,7 +96,7 @@ const MACHINES: MachineInfo[] = [
   { key: 'arcade', title: '大型電玩', label: '雜貨店外面那些有搖桿的街機，要投錢幣的那種。', artClass: 'arcade', artFile: 'arcade.svg' },
   { key: 'gg', title: 'Game Gear', label: '經典的彩色掌機還可以看電視，一次吃你六顆鹼性電池的小怪物。', artClass: 'gg', artFile: 'gg.svg' },
   { key: 'sms', title: 'Master System', label: '電動店總是會放這台讓音速小子跑一整天。', artClass: 'sms', artFile: 'sms.svg' },
-  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，手機會自動使用低負載效能模式。', artClass: 'n64', artFile: 'n64.svg' },
+  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，不過手機還跑不動，建議先在電腦上玩。', artClass: 'n64', artFile: 'n64.svg' },
 ];
 
 function getPublicAssetUrl(path: string): string {
@@ -484,6 +484,25 @@ function setupAppShell(): boolean {
   // 設定電腦版控制按鈕
   setupDesktopControls();
 
+  const homeLink = document.getElementById('game-home-link');
+  homeLink?.addEventListener('click', confirmReturnToMachineMenu);
+  homeLink?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      confirmReturnToMachineMenu();
+    }
+  });
+
+  document.getElementById('app-dialog-confirm')?.addEventListener('click', () => closeAppDialog(true));
+  document.getElementById('app-dialog-cancel')?.addEventListener('click', () => closeAppDialog(false));
+  document.getElementById('app-dialog-overlay')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      closeAppDialog(false);
+    }
+  });
+
   // 設定觸控裝置 RWD 狀態（iPhone Safari 橫版可能仍落在桌機寬度斷點）
   setupResponsiveModeDetection();
   updateKeyboardGuide();
@@ -717,15 +736,75 @@ function setupKeyboardInput(): void {
 // ===== ROM 選擇器 =====
 
 let gameLoadingSequence = 0;
+let appDialogResolve: ((confirmed: boolean) => void) | null = null;
+let appDialogPreviousFocus: HTMLElement | null = null;
+
+function closeAppDialog(confirmed: boolean): void {
+  const overlay = document.getElementById('app-dialog-overlay');
+  if (!overlay || overlay.hidden || !appDialogResolve) return;
+
+  overlay.hidden = true;
+  const resolve = appDialogResolve;
+  appDialogResolve = null;
+  resolve(confirmed);
+  appDialogPreviousFocus?.focus();
+  appDialogPreviousFocus = null;
+}
+
+function showAppDialog(
+  title: string,
+  message: string,
+  confirmLabel: string,
+  cancelLabel?: string,
+): Promise<boolean> {
+  if (appDialogResolve) closeAppDialog(false);
+
+  const overlay = document.getElementById('app-dialog-overlay');
+  const titleElement = document.getElementById('app-dialog-title');
+  const messageElement = document.getElementById('app-dialog-message');
+  const confirmButton = document.getElementById('app-dialog-confirm') as HTMLButtonElement | null;
+  const cancelButton = document.getElementById('app-dialog-cancel') as HTMLButtonElement | null;
+  if (!overlay || !titleElement || !messageElement || !confirmButton || !cancelButton) {
+    return Promise.resolve(false);
+  }
+
+  titleElement.textContent = title;
+  messageElement.textContent = message;
+  confirmButton.textContent = confirmLabel;
+  cancelButton.textContent = cancelLabel ?? '';
+  cancelButton.hidden = cancelLabel === undefined;
+  appDialogPreviousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  overlay.hidden = false;
+
+  return new Promise<boolean>((resolve) => {
+    appDialogResolve = resolve;
+    requestAnimationFrame(() => confirmButton.focus());
+  });
+}
+
+function showAppAlert(message: string, title = '發生錯誤'): Promise<boolean> {
+  return showAppDialog(title, message, '確定');
+}
+
+function showAppConfirm(message: string, title = '請確認'): Promise<boolean> {
+  return showAppDialog(title, message, '是', '否');
+}
 
 async function showGameLoading(gameName: string, status: string): Promise<number> {
   const sequence = ++gameLoadingSequence;
   const overlay = document.getElementById('game-loading-overlay');
   const nameElement = document.getElementById('game-loading-name');
   const statusElement = document.getElementById('game-loading-status');
+  const progressElement = document.getElementById('game-loading-progress');
+  const progressBar = document.getElementById('game-loading-progress-bar');
 
   if (nameElement) nameElement.textContent = gameName;
   if (statusElement) statusElement.textContent = status;
+  if (progressElement) {
+    progressElement.hidden = true;
+    progressElement.removeAttribute('aria-valuenow');
+  }
+  if (progressBar) progressBar.style.width = '0%';
   if (overlay) overlay.hidden = false;
 
   // 先讓瀏覽器畫出動畫，再開始 fetch、解壓縮或核心初始化等較重工作。
@@ -739,10 +818,60 @@ function updateGameLoading(sequence: number, status: string): void {
   if (statusElement) statusElement.textContent = status;
 }
 
+function updateGameLoadingProgress(sequence: number, progress: number | null, status: string): void {
+  if (sequence !== gameLoadingSequence) return;
+  updateGameLoading(sequence, status);
+  const progressElement = document.getElementById('game-loading-progress');
+  const progressBar = document.getElementById('game-loading-progress-bar');
+  if (!progressElement || !progressBar) return;
+
+  if (progress === null) {
+    progressElement.hidden = true;
+    progressElement.removeAttribute('aria-valuenow');
+    return;
+  }
+
+  const percentage = Math.max(0, Math.min(100, Math.round(progress)));
+  progressElement.hidden = false;
+  progressElement.setAttribute('aria-valuemin', '0');
+  progressElement.setAttribute('aria-valuemax', '100');
+  progressElement.setAttribute('aria-valuenow', String(percentage));
+  progressBar.style.width = `${percentage}%`;
+}
+
 function hideGameLoading(sequence: number): void {
   if (sequence !== gameLoadingSequence) return;
   const overlay = document.getElementById('game-loading-overlay');
   if (overlay) overlay.hidden = true;
+}
+
+async function readResponseWithProgress(response: Response, sequence: number): Promise<ArrayBuffer> {
+  const totalBytes = Number(response.headers.get('Content-Length'));
+  if (!response.body || !Number.isFinite(totalBytes) || totalBytes <= 0) {
+    updateGameLoadingProgress(sequence, null, '正在下載遊戲檔案…');
+    return response.arrayBuffer();
+  }
+
+  const reader = response.body.getReader();
+  let bytes = new Uint8Array(totalBytes);
+  let receivedBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (receivedBytes + value.length > bytes.length) {
+      const expanded = new Uint8Array(Math.max(receivedBytes + value.length, bytes.length * 2));
+      expanded.set(bytes.subarray(0, receivedBytes));
+      bytes = expanded;
+    }
+    bytes.set(value, receivedBytes);
+    receivedBytes += value.length;
+    const percentage = receivedBytes / totalBytes * 100;
+    updateGameLoadingProgress(sequence, percentage, `正在下載遊戲檔案… ${Math.min(100, Math.round(percentage))}%`);
+  }
+
+  if (receivedBytes === bytes.byteLength) return bytes.buffer;
+  return bytes.slice(0, receivedBytes).buffer;
 }
 
 /**
@@ -898,7 +1027,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
       throw new Error(`無法載入 ROM: ${filename}`);
     }
     
-    const buffer = await response.arrayBuffer();
+    const buffer = await readResponseWithProgress(response, loadingSequence);
     const lower = filename.toLowerCase();
     updateGameLoading(loadingSequence, '正在啟動模擬器…');
 
@@ -927,11 +1056,17 @@ async function loadRomFromServer(filename: string): Promise<void> {
       }
 
       if (!romFile) {
-        alert('ZIP 檔案中找不到遊戲 ROM');
+        await showAppAlert('ZIP 檔案中找不到遊戲 ROM');
         return;
       }
 
-      const romBuffer = await romFile.async('arraybuffer');
+      const romBuffer = await romFile.async('arraybuffer', metadata => {
+        updateGameLoadingProgress(
+          loadingSequence,
+          metadata.percent,
+          `正在解壓縮遊戲檔案… ${Math.round(metadata.percent)}%`,
+        );
+      });
       currentRomFilename = romFileName.split('/').pop() || romFileName;
       updateGameLoading(loadingSequence, '正在啟動模擬器…');
       await startGame(romBuffer);
@@ -941,7 +1076,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
     }
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
-    alert('載入遊戲失敗，請重試');
+    await showAppAlert('載入遊戲失敗，請重試');
   } finally {
     hideGameLoading(loadingSequence);
   }
@@ -984,11 +1119,17 @@ async function loadRomFromFile(file: File): Promise<void> {
       }
 
       if (!romFile) {
-        alert('ZIP 檔案中找不到遊戲 ROM');
+        await showAppAlert('ZIP 檔案中找不到遊戲 ROM');
         return;
       }
 
-      buffer = await romFile.async('arraybuffer');
+      buffer = await romFile.async('arraybuffer', metadata => {
+        updateGameLoadingProgress(
+          loadingSequence,
+          metadata.percent,
+          `正在解壓縮遊戲檔案… ${Math.round(metadata.percent)}%`,
+        );
+      });
       // Use the actual ROM filename inside the ZIP for extension detection
       romName = romFileName.split('/').pop() || romFileName;
     } else {
@@ -1000,7 +1141,7 @@ async function loadRomFromFile(file: File): Promise<void> {
     await startGame(buffer);
   } catch (error) {
     console.error('載入 ROM 失敗:', error);
-    alert('載入遊戲失敗，請重試');
+    await showAppAlert('載入遊戲失敗，請重試');
   } finally {
     hideGameLoading(loadingSequence);
   }
@@ -1030,7 +1171,7 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
     if (!validity.ok) {
       activeBackend = 'wasm';
       console.error(`[FBNeo] ROM 校驗失敗:\n${validity.log}`);
-      alert(`FBNeo 無法識別 ${archiveName}\n\n${validity.log}`);
+      await showAppAlert(`FBNeo 無法識別 ${archiveName}\n\n${validity.log}`);
       return;
     }
 
@@ -1038,7 +1179,7 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
     if (!loaded) {
       activeBackend = 'wasm';
       const log = fbneoCore.getLog();
-      alert(`FBNeo 載入 ${archiveName} 失敗\n\n${log}`);
+      await showAppAlert(`FBNeo 載入 ${archiveName} 失敗\n\n${log}`);
       return;
     }
 
@@ -1063,7 +1204,7 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
     activeBackend = 'wasm';
     currentFbNeoRomSet = null;
     console.error('[FBNeo] 啟動失敗:', error);
-    alert(error instanceof Error ? error.message : 'FBNeo 啟動失敗');
+    await showAppAlert(error instanceof Error ? error.message : 'FBNeo 啟動失敗');
   }
 }
 
@@ -1082,7 +1223,7 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
   }
 
   if (!(await waitForWasmCore()) || !nes) {
-    alert('模擬器核心尚未初始化完成，請稍候再試。');
+    await showAppAlert('模擬器核心尚未初始化完成，請稍候再試。');
     return;
   }
 
@@ -1150,7 +1291,7 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
 
   } else {
     console.error('ROM 載入失敗');
-    alert('無法載入此 ROM 檔案');
+    await showAppAlert('此 ROM 格式、Mapper 或特殊晶片目前不受支援。');
   }
 }
 
@@ -1235,8 +1376,8 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
   } catch (error) {
     console.error('[N64] Mupen64Plus backend failed:', error);
     await stopN64Backend();
-    showRomSelector();
-    alert('N64 模擬器啟動失敗，請查看主控台錯誤');
+    await showRomSelector();
+    await showAppAlert('N64 模擬器啟動失敗，請查看主控台錯誤');
   }
 }
 
@@ -1328,13 +1469,21 @@ function hideRomSelector(): void {
 /**
  * 顯示 ROM 選擇器
  */
-function showRomSelector(): void {
+async function showRomSelector(): Promise<void> {
+  saveSram();
   stopEmulation();
-  void stopN64Backend();
+  await stopN64Backend();
+  currentN64RomData = null;
   powerLed?.classList.remove('on');
   if (romCatalog.length > 0) renderMachineSelector();
   if (romSelector) romSelector.style.display = 'flex';
   if (gameboyShell) gameboyShell.style.display = 'none';
+}
+
+async function confirmReturnToMachineMenu(): Promise<void> {
+  if (await showAppConfirm('是否返回遊戲主機選單')) {
+    await showRomSelector();
+  }
 }
 
 // ===== 虛擬控制器 (多點觸控支援) =====
@@ -1836,7 +1985,9 @@ function setupDesktopControls(): void {
       nes?.reset();
     }
   });
-  document.getElementById('btn-select-game')?.addEventListener('click', showRomSelector);
+  document.getElementById('btn-select-game')?.addEventListener('click', () => {
+    void showRomSelector();
+  });
   
   // 存檔/讀取按鈕 (電腦版)
   document.getElementById('btn-save-state')?.addEventListener('click', () => {
@@ -3124,7 +3275,7 @@ function setupKeyboardShortcuts(): void {
     }
     // ESC 鍵返回選擇畫面
     if (e.key === 'Escape') {
-      showRomSelector();
+      void showRomSelector();
     }
   });
 }
@@ -3139,7 +3290,7 @@ declare global {
     saveState: (slot?: number) => boolean;
     loadState: (slot?: number) => boolean;
     exportSaveToFile: () => void;
-    showRomSelector: () => void;
+    showRomSelector: () => Promise<void>;
     debugState: () => string;
     debugSpriteInfo: () => string;
     debugPpuColorState: () => string;

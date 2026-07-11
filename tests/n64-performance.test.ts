@@ -54,7 +54,7 @@ describe('N64 mobile performance profiles', () => {
     });
   });
 
-  it('uses display-synchronised pacing and more detail on high-end iOS', () => {
+  it('uses display-synchronised pacing and native resolution on high-end iOS', () => {
     const profile = selectN64PerformanceProfile(navigatorInfo({
       userAgent: 'Mozilla/5.0 iPhone Mobile',
       hardwareConcurrency: 8,
@@ -63,9 +63,9 @@ describe('N64 mobile performance profiles', () => {
     }), 430);
 
     expect(profile.name).toBe('ios-high-end');
-    expect(profile.skipFrame).toBe(false);
-    expect(profile.width).toBe(480);
-    expect(profile.height).toBe(360);
+    expect(profile.skipFrame).toBe(true);
+    expect(profile.width).toBe(320);
+    expect(profile.height).toBe(240);
     expect(profile.mainLoopTimingMode).toBe(0);
     expect(profile.secondaryAudioBuffer).toBe(1024);
   });
