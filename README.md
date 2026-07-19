@@ -29,7 +29,7 @@ H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到�
 | **Master System** | 256×192 | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊) | ✅ 支援 |
 | **SFC / SNES** | 256×224 | 65816 (3.58 MHz) + SPC700 (1.024 MHz) | 60.0988 fps | 8 (S-DSP 8 聲道 BRR) | ✅ 支援 |
 | **N64** | 320×240 起，依遊戲/外掛 | VR4300 / Mupen64Plus Web | 依遊戲 | Runtime 混音 | 🧪 WebGL2 後端 |
-| **FBNeo Arcade** | 動態解析度 | 多種街機硬體 | 依遊戲 | Web Audio 混音 | ✅ 30 款完整 ZIP ROM set |
+| **FBNeo Arcade** | 動態解析度 | 多種街機硬體 | 依遊戲 | Web Audio 混音 | ✅ 37 款完整 ZIP ROM set |
 
 ---
 
@@ -47,7 +47,7 @@ H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到�
 
 - Rust/WASM 單一核心整合 NES、GB、GG/SMS、SNES，前端透過統一 `EmuWasm` API 操作。
 - N64 透過 `mupen64plus-web` 與獨立 WebGL2 canvas 啟動。手機預設載入固定版本、可重建的 64 MiB fork 與 Rice triangle streaming ring；iPhone/iPad 使用 cached interpreter、rAF、關閉 SkipFrame 與 3072/1024 音頻緩衝，Android 依裝置 profile 使用 timer/SkipFrame。桌機維持 npm runtime，手機可用 `?n64Runtime=npm` 緊急回退。完整數據與後續路線見 [N64 瀏覽器核心分階段優化計畫](docs/N64_CORE_OPTIMIZATION_PLAN.md)。
-- FBNeo Arcade 透過 `@mantou/fbneo` 載入完整 ZIP ROM set，支援 Pac-Man、Metal Slug 系列、KOF 2002、Donkey Kong、Tetris、Out Run、Final Fight、忍者龜、Street Fighter II 等 30 款街機，並處理 Emscripten FS、音視頻與街機輸入橋接。
+- FBNeo Arcade 透過 `@mantou/fbneo` 載入完整 ZIP ROM set，支援 Pac-Man、Metal Slug 系列、KOF 94–98 / 2002、侍魂系列、Tetris、Out Run、Final Fight、忍者龜、Street Fighter II 等 37 款街機，並處理 Emscripten FS、音視頻與街機輸入橋接。
 
 ### 模擬精度與相容性努力
 
@@ -173,9 +173,10 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 ### FBNeo Arcade — 🕹️ 街機後端
 - 透過 `@mantou/fbneo` WebAssembly runtime 載入 FBNeo arcade driver
 - 支援完整 ZIP ROM set，不拆成單一主機 ROM
-- 目前支援 30 款完整 ZIP ROM set，除了既有的 `raiden.zip`、`wof.zip`、`ffight.zip`、`dino.zip` 等，也包含 `pacman.zip`、`mslug.zip`、`mslug2t.zip`、`mslug3.zip`、`mslug4.zip`、`kof2002.zip`、`dkong.zip`、`tetris.zip`、`outrun.zip`、`frogger.zip`
+- 目前支援 37 款完整 ZIP ROM set，除了既有的 `raiden.zip`、`wof.zip`、`ffight.zip`、`dino.zip` 等，也包含 Metal Slug 1–5、KOF 94–98 / 2002、侍魂 1 / 2 / 4、`pacman.zip`、`tetris.zip`、`outrun.zip`
 - 每次切換 arcade 遊戲都建立新的 FBNeo instance，避免 Emscripten memory / native 狀態殘留
-- Pac-Man、Donkey Kong、Frogger 右轉 90 度，Raiden、1943 左轉 90 度，其餘街機維持原橫向 framebuffer
+- Pac-Man 右轉 90 度，Raiden、1943 左轉 90 度，其餘街機維持原橫向 framebuffer
+- 載入遮罩會持續到 FBNeo 產生穩定的非綠屏畫面，避免初始化測試畫面直接閃到使用者眼前
 - 手機版提供街機專用 COIN、START、MUTE 與 A-F 六鍵控制器
 
 ---
@@ -384,8 +385,8 @@ NES (30 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛
 🔵 Master System (1 款新增)：
 - Sonic The Hedgehog 2 音速小子 2
 
-🟣 SFC / SNES (17 款)：
-- 超級瑪利歐世界 / 超級瑪利歐賽車 / 超級瑪利歐 RPG
+🟣 SFC / SNES (16 款)：
+- 超級瑪利歐世界 / 超級瑪利歐 RPG
 - 洛克人 X / X2 / X3
 - 最終幻想 VI / 超時空之鑰 / 聖劍傳說 2 / 聖劍傳說 3 / 大金剛國度
 - 七龍珠 Z Hyper Dimension / 超武鬥傳 / 超武鬥傳 2（兩個版本）
@@ -632,9 +633,8 @@ Z80：DAA H 旗標精確公式 (MAME/ZEXALL)、INI/IND B 遞減時序、RETN und
 | 協處理器 | DSP-1 Raster Output 無限迴圈 | SMK DSP-1 卡死 |
 | 協處理器 | CX4 協處理器未實作 | MMX2、MMX3 |
 
-### 🟣 SNES 遊戲列表 (17 款)
+### 🟣 SNES 遊戲列表 (16 款)
 - 🟣 超級瑪利歐世界 (Super Mario World)
-- 🟣 超級瑪利歐賽車 (Super Mario Kart)
 - 🟣 超級瑪利歐 RPG (Super Mario RPG) — SA-1 尚未支援
 - 🟣 洛克人 X (Rockman X)
 - 🟣 洛克人 X2 (Mega Man X2) — CX4 協處理器

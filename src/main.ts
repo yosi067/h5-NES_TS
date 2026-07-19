@@ -58,18 +58,25 @@ interface KeyboardBindingView {
 }
 
 const FBNEO_SUPPORTED_GAMES = [
+  'knights',
+  'kof94',
+  'kof95',
+  'kof96',
+  'kof97',
+  'kof98',
+  'ms5pcb',
+  'samsho2',
+  'samsho4',
+  'samshoh',
   'mslug',
   'mslug2t',
   'mslug3',
   'mslug4',
   'kof2002',
   'pacman',
-  'dkong',
   'tetris',
   'outrun',
-  'frogger',
   'shinobi',
-  'ddragon',
   'strider',
   'raiden',
   'wof',
@@ -96,8 +103,6 @@ type ArcadeRotation = 'none' | 'left' | 'right';
 
 const FBNEO_ROTATIONS: Partial<Record<FbNeoGameName, Exclude<ArcadeRotation, 'none'>>> = {
   pacman: 'right',
-  dkong: 'right',
-  frogger: 'right',
   raiden: 'left',
   '1943': 'left',
 };
@@ -1137,7 +1142,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
 
     if (isFbNeoArcadeRomName(filename)) {
       currentRomFilename = filename;
-      await startFbNeoGame(filename, buffer);
+      await startFbNeoGame(filename, buffer, loadingSequence);
       return;
     }
 
@@ -1201,7 +1206,7 @@ async function loadRomFromFile(file: File): Promise<void> {
         const zipBuffer = await file.arrayBuffer();
         currentRomFilename = file.name;
         updateGameLoading(loadingSequence, '正在啟動模擬器…');
-        await startFbNeoGame(file.name, zipBuffer);
+        await startFbNeoGame(file.name, zipBuffer, loadingSequence);
         return;
       }
 
@@ -1251,7 +1256,7 @@ async function loadRomFromFile(file: File): Promise<void> {
   }
 }
 
-async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promise<void> {
+async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer, loadingSequence: number): Promise<void> {
   if (!canvas || !ctx) return;
 
   stopEmulation();
@@ -1298,6 +1303,9 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
     hideRomSelector();
     updateControllerLayout();
     powerLed?.classList.add('on');
+    updateGameLoading(loadingSequence, '正在準備遊戲畫面…');
+    await warmUpFbNeoVideo();
+    renderFbNeoFrame();
     console.log(`[FBNeo] ${romSet.gameName} loaded: ${width}x${height}${arcadeRotation === 'none' ? '' : ` rotated-${arcadeRotation}`}`);
     showToast(`FBNeo: ${romSet.gameName} OK`);
     startEmulation();
@@ -2431,6 +2439,56 @@ function startFbNeoEmulation(): void {
   animationId = requestAnimationFrame(frameLoop);
 }
 
+function isPresentableFbNeoFrame(frameBuffer: Uint8Array): boolean {
+  let sampledPixels = 0;
+  let nonBlackPixels = 0;
+  let redTotal = 0;
+  let greenTotal = 0;
+  let blueTotal = 0;
+  const colors = new Set<number>();
+
+  for (let offset = 0; offset < frameBuffer.length; offset += 64) {
+    const red = frameBuffer[offset];
+    const green = frameBuffer[offset + 1];
+    const blue = frameBuffer[offset + 2];
+    sampledPixels++;
+    if (red > 4 || green > 4 || blue > 4) nonBlackPixels++;
+    redTotal += red;
+    greenTotal += green;
+    blueTotal += blue;
+    if (colors.size < 32) colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4));
+  }
+
+  if (sampledPixels === 0 || nonBlackPixels < sampledPixels * 0.02) return false;
+  const averageRed = redTotal / sampledPixels;
+  const averageGreen = greenTotal / sampledPixels;
+  const averageBlue = blueTotal / sampledPixels;
+  const greenFlash = averageGreen > 36
+    && averageGreen > averageRed * 1.55
+    && averageGreen > averageBlue * 1.55
+    && colors.size < 12;
+  return !greenFlash;
+}
+
+async function warmUpFbNeoVideo(): Promise<void> {
+  if (!fbneoCore) return;
+
+  let stableSamples = 0;
+  for (let frame = 0; frame < 600; frame += 6) {
+    for (let step = 0; step < 6; step++) fbneoCore.stepFrame(0, 0);
+    fbneoCore.consumeAudioSamples();
+
+    if (frame >= 60 && isPresentableFbNeoFrame(fbneoCore.getFrameBufferView())) {
+      stableSamples++;
+      if (stableSamples >= 3) return;
+    } else {
+      stableSamples = 0;
+    }
+
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  }
+}
+
 /**
  * 停止模擬
  */
@@ -2936,6 +2994,7 @@ function updateControllerLayout(): void {
   const n64Ctrl = document.getElementById('n64-controller-area');
   document.body.classList.toggle('n64-mode', isMupenN64Active());
   document.body.classList.toggle('arcade-mode', isFbNeoActive());
+  document.body.classList.toggle('arcade-vertical-mode', isFbNeoActive() && arcadeRotation !== 'none');
   document.body.classList.toggle('snes-mode', !isMupenN64Active() && !isFbNeoActive() && isSnesCore());
   if (isMupenN64Active()) {
     if (nesCtrl) nesCtrl.style.display = 'none';
