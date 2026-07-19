@@ -63,11 +63,22 @@ describe('N64 mobile performance profiles', () => {
     }), 430);
 
     expect(profile.name).toBe('ios-high-end');
-    expect(profile.skipFrame).toBe(true);
+    expect(profile.skipFrame).toBe(false);
     expect(profile.width).toBe(320);
     expect(profile.height).toBe(240);
     expect(profile.mainLoopTimingMode).toBe(0);
     expect(profile.secondaryAudioBuffer).toBe(1024);
+  });
+
+  it('does not misclassify iOS when Safari exposes a low logical core count', () => {
+    const profile = selectN64PerformanceProfile(navigatorInfo({
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X)',
+      hardwareConcurrency: 2,
+      maxTouchPoints: 5,
+    }), 430);
+
+    expect(profile.name).toBe('ios-high-end');
+    expect(profile.mainLoopTimingMode).toBe(0);
   });
 
   it('rewrites only the intended Mupen sections for mobile', () => {

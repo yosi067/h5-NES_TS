@@ -22,8 +22,10 @@ export function selectN64PerformanceProfile(
   const mobile = mobileUserAgent || touchTablet || (coarsePointer && viewportWidth <= 1180);
   const memory = nav.deviceMemory;
   const cores = nav.hardwareConcurrency ?? 4;
-  const lowEnd = mobile && ((memory !== undefined && memory <= 4) || cores <= 4);
-  const highEndIos = /iPhone|iPad|iPod/i.test(nav.userAgent) && cores >= 6;
+  const ios = /iPhone|iPad|iPod/i.test(nav.userAgent);
+  // Safari 可能基於隱私只暴露少量 logical cores，不能用 hardwareConcurrency 判定 iOS 裝置等級。
+  const lowEnd = mobile && !ios && ((memory !== undefined && memory <= 4) || cores <= 4);
+  const highEndIos = ios;
 
   if (lowEnd) {
     return {
@@ -33,7 +35,7 @@ export function selectN64PerformanceProfile(
   }
   if (highEndIos) {
     return {
-      name: 'ios-high-end', width: 320, height: 240, skipFrame: true,
+      name: 'ios-high-end', width: 320, height: 240, skipFrame: false,
       // iOS 對極短 setTimeout 的節流與抖動較明顯；rAF 能讓 WebGL 呈現和音訊回呼取得公平的主執行緒時間。
       mainLoopTimingMode: 0, primaryAudioTarget: 3072, secondaryAudioBuffer: 1024,
     };

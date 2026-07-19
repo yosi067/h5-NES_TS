@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "wasm:build": "cd nes-wasm && wasm-pack build --target web --out-dir ../src/wasm",
+    "n64:source": "powershell -ExecutionPolicy Bypass -File tools/n64/bootstrap-mupen.ps1",
+    "n64:build": "powershell -ExecutionPolicy Bypass -File tools/n64/build-mupen.ps1",
     "dev": "vite",
+    "dev:mobile": "vite --host 0.0.0.0",
     "build": "npm run wasm:build && tsc --noEmit && node -e \"require('fs').rm('dist',{recursive:true,force:true},e=>{if(e)throw e})\" && vite build",
     "preview": "vite preview",
     "test": "vitest",

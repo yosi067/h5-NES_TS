@@ -2,12 +2,40 @@ import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { copyFileSync, mkdirSync, readdirSync, existsSync, readFileSync, statSync } from 'fs';
 
+function copyDirectory(sourceDir: string, destinationDir: string): void {
+  mkdirSync(destinationDir, { recursive: true });
+  for (const entry of readdirSync(sourceDir, { withFileTypes: true })) {
+    const sourcePath = resolve(sourceDir, entry.name);
+    const destinationPath = resolve(destinationDir, entry.name);
+    if (entry.isDirectory()) {
+      copyDirectory(sourcePath, destinationPath);
+    } else if (entry.isFile()) {
+      copyFileSync(sourcePath, destinationPath);
+    }
+  }
+}
+
 function getMupen64AssetFiles(sourceDir: string): string[] {
   // mupen64plus-web 的 wasm/data 檔名含有版本 hash，因此用目錄掃描避免升降版後失效。
   const runtimeFiles = existsSync(sourceDir)
     ? readdirSync(sourceDir).filter(file => /^index\..*\.(wasm|data)$/.test(file))
     : [];
   return [...runtimeFiles, 'mupen64plus.cfg'];
+}
+
+function assertRebuiltMupenAssets(sourceDir: string): void {
+  const files = existsSync(sourceDir) ? readdirSync(sourceDir) : [];
+  const missing = [
+    ...(!files.includes('main.bundle.js') ? ['main.bundle.js'] : []),
+    ...(!files.some(file => /^index\..*\.wasm$/.test(file)) ? ['index.<hash>.wasm'] : []),
+    ...(!files.some(file => /^index\..*\.data$/.test(file)) ? ['index.<hash>.data'] : []),
+  ];
+  if (missing.length > 0) {
+    throw new Error(
+      `Rebuilt N64 runtime is incomplete (${missing.join(', ')}). ` +
+      'Restore artifacts/n64/mupen64plus-web-1.5.7-baseline or run npm run n64:build.',
+    );
+  }
 }
 
 // 複製 roms 目錄的 plugin
@@ -70,12 +98,51 @@ function serveRomBinaryPlugin() {
 function mupen64AssetsPlugin() {
   const sourceDir = resolve(__dirname, 'node_modules/mupen64plus-web/bin/web');
   const publicPath = '/n64-mupen/';
+  const forkSourceDir = resolve(__dirname, 'artifacts/n64/mupen64plus-web-1.5.7-baseline');
+  const forkPublicPath = '/n64-fork/';
 
   return {
     name: 'mupen64-assets',
     configureServer(server: any) {
       server.middlewares.use((req: any, res: any, next: any) => {
         const url = decodeURIComponent(req.url || '').split('?')[0];
+        if (url === '/__n64-benchmark' && req.method === 'POST') {
+          let body = '';
+          req.setEncoding('utf8');
+          req.on('data', (chunk: string) => {
+            if (body.length < 64 * 1024) body += chunk;
+          });
+          req.on('end', () => {
+            try {
+              const result = JSON.parse(body);
+              console.log('\n[N64 benchmark received]');
+              console.log(JSON.stringify(result, null, 2));
+              res.statusCode = 204;
+              res.end();
+            } catch {
+              res.statusCode = 400;
+              res.end('Invalid benchmark result');
+            }
+          });
+          return;
+        }
+
+        if (url.startsWith(forkPublicPath)) {
+          const filePath = resolve(forkSourceDir, url.slice(forkPublicPath.length));
+          if (filePath.startsWith(`${forkSourceDir}\\`) && existsSync(filePath) && statSync(filePath).isFile()) {
+            const stat = statSync(filePath);
+            const contentType = filePath.endsWith('.wasm')
+              ? 'application/wasm'
+              : filePath.endsWith('.js') ? 'text/javascript' : 'application/octet-stream';
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Content-Length', stat.size);
+            res.end(readFileSync(filePath));
+            return;
+          }
+          next();
+          return;
+        }
+
         if (!url.startsWith(publicPath)) {
           next();
           return;
@@ -100,6 +167,7 @@ function mupen64AssetsPlugin() {
       });
     },
     writeBundle() {
+      assertRebuiltMupenAssets(forkSourceDir);
       const distDir = resolve(__dirname, 'dist/n64-mupen');
       if (!existsSync(distDir)) {
         mkdirSync(distDir, { recursive: true });
@@ -112,6 +180,9 @@ function mupen64AssetsPlugin() {
           console.log(`Copied N64 runtime: ${fileName}`);
         }
       }
+
+      copyDirectory(forkSourceDir, resolve(__dirname, 'dist/n64-fork'));
+      console.log('Copied rebuilt N64 mobile runtime');
     },
   };
 }
@@ -119,7 +190,7 @@ function mupen64AssetsPlugin() {
 export default defineConfig({
   // GitHub Pages 部署需要設定正確的 base 路徑
   // 使用環境變數 VITE_BASE_PATH，預設為 './' (本地開發)
-  // 在 GitHub Actions 中會設定為 '/<repo-name>/'
+  // GitHub Actions會依repository path設定為 '/<name>/'
   base: process.env.VITE_BASE_PATH || './',
   resolve: {
     alias: {

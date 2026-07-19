@@ -1,0 +1,26 @@
+diff --git a/src/main.c b/src/main.c
+index f4ae21a..0000000 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -1170,6 +1170,13 @@ int main(int argc, char *argv[])
+           }
+         };
+ 
++                const resumeAudio = function() {
++                    if (Module.SDL2 && Module.SDL2.audioContext && Module.SDL2.audioContext.state !== 'running') {
++                        return Module.SDL2.audioContext.resume();
++                    }
++                    return Promise.resolve();
++                };
++
+         // Can't seem to use normal object syntax here
+         // (e.g. "emulatorControls = { start, pause, resume }" fails to build)
+         const emulatorControls = {};
+@@ -1178,6 +1185,7 @@ int main(int argc, char *argv[])
+         emulatorControls.pause = pause;
+         emulatorControls.resume = resume;
+         emulatorControls.forceDumpSaveFiles = forceDumpSaveFiles;
++        emulatorControls.resumeAudio = resumeAudio;
+ 
+         Module.emulatorControls = emulatorControls;
+         

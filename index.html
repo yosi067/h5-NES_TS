@@ -2161,6 +2161,10 @@
         aspect-ratio: 4 / 3;
       }
 
+      body.n64-mode.n64-initializing #canvas {
+        width: min(100%, var(--n64-render-width)) !important;
+      }
+
       .screen-bezel {
         width: 100%;
         max-width: calc(95vw + 16px);

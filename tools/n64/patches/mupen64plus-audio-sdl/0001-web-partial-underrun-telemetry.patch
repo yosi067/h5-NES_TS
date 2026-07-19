@@ -1,0 +1,70 @@
+diff --git a/src/main.c b/src/main.c
+--- a/src/main.c
++++ b/src/main.c
+@@ -380,6 +380,15 @@ EXPORT void CALL AiLenChanged(void)
+     sdl_synchronize_audio(l_sdl_backend);
+ }
+ 
++#if EMSCRIPTEN
++unsigned int audio_web_underrun_count(void)
++{
++    if (!l_PluginInit || l_sdl_backend == NULL)
++        return 0;
++    return sdl_get_underrun_count(l_sdl_backend);
++}
++#endif
++
+ EXPORT int CALL InitiateAudio(AUDIO_INFO Audio_Info)
+ {
+     if (!l_PluginInit)
+diff --git a/src/sdl_backend.c b/src/sdl_backend.c
+--- a/src/sdl_backend.c
++++ b/src/sdl_backend.c
+@@ -142,11 +142,29 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
+     }
+     else
+     {
++        size_t partial_len = (available * newsamplerate) / oldsamplerate;
++        partial_len = (partial_len / SDL_SAMPLE_BYTES) * SDL_SAMPLE_BYTES;
++        if (partial_len > (size_t)len)
++            partial_len = len;
++
+         ++sdl_backend->underrun_count;
+-        memset(stream, 0, len);
++        if (partial_len > 0)
++        {
++            consumed = ResampleAndMix(sdl_backend->resampler, sdl_backend->iresampler,
++                    sdl_backend->mix_buffer,
++                    src, available, oldsamplerate,
++                    stream, partial_len, newsamplerate);
++            consume_cbuff_data(&sdl_backend->primary_buffer, consumed);
++        }
++        memset(stream + partial_len, 0, len - partial_len);
+     }
+ }
+ 
++unsigned int sdl_get_underrun_count(const struct sdl_backend* sdl_backend)
++{
++    return sdl_backend->underrun_count;
++}
++
+ static size_t new_primary_buffer_size(const struct sdl_backend* sdl_backend)
+ {
+     return N64_SAMPLE_BYTES * ((uint64_t)sdl_backend->primary_buffer_size * sdl_backend->input_frequency * sdl_backend->speed_factor) /
+diff --git a/src/sdl_backend.h b/src/sdl_backend.h
+--- a/src/sdl_backend.h
++++ b/src/sdl_backend.h
+@@ -28,8 +28,10 @@ struct sdl_backend;
+ 
+ struct sdl_backend* init_sdl_backend_from_config(m64p_handle config);
+ 
++unsigned int sdl_get_underrun_count(const struct sdl_backend* sdl_backend);
++
+ void release_sdl_backend(struct sdl_backend* sdl_backend);
+ 
+ void sdl_set_frequency(struct sdl_backend* sdl_backend, unsigned int frequency);
+ 
+ void sdl_push_samples(struct sdl_backend* sdl_backend, const void* src, size_t size);
+
+-- 
+2.39.0

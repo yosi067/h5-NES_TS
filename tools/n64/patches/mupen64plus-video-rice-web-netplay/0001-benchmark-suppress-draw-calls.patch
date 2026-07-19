@@ -1,0 +1,421 @@
+diff --git a/src/Config.cpp b/src/Config.cpp
+index fd843ae..28ef531 100644
+--- a/src/Config.cpp
++++ b/src/Config.cpp
+@@ -45,6 +45,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ 
+ static m64p_handle l_ConfigVideoRice = NULL;
+ static m64p_handle l_ConfigVideoGeneral = NULL;
++bool g_suppressDrawCalls = false;
++bool g_suppressGlFinish = false;
++bool g_persistentBuffers = false;
++bool g_persistentRectBuffers = false;
+ 
+ static int FindIniEntry(uint32 dwCRC1, uint32 dwCRC2, uint8 nCountryID, char* szName, int PrintInfo); 
+ 
+@@ -587,6 +591,11 @@ void GenerateCurrentRomOptions()
+     uint32 accurateTextureMappingOverride = loadRomConfigOptionOverride("AccurateTextureMapping");
+     if (-1 != accurateTextureMappingOverride)
+       currentRomOptions.bAccurateTextureMapping = accurateTextureMappingOverride;
++
++    g_suppressDrawCalls = loadRomConfigOptionOverride("SuppressDrawCalls") == 1;
++    g_suppressGlFinish = loadRomConfigOptionOverride("SuppressGlFinish") == 1;
++    g_persistentBuffers = loadRomConfigOptionOverride("PersistentBuffers") == 1;
++    g_persistentRectBuffers = loadRomConfigOptionOverride("PersistentRectBuffers") == 1;
+ #endif
+ 
+     options.enableHackForGames = NO_HACK_FOR_GAME;
+diff --git a/src/Config.h b/src/Config.h
+index 4476434..769cf47 100644
+--- a/src/Config.h
++++ b/src/Config.h
+@@ -371,6 +371,10 @@ typedef struct
+ #define TV_SYSTEM_PAL       0
+ 
+ extern GlobalOptions       options;
++extern bool                g_suppressDrawCalls;
++extern bool                g_suppressGlFinish;
++extern bool                g_persistentBuffers;
++extern bool                g_persistentRectBuffers;
+ extern FrameBufferOptions  frameBufferOptions;
+ extern RomOptions          defaultRomOptions;
+ extern RomOptions          currentRomOptions;
+diff --git a/src/OGLRender.cpp b/src/OGLRender.cpp
+index efc7529..0000000 100644
+--- a/src/OGLRender.cpp
++++ b/src/OGLRender.cpp
+@@ -40,6 +40,214 @@
+ #include "OGLTexture.h"
+ #include "TextureManager.h"
+ 
++#if EMSCRIPTEN
++#include "emscripten.h"
++
++static double g_triangleDrawMs;
++static double g_rectDrawMs;
++static uint32 g_triangleDrawCalls;
++static uint32 g_rectDrawCalls;
++
++struct RiceStreamVertex
++{
++    float position[4];
++    float fog;
++    float texCoord0[2];
++    float texCoord1[2];
++    uint8 color[4];
++};
++
++static const size_t RICE_STREAM_BATCH_VERTICES = 1000;
++static const size_t RICE_STREAM_BUFFER_BATCHES = 64;
++static RiceStreamVertex g_streamVertices[RICE_STREAM_BATCH_VERTICES];
++static GLuint g_streamBuffer;
++static size_t g_streamWriteOffset;
++static bool g_streamNeedsOrphan = true;
++
++struct RiceRectStreamVertex
++{
++    float position[4];
++    float texCoord0[2];
++    float texCoord1[2];
++    uint8 color[4];
++};
++
++static const size_t RICE_RECT_STREAM_VERTICES = 4096;
++static RiceRectStreamVertex g_rectStreamVertices[6];
++static GLuint g_rectStreamBuffer;
++static size_t g_rectStreamWriteOffset;
++static bool g_rectStreamNeedsOrphan = true;
++
++static void RiceEnsurePersistentBuffers()
++{
++    if (g_streamBuffer != 0) return;
++
++    glGenBuffers(1, &g_streamBuffer);
++    glBindBuffer(GL_ARRAY_BUFFER, g_streamBuffer);
++    glBufferData(GL_ARRAY_BUFFER,
++        sizeof(g_streamVertices) * RICE_STREAM_BUFFER_BATCHES, NULL, GL_STREAM_DRAW);
++    glBindBuffer(GL_ARRAY_BUFFER, 0);
++}
++
++static bool RiceDrawTrianglesWithPersistentBuffers()
++{
++    const size_t vertexCount = gRSP.numVertices;
++    if (vertexCount > RICE_STREAM_BATCH_VERTICES) return false;
++
++    RiceEnsurePersistentBuffers();
++
++    for (size_t i = 0; i < vertexCount; ++i)
++    {
++        RiceStreamVertex &target = g_streamVertices[i];
++        target.position[0] = g_vtxProjected5[i][0];
++        target.position[1] = g_vtxProjected5[i][1];
++        target.position[2] = g_vtxProjected5[i][2];
++        target.position[3] = g_vtxProjected5[i][3];
++        target.fog = g_vtxProjected5[i][4];
++        target.texCoord0[0] = g_vtxBuffer[i].tcord[0].u;
++        target.texCoord0[1] = g_vtxBuffer[i].tcord[0].v;
++        target.texCoord1[0] = g_vtxBuffer[i].tcord[1].u;
++        target.texCoord1[1] = g_vtxBuffer[i].tcord[1].v;
++        target.color[0] = g_oglVtxColors[i][0];
++        target.color[1] = g_oglVtxColors[i][1];
++        target.color[2] = g_oglVtxColors[i][2];
++        target.color[3] = g_oglVtxColors[i][3];
++    }
++
++    const size_t uploadSize = vertexCount * sizeof(RiceStreamVertex);
++    const size_t bufferSize = sizeof(g_streamVertices) * RICE_STREAM_BUFFER_BATCHES;
++    glBindBuffer(GL_ARRAY_BUFFER, g_streamBuffer);
++    if (g_streamNeedsOrphan || g_streamWriteOffset + uploadSize > bufferSize)
++    {
++        glBufferData(GL_ARRAY_BUFFER, bufferSize, NULL, GL_STREAM_DRAW);
++        g_streamWriteOffset = 0;
++        g_streamNeedsOrphan = false;
++    }
++    glBufferSubData(GL_ARRAY_BUFFER, g_streamWriteOffset, uploadSize, g_streamVertices);
++
++    const size_t baseOffset = g_streamWriteOffset;
++    glVertexAttribPointer(VS_POSITION, 4, GL_FLOAT, GL_FALSE,
++        sizeof(RiceStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceStreamVertex, position)));
++    glVertexAttribPointer(VS_FOG, 1, GL_FLOAT, GL_FALSE,
++        sizeof(RiceStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceStreamVertex, fog)));
++    glVertexAttribPointer(VS_TEXCOORD0, 2, GL_FLOAT, GL_FALSE,
++        sizeof(RiceStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceStreamVertex, texCoord0)));
++    glVertexAttribPointer(VS_TEXCOORD1, 2, GL_FLOAT, GL_FALSE,
++        sizeof(RiceStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceStreamVertex, texCoord1)));
++    glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE, GL_TRUE,
++        sizeof(RiceStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceStreamVertex, color)));
++
++    glDrawArrays(GL_TRIANGLES, 0, vertexCount);
++    g_streamWriteOffset += uploadSize;
++    glBindBuffer(GL_ARRAY_BUFFER, 0);
++    glVertexAttribPointer(VS_POSITION, 4, GL_FLOAT, GL_FALSE,
++        sizeof(float) * 5, &(g_vtxProjected5[0][0]));
++    glVertexAttribPointer(VS_FOG, 1, GL_FLOAT, GL_FALSE,
++        sizeof(float) * 5, &(g_vtxProjected5[0][4]));
++    glVertexAttribPointer(VS_TEXCOORD0, 2, GL_FLOAT, GL_FALSE,
++        sizeof(TLITVERTEX), &(g_vtxBuffer[0].tcord[0].u));
++    glVertexAttribPointer(VS_TEXCOORD1, 2, GL_FLOAT, GL_FALSE,
++        sizeof(TLITVERTEX), &(g_vtxBuffer[0].tcord[1].u));
++    glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE, GL_TRUE,
++        sizeof(uint8) * 4, &(g_oglVtxColors[0][0]));
++    return true;
++}
++
++static bool RiceDrawRectWithPersistentBuffer(GLenum mode, size_t vertexCount,
++    const GLfloat *positions, const GLfloat *texCoord0, const GLfloat *texCoord1,
++    const GLubyte *colors, GLboolean normalizeColors)
++{
++    if (vertexCount > 6) return false;
++
++    if (g_rectStreamBuffer == 0)
++    {
++        glGenBuffers(1, &g_rectStreamBuffer);
++        glBindBuffer(GL_ARRAY_BUFFER, g_rectStreamBuffer);
++        glBufferData(GL_ARRAY_BUFFER,
++            RICE_RECT_STREAM_VERTICES * sizeof(RiceRectStreamVertex), NULL, GL_STREAM_DRAW);
++        glBindBuffer(GL_ARRAY_BUFFER, 0);
++    }
++
++    for (size_t i = 0; i < vertexCount; ++i)
++    {
++        RiceRectStreamVertex &target = g_rectStreamVertices[i];
++        memcpy(target.position, positions + i * 4, sizeof(target.position));
++        if (texCoord0 != NULL)
++        {
++            memcpy(target.texCoord0, texCoord0 + i * 2, sizeof(target.texCoord0));
++            memcpy(target.texCoord1, texCoord1 + i * 2, sizeof(target.texCoord1));
++        }
++        memcpy(target.color, colors + i * 4, sizeof(target.color));
++    }
++
++    const size_t uploadSize = vertexCount * sizeof(RiceRectStreamVertex);
++    const size_t bufferSize = RICE_RECT_STREAM_VERTICES * sizeof(RiceRectStreamVertex);
++    glBindBuffer(GL_ARRAY_BUFFER, g_rectStreamBuffer);
++    if (g_rectStreamNeedsOrphan || g_rectStreamWriteOffset + uploadSize > bufferSize)
++    {
++        glBufferData(GL_ARRAY_BUFFER, bufferSize, NULL, GL_STREAM_DRAW);
++        g_rectStreamWriteOffset = 0;
++        g_rectStreamNeedsOrphan = false;
++    }
++    glBufferSubData(GL_ARRAY_BUFFER, g_rectStreamWriteOffset, uploadSize, g_rectStreamVertices);
++
++    const size_t baseOffset = g_rectStreamWriteOffset;
++    glVertexAttribPointer(VS_POSITION, 4, GL_FLOAT, GL_FALSE,
++        sizeof(RiceRectStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceRectStreamVertex, position)));
++    if (texCoord0 != NULL)
++    {
++        glVertexAttribPointer(VS_TEXCOORD0, 2, GL_FLOAT, GL_FALSE,
++            sizeof(RiceRectStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceRectStreamVertex, texCoord0)));
++        glVertexAttribPointer(VS_TEXCOORD1, 2, GL_FLOAT, GL_FALSE,
++            sizeof(RiceRectStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceRectStreamVertex, texCoord1)));
++    }
++    glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE, normalizeColors,
++        sizeof(RiceRectStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceRectStreamVertex, color)));
++    glDrawArrays(mode, 0, vertexCount);
++    g_rectStreamWriteOffset += uploadSize;
++    glBindBuffer(GL_ARRAY_BUFFER, 0);
++    return true;
++}
++
++class RiceDrawTimer
++{
++public:
++    RiceDrawTimer(double *totalMs, uint32 *calls)
++        : m_totalMs(totalMs), m_startedAt(emscripten_get_now())
++    {
++        (*calls)++;
++    }
++
++    ~RiceDrawTimer()
++    {
++        *m_totalMs += emscripten_get_now() - m_startedAt;
++    }
++
++private:
++    double *m_totalMs;
++    double m_startedAt;
++};
++
++#define RICE_DRAW_TIMER(total, calls) RiceDrawTimer drawTimer(&(total), &(calls))
++
++extern "C" void rice_web_draw_timing_reset(void)
++{
++    g_triangleDrawMs = 0.0;
++    g_rectDrawMs = 0.0;
++    g_triangleDrawCalls = 0;
++    g_rectDrawCalls = 0;
++    g_streamNeedsOrphan = true;
++    g_rectStreamNeedsOrphan = true;
++}
++
++extern "C" double rice_web_triangle_draw_ms(void) { return g_triangleDrawMs; }
++extern "C" double rice_web_rect_draw_ms(void) { return g_rectDrawMs; }
++extern "C" uint32 rice_web_triangle_draw_calls(void) { return g_triangleDrawCalls; }
++extern "C" uint32 rice_web_rect_draw_calls(void) { return g_rectDrawCalls; }
++#else
++#define RICE_DRAW_TIMER(total, calls)
++#endif
++
+ // FIXME: Use OGL internal L/T and matrix stack
+ // FIXME: Use OGL lookupAt function
+ // FIXME: Use OGL DisplayList
+@@ -563,6 +709,9 @@ void OGLRender::SetTextureVFlag(TextureUVFlag dwFlag, uint32 dwTile)
+ // Basic render drawing functions
+ bool OGLRender::RenderTexRect()
+ {
++    if (g_suppressDrawCalls) return true;
++    RICE_DRAW_TIMER(g_rectDrawMs, g_rectDrawCalls);
++
+     glViewportWrapper(0, windowSetting.statusBarHeightToUse, windowSetting.uDisplayWidth, windowSetting.uDisplayHeight);
+     OPENGL_CHECK_ERRORS;
+ 
+@@ -600,13 +749,19 @@ bool OGLRender::RenderTexRect()
+             -inv + g_texRectTVtx[0].x / w, inv - g_texRectTVtx[0].y / h, g_texRectTVtx[3].z, 1
+     };
+ 
+-    glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, &colour );
+-    glVertexAttribPointer(VS_POSITION,4,GL_FLOAT,GL_FALSE,0,&vertices);
+-    glVertexAttribPointer(VS_TEXCOORD0,2,GL_FLOAT,GL_FALSE, 0, &tex);
+-    glVertexAttribPointer(VS_TEXCOORD1,2,GL_FLOAT,GL_FALSE, 0, &tex2);
+-    OPENGL_CHECK_ERRORS;
+-    glDrawArrays(GL_TRIANGLE_FAN,0,4);
+-    OPENGL_CHECK_ERRORS;
++#if EMSCRIPTEN
++    if (!g_persistentRectBuffers || !RiceDrawRectWithPersistentBuffer(
++        GL_TRIANGLE_FAN, 4, vertices, tex, tex2, colour, GL_TRUE))
++#endif
++    {
++        glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, &colour );
++        glVertexAttribPointer(VS_POSITION,4,GL_FLOAT,GL_FALSE,0,&vertices);
++        glVertexAttribPointer(VS_TEXCOORD0,2,GL_FLOAT,GL_FALSE, 0, &tex);
++        glVertexAttribPointer(VS_TEXCOORD1,2,GL_FLOAT,GL_FALSE, 0, &tex2);
++        OPENGL_CHECK_ERRORS;
++        glDrawArrays(GL_TRIANGLE_FAN,0,4);
++        OPENGL_CHECK_ERRORS;
++    }
+ 
+     //Restore old pointers
+     glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE,GL_TRUE, sizeof(uint8)*4, &(g_oglVtxColors[0][0]) );
+@@ -622,6 +777,9 @@ bool OGLRender::RenderTexRect()
+ 
+ bool OGLRender::RenderFillRect(uint32 dwColor, float depth)
+ {
++    if (g_suppressDrawCalls) return true;
++    RICE_DRAW_TIMER(g_rectDrawMs, g_rectDrawCalls);
++
+     uint8 a = (dwColor>>24);
+     uint8 r = ((dwColor>>16)&0xFF);
+     uint8 g = ((dwColor>>8)&0xFF);
+@@ -648,13 +806,19 @@ bool OGLRender::RenderFillRect(uint32 dwColor, float depth)
+             -inv + m_fillRectVtx[0].x / w, inv - m_fillRectVtx[0].y / h, depth, 1
+     };
+ 
+-    glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE,GL_FALSE, 0, &colour );
+-    glVertexAttribPointer(VS_POSITION,4,GL_FLOAT,GL_FALSE,0,&vertices);
+     glDisableVertexAttribArray(VS_TEXCOORD0);
+     glDisableVertexAttribArray(VS_TEXCOORD1);
+-    OPENGL_CHECK_ERRORS;
+-    glDrawArrays(GL_TRIANGLE_FAN,0,4);
+-    OPENGL_CHECK_ERRORS;
++#if EMSCRIPTEN
++    if (!g_persistentRectBuffers || !RiceDrawRectWithPersistentBuffer(
++        GL_TRIANGLE_FAN, 4, vertices, NULL, NULL, colour, GL_FALSE))
++#endif
++    {
++        glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE,GL_FALSE, 0, &colour );
++        glVertexAttribPointer(VS_POSITION,4,GL_FLOAT,GL_FALSE,0,&vertices);
++        OPENGL_CHECK_ERRORS;
++        glDrawArrays(GL_TRIANGLE_FAN,0,4);
++        OPENGL_CHECK_ERRORS;
++    }
+ 
+     //Restore old pointers
+     glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE,GL_TRUE, sizeof(uint8)*4, &(g_oglVtxColors[0][0]) );
+@@ -698,6 +862,9 @@ extern FiddledVtx * g_pVtxBase;
+ // OpenGL internal transform
+ bool OGLRender::RenderFlushTris()
+ {
++    if (g_suppressDrawCalls) return true;
++    RICE_DRAW_TIMER(g_triangleDrawMs, g_triangleDrawCalls);
++
+     ApplyZBias(m_dwZBias);  // set the bias factors
+ 
+     glViewportWrapper(windowSetting.vpLeftW, windowSetting.uDisplayHeight-windowSetting.vpTopW-windowSetting.vpHeightW+windowSetting.statusBarHeightToUse, windowSetting.vpWidthW, windowSetting.vpHeightW, false);
+@@ -708 +895,7 @@ bool OGLRender::RenderFlushTris()
+-        glDrawElements( GL_TRIANGLES, gRSP.numVertices, GL_UNSIGNED_SHORT, g_vtxIndex );
++#if EMSCRIPTEN
++        if (!g_persistentBuffers || !RiceDrawTrianglesWithPersistentBuffers())
++#endif
++            glDrawElements( GL_TRIANGLES, gRSP.numVertices, GL_UNSIGNED_SHORT, g_vtxIndex );
+@@ -744,6 +911,9 @@ bool OGLRender::RenderFlushTris()
+ 
+ void OGLRender::DrawSimple2DTexture(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, COLOR dif, float z, float rhw)
+ {
++    if (g_suppressDrawCalls) return;
++    RICE_DRAW_TIMER(g_rectDrawMs, g_rectDrawCalls);
++
+     if( status.bVIOriginIsUpdated == true && currentRomOptions.screenUpdateSetting==SCREEN_UPDATE_AT_1ST_PRIMITIVE )
+     {
+         status.bVIOriginIsUpdated=false;
+@@ -802,13 +972,19 @@ void OGLRender::DrawSimple2DTexture(float x0, float y0, float x1, float y1, floa
+             -inv + g_texRectTVtx[3].x/ w, inv - g_texRectTVtx[3].y/ h, -g_texRectTVtx[3].z,1
+     };
+ 
+-    glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE,GL_FALSE, 0, &colour );
+-    glVertexAttribPointer(VS_POSITION,4,GL_FLOAT,GL_FALSE,0,&vertices);
+-    glVertexAttribPointer(VS_TEXCOORD0,2,GL_FLOAT,GL_FALSE, 0, &tex);
+-    glVertexAttribPointer(VS_TEXCOORD1,2,GL_FLOAT,GL_FALSE, 0, &tex2);
+-    OPENGL_CHECK_ERRORS;
+-    glDrawArrays(GL_TRIANGLES,0,6);
+-    OPENGL_CHECK_ERRORS;
++#if EMSCRIPTEN
++    if (!g_persistentRectBuffers || !RiceDrawRectWithPersistentBuffer(
++        GL_TRIANGLES, 6, vertices, tex, tex2, colour, GL_FALSE))
++#endif
++    {
++        glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE,GL_FALSE, 0, &colour );
++        glVertexAttribPointer(VS_POSITION,4,GL_FLOAT,GL_FALSE,0,&vertices);
++        glVertexAttribPointer(VS_TEXCOORD0,2,GL_FLOAT,GL_FALSE, 0, &tex);
++        glVertexAttribPointer(VS_TEXCOORD1,2,GL_FLOAT,GL_FALSE, 0, &tex2);
++        OPENGL_CHECK_ERRORS;
++        glDrawArrays(GL_TRIANGLES,0,6);
++        OPENGL_CHECK_ERRORS;
++    }
+ 
+     //Restore old pointers
+     glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE,GL_TRUE, sizeof(uint8)*4, &(g_oglVtxColors[0][0]) );
+@@ -822,6 +998,9 @@ void OGLRender::DrawSimple2DTexture(float x0, float y0, float x1, float y1, floa
+ 
+ void OGLRender::DrawSimpleRect(int nX0, int nY0, int nX1, int nY1, uint32 dwColor, float depth, float rhw)
+ {
++    if (g_suppressDrawCalls) return;
++    RICE_DRAW_TIMER(g_rectDrawMs, g_rectDrawCalls);
++
+     StartDrawSimpleRect(nX0, nY0, nX1, nY1, dwColor, depth, rhw);
+ 
+     GLboolean cullface = glIsEnabled(GL_CULL_FACE);
+@@ -847,13 +1026,19 @@ void OGLRender::DrawSimpleRect(int nX0, int nY0, int nX1, int nY1, uint32 dwColo
+             -inv + m_simpleRectVtx[0].x / w, inv - m_simpleRectVtx[0].y / h, -depth, 1
+     };
+ 
+-    glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE,GL_FALSE, 0, &colour );
+-    glVertexAttribPointer(VS_POSITION,4,GL_FLOAT,GL_FALSE,0,&vertices);
+     glDisableVertexAttribArray(VS_TEXCOORD0);
+     glDisableVertexAttribArray(VS_TEXCOORD1);
+-    OPENGL_CHECK_ERRORS;
+-    glDrawArrays(GL_TRIANGLE_FAN,0,4);
+-    OPENGL_CHECK_ERRORS;
++#if EMSCRIPTEN
++    if (!g_persistentRectBuffers || !RiceDrawRectWithPersistentBuffer(
++        GL_TRIANGLE_FAN, 4, vertices, NULL, NULL, colour, GL_FALSE))
++#endif
++    {
++        glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE,GL_FALSE, 0, &colour );
++        glVertexAttribPointer(VS_POSITION,4,GL_FLOAT,GL_FALSE,0,&vertices);
++        OPENGL_CHECK_ERRORS;
++        glDrawArrays(GL_TRIANGLE_FAN,0,4);
++        OPENGL_CHECK_ERRORS;
++    }
+ 
+     //Restore old pointers
+     glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE,GL_TRUE, sizeof(uint8)*4, &(g_oglVtxColors[0][0]) );

@@ -1,0 +1,270 @@
+diff --git a/src/device/r4300/cached_interp.c b/src/device/r4300/cached_interp.c
+index 86a7d4bd..f59b2b15 100644
+--- a/src/device/r4300/cached_interp.c
++++ b/src/device/r4300/cached_interp.c
+@@ -50,7 +50,20 @@ extern uint32_t numberOfRecompiles;
+ extern uint32_t netplayPaused;
+ 
+ extern void beginStats();
+-extern void endStats(uint32_t numRecompiles);
++extern void endStats(uint32_t numRecompiles, double rspMs, double dlistMs,
++                     double rdpMs, double presentMs, double audioMs,
++                     double triangleDrawMs, double rectDrawMs,
++                     uint32_t triangleDrawCalls, uint32_t rectDrawCalls,
++                     uint32_t audioUnderruns);
++extern void n64_web_timing_reset(void);
++extern double n64_web_timing_rsp_ms(void);
++extern double n64_web_timing_dlist_ms(void);
++extern double n64_web_timing_rdp_ms(void);
++extern double n64_web_timing_present_ms(void);
++extern double n64_web_timing_audio_ms(void);
++extern double n64_web_timing_triangle_draw_ms(void);
++extern double n64_web_timing_rect_draw_ms(void);
++extern uint32_t n64_web_timing_triangle_draw_calls(void);
++extern uint32_t n64_web_timing_rect_draw_calls(void);
++extern uint32_t n64_web_audio_underruns(void);
+ 
+ #endif
+ 
+@@ -1040,6 +1053,7 @@ static void cached_interpreter_loop(struct r4300_core* r4300)
+   }
+ 
+   numberOfRecompiles = 0;
++    n64_web_timing_reset();
+   beginStats();
+   
+   viArrived = 0;
+@@ -1056,7 +1070,11 @@ static void cached_interpreter_loop(struct r4300_core* r4300)
+     //    viArrived++;
+   }
+ 
+-  endStats(numberOfRecompiles);
++    endStats(numberOfRecompiles, n64_web_timing_rsp_ms(),
++            n64_web_timing_dlist_ms(), n64_web_timing_rdp_ms(),
++            n64_web_timing_present_ms(), n64_web_timing_audio_ms(),
++            n64_web_timing_triangle_draw_ms(), n64_web_timing_rect_draw_ms(),
++            n64_web_timing_triangle_draw_calls(), n64_web_timing_rect_draw_calls(),
++            n64_web_audio_underruns());
+ }
+ 
+ static void set_main_loop_timing(int* dummy) {
+diff --git a/src/device/rcp/rsp/rsp_core.c b/src/device/rcp/rsp/rsp_core.c
+index cbdfa32f..6d7513a7 100644
+--- a/src/device/rcp/rsp/rsp_core.c
++++ b/src/device/rcp/rsp/rsp_core.c
+@@ -36,6 +36,11 @@
+ #include "plugin/plugin.h"
+ #include "api/callbacks.h"
+ 
++#if EMSCRIPTEN
++extern void n64_web_timing_rsp_start(void);
++extern void n64_web_timing_rsp_end(void);
++#endif
++
+ static void do_sp_dma(struct rsp_core* sp, const struct sp_dma* dma)
+ {
+     unsigned int i,j;
+@@ -318,8 +323,14 @@ void do_SP_Task(struct rsp_core* sp)
+         sp->regs2[SP_PC_REG] &= 0xfff;
+ #if defined(PROFILE)
+         timed_section_start(TIMED_SECTION_GFX);
++#endif
++#if EMSCRIPTEN
++    n64_web_timing_rsp_start();
+ #endif
+         rsp.doRspCycles(0xffffffff);
++#if EMSCRIPTEN
++    n64_web_timing_rsp_end();
++#endif
+ #if defined(PROFILE)
+         timed_section_end(TIMED_SECTION_GFX);
+ #endif
+@@ -346,8 +357,14 @@ void do_SP_Task(struct rsp_core* sp)
+         sp->regs2[SP_PC_REG] &= 0xfff;
+ #if defined(PROFILE)
+         timed_section_start(TIMED_SECTION_AUDIO);
++#endif
++#if EMSCRIPTEN
++    n64_web_timing_rsp_start();
+ #endif
+         rsp.doRspCycles(0xffffffff);
++#if EMSCRIPTEN
++    n64_web_timing_rsp_end();
++#endif
+ #if defined(PROFILE)
+         timed_section_end(TIMED_SECTION_AUDIO);
+ #endif
+@@ -358,7 +375,13 @@ void do_SP_Task(struct rsp_core* sp)
+     else
+     {
+         sp->regs2[SP_PC_REG] &= 0xfff;
++    #if EMSCRIPTEN
++        n64_web_timing_rsp_start();
++    #endif
+         rsp.doRspCycles(0xffffffff);
++    #if EMSCRIPTEN
++        n64_web_timing_rsp_end();
++    #endif
+         sp->regs2[SP_PC_REG] |= save_pc;
+ 
+         sp_delay_time = 0;
+diff --git a/src/jslib/corelib.js b/src/jslib/corelib.js
+index 4f6a769d..d3b95dbb 100644
+--- a/src/jslib/corelib.js
++++ b/src/jslib/corelib.js
+@@ -6,9 +6,9 @@ mergeInto(LibraryManager.library, {
+     }
+   },
+ 
+-  endStats: function(numberOfRecompiles) {
++  endStats: function(numberOfRecompiles, rspMs, dlistMs, rdpMs, presentMs, audioMs, triangleDrawMs, rectDrawMs, triangleDrawCalls, rectDrawCalls, audioUnderruns) {
+     if (Module.endStats) {
+-      Module.endStats(numberOfRecompiles);
++      Module.endStats(numberOfRecompiles, rspMs, dlistMs, rdpMs, presentMs, audioMs, triangleDrawMs, rectDrawMs, triangleDrawCalls, rectDrawCalls, audioUnderruns);
+     }
+   },
+ 
+diff --git a/src/plugin/plugin.c b/src/plugin/plugin.c
+index 3d7ef0a8..6bdaa2fb 100644
+--- a/src/plugin/plugin.c
++++ b/src/plugin/plugin.c
+@@ -33,6 +33,10 @@
+ #include "../../../mupen64plus-input-sdl/src/input_static.h"
+ #endif
+ 
++#if EMSCRIPTEN
++#include "emscripten.h"
++#endif
++
+ #include "api/callbacks.h"
+ #include "api/m64p_common.h"
+ #include "api/m64p_plugin.h"
+@@ -132,6 +136,86 @@ static int l_GfxAttached = 0;
+ 
+ static unsigned int dummy;
+ 
++#if EMSCRIPTEN && M64P_STATIC_PLUGINS
++static double web_rsp_start;
++static double web_rsp_total;
++static double web_dlist_total;
++static double web_rdp_total;
++static double web_present_total;
++static double web_audio_total;
++
++extern void rice_web_draw_timing_reset(void);
++extern double rice_web_triangle_draw_ms(void);
++extern double rice_web_rect_draw_ms(void);
++extern uint32_t rice_web_triangle_draw_calls(void);
++extern uint32_t rice_web_rect_draw_calls(void);
++extern unsigned int audio_web_underrun_count(void);
++
++void n64_web_timing_reset(void)
++{
++    web_rsp_total = 0.0;
++    web_dlist_total = 0.0;
++    web_rdp_total = 0.0;
++    web_present_total = 0.0;
++    web_audio_total = 0.0;
++    rice_web_draw_timing_reset();
++}
++
++void n64_web_timing_rsp_start(void)
++{
++    web_rsp_start = emscripten_get_now();
++}
++
++void n64_web_timing_rsp_end(void)
++{
++    web_rsp_total += emscripten_get_now() - web_rsp_start;
++}
++
++double n64_web_timing_rsp_ms(void) { return web_rsp_total; }
++double n64_web_timing_dlist_ms(void) { return web_dlist_total; }
++double n64_web_timing_rdp_ms(void) { return web_rdp_total; }
++double n64_web_timing_present_ms(void) { return web_present_total; }
++double n64_web_timing_audio_ms(void) { return web_audio_total; }
++double n64_web_timing_triangle_draw_ms(void) { return rice_web_triangle_draw_ms(); }
++double n64_web_timing_rect_draw_ms(void) { return rice_web_rect_draw_ms(); }
++uint32_t n64_web_timing_triangle_draw_calls(void) { return rice_web_triangle_draw_calls(); }
++uint32_t n64_web_timing_rect_draw_calls(void) { return rice_web_rect_draw_calls(); }
++uint32_t n64_web_audio_underruns(void)
++{
++    return audio_web_underrun_count();
++}
++
++static void web_ProcessDList(void)
++{
++    double start = emscripten_get_now();
++    ProcessDList();
++    web_dlist_total += emscripten_get_now() - start;
++}
++
++static void web_ProcessRDPList(void)
++{
++    double start = emscripten_get_now();
++    ProcessRDPList();
++    web_rdp_total += emscripten_get_now() - start;
++}
++
++static void web_UpdateScreen(void)
++{
++    double start = emscripten_get_now();
++    UpdateScreen();
++    web_present_total += emscripten_get_now() - start;
++}
++
++static void web_AiLenChanged(void)
++{
++    double start = emscripten_get_now();
++    AiLenChanged();
++    web_audio_total += emscripten_get_now() - start;
++}
++
++static void web_ProcessAList(void)
++{
++    double start = emscripten_get_now();
++    ProcessAList();
++    web_audio_total += emscripten_get_now() - start;
++}
++#endif
++
+ /* local functions */
+ static void EmptyFunc(void)
+ {
+@@ -210,12 +294,18 @@ static m64p_error plugin_connect_gfx(m64p_dynlib_handle plugin_handle)
+         gfx.changeWindow = &ChangeWindow;
+         gfx.initiateGFX = &InitiateGFX;
+         gfx.moveScreen =  &MoveScreen;
++    #if EMSCRIPTEN
++        gfx.processDList = &web_ProcessDList;
++        gfx.processRDPList = &web_ProcessRDPList;
++        gfx.updateScreen = &web_UpdateScreen;
++    #else
+         gfx.processDList =  &ProcessDList;
+         gfx.processRDPList = ProcessRDPList;
++        gfx.updateScreen = &UpdateScreen;
++    #endif
+         gfx.romClosed = &RomClosedVideo;
+         gfx.romOpen = &RomOpenVideo;
+         gfx.showCFB = &ShowCFB;
+-        gfx.updateScreen = &UpdateScreen;
+         gfx.viStatusChanged = &ViStatusChanged;
+         gfx.viWidthChanged = &ViWidthChanged;
+         gfx.readScreen = &ReadScreen2;
+@@ -363,10 +453,15 @@ static m64p_error plugin_connect_audio(m64p_dynlib_handle plugin_handle)
+ #else
+ 	audio.getVersion = &PluginGetVersionAudio;
+         audio.aiDacrateChanged = &AiDacrateChanged;
++#if EMSCRIPTEN
++    audio.aiLenChanged = &web_AiLenChanged;
++    audio.processAList = &web_ProcessAList;
++#else
+         audio.aiLenChanged = &AiLenChanged;
++    audio.processAList = &ProcessAList;
++#endif
+         audio.initiateAudio = &InitiateAudio;
+-        audio.processAList = &ProcessAList;
+         audio.romOpen = &RomOpenAudio;
+         audio.romClosed = &RomClosedAudio;
+         audio.setSpeedFactor = &SetSpeedFactor;
+         audio.volumeUp = &VolumeUp;

@@ -4,9 +4,13 @@ node_modules/
 # Build output
 dist/
 nes-wasm/target/
+artifacts/n64/*
+!artifacts/n64/mupen64plus-web-1.5.7-baseline/
+!artifacts/n64/mupen64plus-web-1.5.7-baseline/**
 
 # Local Vite/dependency cache
 .vite/
+.cache/n64/
 
 # Build logs
 build_stdout.txt

@@ -331,29 +331,106 @@
 
 ### Q1: 第一次啟動 N64 ROM 時畫面內容尺寸錯誤
 
-**現象**：第一次啟動 N64 遊戲時，外框已置中但遊戲內容大小不正確；手動適配或重新 resize 一次後才正常。
+**現象**：第一次啟動 N64 遊戲時，畫面上方與右側被裁切或留下大片清屏色；外框本身仍是正確的 `4:3`。
 
-**排查**：DOM 量測顯示外層 `.screen-bezel` 與 canvas CSS 尺寸正確，但 Mupen64Plus-web / SDL 在啟動後仍會自行處理 canvas resize，導致 WebGL backing store 或 viewport 在第一幀使用到錯誤尺寸。
+**排查**：DOM 量測顯示外層 `.screen-bezel` 與 canvas CSS 尺寸正確，但手機 canvas backing變成`390x292`，Rice viewport仍只繪製`320x240`。因此內容落在部分畫布內，問題不是CSS overflow。
 
-**原因**：只在 `createMupen64PlusWeb()` / `start()` 前 dispatch `resize` 不足。Mupen 的內部 renderer 會在初始化後再讀取 canvas 尺寸，因此必須在 start 前後都強制觸發 RWD layout pulse。
+**原因**：Mupen的`start()`會先非同步準備IDBFS，之後SDL/Rice才讀取canvas尺寸。若此時CSS已放大至容器寬度，SDL會用顯示尺寸改寫backing；發送假的`resize`或`orientationchange`事件會讓這個競態更不穩定。
 
 **解決**：`src/main.ts` 新增 N64 專用適配流程：
 - 建立全新的 `<canvas id="canvas">`，避免重用已取得 2D context 的 `#screen`
-- 套用 `body.n64-mode` 後等待兩個 animation frame
-- start 前後執行 `forceN64ResponsiveResize()` / `scheduleN64ResponsiveResize()`
-- 先送 `resize` / `orientationchange` pulse，再把 WebGL backing store 固定回桌機 `640x480`、高階 iOS `480x360` 或一般手機 `320x240`
+- SDL/Rice初始化期間以`body.n64-initializing`將CSS尺寸固定為效能profile的原生尺寸
+- Rice第一個`beginStats`（第一個VI）回呼後才鎖定WebGL backing，並移除初始化class恢復responsive CSS
+- backend停止或啟動失敗時一律清除初始化class；不再發送假的window/orientation resize pulse
 
-**驗證**：初次載入 Super Mario 64 後，CSS 顯示維持 `4:3`；桌機 backing store 為 `640x480`，高階 iOS 為 `480x360`，一般手機為 `320x240`。
+**驗證**：GitHub Pages base path的production preview以iPhone profile啟動Super Mario 64後，backing為`320x240`、CSS為`390x292.5`，完整畫面填滿`4:3` canvas。切換Mario Kart 64後仍為`320x240`；切至NES則正確還原`#screen`與`256x240`。
 
 ### Q2: N64 在手機上嚴重掉幀與音頻爆音
 
 **原因**：舊流程在所有裝置固定繪製 `640x480`，Rice 使用精確材質映射、mipmap 與 sinc resampler；高更新率手機還會讓 `requestAnimationFrame` 主迴圈以 90/120 Hz 喚醒。重設遊戲時額外複製完整 ROM，也會造成行動裝置記憶體尖峰與 GC 壓力。
 
-**解決**：新增自動效能 profile。一般手機使用 N64 原生級 `320x240` backing store、快速材質載入、16-bit texture、trivial resampler 與 timer 主迴圈；6 核心以上 iPhone/iPad 改用 `480x360`、rAF 同步與較低延遲的 3072/1024 audio buffers，避免 Safari 的 1ms timer 抖動餓死主執行緒音頻回呼。CPU/RAM 較弱的手機另啟用每隔一幀繪製。ROM reset 改為共用原始 buffer。
+**解決**：新增自動效能 profile。手機使用 N64 原生級 `320x240` backing store、快速材質載入、16-bit texture 與 trivial resampler；Android low-end 保留畫面跳幀。iPhone/iPad 改用 cached interpreter、關閉畫面跳幀，並使用 rAF 同步與 3072/1024 audio buffers，避免 Safari 的 1ms timer 抖動餓死主執行緒音頻回呼。ROM reset 改為共用原始 buffer。
 
-**量測**：開啟瀏覽器遠端主控台，搜尋 `[N64 perf]`。每五秒會顯示 VI/s、VI avg/max、long VI 與 recompiles。NTSC 遊戲穩定低於約 56 VI/s 表示核心本身未達 real-time；若 long VI 與 recompiles 同時偏高，啟動初期的 Wasm 動態重編譯是主要卡點。若 recompiles 已降到 0 但仍低於 real-time，才需要進一步降低 Rice 負載或使用不同核心。
+**量測**：開啟瀏覽器遠端主控台，搜尋 `[N64 perf]`。每五秒會顯示 VI/s、VI avg/max、long VI、recompiles與audio underruns。NTSC 遊戲穩定低於約 56 VI/s 表示核心本身未達 real-time；若 long VI 與 recompiles 同時偏高，啟動初期的 Wasm 動態重編譯是主要卡點。若recompiles已下降但audio underruns仍持續增加，表示renderer或其他主執行緒長工作仍在餓死SDL/Web Audio供料。
+
+**音訊短缺處理**：rebuilt fork會保留SDL callback當下仍可安全resample的樣本，只將不足尾端補靜音，不再因少量短缺捨棄整個callback。SDL累積underrun counter透過既有每VI telemetry傳回，沒有新增高頻JS crossing。這可降低破碎幅度並提供客觀計數，但無法替代把Rice renderer降到real-time預算內；若手機持續大量underrun，仍應先降低主執行緒render stall。
+
+**啟動或切換後無聲**：app AudioWorklet與Mupen SDL使用不同的AudioContext。N64啟動前呼叫resume時，SDL context可能尚未建立；Safari也可能在背景切換後再次暫停context。頁面現在保留click、keydown與touchstart恢復監聽，在Rice第一個VI後再恢復SDL，並於頁面回到visible時同時恢復兩個context。fork control必須讀取`Module.SDL2.audioContext`，直接引用lexical `SDL2`會因符號不在該scope而靜默失效。production preview將兩個context模擬為suspended後，visibility與後續click均確認觸發兩次resume。
 
 **限制**：這個後端仍是單執行緒 Mupen64Plus/Rice WebAssembly。遊戲相容性與最終速度仍受手機 SoC、瀏覽器 WebGL 驅動及遊戲本身負載影響；低階裝置會以畫面更新率換取穩定遊戲速度。
+
+**正式手機路徑**：不帶benchmark參數時，mobile profile會自動載入版本化rebuilt fork並啟用triangle stream；rectangle ring不會啟用。桌機維持npm runtime。若特定手機遇到fork相容性問題，可暫時在網址加入`?n64Runtime=npm`回退。
+
+**GitHub Pages部署檢查**：production build必須包含`n64-fork/main.bundle.js`、`index.<hash>.wasm`與`index.<hash>.data`。Vite現在會在artifact不完整時使build失敗；GitHub Actions依repository name設定`VITE_BASE_PATH`。已用`/h5-NES_TS/`子路徑和iPhone user agent確認不帶query能載入rebuilt fork及320x240 3D畫面。
+
+### Q3: 如何取得可重現的 N64 A/B 效能基準
+
+**方法**：在網址 query string 加上 `n64Benchmark=1`。模擬器會先暖機 30 秒，再收集 60 秒穩態資料，最後輸出 `[N64 benchmark result]`。未啟用 benchmark 時不會覆寫正常設定。
+
+可選參數：
+- `n64MobileTest=baseline|stream|full`：手機短版renderer比較；固定rebuilt fork，使用10秒暖機與20秒採樣。stream只啟用triangle ring，full另含已判定不採用的rectangle ring
+- `n64EmuMode=1|2`：cached interpreter / Wasm recompiler
+- `n64SkipFrame=0|1`：關閉 / 開啟 Rice SkipFrame
+- `n64Timing=0|1`：requestAnimationFrame / timer
+- `n64Runtime=fork`：使用固定 source/toolchain 重建的 baseline；省略時使用 npm 1.5.7 rollback runtime
+- `n64NullVideo=1`：只在benchmark與fork同時啟用時改用核心內建NoVideo plugin；畫面全黑是預期行為，正常遊玩與npm runtime不受影響
+- `n64SuppressDraw=1`：只在benchmark與fork同時啟用時保留Rice DList解析、texture與state處理，但抑制主要GL draw calls；用來估算替換render backend的收益上限
+- `n64PersistentBuffers=1`：只在benchmark與fork同時啟用Rice triangle交錯streaming ring A/B；rectangle與預設Rice路徑不變
+- `n64PersistentRectBuffers=1`：需同時啟用`n64PersistentBuffers=1`；將四條rectangle draw路徑移至獨立交錯ring
+
+例如：`?n64Benchmark=1&n64EmuMode=2&n64SkipFrame=1&n64Timing=0`。比較不同組合時必須使用同一 ROM、場景、裝置與溫度條件。
+
+baseline、stream與full手機簡測已完成，不需重跑。目前沒有待執行的手機短測；下一次只會在另一個大型renderer調整通過本機三款遊戲驗收後安排。
+
+### Q4: iPhone N64 基準顯示主要瓶頸在哪裡
+
+**Super Mario 64 實測**（iPhone 17 Pro Max）：Wasm recompiler (`emuMode=2`) 為 27.23 VI/s，cached interpreter (`emuMode=1`) 為 27.65 VI/s。recompiler 在穩態期間仍產生 163 次 recompiles，吞吐量反而低約 1.5%，最長 VI 也由 118 ms 增至 207 ms。
+
+同樣使用 cached interpreter 時，關閉 SkipFrame只讓27.65 VI/s降至27.06 VI/s，差約2.1%。這項早期結果只能說明Rice的SkipFrame沒有避開主要工作，不能據此判定renderer成本低；後續C端分段、true null-video與Rice no-draw已確認主要瓶頸位於Rice的GL draw入口及WebGL資料提交。降低輸出解析度仍不是首選，WebGPU則保留為低風險WebGL優化不足時的候選。
+
+**Mario Kart 64 實測**：cached interpreter、no SkipFrame、rAF 為 21.24 VI/s，平均 VI 38.89 ms，最長 VI 275 ms。相較 Super Mario 64 同設定再慢約 21.5%，約為 NTSC 即時速度的 35%。結果支持優先處理 R4300、RSP、Wasm 執行與主執行緒成本。
+
+**Ocarina of Time 實測**：cached interpreter、no SkipFrame、rAF 為 21.98 VI/s，平均 VI 43.37 ms，最長 VI 212 ms，約為 NTSC 即時速度的 36.6%。90 秒測試內正常完成且未收到 diagnostic，因此這次沒有重現較長時間遊玩後的閃退，也不能據此宣稱閃退已修復。
+
+**崩潰分類**：benchmark 模式會額外監聽 JavaScript error、unhandled Promise rejection、Mupen `setErrorStatus` 與 `webglcontextlost`，並 POST 到開發伺服器的 `/__n64-benchmark`。Vite 主控台出現 `[N64 benchmark received]` 後，可由 `event: diagnostic` 與 `type` 區分 Wasm/JS、Mupen 或 WebGL 問題。Safari 若直接終止整個頁面程序，瀏覽器來不及送出事件，此情況仍需由 Safari Web Inspector 或裝置系統記錄確認。
+
+### Q5: rebuilt N64 runtime 顯示「模擬器啟動失敗」
+
+**現象**：使用 `n64Runtime=fork` 時，ROM 下載完成後立即顯示啟動失敗；最初沒有 server diagnostic。修正 browser import 後，核心進一步在 `initWasmRecompiler` 發生 `ReferenceError: wasmExports is not defined`。
+
+**原因**：upstream `main.js` 是預期由 npm bundler處理的來源入口，包含 extensionless imports與 `axios` bare import，不能直接作為靜態 browser module載入。此外 Emscripten 3.1.25 將 Wasm exports放在 `Module['asm']`，但舊 `corelib.js`仍使用已不存在的 `wasmExports`全域變數。
+
+**解決**：`npm run n64:build` 使用 esbuild產生 browser-ready `main.bundle.js`；版本化 core submodule patch將 function table與memory存取改為 `Module['asm']`。`n64Runtime=fork`改載入 bundle，並新增 backend startup與 `start()` rejection diagnostic。桌面實測已完成 Rice/RSP/Input初始化、loading overlay消失並開始輸出 VI telemetry。
+
+**iPhone驗證**：Super Mario 64 rebuilt fork為 27.082 VI/s，npm baseline為 27.060 VI/s，差約 +0.08%；平均 VI與 long VI差異也低於 0.4%，可視為量測噪音。最長 VI由 114 ms降至107 ms。此結果確認固定 source/toolchain沒有造成第一款遊戲的效能回歸。
+
+Mario Kart 64 rebuilt fork為21.94 VI/s，npm baseline為21.24 VI/s，提升約3.32%；平均 VI由38.89 ms降至37.51 ms，最長 VI由275 ms降至147 ms。結果在5%驗收門檻內，且沒有發現相容性回歸。
+
+Ocarina of Time rebuilt fork為22.70 VI/s，npm baseline為21.98 VI/s，提升約3.29%；平均 VI由43.37 ms降至41.92 ms，最長 VI由212 ms降至116 ms。90秒內正常完成且未收到 diagnostic。三款遊戲因此完成 rebuilt baseline驗收，可以在此固定版本上加入 subsystem timing；較長時間遊玩後的歷史閃退仍未被這次短測排除。
+
+**Subsystem timing**：instrumented fork在C端累加RSP、Rice DList/RDP、present與audio plugin時間，並隨既有每VI一次的 `endStats` 呼叫一起送到JavaScript，沒有新增per-event JS crossing。benchmark結果中的 `averageCoreResidualMs`是扣除inclusive RSP、present與audio後的core/R4300上限；DList與RDP已包含在RSP時間內，只作明細，不能再次從residual扣除。npm rollback不提供這些C端數值，因此分段欄位為0。
+
+正常Rice的instrumented fork另在五個主要draw入口內累加triangle與rectangle的總時間及呼叫數，仍只透過既有每VI一次的 `endStats` 傳送。結果欄位為 `averageTriangleDrawMs`、`averageRectDrawMs`、`averageTriangleDrawCalls`與`averageRectDrawCalls`。若時間由高calls/VI的triangle路徑主導，優先減少client-array uploads並評估batching；若少量draw仍耗時很高，優先建立persistent VBO/EBO staging。`rice-no-draw`與null-video模式的這四項應接近0。
+
+Super Mario 64首組分段結果為31.68 ms/VI，其中RSP inclusive 28.22 ms、Rice DList 28.08 ms、core residual 3.45 ms、present 0.012 ms、audio plugin 0.003 ms。Rice DList約占整個VI的88.6%，而present接近零，因此先前SkipFrame僅約2%的改善不代表video plugin成本低；它只沒有避開主要的display-list解析與繪圖工作。需以true null-video量測移除整個Rice路徑後的上限，再決定renderer優化或其他核心方向。
+
+true null-video使用 `?n64Benchmark=1&n64Runtime=fork&n64NullVideo=1`。static console已修正為辨識既有的 `--gfx dummy`，讓core連接真正的NoVideo plugin，而非只關閉present或使用Rice SkipFrame。此模式刻意限制在fork benchmark，避免一般遊玩意外黑屏。
+
+**第一次null-video無結果**：畫面如預期全黑，但90秒後server沒有收到benchmark或diagnostic。Web cached-interpreter loop以 `viArrived`決定每個VI何時yield；Rice透過 `VidExt_GL_SwapBuffers()`增加該計數，原始dummy `UpdateScreen()`則完全為空，導致loop永遠不返回JavaScript。Emscripten dummy video現會在 `UpdateScreen()`增加 `viArrived`，只補回main-loop生命週期訊號，不執行Rice、GL swap或任何繪圖。
+
+**修正後null-video結果**：Super Mario 64為60.0 VI/s、6.13 ms/VI、9 ms max、0 long VI；RSP 0.005 ms、DList/RDP/present 0、audio 0.001 ms、core residual 6.12 ms。相較Rice的27.20 VI/s與31.68 ms/VI，移除video plugin後已達原生60 VI/s，因此目前不應優先重構R4300或降低輸出解析度。若維持60 VI/s，renderer只能使用約10.55 ms/VI；Rice DList目前28.08 ms，至少需減少62.4%。
+
+**Rice no-draw A/B**：使用 `?n64Benchmark=1&n64Runtime=fork&n64SuppressDraw=1`。此模式仍初始化Rice並完整執行DList parser、ucode dispatch、texture lookup與render state，但在五個主要OpenGL draw入口提前成功返回。若結果接近null-video的60 VI/s，GL draw/backend是主要投資方向；若仍接近正常Rice的27 VI/s，成本主要在parser、texture或state，單純換WebGPU後端不會達標。
+
+Super Mario 64 Rice no-draw實測為59.98 VI/s、12.19 ms/VI、DList 0.24 ms；正常Rice則為27.20 VI/s、DList 28.08 ms。約27.84 ms/VI因此位於主要GL draw入口及其周邊WebGL提交，而非DList parser、ucode、texture lookup或一般state處理。應先處理WebGL同步點、client array上傳與draw batching，再評估WebGPU。
+
+**Interleaved triangle stream ring A/B**：使用 `?n64Benchmark=1&n64Runtime=fork&n64PersistentBuffers=1`。此路徑把position/fog、兩組texture coordinates與color交錯成40-byte vertex，寫入單一2.56 MB `GL_STREAM_DRAW` ring，並利用Rice已展開為連續三頂點的資料改用`glDrawArrays`。每VI第一批先orphan buffer，後續draw依序追加，將每draw三次upload降為一次並避免立即覆寫GPU可能仍在讀取的區段。每批後仍恢復原client pointers；未帶參數、npm runtime、rectangle與no-draw路徑維持原行為。
+
+2026-07-19 iPhone固定場景baseline為16.71 VI/s、57.69 ms/VI、48.16 ms DList、0.469 ms triangle、46.47 ms rectangle與706 underruns；stream為38.22 VI/s、21.39 ms/VI、18.70 ms DList、0.078 ms triangle、18.36 ms rectangle與290 underruns。VI/s提升128.7%、DList降低61.2%、underruns降低58.9%，triangle ring確定保留。rectangle程式尚未修改卻同步下降，表示client-array同步等待會跨draw入口累積。
+
+**Rectangle stream ring**：`full`模式把四條rectangle路徑交錯為36-byte vertex並寫入第二個ring。iPhone結果為37.7 VI/s、22.0 ms/VI、18.4 ms rectangle與449 underruns；相較stream的38.22 VI/s、21.39 ms、18.36 ms與290 underruns沒有收益，因此不採用並維持rectangle flag關閉。使用者主觀感受整體較好但仍有輕微爆音，記錄為可能的run-to-run差異。
+
+**iOS audio buffer A/B**：曾以triangle-only stream將secondary callback由1024增至2048 samples、primary target由3072增至4096。結果為37.9 VI/s、21.7 ms/VI、18.1 ms rectangle與435 underruns，未優於stream的38.22 VI/s與290 underruns；使用者亦回報體感沒有改善且延遲稍增。此preset已移除，iOS維持3072/1024，剩餘爆音應由降低renderer stall處理而非繼續增加buffer。
 
 ---
 

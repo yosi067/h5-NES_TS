@@ -1,0 +1,14 @@
+diff --git a/Makefile b/Makefile
+index 753c68a..847f858 100644
+--- a/Makefile
++++ b/Makefile
+@@ -108,7 +108,7 @@ OPT_LEVEL ?= -O2
+ DEBUG_LEVEL ?=
+ 
+ 
+ STACK_SIZE = 5MB
+-INITIAL_HEAP = 16MB
++INITIAL_HEAP = 38535168
+ 
+ NATIVE_BIN := bin
+ NATIVE_PLUGINS := \

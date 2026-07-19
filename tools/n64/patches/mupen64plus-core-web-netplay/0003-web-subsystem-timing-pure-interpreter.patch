@@ -1,0 +1,30 @@
+diff --git a/src/device/r4300/pure_interp.c b/src/device/r4300/pure_interp.c
+index 2265d63a..00000000 100644
+--- a/src/device/r4300/pure_interp.c
++++ b/src/device/r4300/pure_interp.c
+@@ -47 +47,13 @@ extern void beginStats();
+-extern void endStats(uint32_t numRecompiles);
++extern void endStats(uint32_t numRecompiles, double rspMs, double dlistMs,
++double rdpMs, double presentMs, double audioMs, double triangleDrawMs,
++double rectDrawMs, uint32_t triangleDrawCalls, uint32_t rectDrawCalls,
++uint32_t audioUnderruns);
++extern void n64_web_timing_reset(void);
++extern double n64_web_timing_rsp_ms(void);
++extern double n64_web_timing_dlist_ms(void);
++extern double n64_web_timing_rdp_ms(void);
++extern double n64_web_timing_present_ms(void);
++extern double n64_web_timing_audio_ms(void);
++extern double n64_web_timing_triangle_draw_ms(void);
++extern double n64_web_timing_rect_draw_ms(void);
++extern uint32_t n64_web_timing_triangle_draw_calls(void);
++extern uint32_t n64_web_timing_rect_draw_calls(void);
++extern uint32_t n64_web_audio_underruns(void);
+@@ -742,0 +750 @@ static void  pure_interpreter_loop(struct r4300_core* r4300)
++n64_web_timing_reset();
+@@ -757 +770,5 @@ static void  pure_interpreter_loop(struct r4300_core* r4300)
+-  endStats(0);
++endStats(0, n64_web_timing_rsp_ms(), n64_web_timing_dlist_ms(),
++n64_web_timing_rdp_ms(), n64_web_timing_present_ms(),
++n64_web_timing_audio_ms(), n64_web_timing_triangle_draw_ms(),
++n64_web_timing_rect_draw_ms(), n64_web_timing_triangle_draw_calls(),
++n64_web_timing_rect_draw_calls(), n64_web_audio_underruns());

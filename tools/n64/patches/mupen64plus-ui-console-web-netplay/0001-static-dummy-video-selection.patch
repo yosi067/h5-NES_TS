@@ -1,0 +1,16 @@
+diff --git a/src/plugin_static.c b/src/plugin_static.c
+index fab78cc..01b780d 100644
+--- a/src/plugin_static.c
++++ b/src/plugin_static.c
+@@ -163,6 +163,11 @@ m64p_error PluginSearchLoad(m64p_handle ConfigUI)
+             return rval;
+           break;
+         case M64PLUGIN_GFX:
++          if (g_GfxPlugin != NULL && strcmp(g_GfxPlugin, "dummy") == 0)
++            {
++              DebugMessage(M64MSG_INFO, "Using video plugin: <dummy>");
++              break;
++            }
+           rval = SetupGfx();
+           if(rval != M64ERR_SUCCESS)
+             return rval;

@@ -1,0 +1,15 @@
+diff --git a/Makefile b/Makefile
+index 28ed119..753c68a 100644
+--- a/Makefile
++++ b/Makefile
+@@ -477,8 +477,8 @@ $(BIN_DIR)/$(TARGET_JS): $(INDEX_TEMPLATE) $(REQUIRED_PLUGINS) $(INPUT_FILES)
+ 			--shell-file $(INDEX_TEMPLATE) \
+ 			--js-library ../../../mupen64plus-core-web-netplay/src/jslib/corelib.js \
+ 			--js-library ../../../mupen64plus-input-sdl/src/jslib/input-lib.js \
+-			-s INITIAL_HEAP=$(INITIAL_HEAP) \
+-			-s STACK_SIZE=$(STACK_SIZE) \
++			-s INITIAL_MEMORY=$(INITIAL_HEAP) \
++			-s TOTAL_STACK=$(STACK_SIZE) \
+ 			-s ALLOW_MEMORY_GROWTH=1 \
+ 			-s DEMANGLE_SUPPORT=1 -s MODULARIZE=1 -s EXPORT_NAME=\"createModule\" \
+ 			-s ENVIRONMENT='web,worker' -s EXPORT_ES6=0 \

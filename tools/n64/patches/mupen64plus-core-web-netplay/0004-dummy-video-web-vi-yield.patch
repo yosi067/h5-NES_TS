@@ -1,0 +1,24 @@
+diff --git a/src/plugin/dummy_video.c b/src/plugin/dummy_video.c
+index d2b8bc47..929611ac 100644
+--- a/src/plugin/dummy_video.c
++++ b/src/plugin/dummy_video.c
+@@ -26,6 +26,10 @@
+ #include "dummy_video.h"
+ #include "plugin.h"
+ 
++#if EMSCRIPTEN
++extern uint32_t viArrived;
++#endif
++
+ m64p_error dummyvideo_PluginGetVersion(m64p_plugin_type *PluginType, int *PluginVersion,
+                                        int *APIVersion, const char **PluginNamePtr, int *Capabilities)
+ {
+@@ -88,5 +92,8 @@ void dummyvideo_ShowCFB (void)
+ 
+ void dummyvideo_UpdateScreen (void)
+ {
++#if EMSCRIPTEN
++    viArrived++;
++#endif
+ 
+ }

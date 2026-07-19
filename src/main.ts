@@ -18,7 +18,16 @@ import {
   selectN64PerformanceProfile,
   type N64PerformanceProfile,
 } from './n64/performance';
+import {
+  createN64BenchmarkSession,
+  resolveN64BenchmarkConfig,
+  type N64BenchmarkSession,
+} from './n64/benchmark';
 import { createN64Telemetry } from './n64/telemetry';
+
+type N64EmulatorControls = EmulatorControls & {
+  resumeAudio?: () => Promise<void>;
+};
 
 // ===== 型別定義 =====
 
@@ -151,17 +160,133 @@ let wasmInitPromise: Promise<void> | null = null;
 let isRunning: boolean = false;
 let currentRomFilename: string = '';
 let activeBackend: 'wasm' | 'mupen64' | 'fbneo' = 'wasm';
-let n64Controls: EmulatorControls | null = null;
+let n64Controls: N64EmulatorControls | null = null;
 let currentN64RomData: ArrayBuffer | null = null;
 let n64PerformanceProfile: N64PerformanceProfile = selectN64PerformanceProfile();
+let n64BenchmarkSession: N64BenchmarkSession | null = null;
+let removeN64BenchmarkDiagnostics: (() => void) | null = null;
+
+function describeN64Failure(reason: unknown): { message: string; stack?: string } {
+  if (reason instanceof Error) {
+    return { message: reason.message, stack: reason.stack };
+  }
+  if (typeof reason === 'string') return { message: reason };
+  try {
+    return { message: JSON.stringify(reason) };
+  } catch {
+    return { message: String(reason) };
+  }
+}
+
+function postN64Diagnostic(type: string, reason: unknown, label: string): void {
+  const diagnostic = {
+    event: 'diagnostic',
+    type,
+    ...describeN64Failure(reason),
+    label,
+    rom: currentRomFilename,
+    profile: n64PerformanceProfile.name,
+    userAgent: navigator.userAgent,
+    recordedAt: new Date().toISOString(),
+  };
+  console.error(`[N64 diagnostic] ${type}:`, reason);
+  void fetch(`${import.meta.env.BASE_URL}__n64-benchmark`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(diagnostic),
+    keepalive: true,
+  }).catch(error => console.warn('[N64 diagnostic] upload failed:', error));
+}
+
+function installN64BenchmarkDiagnostics(canvas: HTMLCanvasElement, label: string): () => void {
+  const onError = (event: ErrorEvent) => {
+    postN64Diagnostic('window-error', event.error ?? event.message, label);
+  };
+  const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+    postN64Diagnostic('unhandled-rejection', event.reason, label);
+  };
+  const onContextLost = (event: Event) => {
+    event.preventDefault();
+    postN64Diagnostic('webgl-context-lost', 'WebGL context lost', label);
+  };
+  window.addEventListener('error', onError);
+  window.addEventListener('unhandledrejection', onUnhandledRejection);
+  canvas.addEventListener('webglcontextlost', onContextLost);
+  return () => {
+    window.removeEventListener('error', onError);
+    window.removeEventListener('unhandledrejection', onUnhandledRejection);
+    canvas.removeEventListener('webglcontextlost', onContextLost);
+  };
+}
+
 let n64Telemetry = createN64Telemetry({
   onReport: report => {
     const speed = report.viPerSecond >= 56 ? 'real-time' : 'below real-time';
     console.info(
       `[N64 perf] ${report.viPerSecond.toFixed(1)} VI/s (${speed}), ` +
       `VI avg/max ${report.averageViMs.toFixed(1)}/${report.longestViMs.toFixed(1)} ms, ` +
-      `long VI ${report.longVis}, recompiles ${report.recompiles}`,
+      `long VI ${report.longVis}, recompiles ${report.recompiles}, ` +
+      `avg core/RSP/present/audio ${(report.coreResidualMs / report.viCount).toFixed(1)}/` +
+      `${(report.rspMs / report.viCount).toFixed(1)}/` +
+      `${(report.presentMs / report.viCount).toFixed(1)}/` +
+      `${(report.audioMs / report.viCount).toFixed(1)} ms, ` +
+      `RSP detail DList/RDP ${(report.dlistMs / report.viCount).toFixed(1)}/` +
+      `${(report.rdpMs / report.viCount).toFixed(1)} ms, ` +
+      `draw tri/rect ${(report.triangleDrawMs / report.viCount).toFixed(1)}/` +
+      `${(report.rectDrawMs / report.viCount).toFixed(1)} ms, calls/VI ` +
+      `${(report.triangleDrawCalls / report.viCount).toFixed(1)}/` +
+      `${(report.rectDrawCalls / report.viCount).toFixed(1)}, ` +
+      `audio underruns ${report.audioUnderruns}`,
     );
+
+    const benchmarkEvent = n64BenchmarkSession?.record(report);
+    if (benchmarkEvent?.type === 'warmup-complete') {
+      console.info('[N64 benchmark] warmup complete; collecting steady-state data');
+    } else if (benchmarkEvent?.type === 'complete') {
+      const summary = benchmarkEvent.summary;
+      const result = {
+        ...summary,
+        rom: currentRomFilename,
+        profile: n64PerformanceProfile.name,
+        userAgent: navigator.userAgent,
+        recordedAt: new Date().toISOString(),
+      };
+      console.info(
+        `[N64 benchmark result] ${summary.label}: ${summary.viPerSecond.toFixed(1)} VI/s, ` +
+        `VI avg/max ${summary.averageViMs.toFixed(1)}/${summary.longestViMs.toFixed(1)} ms, ` +
+        `long VI ${summary.longVis}, recompiles ${summary.recompiles}, ` +
+        `avg core/RSP/present/audio ${summary.averageCoreResidualMs.toFixed(1)}/` +
+        `${summary.averageRspMs.toFixed(1)}/${summary.averagePresentMs.toFixed(1)}/` +
+        `${summary.averageAudioMs.toFixed(1)} ms, ` +
+        `RSP detail DList/RDP ${summary.averageDlistMs.toFixed(1)}/` +
+        `${summary.averageRdpMs.toFixed(1)} ms, ` +
+        `draw tri/rect ${summary.averageTriangleDrawMs.toFixed(1)}/` +
+        `${summary.averageRectDrawMs.toFixed(1)} ms, calls/VI ` +
+        `${summary.averageTriangleDrawCalls.toFixed(1)}/` +
+        `${summary.averageRectDrawCalls.toFixed(1)}, ` +
+        `audio underruns ${summary.audioUnderruns}, ` +
+        `sample ${(summary.elapsedMs / 1000).toFixed(1)} s`,
+      );
+      localStorage.setItem('n64BenchmarkResult', JSON.stringify(result));
+      const mobileTest = new URLSearchParams(window.location.search).get('n64MobileTest');
+      if (mobileTest === 'baseline' || mobileTest === 'stream' || mobileTest === 'full') {
+        localStorage.setItem(`n64MobileTestResult:${mobileTest}`, JSON.stringify(result));
+      }
+      void fetch(`${import.meta.env.BASE_URL}__n64-benchmark`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result),
+      }).catch(error => console.warn('[N64 benchmark] result upload failed:', error));
+      void showAppAlert(
+        `${mobileTest ? 'N64 手機簡易測試' : 'N64 Benchmark'}完成\n\n${summary.label}\n` +
+        `${summary.viPerSecond.toFixed(1)} VI/s\n` +
+        `VI avg/max: ${summary.averageViMs.toFixed(1)}/${summary.longestViMs.toFixed(1)} ms\n` +
+        `Triangle/Rect: ${summary.averageTriangleDrawMs.toFixed(1)}/${summary.averageRectDrawMs.toFixed(1)} ms\n` +
+        `Audio underruns: ${summary.audioUnderruns}\n` +
+        `Long VI: ${summary.longVis}\nRecompiles: ${summary.recompiles}`,
+        'N64 測試結果',
+      );
+    }
   },
 });
 let fbneoCore: FbNeoArcadeCore | null = null;
@@ -345,11 +470,12 @@ function activateN64Canvas(profile: N64PerformanceProfile): HTMLCanvasElement {
     throw new Error('找不到可替換的 2D 畫布');
   }
 
-  document.body.classList.add('n64-mode');
+  document.body.classList.add('n64-mode', 'n64-initializing');
   const n64Canvas = document.createElement('canvas');
   n64Canvas.id = 'canvas';
   n64Canvas.width = profile.width;
   n64Canvas.height = profile.height;
+  n64Canvas.style.setProperty('--n64-render-width', `${profile.width}px`);
   n64Canvas.style.aspectRatio = '4 / 3';
   n64Canvas.style.width = '100%';
   n64Canvas.style.height = 'auto';
@@ -369,57 +495,20 @@ async function settleN64CanvasLayout(n64Canvas: HTMLCanvasElement): Promise<void
   await waitForNextFrame();
   await waitForNextFrame();
   n64Canvas.getBoundingClientRect();
-  window.dispatchEvent(new Event('resize'));
 }
 
-function dispatchN64ResizePulse(n64Canvas: HTMLCanvasElement): void {
-  n64Canvas.dispatchEvent(new Event('resize'));
-  window.dispatchEvent(new Event('resize'));
-  window.dispatchEvent(new Event('orientationchange'));
-}
-
-async function forceN64ResponsiveResize(
-  n64Canvas: HTMLCanvasElement,
-  profile: N64PerformanceProfile,
-): Promise<void> {
-  const originalWidth = n64Canvas.style.width || '100%';
-  n64Canvas.style.width = '99.9%';
-  await waitForNextFrame();
-  n64Canvas.style.width = originalWidth;
-  await waitForNextFrame();
-
-  dispatchN64ResizePulse(n64Canvas);
-  await waitForNextFrame();
-
-  n64Canvas.width = profile.width;
-  n64Canvas.height = profile.height;
-
-  const rect = n64Canvas.getBoundingClientRect();
-  const displayWidth = Math.max(1, Math.round(rect.width));
-  const displayHeight = Math.max(1, Math.round(rect.height));
-  if (displayWidth > 1 && displayHeight > 1) {
-    const gl = n64Canvas.getContext('webgl2') ?? n64Canvas.getContext('webgl');
-    gl?.viewport(0, 0, n64Canvas.width, n64Canvas.height);
-  }
-}
-
-function scheduleN64ResponsiveResize(
+function lockN64RenderSize(
   n64Canvas: HTMLCanvasElement,
   profile: N64PerformanceProfile,
 ): void {
-  const runResize = () => {
-    void forceN64ResponsiveResize(n64Canvas, profile).catch((error) => {
-      console.warn('[N64] 強制畫面適配失敗:', error);
-    });
-  };
-
-  runResize();
-  window.setTimeout(runResize, 250);
-  window.setTimeout(runResize, 750);
-  window.setTimeout(runResize, 1500);
+  n64Canvas.width = profile.width;
+  n64Canvas.height = profile.height;
+  const gl = n64Canvas.getContext('webgl2') ?? n64Canvas.getContext('webgl');
+  gl?.viewport(0, 0, profile.width, profile.height);
 }
 
 function restoreWasmCanvas(): void {
+  document.body.classList.remove('n64-initializing');
   if (!wasmCanvas || canvas === wasmCanvas) return;
 
   canvas?.replaceWith(wasmCanvas);
@@ -1285,6 +1374,7 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
 
   stopEmulation();
   await stopN64Backend();
+  let startupDiagnosticLabel: string | null = null;
 
   const graphicsCapability = getN64GraphicsCapability();
   if (!graphicsCapability.supported) {
@@ -1303,17 +1393,51 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
   try {
     activeBackend = 'mupen64';
     currentN64RomData = romData;
-    n64PerformanceProfile = selectN64PerformanceProfile();
+    const benchmarkConfig = resolveN64BenchmarkConfig(selectN64PerformanceProfile());
+    const useRebuiltRuntime = benchmarkConfig.runtime === 'fork';
+    if (benchmarkConfig.enabled) {
+      benchmarkConfig.label += useRebuiltRuntime ? '/fork' : '/npm';
+      startupDiagnosticLabel = benchmarkConfig.label;
+    }
+    n64PerformanceProfile = benchmarkConfig.profile;
+    n64BenchmarkSession = benchmarkConfig.enabled
+      ? createN64BenchmarkSession(
+        benchmarkConfig.label,
+        benchmarkConfig.warmupMs,
+        benchmarkConfig.sampleMs,
+      )
+      : null;
     console.log(
       `[N64] performance profile: ${n64PerformanceProfile.name} ` +
       `(${n64PerformanceProfile.width}x${n64PerformanceProfile.height}, ` +
       `frame skip: ${n64PerformanceProfile.skipFrame ? 'on' : 'off'})`,
     );
+    if (benchmarkConfig.enabled) {
+      console.info(
+        `[N64 benchmark] ${benchmarkConfig.label}; ` +
+        `${benchmarkConfig.warmupMs / 1000} seconds warmup + ` +
+        `${benchmarkConfig.sampleMs / 1000} seconds sample`,
+      );
+      if (benchmarkConfig.mobileTest !== null) {
+        const mobileTestLabel = benchmarkConfig.mobileTest === 'baseline'
+          ? '基準版'
+          : benchmarkConfig.mobileTest === 'stream' ? 'Triangle 串流版' : '完整串流版';
+        showToast(
+          `N64 手機測試：${mobileTestLabel}`,
+        );
+      }
+    }
 
     // Mupen64Plus-web 內部 SDL/Emscripten 程式碼會尋找 id="canvas"。
     // 原本的 #screen 已建立 2D context，瀏覽器不允許同一張 canvas 再切成 WebGL，
     // 因此 N64 模式必須替換成全新的 WebGL canvas，否則會在 EGL 層得到 BAD_MATCH。
     const n64Canvas = activateN64Canvas(n64PerformanceProfile);
+    if (benchmarkConfig.enabled) {
+      removeN64BenchmarkDiagnostics = installN64BenchmarkDiagnostics(
+        n64Canvas,
+        benchmarkConfig.label,
+      );
+    }
 
     hideRomSelector();
     updateControllerLayout();
@@ -1323,17 +1447,68 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
 
     const baseUrl = import.meta.env.BASE_URL;
     await ensureMupen64Config(baseUrl, n64PerformanceProfile);
-    const { default: createMupen64PlusWeb } = await import('mupen64plus-web');
+    const runtimeModule: typeof import('mupen64plus-web') = useRebuiltRuntime
+      ? await import(/* @vite-ignore */ `${baseUrl}n64-fork/main.bundle.js`)
+      : await import('mupen64plus-web');
+    const createMupen64PlusWeb = runtimeModule.default;
+    console.info(`[N64] runtime: ${useRebuiltRuntime ? 'rebuilt fork' : 'npm 1.5.7'}`);
+    let n64CanvasReady = false;
+    const finalizeN64Canvas = () => {
+      if (n64CanvasReady) return;
+      n64CanvasReady = true;
+      lockN64RenderSize(n64Canvas, n64PerformanceProfile);
+      document.body.classList.remove('n64-initializing');
+      resumeAudio();
+    };
     n64Controls = await createMupen64PlusWeb({
       canvas: n64Canvas,
       romData,
-      beginStats: () => n64Telemetry.beginStats(),
-      endStats: (numberOfRecompiles: number) => n64Telemetry.endStats(numberOfRecompiles),
-      // 明確指定 1.5.x 中目前最能啟動的 Rice video plugin。
-      arguments: ['--gfx', '/plugins/mupen64plus-video-rice-web-netplay-web.so'],
+      beginStats: () => {
+        finalizeN64Canvas();
+        n64Telemetry.beginStats();
+      },
+      endStats: (
+        numberOfRecompiles: number,
+        rspMs?: number,
+        dlistMs?: number,
+        rdpMs?: number,
+        presentMs?: number,
+        audioMs?: number,
+        triangleDrawMs?: number,
+        rectDrawMs?: number,
+        triangleDrawCalls?: number,
+        rectDrawCalls?: number,
+        audioUnderruns?: number,
+      ) => n64Telemetry.endStats(
+        numberOfRecompiles,
+        rspMs,
+        dlistMs,
+        rdpMs,
+        presentMs,
+        audioMs,
+        triangleDrawMs,
+        rectDrawMs,
+        triangleDrawCalls,
+        rectDrawCalls,
+        audioUnderruns,
+      ),
+      // null-video只供fork benchmark判斷renderer理論上限；正常遊玩固定使用Rice。
+      arguments: [
+        '--gfx',
+        benchmarkConfig.nullVideo
+          ? 'dummy'
+          : '/plugins/mupen64plus-video-rice-web-netplay-web.so',
+      ],
+      romConfigOptionOverrides: {
+        videoRice: {
+          SuppressDrawCalls: benchmarkConfig.suppressDrawCalls ? 1 : 0,
+          PersistentBuffers: benchmarkConfig.persistentBuffers ? 1 : 0,
+          PersistentRectBuffers: benchmarkConfig.persistentRectBuffers ? 1 : 0,
+        },
+      },
       coreConfig: {
-        // 2 = dynamic recompiler；N64 在瀏覽器中若使用 pure interpreter 會慢到長時間黑畫面。
-        emuMode: 2,
+        // iOS 預設使用量測較穩定的 cached interpreter；benchmark 可明確切換 1/2 做 A/B。
+        emuMode: benchmarkConfig.emuMode,
         // 高更新率手機若綁定 requestAnimationFrame，可能每秒執行 90/120 次 VI。
         // 1ms timer 讓模擬器依 N64 自身節流，不跟著螢幕更新率增加 CPU 負載。
         mainLoopTimingMode: n64PerformanceProfile.mainLoopTimingMode,
@@ -1341,25 +1516,34 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
       netplayConfig: { player: 0 },
       locateFile: (path: string, prefix: string) => {
         if (path.endsWith('.wasm') || path.endsWith('.data')) {
-          return `${baseUrl}n64-mupen/${path}`;
+          return `${baseUrl}${useRebuiltRuntime ? 'n64-fork' : 'n64-mupen'}/${path}`;
         }
         return prefix + path;
       },
       setErrorStatus: (message: string) => {
         console.error('[N64/Mupen64Plus]', message);
+        if (benchmarkConfig.enabled) {
+          postN64Diagnostic('mupen-error-status', message, benchmarkConfig.label);
+        }
       },
     });
 
     console.log(`[N64] Mupen64Plus-web backend ready for ${currentRomFilename}`);
+    resumeAudio();
     await settleN64CanvasLayout(n64Canvas);
-    await forceN64ResponsiveResize(n64Canvas, n64PerformanceProfile);
+    lockN64RenderSize(n64Canvas, n64PerformanceProfile);
     void n64Controls.start().catch((error) => {
       console.error('[N64] Mupen64Plus start failed:', error);
+      if (benchmarkConfig.enabled) {
+        postN64Diagnostic('mupen-start-failure', error, benchmarkConfig.label);
+      }
       showToast('N64 啟動失敗');
     });
-    scheduleN64ResponsiveResize(n64Canvas, n64PerformanceProfile);
   } catch (error) {
     console.error('[N64] Mupen64Plus backend failed:', error);
+    if (startupDiagnosticLabel) {
+      postN64Diagnostic('backend-startup-failure', error, startupDiagnosticLabel);
+    }
     await stopN64Backend();
     await showRomSelector();
     await showAppAlert('N64 模擬器啟動失敗，請查看主控台錯誤');
@@ -1422,6 +1606,9 @@ function putMupenIdbFile(fileKey: string, contents: Uint8Array): Promise<void> {
 async function stopN64Backend(): Promise<void> {
   releaseAllN64Inputs();
   n64Telemetry.reset();
+  n64BenchmarkSession = null;
+  removeN64BenchmarkDiagnostics?.();
+  removeN64BenchmarkDiagnostics = null;
   if (n64Controls) {
     try {
       await n64Controls.forceDumpSaveFiles?.();
@@ -2029,6 +2216,7 @@ function setupFileInput(): void {
  * 開始模擬
  */
 function startEmulation(): void {
+  resumeAudio();
   if (isMupenN64Active()) {
     isRunning = true;
     syncAudioWorkletState();
@@ -2191,6 +2379,7 @@ function startFbNeoEmulation(): void {
     cancelAnimationFrame(animationId);
   }
 
+  resumeAudio();
   isRunning = true;
   syncAudioWorkletState();
   const targetFrameTime = 1000 / 60;
@@ -2382,6 +2571,12 @@ function drainWasmAudioToWorklet(): void {
 async function initAudio(): Promise<void> {
   try {
     audioContext = new AudioContext({ sampleRate: 44100 });
+    if (!audioContext.audioWorklet) {
+      await audioContext.close();
+      audioContext = null;
+      console.info('[Audio] AudioWorklet unavailable on LAN HTTP; N64 SDL audio remains available');
+      return;
+    }
     await audioContext.audioWorklet.addModule(`${import.meta.env.BASE_URL}audio-worklet.js`);
     audioWorkletNode = new AudioWorkletNode(audioContext, 'emulator-audio-processor', {
       numberOfInputs: 0,
@@ -2411,9 +2606,10 @@ async function initAudio(): Promise<void> {
  * 恢復音頻
  */
 function resumeAudio(): void {
-  if (audioContext && audioContext.state === 'suspended') {
-    audioContext.resume();
+  if (audioContext && audioContext.state !== 'running' && audioContext.state !== 'closed') {
+    void audioContext.resume().catch(error => console.warn('[Audio] 恢復 AudioContext 失敗:', error));
   }
+  void n64Controls?.resumeAudio?.().catch(error => console.warn('[N64] 恢復 SDL 音訊失敗:', error));
 }
 
 /**
@@ -3307,6 +3503,14 @@ window.debugRunUntilPcInRange = (b: number, lo: number, hi: number, mf: number, 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!setupAppShell()) return;
 
+  // Safari可能在背景切換或重建backend後再次暫停AudioContext，必須保留解鎖監聽。
+  document.addEventListener('click', resumeAudio);
+  document.addEventListener('keydown', resumeAudio);
+  document.addEventListener('touchstart', resumeAudio, { passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) resumeAudio();
+  });
+
   wasmInitPromise = initWasm().catch((error) => {
     console.error('WASM 核心初始化失敗:', error);
     showToast('核心初始化失敗，仍可瀏覽遊戲列表或使用 FBNeo 遊戲');
@@ -3327,11 +3531,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setupKeyboardShortcuts();
   window.nes = nes;
-  
-  // 用戶交互後恢復音頻
-  document.addEventListener('click', resumeAudio, { once: true });
-  document.addEventListener('keydown', resumeAudio, { once: true });
-  document.addEventListener('touchstart', resumeAudio, { once: true });
 
   // 定期自動儲存 SRAM（每 30 秒）
   setInterval(() => {
