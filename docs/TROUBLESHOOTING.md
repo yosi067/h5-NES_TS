@@ -402,7 +402,7 @@ baseline、stream與full手機簡測已完成，不需重跑。目前沒有待�
 
 **解決**：`npm run n64:build` 使用 esbuild產生 browser-ready `main.bundle.js`；版本化 core submodule patch將 function table與memory存取改為 `Module['asm']`。`n64Runtime=fork`改載入 bundle，並新增 backend startup與 `start()` rejection diagnostic。桌面實測已完成 Rice/RSP/Input初始化、loading overlay消失並開始輸出 VI telemetry。
 
-**2026-07-19 Asyncify修復**：588-page rebuilt artifact雖能完成module與Rice初始化，但在`startCore`的Asyncify rewind發生Wasm `memory access out of bounds`；desktop與iPhone路徑都可重現，因此不是Safari專屬。原因是加入instrumentation後仍把npm的38,535,168-byte初始空間當作固定目標。fork已改為64 MiB（1024 pages），manifest記錄`initialMemoryBytes=67108864`，production build會拒絕缺少此值的舊artifact。由於upstream檔名只含source commit，重建後檔名不會改變；Pages正式站曾把正確的新JS/Wasm與舊data混用，且version query仍回傳舊data。main bundle、data與Wasm因此必須發布為帶相同asset version的實體檔名。修復後Super Mario 64與Mario Kart 64完成第一個VI，Ocarina of Time完成backend啟動且沒有越界。
+**2026-07-19 Asyncify修復**：588-page rebuilt artifact雖能完成module與Rice初始化，但在`startCore`的Asyncify rewind發生Wasm `memory access out of bounds`；desktop與iPhone路徑都可重現，因此不是Safari專屬。原因是加入instrumentation後仍把npm的38,535,168-byte初始空間當作固定目標。fork已改為64 MiB（1024 pages），manifest記錄`initialMemoryBytes=67108864`，production build會拒絕缺少此值的舊artifact。正式站後續仍越界是另一個問題：Windows `core.autocrlf=true`曾把Emscripten binary `.data`從537,524 bytes正規化成515,609-byte Git blob，使Actions部署損壞的preload archive；`.gitattributes`現以`*.data binary`保存原始bytes。main bundle、data與Wasm也發布為帶相同asset version的實體檔名，確保三層原子更新。修復後Super Mario 64與Mario Kart 64完成第一個VI，Ocarina of Time完成backend啟動且沒有越界。
 
 **iPhone驗證**：Super Mario 64 rebuilt fork為 27.082 VI/s，npm baseline為 27.060 VI/s，差約 +0.08%；平均 VI與 long VI差異也低於 0.4%，可視為量測噪音。最長 VI由 114 ms降至107 ms。此結果確認固定 source/toolchain沒有造成第一款遊戲的效能回歸。
 

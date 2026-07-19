@@ -1,4 +1,4 @@
-export const N64_REBUILT_ASSET_VERSION = '7f0ebbf78c-64m1';
+export const N64_REBUILT_ASSET_VERSION = '7f0ebbf78c-64m2';
 
 export function getN64RebuiltAssetFileName(path: string): string {
   const extensionIndex = path.lastIndexOf('.');
