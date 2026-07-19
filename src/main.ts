@@ -1103,7 +1103,7 @@ function renderRomList(system: SystemKey): void {
 
   romListEl.innerHTML = roms.map((rom, index) => {
     return `
-      <button class="rom-item" data-index="${index}" data-file="${encodeURIComponent(rom.file)}">
+      <button class="rom-item" data-index="${index}" data-system="${system}" data-file="${encodeURIComponent(rom.file)}">
         <span class="rom-icon ${system}" aria-hidden="true"></span>
         <span class="rom-name">${escapeHtml(getRomDisplayName(rom))}</span>
         <span class="rom-arrow">▶</span>

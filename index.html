@@ -1922,6 +1922,660 @@
       display: none;
     }
 
+    /* ===== Taipei game shop pixel-art refresh ===== */
+    .rom-selector {
+      background:
+        linear-gradient(180deg, transparent 0 63%, rgba(34, 53, 61, 0.16) 63% 100%),
+        repeating-linear-gradient(90deg, transparent 0 47px, rgba(231, 250, 244, 0.24) 47px 49px),
+        repeating-linear-gradient(0deg, transparent 0 47px, rgba(231, 250, 244, 0.2) 47px 49px),
+        linear-gradient(180deg, #75bec9 0 12%, #4f98a5 12% 63%, #536873 63% 100%);
+      isolation: isolate;
+    }
+
+    .rom-selector::before {
+      display: block;
+      inset: 0;
+      opacity: 1;
+      background:
+        linear-gradient(#fffbe8 0 0) 8% 4% / 22% 8px no-repeat,
+        linear-gradient(#fffbe8 0 0) 39% 4% / 22% 8px no-repeat,
+        linear-gradient(#fffbe8 0 0) 70% 4% / 22% 8px no-repeat,
+        linear-gradient(rgba(255, 249, 211, 0.34), transparent) 8% 4% / 22% 22% no-repeat,
+        linear-gradient(rgba(255, 249, 211, 0.34), transparent) 39% 4% / 22% 22% no-repeat,
+        linear-gradient(rgba(255, 249, 211, 0.34), transparent) 70% 4% / 22% 22% no-repeat,
+        repeating-linear-gradient(90deg, #294f59 0 44px, #578a91 44px 48px, #315d68 48px 82px) 0 73% / 100% 27% no-repeat,
+        repeating-linear-gradient(90deg, transparent 0 79px, rgba(238, 63, 55, 0.72) 79px 83px) 0 73% / 100% 4px no-repeat,
+        linear-gradient(#284951 0 0) 0 72% / 100% 5px no-repeat;
+      filter: drop-shadow(0 8px 0 rgba(21, 49, 57, 0.2));
+    }
+
+    .rom-selector::after {
+      background:
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 4px),
+        linear-gradient(112deg, transparent 0 24%, rgba(255, 255, 255, 0.1) 24% 28%, transparent 28% 72%, rgba(255, 255, 255, 0.08) 72% 75%, transparent 75%),
+        radial-gradient(ellipse at center, transparent 0 64%, rgba(15, 46, 54, 0.28) 100%);
+      opacity: 0.72;
+    }
+
+    .rom-selector-content {
+      max-width: 1080px;
+      height: min(94vh, 826px);
+      padding: 14px 18px 16px;
+      border: 5px solid #f8f2d5;
+      border-radius: 2px;
+      background:
+        linear-gradient(108deg, transparent 0 22%, rgba(255, 255, 255, 0.26) 22% 26%, transparent 26% 70%, rgba(255, 255, 255, 0.18) 70% 73%, transparent 73%),
+        repeating-linear-gradient(90deg, rgba(42, 111, 120, 0.1) 0 1px, transparent 1px 31px),
+        repeating-linear-gradient(0deg, rgba(42, 111, 120, 0.1) 0 1px, transparent 1px 31px),
+        linear-gradient(180deg, rgba(218, 241, 237, 0.98), rgba(171, 213, 211, 0.98));
+      box-shadow:
+        0 0 0 4px #174a61,
+        0 0 0 7px #ed4137,
+        14px 18px 0 rgba(23, 64, 72, 0.34),
+        0 28px 70px rgba(17, 50, 58, 0.34),
+        inset 0 0 0 2px #fff9dc,
+        inset 0 0 46px rgba(255, 255, 255, 0.38);
+    }
+
+    .rom-selector-content::before {
+      left: 18px;
+      right: 18px;
+      top: 86px;
+      height: 8px;
+      opacity: 1;
+      background:
+        repeating-linear-gradient(90deg, #d9d5bd 0 9px, #b83531 9px 18px, #2b7778 18px 27px),
+        #d9d5bd;
+      box-shadow: 0 4px 0 #090e10;
+    }
+
+    .rom-selector-header {
+      min-height: 82px;
+      margin: 0 0 10px;
+      padding: 7px 92px 10px;
+      border: 4px solid #174a61;
+      background:
+        radial-gradient(circle, #fff9cf 0 2px, transparent 3px) 0 0 / 18px 18px,
+        linear-gradient(180deg, #f9d84c, #f2ad31);
+      box-shadow: 0 5px 0 #e33d35, 0 9px 0 #174a61, inset 0 0 0 3px #fff2a8;
+    }
+
+    .rom-selector-header h2 {
+      margin: 7px 0 1px;
+      color: #123e59;
+      text-shadow: 2px 2px 0 #fff6d2, -2px 0 0 #fff6d2, 0 -2px 0 #fff6d2;
+    }
+
+    .rom-selector-header .brand-name {
+      color: #fffdf0;
+      text-shadow: 0 5px 0 #174a61, -3px 0 0 #174a61, 3px 0 0 #174a61, 0 0 10px #fff8c7;
+    }
+
+    .brand-logo-red {
+      color: #ed3f37;
+      text-shadow: 0 5px 0 #7e1e22, -3px 0 0 #fffdf0, 3px 0 0 #fffdf0, 0 0 14px rgba(255, 250, 189, 0.9);
+    }
+
+    .selector-subtitle {
+      color: #173c50;
+      font-weight: 800;
+      text-shadow: 1px 1px 0 #fff4b4;
+    }
+
+    .machine-grid {
+      gap: 8px 18px;
+      padding: 10px 12px 16px 4px;
+      scrollbar-color: #e83f36 #d4ebe6;
+    }
+
+    .machine-grid::-webkit-scrollbar-track,
+    .rom-list::-webkit-scrollbar-track {
+      background: #d4ebe6;
+      border-color: #356f78;
+    }
+
+    .machine-grid::-webkit-scrollbar-thumb,
+    .rom-list::-webkit-scrollbar-thumb {
+      background: repeating-linear-gradient(0deg, #b83b31 0 8px, #d3cba9 8px 12px);
+      border-color: #d4ebe6;
+    }
+
+    .machine-card-shell {
+      min-height: 126px;
+      padding: 6px 7px 5px 0;
+    }
+
+    .machine-card {
+      min-height: 116px;
+      padding: 10px 16px 10px 10px;
+      grid-template-columns: 142px minmax(0, 1fr);
+      column-gap: 16px;
+      border: 3px solid #285c6c;
+      border-radius: 2px;
+      color: #17394d;
+      background:
+        linear-gradient(90deg, rgba(70, 162, 172, 0.2), transparent 42%),
+        repeating-linear-gradient(0deg, rgba(27, 84, 96, 0.035) 0 2px, transparent 2px 5px),
+        linear-gradient(180deg, #fffdf0, #dcece7);
+      box-shadow:
+        0 5px 0 #5c9da2,
+        0 9px 0 #174554,
+        inset 0 0 0 2px #f9d869,
+        inset 0 -10px 0 rgba(53, 123, 132, 0.08);
+    }
+
+    .machine-card::before {
+      inset: 3px 3px auto;
+      height: 5px;
+      background: repeating-linear-gradient(90deg, #c9c4aa 0 12px, #527b78 12px 24px);
+      opacity: 0.72;
+    }
+
+    .machine-card::after {
+      left: 169px;
+      right: 18px;
+      bottom: 12px;
+      width: auto;
+      height: 4px;
+      background: repeating-linear-gradient(90deg, #579ca2 0 16px, transparent 16px 22px);
+      opacity: 0.72;
+    }
+
+    .machine-card[data-system="nes"]::before { background: repeating-linear-gradient(90deg, #d9cfb2 0 12px, #c83439 12px 24px); }
+    .machine-card[data-system="gb"]::before { background: repeating-linear-gradient(90deg, #a9c6ae 0 12px, #738b67 12px 24px); }
+    .machine-card[data-system="snes"]::before { background: repeating-linear-gradient(90deg, #bfc0ba 0 12px, #8d799a 12px 24px); }
+    .machine-card[data-system="arcade"]::before { background: repeating-linear-gradient(90deg, #d7ccb0 0 12px, #258c9e 12px 24px); }
+    .machine-card[data-system="gg"]::before { background: repeating-linear-gradient(90deg, #7893bd 0 12px, #171e2c 12px 24px); }
+    .machine-card[data-system="sms"]::before { background: repeating-linear-gradient(90deg, #d9d7cf 0 12px, #c92a34 12px 24px); }
+    .machine-card[data-system="n64"]::before { background: repeating-linear-gradient(90deg, #5a9f68 0 12px, #2e343b 12px 24px); }
+
+    .machine-card:hover,
+    .machine-card:focus-visible {
+      transform: translate(-2px, -3px);
+      filter: brightness(1.12);
+      box-shadow: 2px 7px 0 #4c5b5b, 2px 11px 0 #070b0c, inset 0 0 0 2px #111a1d;
+    }
+
+    .machine-art {
+      width: 142px;
+      height: 96px;
+      border: 3px solid #05090a;
+      border-radius: 0;
+      background:
+        linear-gradient(180deg, rgba(190, 226, 207, 0.13), transparent 44%),
+        repeating-linear-gradient(90deg, rgba(160, 197, 183, 0.08) 0 1px, transparent 1px 13px),
+        repeating-linear-gradient(0deg, rgba(160, 197, 183, 0.08) 0 1px, transparent 1px 13px),
+        #173237;
+      box-shadow: inset 0 0 0 3px #55777a, 0 3px 0 #070b0c, 0 0 0 1px #b9b79f;
+    }
+
+    .machine-art.gb { background-color: #24483f; }
+    .machine-art.gg { background-color: #243858; }
+    .machine-art.sms { background-color: #4a4058; }
+    .machine-art.snes { background-color: #4b4353; }
+    .machine-art.n64 { background-color: #264b35; }
+    .machine-art.arcade { background-color: #164c58; }
+
+    .machine-art-img {
+      width: 100%;
+      height: 100%;
+      padding: 2px;
+      filter: drop-shadow(4px 5px 0 rgba(0, 0, 0, 0.34));
+    }
+
+    .machine-title {
+      font-size: 25px;
+      color: #123e59;
+      text-shadow: 2px 2px 0 #fffdf0;
+    }
+
+    .machine-meta {
+      color: #274b57;
+      font-size: 15px;
+      font-weight: 750;
+      text-shadow: 1px 1px 0 #ffffff;
+    }
+
+    .machine-count {
+      top: 0;
+      right: 0;
+      min-width: 38px;
+      height: 34px;
+      padding: 0 5px;
+      border: 3px solid #e8dfc2;
+      border-radius: 2px;
+      background: #c83437;
+      box-shadow: 4px 4px 0 #080d0f, inset 0 -4px 0 #8d1e25;
+    }
+
+    .rom-browser-header {
+      min-height: 58px;
+      margin: 5px 4px 12px;
+      padding: 8px 12px;
+      border: 3px solid #174a61;
+      border-radius: 0;
+      background:
+        repeating-linear-gradient(0deg, rgba(27, 75, 89, 0.04) 0 2px, transparent 2px 5px),
+        linear-gradient(180deg, #ffe174, #f6c64b);
+      box-shadow: 0 5px 0 #e24036, inset 0 0 0 2px #fff4b3;
+    }
+
+    .rom-back-btn {
+      border: 3px solid #d1c9aa;
+      border-radius: 2px;
+      background: #a93631;
+      box-shadow: 0 4px 0 #080c0e, inset 0 -4px 0 #72201f;
+    }
+
+    .rom-browser-title {
+      color: #123e59;
+      text-shadow: 2px 2px 0 #fff7d1;
+      text-align: right;
+    }
+
+    .rom-list {
+      padding: 14px 16px 18px;
+      border: 4px solid #285c6c;
+      border-radius: 0;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 78px, #5e9499 78px 83px, #1a5260 83px 88px),
+        repeating-linear-gradient(90deg, rgba(31, 103, 112, 0.09) 0 1px, transparent 1px 31px),
+        #b9dcd8;
+      box-shadow: inset 0 0 0 3px #eaf5ec, 0 6px 0 #174554;
+    }
+
+    .rom-item {
+      min-height: 68px;
+      margin-bottom: 12px;
+      padding: 10px 16px 10px 14px;
+      gap: 15px;
+      border: 3px solid #356c77;
+      border-left-width: 9px;
+      border-radius: 2px;
+      color: #16394e;
+      background:
+        linear-gradient(90deg, rgba(89, 184, 190, 0.18), transparent 36%),
+        repeating-linear-gradient(0deg, rgba(22, 74, 88, 0.035) 0 2px, transparent 2px 5px),
+        #fffdf0;
+      box-shadow: 0 5px 0 #397780, inset 0 0 0 2px #d9eee8;
+    }
+
+    .rom-item[data-system="nes"] { border-left-color: #c93539; }
+    .rom-item[data-system="gb"] { border-left-color: #7f9d74; }
+    .rom-item[data-system="snes"] { border-left-color: #8f789a; }
+    .rom-item[data-system="arcade"] { border-left-color: #2aa6b6; }
+    .rom-item[data-system="gg"] { border-left-color: #5575ad; }
+    .rom-item[data-system="sms"] { border-left-color: #d14a4f; }
+    .rom-item[data-system="n64"] { border-left-color: #4b9a5b; }
+
+    .rom-item:hover,
+    .rom-item:active {
+      filter: brightness(1.13);
+      transform: translate(4px, -2px);
+    }
+
+    .rom-icon {
+      border-radius: 2px;
+      box-shadow: inset 0 0 0 3px #080d0f, 3px 3px 0 rgba(0, 0, 0, 0.42);
+    }
+
+    .rom-name {
+      font-weight: 800;
+      text-shadow: 1px 1px 0 #ffffff;
+    }
+
+    .rom-arrow {
+      color: #e84235;
+      text-shadow: 1px 1px 0 #fff4a9;
+    }
+
+    .rom-selector-footer::before {
+      right: 54px;
+      filter: drop-shadow(4px 4px 0 #05090a) saturate(0.8);
+    }
+
+    .upload-btn {
+      border-color: #a8aca3;
+      border-radius: 2px;
+      color: #f3ead0;
+      background:
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 9px),
+        linear-gradient(180deg, #b43d32, #74241f);
+      box-shadow: inset 0 0 0 3px #551c19, 0 5px 0 #060a0c, 0 0 0 2px #d1c8aa;
+    }
+
+    /* Refined retro wood storefront */
+    .rom-selector {
+      background:
+        linear-gradient(180deg, transparent 0 63%, rgba(42, 24, 19, 0.28) 63% 100%),
+        repeating-linear-gradient(90deg, transparent 0 47px, rgba(255, 226, 177, 0.09) 47px 49px),
+        repeating-linear-gradient(0deg, transparent 0 47px, rgba(255, 226, 177, 0.07) 47px 49px),
+        linear-gradient(180deg, #b58b66 0 12%, #835c43 12% 63%, #4f362d 63% 100%);
+    }
+
+    .rom-selector::before {
+      background:
+        linear-gradient(#fff0ca 0 0) 8% 4% / 22% 7px no-repeat,
+        linear-gradient(#fff0ca 0 0) 39% 4% / 22% 7px no-repeat,
+        linear-gradient(#fff0ca 0 0) 70% 4% / 22% 7px no-repeat,
+        linear-gradient(rgba(255, 227, 178, 0.22), transparent) 8% 4% / 22% 20% no-repeat,
+        linear-gradient(rgba(255, 227, 178, 0.22), transparent) 39% 4% / 22% 20% no-repeat,
+        linear-gradient(rgba(255, 227, 178, 0.22), transparent) 70% 4% / 22% 20% no-repeat,
+        repeating-linear-gradient(90deg, #3b2924 0 44px, #6d4b3a 44px 48px, #493028 48px 82px) 0 73% / 100% 27% no-repeat,
+        repeating-linear-gradient(90deg, transparent 0 79px, rgba(143, 52, 43, 0.62) 79px 83px) 0 73% / 100% 4px no-repeat,
+        linear-gradient(#382721 0 0) 0 72% / 100% 5px no-repeat;
+      filter: drop-shadow(0 8px 0 rgba(45, 24, 18, 0.24));
+    }
+
+    .rom-selector::after {
+      background:
+        repeating-linear-gradient(0deg, rgba(255, 243, 214, 0.035) 0 1px, transparent 1px 4px),
+        linear-gradient(112deg, transparent 0 24%, rgba(255, 235, 198, 0.07) 24% 28%, transparent 28% 72%, rgba(255, 235, 198, 0.05) 72% 75%, transparent 75%),
+        radial-gradient(ellipse at center, transparent 0 62%, rgba(41, 22, 18, 0.38) 100%);
+    }
+
+    .rom-selector-content {
+      border-color: #c9a66f;
+      background:
+        linear-gradient(108deg, transparent 0 22%, rgba(255, 232, 191, 0.1) 22% 26%, transparent 26% 70%, rgba(255, 232, 191, 0.07) 70% 73%, transparent 73%),
+        repeating-linear-gradient(90deg, rgba(255, 219, 163, 0.055) 0 1px, transparent 1px 31px),
+        repeating-linear-gradient(0deg, rgba(255, 219, 163, 0.045) 0 1px, transparent 1px 31px),
+        linear-gradient(180deg, rgba(112, 75, 55, 0.98), rgba(72, 45, 37, 0.98));
+      box-shadow: 0 0 0 4px #38251f, 0 0 0 7px #7f302d, 14px 18px 0 rgba(39, 21, 17, 0.42), 0 28px 70px rgba(36, 19, 15, 0.5), inset 0 0 0 2px #e1bf83, inset 0 0 46px rgba(255, 218, 163, 0.08);
+    }
+
+    .rom-selector-content::before {
+      background: repeating-linear-gradient(90deg, #d8b676 0 12px, #7f302d 12px 18px, #51352a 18px 30px), #d8b676;
+      box-shadow: 0 4px 0 #35231d;
+    }
+
+    .rom-selector-header {
+      border-color: #572c28;
+      background:
+        repeating-linear-gradient(0deg, rgba(121, 75, 45, 0.045) 0 2px, transparent 2px 6px),
+        linear-gradient(180deg, #f7e8c3, #dfc18a);
+      box-shadow: 0 5px 0 #7f302d, 0 9px 0 #38251f, inset 0 0 0 3px #fff4d4;
+    }
+
+    .rom-selector-header h2 {
+      color: #4d2b27;
+      text-shadow: 2px 2px 0 #fff3d4, -2px 0 0 #fff3d4, 0 -2px 0 #fff3d4;
+    }
+
+    .rom-selector-header .brand-name {
+      color: #fff5da;
+      text-shadow: 0 5px 0 #4e2925, -3px 0 0 #4e2925, 3px 0 0 #4e2925, 0 0 10px rgba(255, 232, 183, 0.72);
+    }
+
+    .brand-logo-red {
+      color: #a73330;
+      text-shadow: 0 5px 0 #5b211f, -3px 0 0 #fff5da, 3px 0 0 #fff5da, 0 0 12px rgba(255, 231, 181, 0.72);
+    }
+
+    .selector-subtitle {
+      color: #54372d;
+      text-shadow: 1px 1px 0 #fff2d0;
+    }
+
+    .machine-grid {
+      scrollbar-color: #8b3a32 #d8c09a;
+    }
+
+    .machine-grid::-webkit-scrollbar-track,
+    .rom-list::-webkit-scrollbar-track {
+      background: #d8c09a;
+      border-color: #634438;
+    }
+
+    .machine-grid::-webkit-scrollbar-thumb,
+    .rom-list::-webkit-scrollbar-thumb {
+      border-color: #d8c09a;
+    }
+
+    .machine-card {
+      border-color: #6a493b;
+      color: #3f2b25;
+      background:
+        linear-gradient(90deg, rgba(168, 112, 71, 0.14), transparent 42%),
+        repeating-linear-gradient(0deg, rgba(103, 65, 43, 0.035) 0 2px, transparent 2px 5px),
+        linear-gradient(180deg, #f8edd5, #ddc6a1);
+      box-shadow: 0 5px 0 #9c7556, 0 9px 0 #3b2822, inset 0 0 0 2px #fff0c8, inset 0 -10px 0 rgba(101, 62, 41, 0.08);
+    }
+
+    .machine-card::after {
+      background: repeating-linear-gradient(90deg, #9c7658 0 16px, transparent 16px 22px);
+    }
+
+    .machine-card:hover,
+    .machine-card:focus-visible {
+      box-shadow: 2px 7px 0 #a17c5d, 2px 11px 0 #38251f, inset 0 0 0 2px #fff0c8;
+    }
+
+    .machine-title {
+      color: #472d27;
+      text-shadow: 2px 2px 0 #fff5dd;
+    }
+
+    .machine-meta {
+      color: #594238;
+      text-shadow: 1px 1px 0 #fff9e8;
+    }
+
+    .rom-browser-header {
+      border-color: #572c28;
+      background: repeating-linear-gradient(0deg, rgba(104, 66, 43, 0.04) 0 2px, transparent 2px 5px), linear-gradient(180deg, #f6e5be, #dcb77e);
+      box-shadow: 0 5px 0 #7f302d, inset 0 0 0 2px #fff2ce;
+    }
+
+    .rom-browser-title {
+      color: #4b2c27;
+      text-shadow: 2px 2px 0 #fff2d0;
+    }
+
+    .rom-list {
+      border-color: #664438;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 78px, #8d654d 78px 83px, #3e2922 83px 88px),
+        repeating-linear-gradient(90deg, rgba(255, 223, 176, 0.06) 0 1px, transparent 1px 31px),
+        #74513f;
+      box-shadow: inset 0 0 0 3px #c69e70, 0 6px 0 #38251f;
+    }
+
+    .rom-item {
+      border-color: #76513f;
+      color: #422d27;
+      background:
+        linear-gradient(90deg, rgba(172, 112, 71, 0.14), transparent 36%),
+        repeating-linear-gradient(0deg, rgba(99, 62, 42, 0.035) 0 2px, transparent 2px 5px),
+        #f8edd5;
+      box-shadow: 0 5px 0 #4b332b, inset 0 0 0 2px #fff4d7;
+    }
+
+    .rom-name {
+      text-shadow: 1px 1px 0 #fff9e9;
+    }
+
+    .rom-arrow {
+      color: #9e332f;
+      text-shadow: 1px 1px 0 #fff0c8;
+    }
+
+    /* Nintendo-inspired pixel game store */
+    .rom-selector {
+      background:
+        repeating-linear-gradient(90deg, transparent 0 63px, rgba(28, 76, 108, 0.13) 63px 65px) 0 66% / 100% 34% no-repeat,
+        repeating-linear-gradient(0deg, transparent 0 47px, rgba(28, 76, 108, 0.1) 47px 49px) 0 66% / 100% 34% no-repeat,
+        linear-gradient(180deg, #8bb8d0 0 12%, #edf3f5 12% 66%, #c5d2d8 66% 100%);
+    }
+
+    .rom-selector::before {
+      background:
+        linear-gradient(#fff 0 0) 7% 4% / 22% 8px no-repeat,
+        linear-gradient(#fff 0 0) 39% 4% / 22% 8px no-repeat,
+        linear-gradient(#fff 0 0) 71% 4% / 22% 8px no-repeat,
+        linear-gradient(rgba(255, 255, 255, 0.5), transparent) 7% 4% / 22% 23% no-repeat,
+        linear-gradient(rgba(255, 255, 255, 0.5), transparent) 39% 4% / 22% 23% no-repeat,
+        linear-gradient(rgba(255, 255, 255, 0.5), transparent) 71% 4% / 22% 23% no-repeat,
+        linear-gradient(90deg, #d90012 0 16%, transparent 16% 84%, #d90012 84%) 0 22% / 100% 46% no-repeat,
+        repeating-linear-gradient(90deg, #d90012 0 54px, #fff 54px 58px, #1479b8 58px 64px, #fff 64px 82px) 0 74% / 100% 20% no-repeat,
+        linear-gradient(#236f9e 0 0) 0 72% / 100% 5px no-repeat;
+      filter: drop-shadow(0 8px 0 rgba(29, 61, 79, 0.18));
+    }
+
+    .rom-selector::after {
+      background:
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 4px),
+        linear-gradient(112deg, transparent 0 25%, rgba(255, 255, 255, 0.18) 25% 29%, transparent 29% 72%, rgba(255, 255, 255, 0.12) 72% 76%, transparent 76%),
+        radial-gradient(ellipse at center, transparent 0 68%, rgba(23, 60, 83, 0.2) 100%);
+      opacity: 0.72;
+    }
+
+    .rom-selector-content {
+      border-color: #fff;
+      background:
+        linear-gradient(108deg, transparent 0 22%, rgba(255, 255, 255, 0.7) 22% 25%, transparent 25% 72%, rgba(255, 255, 255, 0.38) 72% 75%, transparent 75%),
+        repeating-linear-gradient(90deg, rgba(25, 89, 128, 0.055) 0 1px, transparent 1px 31px),
+        repeating-linear-gradient(0deg, rgba(25, 89, 128, 0.055) 0 1px, transparent 1px 31px),
+        linear-gradient(180deg, rgba(242, 247, 248, 0.98), rgba(213, 226, 231, 0.98));
+      box-shadow: 0 0 0 4px #d90012, 0 0 0 7px #fff, 0 0 0 11px #176fa7, 14px 18px 0 rgba(23, 67, 93, 0.28), 0 28px 70px rgba(30, 69, 91, 0.3), inset 0 0 0 2px #fff, inset 0 0 42px rgba(118, 169, 191, 0.14);
+    }
+
+    .rom-selector-content::before {
+      background:
+        linear-gradient(#176fa7 0 0) 0 100% / 100% 3px no-repeat,
+        conic-gradient(from 45deg, #d90012 25%, #fff 0 50%, #d90012 0 75%, #fff 0) 0 0 / 16px 16px;
+      box-shadow: 0 4px 0 #164e72;
+    }
+
+    .rom-selector-header {
+      border-color: #fff;
+      background:
+        linear-gradient(108deg, transparent 0 16%, rgba(255, 255, 255, 0.22) 16% 20%, transparent 20% 74%, rgba(255, 255, 255, 0.12) 74% 78%, transparent 78%),
+        repeating-linear-gradient(0deg, rgba(99, 0, 11, 0.06) 0 2px, transparent 2px 6px),
+        linear-gradient(180deg, #ef1b2d, #c90012);
+      box-shadow: 0 5px 0 #9c0010, 0 9px 0 #176fa7, inset 0 0 0 3px #ff5966;
+    }
+
+    .rom-selector-header h2 {
+      color: #fff;
+      text-shadow: 3px 3px 0 #8c0010, -2px 0 0 #8c0010, 0 -2px 0 #8c0010;
+    }
+
+    .rom-selector-header .brand-name,
+    .brand-logo-red,
+    .brand-logo-white {
+      color: #fff;
+      text-shadow: 0 5px 0 #8f0010, -3px 0 0 #8f0010, 3px 0 0 #8f0010, 0 0 12px rgba(255, 255, 255, 0.55);
+    }
+
+    .selector-subtitle {
+      color: #fff;
+      text-shadow: 2px 2px 0 #88000e;
+    }
+
+    .machine-grid {
+      scrollbar-color: #d90012 #dbe8ed;
+    }
+
+    .machine-grid::-webkit-scrollbar-track,
+    .rom-list::-webkit-scrollbar-track {
+      background: #dbe8ed;
+      border-color: #176fa7;
+    }
+
+    .machine-grid::-webkit-scrollbar-thumb,
+    .rom-list::-webkit-scrollbar-thumb {
+      background: repeating-linear-gradient(0deg, #d90012 0 8px, #fff 8px 12px);
+      border-color: #dbe8ed;
+    }
+
+    .machine-card {
+      border-color: #b8c8cf;
+      color: #202b34;
+      background:
+        linear-gradient(90deg, rgba(23, 111, 167, 0.08), transparent 42%),
+        repeating-linear-gradient(0deg, rgba(34, 78, 101, 0.025) 0 2px, transparent 2px 5px),
+        linear-gradient(180deg, #fff, #e8eff2);
+      box-shadow: 0 5px 0 #aabcc4, 0 9px 0 #17618f, inset 0 0 0 2px #fff, inset 0 -10px 0 rgba(27, 91, 125, 0.05);
+    }
+
+    .machine-card::after {
+      background: repeating-linear-gradient(90deg, #1782bf 0 16px, transparent 16px 22px);
+    }
+
+    .machine-card:hover,
+    .machine-card:focus-visible {
+      box-shadow: 2px 7px 0 #7eb4ce, 2px 11px 0 #0d527d, inset 0 0 0 2px #fff;
+    }
+
+    .machine-title {
+      color: #202a33;
+      text-shadow: 2px 2px 0 #fff;
+    }
+
+    .machine-meta {
+      color: #465560;
+      text-shadow: 1px 1px 0 #fff;
+    }
+
+    .machine-count {
+      border-color: #fff;
+      background: #d90012;
+      box-shadow: 4px 4px 0 #115b88, inset 0 -4px 0 #92000d;
+    }
+
+    .rom-browser-header {
+      border-color: #fff;
+      background: linear-gradient(110deg, transparent 0 70%, rgba(255, 255, 255, 0.18) 70% 76%, transparent 76%), linear-gradient(180deg, #ef1b2d, #c90012);
+      box-shadow: 0 5px 0 #176fa7, inset 0 0 0 2px #ff6671;
+    }
+
+    .rom-back-btn {
+      border-color: #fff;
+      background: #176fa7;
+      box-shadow: 0 4px 0 #74000c, inset 0 -4px 0 #0e4d77;
+    }
+
+    .rom-browser-title {
+      color: #fff;
+      text-shadow: 2px 2px 0 #87000e;
+    }
+
+    .rom-list {
+      border-color: #176fa7;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 78px, #b8cbd3 78px 83px, #17618f 83px 88px),
+        repeating-linear-gradient(90deg, rgba(26, 103, 143, 0.07) 0 1px, transparent 1px 31px),
+        #dce8ec;
+      box-shadow: inset 0 0 0 3px #fff, 0 6px 0 #0e557f;
+    }
+
+    .rom-item {
+      border-color: #b4c4cc;
+      color: #202b34;
+      background:
+        linear-gradient(90deg, rgba(23, 111, 167, 0.08), transparent 36%),
+        repeating-linear-gradient(0deg, rgba(30, 77, 101, 0.025) 0 2px, transparent 2px 5px),
+        #fff;
+      box-shadow: 0 5px 0 #17618f, inset 0 0 0 2px #edf5f7;
+    }
+
+    .rom-name {
+      text-shadow: 1px 1px 0 #fff;
+    }
+
+    .rom-arrow {
+      color: #d90012;
+      text-shadow: 1px 1px 0 #fff;
+    }
+
+    .upload-btn {
+      border-color: #fff;
+      color: #fff;
+      background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 2px, transparent 2px 9px), linear-gradient(180deg, #ef1b2d, #b90010);
+      box-shadow: inset 0 0 0 3px #9c000e, 0 5px 0 #0d557f, 0 0 0 2px #fff;
+    }
+
     @media (max-width: 980px) {
       .rom-selector-content {
         padding: 14px;
@@ -1993,6 +2647,89 @@
 
       .upload-label-compact {
         display: inline;
+      }
+
+      .rom-selector {
+        padding: 6px;
+      }
+
+      .rom-selector-content {
+        max-height: 98vh;
+        padding: 8px;
+        border-width: 3px;
+        box-shadow: 0 0 0 3px #172126, 0 0 0 5px #b63b31, 8px 10px 0 rgba(3, 8, 10, 0.5), inset 0 0 0 2px #d9d5bd;
+      }
+
+      .rom-selector-content::before {
+        left: 9px;
+        right: 9px;
+        top: 69px;
+        height: 6px;
+      }
+
+      .rom-selector-header {
+        min-height: 66px;
+        padding: 5px 10px 8px;
+      }
+
+      .machine-grid {
+        gap: 8px;
+        padding: 8px 6px 12px 2px;
+      }
+
+      .machine-card-shell {
+        min-height: 112px;
+        padding: 4px 5px 4px 0;
+      }
+
+      .machine-card {
+        min-height: 104px;
+        grid-template-columns: 104px minmax(0, 1fr);
+        column-gap: 10px;
+        padding: 8px 10px 8px 8px;
+      }
+
+      .machine-card::after {
+        left: 126px;
+      }
+
+      .machine-art {
+        width: 104px;
+        height: 84px;
+      }
+
+      .machine-title {
+        font-size: 21px;
+      }
+
+      .machine-meta {
+        font-size: 12px;
+      }
+
+      .machine-count {
+        min-width: 34px;
+        height: 30px;
+      }
+
+      .rom-browser-header {
+        min-height: 52px;
+        margin: 4px 2px 9px;
+        padding: 6px 8px;
+      }
+
+      .rom-browser-title {
+        font-size: 20px;
+      }
+
+      .rom-list {
+        padding: 10px 9px 14px;
+      }
+
+      .rom-item {
+        min-height: 62px;
+        margin-bottom: 9px;
+        padding: 9px 10px;
+        gap: 10px;
       }
     }
 
@@ -3360,17 +4097,22 @@
       }
 
       body:not(.mobile-landscape-mode) .rom-selector-content {
-        max-width: 920px;
+        max-width: 1080px;
         width: 100%;
-        height: min(94vh, 712px);
+        height: min(94vh, 826px);
         max-height: 94vh;
         border-width: 5px;
-        border-radius: 9px;
-        padding: 10px 16px 12px;
+        border-radius: 2px;
+        padding: 14px 18px 16px;
+      }
+
+      body:not(.mobile-landscape-mode) .rom-selector-content::before {
+        top: 164px;
       }
 
       body:not(.mobile-landscape-mode) .rom-selector-header {
-        margin-bottom: 8px;
+        min-height: 116px;
+        margin: 0 0 10px;
       }
 
       body:not(.mobile-landscape-mode) .rom-selector-header .brand-nintendo,
@@ -3390,31 +4132,31 @@
 
       body:not(.mobile-landscape-mode) .machine-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 10px 20px;
-        padding: 8px 10px 14px 2px;
+        gap: 8px 18px;
+        padding: 10px 12px 16px 4px;
       }
 
       body:not(.mobile-landscape-mode) .machine-card {
-        min-height: 108px;
-        grid-template-columns: 104px minmax(0, 1fr);
-        padding: 10px 14px 10px 10px;
-        gap: 4px 14px;
-        border-radius: 4px;
+        min-height: 116px;
+        grid-template-columns: 142px minmax(0, 1fr);
+        padding: 10px 16px 10px 10px;
+        gap: 4px 16px;
+        border-radius: 2px;
       }
 
       body:not(.mobile-landscape-mode) .machine-art {
         display: block;
-        width: 104px;
-        height: 86px;
+        width: 142px;
+        height: 96px;
       }
 
       body:not(.mobile-landscape-mode) .machine-title {
-        font-size: 24px;
+        font-size: 25px;
         line-height: 1;
       }
 
       body:not(.mobile-landscape-mode) .machine-meta {
-        font-size: 14px;
+        font-size: 15px;
       }
 
       body:not(.mobile-landscape-mode) .rom-selector-footer {
@@ -3553,6 +4295,45 @@
     }
 
     @media (max-width: 620px) {
+      .rom-selector-content {
+        box-shadow: 0 0 0 3px #d90012, 0 0 0 5px #fff, 0 0 0 8px #176fa7, 8px 10px 0 rgba(23, 67, 93, 0.24), inset 0 0 0 2px #fff;
+      }
+
+      .rom-selector-content::before {
+        top: 132px;
+      }
+
+      .rom-selector-header {
+        min-height: 116px;
+        margin-bottom: 12px;
+        padding: 6px 10px 10px;
+      }
+
+      .rom-selector-header .brand-name {
+        font-size: 40px;
+        line-height: 0.9;
+      }
+
+      .rom-selector-header h2 {
+        margin: 10px 0 1px;
+        font-size: 25px;
+        line-height: 1.05;
+      }
+
+      .selector-subtitle {
+        display: block;
+        color: #fff;
+        font-size: 15px;
+        line-height: 1.25;
+      }
+
+      .machine-meta {
+        color: #465560;
+        font-size: 14px;
+        line-height: 1.25;
+        font-weight: 750;
+      }
+
       .rom-selector-footer::before,
       .rom-selector-footer::after {
         display: none;
