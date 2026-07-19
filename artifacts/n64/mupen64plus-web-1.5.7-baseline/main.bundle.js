@@ -375,7 +375,7 @@ var require_index_7f0ebbf78c = __commonJS({
           Module2["HEAPF32"] = HEAPF32 = new Float32Array(buf);
           Module2["HEAPF64"] = HEAPF64 = new Float64Array(buf);
         }
-        var INITIAL_MEMORY = Module2["INITIAL_MEMORY"] || 38535168;
+        var INITIAL_MEMORY = Module2["INITIAL_MEMORY"] || 67108864;
         var wasmTable;
         var __ATPRERUN__ = [];
         var __ATINIT__ = [];

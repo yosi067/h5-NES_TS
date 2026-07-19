@@ -49,12 +49,12 @@ function report(overrides: Partial<N64TelemetryReport> = {}): N64TelemetryReport
 }
 
 describe('N64 benchmark controls', () => {
-  it('keeps normal mobile gameplay on the stable npm runtime', () => {
+  it('uses the rebuilt fork and triangle streaming for normal mobile gameplay', () => {
     const config = resolveN64BenchmarkConfig(PROFILE, '');
 
     expect(config).toEqual({
       enabled: false,
-      runtime: 'npm',
+      runtime: 'fork',
       emuMode: 1,
       profile: PROFILE,
       label: 'normal',
@@ -63,7 +63,7 @@ describe('N64 benchmark controls', () => {
       mobileTest: null,
       nullVideo: false,
       suppressDrawCalls: false,
-      persistentBuffers: false,
+      persistentBuffers: true,
       persistentRectBuffers: false,
     });
   });

@@ -25,15 +25,27 @@ function getMupen64AssetFiles(sourceDir: string): string[] {
 
 function assertRebuiltMupenAssets(sourceDir: string): void {
   const files = existsSync(sourceDir) ? readdirSync(sourceDir) : [];
+  const manifestPath = resolve(sourceDir, 'h5-nes-build.json');
   const missing = [
     ...(!files.includes('main.bundle.js') ? ['main.bundle.js'] : []),
     ...(!files.some(file => /^index\..*\.wasm$/.test(file)) ? ['index.<hash>.wasm'] : []),
     ...(!files.some(file => /^index\..*\.data$/.test(file)) ? ['index.<hash>.data'] : []),
+    ...(!existsSync(manifestPath) ? ['h5-nes-build.json'] : []),
   ];
   if (missing.length > 0) {
     throw new Error(
       `Rebuilt N64 runtime is incomplete (${missing.join(', ')}). ` +
       'Restore artifacts/n64/mupen64plus-web-1.5.7-baseline or run npm run n64:build.',
+    );
+  }
+
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8').replace(/^\uFEFF/, '')) as {
+    initialMemoryBytes?: number;
+  };
+  if (manifest.initialMemoryBytes !== 64 * 1024 * 1024) {
+    throw new Error(
+      'Rebuilt N64 runtime does not have the required 64 MiB initial memory. ' +
+      'Run npm run n64:build before creating a production build.',
     );
   }
 }

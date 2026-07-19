@@ -15,6 +15,7 @@ if (-not $OutputDir) {
 }
 
 $emsdkImage = 'emscripten/emsdk:3.1.25'
+$initialMemoryBytes = 64 * 1024 * 1024
 $SourceDir = [System.IO.Path]::GetFullPath($SourceDir)
 $OutputDir = [System.IO.Path]::GetFullPath($OutputDir)
 
@@ -34,7 +35,7 @@ if ($dockerInfoExitCode -ne 0) {
 }
 
 $mount = "type=bind,source=$SourceDir,target=/src"
-$buildCommand = 'npm install --prefix /tmp/n64-build-tools --no-save --no-audit --no-fund yargs@17.2.0 && NODE_PATH=/tmp/n64-build-tools/node_modules make web config=release video=rice OPT_LEVEL=-O2'
+$buildCommand = "npm install --prefix /tmp/n64-build-tools --no-save --no-audit --no-fund yargs@17.2.0 && NODE_PATH=/tmp/n64-build-tools/node_modules make web config=release video=rice OPT_LEVEL=-O2 INITIAL_MEMORY=$initialMemoryBytes"
 docker run --rm --mount $mount --workdir /src $emsdkImage bash -lc $buildCommand
 if ($LASTEXITCODE -ne 0) { throw 'The pinned Mupen web build failed.' }
 
@@ -49,6 +50,7 @@ Copy-Item (Join-Path $webOutput '*') $OutputDir -Recurse -Force
 $manifest = [ordered]@{
     sourceCommit = '7f0ebbf78c16da0d41fe80f0e98f17523d4bf793'
     emsdkImage = $emsdkImage
+    initialMemoryBytes = $initialMemoryBytes
     buildCommand = $buildCommand
     builtAt = (Get-Date).ToUniversalTime().ToString('o')
 }

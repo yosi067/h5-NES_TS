@@ -359,7 +359,7 @@
 
 **限制**：這個後端仍是單執行緒 Mupen64Plus/Rice WebAssembly。遊戲相容性與最終速度仍受手機 SoC、瀏覽器 WebGL 驅動及遊戲本身負載影響；低階裝置會以畫面更新率換取穩定遊戲速度。
 
-**正式手機路徑**：不帶benchmark參數時，mobile與desktop都載入npm 1.5.7 runtime。2026-07-19正式artifact在`start()`的Asyncify rewind可重現Wasm `memory access out of bounds`，因此rebuilt fork與triangle stream已退出production，只能由`?n64Runtime=fork`或benchmark明確啟用。
+**正式手機路徑**：mobile不帶benchmark參數時載入64 MiB initial memory的rebuilt fork並啟用triangle stream；desktop維持npm 1.5.7。`?n64Runtime=npm`可強制手機回退，`?n64Runtime=fork`可在desktop明確測試fork。
 
 **GitHub Pages部署檢查**：production build仍包含`n64-fork/main.bundle.js`、`index.<hash>.wasm`與`index.<hash>.data`供修復驗證。Vite會在artifact不完整時使build失敗；GitHub Actions依repository name設定`VITE_BASE_PATH`。正式驗收必須另外確認不帶query的手機路徑選到npm runtime並能進入3D畫面，不能只檢查靜態artifact為HTTP 200。
 
@@ -402,7 +402,7 @@ baseline、stream與full手機簡測已完成，不需重跑。目前沒有待�
 
 **解決**：`npm run n64:build` 使用 esbuild產生 browser-ready `main.bundle.js`；版本化 core submodule patch將 function table與memory存取改為 `Module['asm']`。`n64Runtime=fork`改載入 bundle，並新增 backend startup與 `start()` rejection diagnostic。桌面實測已完成 Rice/RSP/Input初始化、loading overlay消失並開始輸出 VI telemetry。
 
-**2026-07-19回歸**：目前提交的rebuilt artifact雖能完成module與Rice初始化，但在`startCore`的Asyncify rewind發生Wasm `memory access out of bounds`；desktop加上`?n64Runtime=fork`也可重現，因此不是Safari專屬。一般手機已回退npm runtime；修復fork前不得重新設為預設，也不得把靜態檔HTTP 200視為可遊玩驗收。
+**2026-07-19 Asyncify修復**：588-page rebuilt artifact雖能完成module與Rice初始化，但在`startCore`的Asyncify rewind發生Wasm `memory access out of bounds`；desktop與iPhone路徑都可重現，因此不是Safari專屬。原因是加入instrumentation後仍把npm的38,535,168-byte初始空間當作固定目標。fork已改為64 MiB（1024 pages），manifest記錄`initialMemoryBytes=67108864`，production build會拒絕缺少此值的舊artifact。修復後Super Mario 64與Mario Kart 64完成第一個VI，Ocarina of Time完成backend啟動且沒有越界。
 
 **iPhone驗證**：Super Mario 64 rebuilt fork為 27.082 VI/s，npm baseline為 27.060 VI/s，差約 +0.08%；平均 VI與 long VI差異也低於 0.4%，可視為量測噪音。最長 VI由 114 ms降至107 ms。此結果確認固定 source/toolchain沒有造成第一款遊戲的效能回歸。
 

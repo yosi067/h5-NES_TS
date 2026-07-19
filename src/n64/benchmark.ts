@@ -67,7 +67,8 @@ export function resolveN64BenchmarkConfig(
     : null;
   const enabled = mobileTest !== null || params.get('n64Benchmark') === '1';
   const runtimeOverride = params.get('n64Runtime');
-  const runtime = mobileTest !== null || runtimeOverride === 'fork'
+  const mobileDefaultFork = profile.name !== 'desktop' && runtimeOverride !== 'npm';
+  const runtime = mobileTest !== null || runtimeOverride === 'fork' || mobileDefaultFork
     ? 'fork'
     : 'npm';
   const normalMobileStream = !enabled
