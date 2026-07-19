@@ -29,7 +29,7 @@ H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到�
 | **Master System** | 256×192 | Z80 (3.58 MHz) | 59.9227 fps | 4 (3 方波 + 雜訊) | ✅ 支援 |
 | **SFC / SNES** | 256×224 | 65816 (3.58 MHz) + SPC700 (1.024 MHz) | 60.0988 fps | 8 (S-DSP 8 聲道 BRR) | ✅ 支援 |
 | **N64** | 320×240 起，依遊戲/外掛 | VR4300 / Mupen64Plus Web | 依遊戲 | Runtime 混音 | 🧪 WebGL2 後端 |
-| **FBNeo Arcade** | 動態解析度 | 多種街機硬體 | 依遊戲 | Web Audio 混音 | ✅ 17 款完整 ZIP ROM set |
+| **FBNeo Arcade** | 動態解析度 | 多種街機硬體 | 依遊戲 | Web Audio 混音 | ✅ 30 款完整 ZIP ROM set |
 
 ---
 
@@ -47,7 +47,7 @@ H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到�
 
 - Rust/WASM 單一核心整合 NES、GB、GG/SMS、SNES，前端透過統一 `EmuWasm` API 操作。
 - N64 透過 `mupen64plus-web` 與獨立 WebGL2 canvas 啟動。手機預設載入固定版本、可重建的 64 MiB fork 與 Rice triangle streaming ring；iPhone/iPad 使用 cached interpreter、rAF、關閉 SkipFrame 與 3072/1024 音頻緩衝，Android 依裝置 profile 使用 timer/SkipFrame。桌機維持 npm runtime，手機可用 `?n64Runtime=npm` 緊急回退。完整數據與後續路線見 [N64 瀏覽器核心分階段優化計畫](docs/N64_CORE_OPTIMIZATION_PLAN.md)。
-- FBNeo Arcade 透過 `@mantou/fbneo` 載入完整 ZIP ROM set，支援 Raiden、Warriors of Fate、Final Fight、恐龍快打、名將、忍者龜、Street Fighter II 等 17 款街機，並處理 Emscripten FS、音視頻與街機輸入橋接。
+- FBNeo Arcade 透過 `@mantou/fbneo` 載入完整 ZIP ROM set，支援 Pac-Man、Metal Slug 系列、KOF 2002、Donkey Kong、Tetris、Out Run、Final Fight、忍者龜、Street Fighter II 等 30 款街機，並處理 Emscripten FS、音視頻與街機輸入橋接。
 
 ### 模擬精度與相容性努力
 
@@ -173,9 +173,9 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 ### FBNeo Arcade — 🕹️ 街機後端
 - 透過 `@mantou/fbneo` WebAssembly runtime 載入 FBNeo arcade driver
 - 支援完整 ZIP ROM set，不拆成單一主機 ROM
-- 目前支援 17 款完整 ZIP ROM set，包含 `raiden.zip`、`wof.zip`、`ffight.zip`、`dino.zip`、`captcomm.zip`、`punisher.zip`、`tmnt.zip`、`simpsons.zip`、`ssriders.zip`、`snowbros.zip`、`bublbobl.zip`、`pang.zip`、`sf2.zip`、`1943.zip`、`area88.zip`、`rtype.zip`、`parodius.zip`
+- 目前支援 30 款完整 ZIP ROM set，除了既有的 `raiden.zip`、`wof.zip`、`ffight.zip`、`dino.zip` 等，也包含 `pacman.zip`、`mslug.zip`、`mslug2t.zip`、`mslug3.zip`、`mslug4.zip`、`kof2002.zip`、`dkong.zip`、`tetris.zip`、`outrun.zip`、`frogger.zip`
 - 每次切換 arcade 遊戲都建立新的 FBNeo instance，避免 Emscripten memory / native 狀態殘留
-- 雷電啟用直向畫面旋轉，清版動作遊戲維持原橫向 framebuffer
+- Pac-Man、Donkey Kong、Frogger 右轉 90 度，Raiden、1943 左轉 90 度，其餘街機維持原橫向 framebuffer
 - 手機版提供街機專用 COIN、START、MUTE 與 A-F 六鍵控制器
 
 ---

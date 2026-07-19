@@ -98,6 +98,16 @@
 
 ---
 
+### Q3.1: 65816 短分支固定為 2 cycles — Raster 產生時序失真
+
+**現象**：Super Mario Kart 已能進入賽道，但 DSP-1 Raster 與 NMI/IRQ 內的緊密迴圈執行時序不正確。
+
+**原因**：BPL/BMI/BVC/BVS/BRA/BCC/BCS/BNE/BEQ 全部固定計為 2 CPU cycles。65816 的短分支未採用時為 2 cycles，採用時需增加 1 cycle；模擬模式跨 page 時再增加 1 cycle。
+
+**解決**：短分支共用同一個 timing helper；BRA 套用必定採用的分支規則，native mode 不加入跨 page penalty。回歸測試涵蓋未採用、同 page、native 跨 page 與 emulation 跨 page。
+
+---
+
 ## SNES — PPU 渲染
 
 ### Q4: Mode 5 高解析度文字亂碼 — 聖劍傳說 2/3
@@ -313,7 +323,9 @@
 
 **原因**：`write_dr` 在 Raster Output 階段消費寫入並自動 repeat，形成無限迴圈。
 
-**解決**：實作 skip-without-repeat：遞減 word counter，輸出完成時退出到 Idle，精確匹配 snes9x 邏輯。
+**解決**：實作 skip-without-repeat：每次 dummy write 只丟棄一個待輸出 byte，不觸發 Raster auto-repeat；待輸出資料清空後回到 Idle，精確匹配 snes9x 邏輯。測試同時覆蓋完整 8-byte flush 與已讀取半個 word 後的剩餘輸出。
+
+**實際 ROM 驗證**：瀏覽器載入日版 Super Mario Kart 後可正常進入賽事，CPU 無 BRK，DSP-1 可在 Output/Params/Idle 間持續推進。單幀 trace 顯示 SL25-114 為上方駕駛視角 Mode 7、SL115 為分隔列、SL116-224 為下方賽道俯視圖 Mode 7；M7A-D 的四條間接 HDMA channel 均消耗約 104 筆矩陣資料。再執行 300 frames 後排名與俯視賽道持續更新，畫面結構並非水平撕裂。
 
 ---
 

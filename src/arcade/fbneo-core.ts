@@ -3,6 +3,19 @@ import initFbNeo from '@mantou/fbneo/fbneo-arcade';
 import fbneoWasmUrl from '@mantou/fbneo/fbneo-arcade.wasm?url';
 
 export const FBNEO_SUPPORTED_GAMES = [
+  'mslug',
+  'mslug2t',
+  'mslug3',
+  'mslug4',
+  'kof2002',
+  'pacman',
+  'dkong',
+  'tetris',
+  'outrun',
+  'frogger',
+  'shinobi',
+  'ddragon',
+  'strider',
   'raiden',
   'wof',
   'ffight',

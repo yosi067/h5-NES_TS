@@ -401,8 +401,25 @@ impl Dsp1 {
     }
 
     pub fn write_dr(&mut self, val: u8) {
-        // 在 Output 階段收到寫入 = 中止當前命令，回到 Idle
+        // Raster output is auto-repeating when read, but writes only discard the
+        // pending output bytes. SMK uses eight dummy writes before its next command.
         if self.phase == Phase::Output {
+            if matches!(self.cmd, 0x0A | 0x1A | 0x2A | 0x3A) {
+                if self.rd_half {
+                    self.rd_half = false;
+                    self.o_idx += 1;
+                } else {
+                    self.rd_half = true;
+                }
+
+                if self.o_idx >= self.n_output && !self.rd_half {
+                    self.phase = Phase::Idle;
+                    self.o_idx = 0;
+                    self.n_output = 0;
+                }
+                return;
+            }
+
             self.phase = Phase::Idle;
             self.wr_half = false;
             self.rd_half = false;
@@ -1210,5 +1227,49 @@ impl Dsp1 {
         self.output[0] = zrr;
         self.output[1] = xrr;
         self.output[2] = yrr;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn begin_raster_output(dsp1: &mut Dsp1) {
+        dsp1.write_dr(0x0A);
+        dsp1.write_dr(0x00);
+        dsp1.write_dr(0x00);
+        assert_eq!(dsp1.phase_name(), "Output");
+    }
+
+    #[test]
+    fn raster_dummy_writes_drain_output_without_repeating() {
+        let mut dsp1 = Dsp1::new();
+        begin_raster_output(&mut dsp1);
+
+        for _ in 0..7 {
+            dsp1.write_dr(0x00);
+            assert_eq!(dsp1.phase_name(), "Output");
+        }
+        dsp1.write_dr(0x00);
+        assert_eq!(dsp1.phase_name(), "Idle");
+
+        dsp1.write_dr(0x00);
+        assert_eq!(dsp1.phase_name(), "Params");
+        assert_eq!(dsp1.cmd, 0x00);
+    }
+
+    #[test]
+    fn raster_writes_continue_from_a_partially_read_word() {
+        let mut dsp1 = Dsp1::new();
+        begin_raster_output(&mut dsp1);
+
+        dsp1.read_dr();
+        for _ in 0..6 {
+            dsp1.write_dr(0x00);
+            assert_eq!(dsp1.phase_name(), "Output");
+        }
+        dsp1.write_dr(0x00);
+
+        assert_eq!(dsp1.phase_name(), "Idle");
     }
 }

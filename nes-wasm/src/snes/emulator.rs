@@ -1524,6 +1524,20 @@ impl SnesEmulator {
         }
     }
 
+    fn branch(&mut self, condition: bool) {
+        let offset = self.fetch_pc() as i8;
+        self.cpu.cycles = 2;
+        if condition {
+            let next_pc = self.cpu.pc;
+            let target = next_pc.wrapping_add(offset as u16);
+            self.cpu.pc = target;
+            self.cpu.cycles += 1;
+            if self.cpu.emulation && (next_pc & 0xFF00) != (target & 0xFF00) {
+                self.cpu.cycles += 1;
+            }
+        }
+    }
+
     // ================================================================
     // 65816 指令執行 (全 256 opcodes)
     // ================================================================
@@ -1802,16 +1816,16 @@ impl SnesEmulator {
             0xCC => { let a = self.addr_abs(); let v = self.read_x(a); let r = self.cpu.y_val(); self.op_cmp_x(r, v); self.cpu.cycles = 4; }
 
             // === Branches ===
-            0x10 => { let o = self.fetch_pc() as i8; if !self.cpu.flag_n() { self.cpu.pc = self.cpu.pc.wrapping_add(o as u16); } self.cpu.cycles = 2; }
-            0x30 => { let o = self.fetch_pc() as i8; if self.cpu.flag_n() { self.cpu.pc = self.cpu.pc.wrapping_add(o as u16); } self.cpu.cycles = 2; }
-            0x50 => { let o = self.fetch_pc() as i8; if !self.cpu.flag_v() { self.cpu.pc = self.cpu.pc.wrapping_add(o as u16); } self.cpu.cycles = 2; }
-            0x70 => { let o = self.fetch_pc() as i8; if self.cpu.flag_v() { self.cpu.pc = self.cpu.pc.wrapping_add(o as u16); } self.cpu.cycles = 2; }
-            0x80 => { let o = self.fetch_pc() as i8; self.cpu.pc = self.cpu.pc.wrapping_add(o as u16); self.cpu.cycles = 3; } // BRA
+            0x10 => self.branch(!self.cpu.flag_n()),
+            0x30 => self.branch(self.cpu.flag_n()),
+            0x50 => self.branch(!self.cpu.flag_v()),
+            0x70 => self.branch(self.cpu.flag_v()),
+            0x80 => self.branch(true), // BRA
             0x82 => { let o = self.fetch_pc16() as i16; self.cpu.pc = self.cpu.pc.wrapping_add(o as u16); self.cpu.cycles = 4; } // BRL
-            0x90 => { let o = self.fetch_pc() as i8; if !self.cpu.flag_c() { self.cpu.pc = self.cpu.pc.wrapping_add(o as u16); } self.cpu.cycles = 2; }
-            0xB0 => { let o = self.fetch_pc() as i8; if self.cpu.flag_c() { self.cpu.pc = self.cpu.pc.wrapping_add(o as u16); } self.cpu.cycles = 2; }
-            0xD0 => { let o = self.fetch_pc() as i8; if !self.cpu.flag_z() { self.cpu.pc = self.cpu.pc.wrapping_add(o as u16); } self.cpu.cycles = 2; }
-            0xF0 => { let o = self.fetch_pc() as i8; if self.cpu.flag_z() { self.cpu.pc = self.cpu.pc.wrapping_add(o as u16); } self.cpu.cycles = 2; }
+            0x90 => self.branch(!self.cpu.flag_c()),
+            0xB0 => self.branch(self.cpu.flag_c()),
+            0xD0 => self.branch(!self.cpu.flag_z()),
+            0xF0 => self.branch(self.cpu.flag_z()),
 
             // === JMP ===
             0x4C => { self.cpu.pc = self.fetch_pc16(); self.cpu.cycles = 3; }
@@ -3108,5 +3122,37 @@ mod tests {
         emulator.run_cpu_for(1);
 
         assert_eq!(emulator.cpu.cycles, 13);
+    }
+
+    #[test]
+    fn conditional_branch_cycles_follow_65816_rules() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cpu.pb = 0;
+
+        emulator.cpu.set_flag(flags::ZERO, true);
+        emulator.cpu.pc = 0x0100;
+        emulator.wram[0x0100] = 0x02;
+        emulator.execute_instruction(0xD0);
+        assert_eq!(emulator.cpu.pc, 0x0101);
+        assert_eq!(emulator.cpu.cycles, 2);
+
+        emulator.cpu.set_flag(flags::ZERO, false);
+        emulator.cpu.pc = 0x0100;
+        emulator.execute_instruction(0xD0);
+        assert_eq!(emulator.cpu.pc, 0x0103);
+        assert_eq!(emulator.cpu.cycles, 3);
+
+        emulator.cpu.emulation = false;
+        emulator.cpu.pc = 0x00FD;
+        emulator.wram[0x00FD] = 0x02;
+        emulator.execute_instruction(0xD0);
+        assert_eq!(emulator.cpu.pc, 0x0100);
+        assert_eq!(emulator.cpu.cycles, 3);
+
+        emulator.cpu.emulation = true;
+        emulator.cpu.pc = 0x00FD;
+        emulator.execute_instruction(0xD0);
+        assert_eq!(emulator.cpu.pc, 0x0100);
+        assert_eq!(emulator.cpu.cycles, 4);
     }
 }

@@ -58,6 +58,19 @@ interface KeyboardBindingView {
 }
 
 const FBNEO_SUPPORTED_GAMES = [
+  'mslug',
+  'mslug2t',
+  'mslug3',
+  'mslug4',
+  'kof2002',
+  'pacman',
+  'dkong',
+  'tetris',
+  'outrun',
+  'frogger',
+  'shinobi',
+  'ddragon',
+  'strider',
   'raiden',
   'wof',
   'ffight',
@@ -78,6 +91,16 @@ const FBNEO_SUPPORTED_GAMES = [
 ] as const;
 
 type FbNeoGameName = typeof FBNEO_SUPPORTED_GAMES[number];
+
+type ArcadeRotation = 'none' | 'left' | 'right';
+
+const FBNEO_ROTATIONS: Partial<Record<FbNeoGameName, Exclude<ArcadeRotation, 'none'>>> = {
+  pacman: 'right',
+  dkong: 'right',
+  frogger: 'right',
+  raiden: 'left',
+  '1943': 'left',
+};
 
 const ArcadeInputBit = {
   Up: 1 << 0,
@@ -296,7 +319,7 @@ let arcadeInputP1 = 0;
 let arcadeInputP2 = 0;
 let arcadeSourceWidth = 320;
 let arcadeSourceHeight = 240;
-let arcadeRotateLeft = false;
+let arcadeRotation: ArcadeRotation = 'none';
 
 function isN64RomName(filename: string): boolean {
   const lower = filename.toLowerCase();
@@ -1264,9 +1287,9 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
     const { width, height } = fbneoCore.getResolution();
     arcadeSourceWidth = width;
     arcadeSourceHeight = height;
-    arcadeRotateLeft = romSet.gameName === 'raiden' || romSet.gameName === '1943';
-    const canvasWidth = arcadeRotateLeft ? height : width;
-    const canvasHeight = arcadeRotateLeft ? width : height;
+    arcadeRotation = FBNEO_ROTATIONS[romSet.gameName] ?? 'none';
+    const canvasWidth = arcadeRotation === 'none' ? width : height;
+    const canvasHeight = arcadeRotation === 'none' ? height : width;
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
     canvas.style.aspectRatio = `${canvasWidth} / ${canvasHeight}`;
@@ -1275,7 +1298,7 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer): Promis
     hideRomSelector();
     updateControllerLayout();
     powerLed?.classList.add('on');
-    console.log(`[FBNeo] ${romSet.gameName} loaded: ${width}x${height}${arcadeRotateLeft ? ' rotated-left' : ''}`);
+    console.log(`[FBNeo] ${romSet.gameName} loaded: ${width}x${height}${arcadeRotation === 'none' ? '' : ` rotated-${arcadeRotation}`}`);
     showToast(`FBNeo: ${romSet.gameName} OK`);
     startEmulation();
   } catch (error) {
@@ -2452,13 +2475,13 @@ function renderFrame(): void {
 function renderFbNeoFrame(): void {
   if (!fbneoCore || !ctx || !imageData) return;
   const frameBuffer = fbneoCore.getFrameBufferView();
-  if (arcadeRotateLeft) {
+  if (arcadeRotation !== 'none') {
     const output = imageData.data;
     for (let sourceY = 0; sourceY < arcadeSourceHeight; sourceY++) {
       for (let sourceX = 0; sourceX < arcadeSourceWidth; sourceX++) {
         const sourceIndex = (sourceY * arcadeSourceWidth + sourceX) * 4;
-        const destX = sourceY;
-        const destY = arcadeSourceWidth - 1 - sourceX;
+        const destX = arcadeRotation === 'left' ? sourceY : arcadeSourceHeight - 1 - sourceY;
+        const destY = arcadeRotation === 'left' ? arcadeSourceWidth - 1 - sourceX : sourceX;
         const destIndex = (destY * arcadeSourceHeight + destX) * 4;
         output[destIndex] = frameBuffer[sourceIndex];
         output[destIndex + 1] = frameBuffer[sourceIndex + 1];
