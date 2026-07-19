@@ -48,7 +48,7 @@
 
 **近期不做**：R4300 recompiler重構、RSP SIMD、Worker/AudioWorklet與一般toolchain調整。現有數據顯示這些不是Super Mario 64目前的最大瓶頸，先投入會降低可歸因性。
 
-**GitHub Pages部署**：rebuilt runtime納入版本化artifact。Vite production build會在bundle/Wasm/data/manifest缺少，或manifest不是64 MiB initial memory時直接失敗。現有GitHub Actions依repository name設定base URL；正常手機不帶query時載入fork與triangle streaming，維持320x240 backing與完整4:3畫面。
+**GitHub Pages部署**：rebuilt runtime納入版本化artifact。Vite production build會在bundle/Wasm/data/manifest缺少，或manifest不是64 MiB initial memory時直接失敗。fork的main bundle、data與Wasm使用相同asset version query，避免upstream commit檔名不變時Pages CDN混用舊的588-page JS/Wasm。現有GitHub Actions依repository name設定base URL；正常手機不帶query時載入fork與triangle streaming，維持320x240 backing與完整4:3畫面。
 
 ## 階段 1：可重現基準與安全 A/B
 

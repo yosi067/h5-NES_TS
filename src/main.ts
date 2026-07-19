@@ -23,6 +23,7 @@ import {
   resolveN64BenchmarkConfig,
   type N64BenchmarkSession,
 } from './n64/benchmark';
+import { getN64RuntimeAssetUrl } from './n64/runtime-assets';
 import { createN64Telemetry } from './n64/telemetry';
 
 type N64EmulatorControls = EmulatorControls & {
@@ -1448,7 +1449,7 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
     const baseUrl = import.meta.env.BASE_URL;
     await ensureMupen64Config(baseUrl, n64PerformanceProfile);
     const runtimeModule: typeof import('mupen64plus-web') = useRebuiltRuntime
-      ? await import(/* @vite-ignore */ `${baseUrl}n64-fork/main.bundle.js`)
+      ? await import(/* @vite-ignore */ getN64RuntimeAssetUrl(baseUrl, 'main.bundle.js', true))
       : await import('mupen64plus-web');
     const createMupen64PlusWeb = runtimeModule.default;
     console.info(`[N64] runtime: ${useRebuiltRuntime ? 'rebuilt fork' : 'npm 1.5.7'}`);
@@ -1516,7 +1517,7 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
       netplayConfig: { player: 0 },
       locateFile: (path: string, prefix: string) => {
         if (path.endsWith('.wasm') || path.endsWith('.data')) {
-          return `${baseUrl}${useRebuiltRuntime ? 'n64-fork' : 'n64-mupen'}/${path}`;
+          return getN64RuntimeAssetUrl(baseUrl, path, useRebuiltRuntime);
         }
         return prefix + path;
       },
