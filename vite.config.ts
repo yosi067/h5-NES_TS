@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { copyFileSync, mkdirSync, readdirSync, existsSync, readFileSync, statSync } from 'fs';
+import { getN64RebuiltAssetFileName } from './src/n64/runtime-assets';
 
 function copyDirectory(sourceDir: string, destinationDir: string): void {
   mkdirSync(destinationDir, { recursive: true });
@@ -21,6 +22,19 @@ function getMupen64AssetFiles(sourceDir: string): string[] {
     ? readdirSync(sourceDir).filter(file => /^index\..*\.(wasm|data)$/.test(file))
     : [];
   return [...runtimeFiles, 'mupen64plus.cfg'];
+}
+
+function getVersionedRebuiltRuntimeFiles(sourceDir: string): Array<{
+  sourceName: string;
+  publishedName: string;
+}> {
+  if (!existsSync(sourceDir)) return [];
+  return readdirSync(sourceDir)
+    .filter(file => file === 'main.bundle.js' || /^index\..*\.(wasm|data)$/.test(file))
+    .map(sourceName => ({
+      sourceName,
+      publishedName: getN64RebuiltAssetFileName(sourceName),
+    }));
 }
 
 function assertRebuiltMupenAssets(sourceDir: string): void {
@@ -140,7 +154,10 @@ function mupen64AssetsPlugin() {
         }
 
         if (url.startsWith(forkPublicPath)) {
-          const filePath = resolve(forkSourceDir, url.slice(forkPublicPath.length));
+          const requestedName = url.slice(forkPublicPath.length);
+          const versionedFile = getVersionedRebuiltRuntimeFiles(forkSourceDir)
+            .find(file => file.publishedName === requestedName);
+          const filePath = resolve(forkSourceDir, versionedFile?.sourceName ?? requestedName);
           if (filePath.startsWith(`${forkSourceDir}\\`) && existsSync(filePath) && statSync(filePath).isFile()) {
             const stat = statSync(filePath);
             const contentType = filePath.endsWith('.wasm')
@@ -193,7 +210,14 @@ function mupen64AssetsPlugin() {
         }
       }
 
-      copyDirectory(forkSourceDir, resolve(__dirname, 'dist/n64-fork'));
+      const forkDistDir = resolve(__dirname, 'dist/n64-fork');
+      copyDirectory(forkSourceDir, forkDistDir);
+      for (const file of getVersionedRebuiltRuntimeFiles(forkSourceDir)) {
+        copyFileSync(
+          resolve(forkSourceDir, file.sourceName),
+          resolve(forkDistDir, file.publishedName),
+        );
+      }
       console.log('Copied rebuilt N64 mobile runtime');
     },
   };
