@@ -233,7 +233,7 @@ impl EmuWasm {
         false
     }
 
-    /// 載入 SNES ROM (.smc / .sfc)
+    /// 載入 SNES ROM (.smc / .sfc / .fig)
     #[wasm_bindgen(js_name = "loadSnesRom")]
     pub fn load_snes_rom(&mut self, rom_data: &[u8]) -> bool {
         if rom_data.is_empty() { return false; }

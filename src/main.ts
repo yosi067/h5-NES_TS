@@ -325,7 +325,7 @@ function detectRomSystem(rom: RomInfo): SystemKey {
   const lower = rom.file.toLowerCase();
   if (isFbNeoArcadeRomName(rom.file)) return 'arcade';
   if (isN64RomName(rom.file)) return 'n64';
-  if (lower.endsWith('.sfc') || lower.endsWith('.smc')) return 'snes';
+  if (lower.endsWith('.sfc') || lower.endsWith('.smc') || lower.endsWith('.fig')) return 'snes';
   if (lower.endsWith('.sms')) return 'sms';
   if (lower.endsWith('.gg')) return 'gg';
   if (lower.endsWith('.gb') || lower.endsWith('.gbc')) return 'gb';
@@ -1122,7 +1122,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
       // 解壓 ZIP
       updateGameLoading(loadingSequence, '正在解壓縮遊戲檔案…');
       const zip = await JSZip.loadAsync(buffer);
-      const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
+      const romExtensions = ['.nes', '.smc', '.sfc', '.fig', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
       let romFile: JSZip.JSZipObject | null = null;
       let romFileName = '';
 
@@ -1185,7 +1185,7 @@ async function loadRomFromFile(file: File): Promise<void> {
       // 解壓 ZIP，找第一個遊戲檔案
       updateGameLoading(loadingSequence, '正在解壓縮遊戲檔案…');
       const zip = await JSZip.loadAsync(await file.arrayBuffer());
-      const romExtensions = ['.nes', '.smc', '.sfc', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
+      const romExtensions = ['.nes', '.smc', '.sfc', '.fig', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
       let romFile: JSZip.JSZipObject | null = null;
       let romFileName = '';
 
@@ -1312,7 +1312,7 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
     loaded = nes.loadGgRom(romBytes);
   } else if (lower.endsWith('.sms')) {
     loaded = nes.loadSmsRom(romBytes);
-  } else if (lower.endsWith('.smc') || lower.endsWith('.sfc')) {
+  } else if (lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig')) {
     console.log(`[SNES] Attempting loadSnesRom, data size: ${romBytes.length}, first 4 bytes: ${romBytes[0].toString(16)} ${romBytes[1].toString(16)} ${romBytes[2].toString(16)} ${romBytes[3].toString(16)}`);
     try {
       loaded = nes.loadSnesRom(romBytes);

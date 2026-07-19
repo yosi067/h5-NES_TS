@@ -46,7 +46,7 @@ H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到�
 ### 多平台核心與後端整合
 
 - Rust/WASM 單一核心整合 NES、GB、GG/SMS、SNES，前端透過統一 `EmuWasm` API 操作。
-- N64 透過 `mupen64plus-web` 與 WebGL2 canvas 啟動，和 WASM 2D canvas 互斥時會自動切換畫布；手機統一使用 320×240、低成本音頻重採樣及 Rice 隔幀繪製，高階 iPhone/iPad 使用 rAF 畫面同步。完整限制與後續路線見 [模擬核心優化與相容性計畫](docs/CORE_OPTIMIZATION_PLAN.md)。
+- N64 透過 `mupen64plus-web` 與獨立 WebGL2 canvas 啟動。手機預設載入固定版本、可重建的 64 MiB fork 與 Rice triangle streaming ring；iPhone/iPad 使用 cached interpreter、rAF、關閉 SkipFrame 與 3072/1024 音頻緩衝，Android 依裝置 profile 使用 timer/SkipFrame。桌機維持 npm runtime，手機可用 `?n64Runtime=npm` 緊急回退。完整數據與後續路線見 [N64 瀏覽器核心分階段優化計畫](docs/N64_CORE_OPTIMIZATION_PLAN.md)。
 - FBNeo Arcade 透過 `@mantou/fbneo` 載入完整 ZIP ROM set，支援 Raiden、Warriors of Fate、Final Fight、恐龍快打、名將、忍者龜、Street Fighter II 等 17 款街機，並處理 Emscripten FS、音視頻與街機輸入橋接。
 
 ### 模擬精度與相容性努力
@@ -75,7 +75,7 @@ H5-EMU 的目標是在瀏覽器中把多個世代的復古遊戲平台整合到�
 - 副檔名 `.gb` / `.gbc` → **Game Boy 核心**
 - 副檔名 `.gg` → **Game Gear 核心** (160×144 GG 視窗裁切)
 - 副檔名 `.sms` → **Master System 核心** (256×192 全畫面)
-- 副檔名 `.sfc` / `.smc` → **SNES 核心** (256×224)
+- 副檔名 `.sfc` / `.smc` / `.fig` → **SNES 核心** (256×224)
 - 副檔名 `.z64` / `.n64` / `.v64` → **N64 後端**
 - 檔名符合支援清單的街機 `.zip`，例如 `raiden.zip`、`wof.zip`、`ffight.zip`、`dino.zip`、`sf2.zip` → **FBNeo Arcade 核心**（完整 zip ROM set）
 - 其他 `.zip` → 會嘗試解包並尋找其中第一個支援的家用主機 ROM
@@ -161,6 +161,14 @@ NES 模擬器的開發一直是程式設計師學習底層系統架構的絕佳�
 - DSP-1 協處理器 (Mode 7 3D 變換、投影、光柵運算)
 - LoROM / HiROM 卡帶映射自動偵測
 - 128KB WRAM + SRAM 存檔支援
+
+### Nintendo 64 — WebGL2 後端
+- 以 `mupen64plus-web` 1.5.7、Mupen64Plus 與 Rice WebGL renderer 執行 N64 ROM；`nes-wasm/src/n64` 僅為未完成 scaffold，不在正式遊玩路徑
+- 手機固定 320×240，桌機 640×480；初始化期間鎖定 backing size，Rice 第一個 VI 後才恢復響應式 CSS，避免畫面上方或右側裁切
+- 手機預設使用固定 commit、Emscripten 3.1.25 可重建的 fork；production build 會檢查版本化 bundle/Wasm/data 與 64 MiB initial memory，避免快取混版或 Asyncify 啟動越界
+- iPhone 實測保留 triangle streaming ring：固定場景由 16.71 提升至 38.22 VI/s，DList 由 48.16 降至 18.70 ms，audio underruns 由 706 降至 290
+- rectangle ring 與 4096/2048 iOS 音頻緩衝未達 A/B 門檻，正式路徑維持 rectangle 關閉與 3072/1024；SDL underrun 只將缺少的尾端補靜音
+- `[N64 perf]` 每五秒回報 VI/s、VI avg/max、long VI、recompiles、RSP/Rice draw timing 與 audio underruns；null-video/no-draw 測試已確認目前主要瓶頸在 Rice GL draw 與 WebGL 資料提交
 
 ### FBNeo Arcade — 🕹️ 街機後端
 - 透過 `@mantou/fbneo` WebAssembly runtime 載入 FBNeo arcade driver
@@ -356,25 +364,38 @@ GB 方向鍵無法操作 — `result` 低 4 位初始為 0x0 等同所有方向�
 - **HTML** (`index.html`)：檔案上傳接受 `.gb/.gbc/.gg/.sms`、ROM 系統標籤 CSS、品牌名更新為 H5-EMU
 - **WASM 建置**：`wasm-pack build --target web --out-dir ../src/wasm` 同時輸出到 `src/wasm/` 與 `pkg/`
 
-### 🎮 遊戲列表更新（含 FBNeo Arcade 17 款街機）
+### 🎮 遊戲列表更新（共 80 款）
 
-NES (32 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛克人 6 / FF III / 薩爾達傳說 / 雙截龍 3 / 聖鈴傳說 / 冒險島 1~3 / 迷宮組曲 / Captain Tsubasa II / 熱血系列 ×9 / 龍珠 Z 系列 ×4 / Zombie Hunter / 五子棋 / 台灣麻將 / 150 合 1 / 1200 合 1
+NES (30 款)：超級瑪利歐兄弟 / 超級瑪利歐兄弟 3 / 魂斗羅 / 洛克人 6 / FF III / 薩爾達傳說 / 雙截龍 3 / 聖鈴傳說 / 冒險島 1~3 / 迷宮組曲 / Captain Tsubasa II / 熱血系列 ×9 / 龍珠 Z 系列 ×3 / Zombie Hunter / 五子棋 / 台灣麻將 / 1200 合 1
 
-🟢 Game Boy (4 款)：
+🟢 Game Boy (5 款)：
 - Super Mario Land 2: 6 Golden Coins (超級瑪利歐大陸 2)
 - 口袋妖怪黃 (繁體中文加強版)
+- Pokémon Yellow (美版)
 - 聖劍傳說 (簡體中文版)
 - 熱鬥拳皇 96 (簡體中文版)
 
-🟠 Game Gear (5 款新增)：
+🟠 Game Gear (4 款)：
 - Ninku 忍空 (英文翻譯版)
 - Battletoads 忍者蛙
-- Captain America 美國隊長
 - Legend of Illusion 米老鼠幻影傳說
 - Sonic Drift 2 音速小子賽車 2
 
 🔵 Master System (1 款新增)：
 - Sonic The Hedgehog 2 音速小子 2
+
+🟣 SFC / SNES (17 款)：
+- 超級瑪利歐世界 / 超級瑪利歐賽車 / 超級瑪利歐 RPG
+- 洛克人 X / X2 / X3
+- 最終幻想 VI / 超時空之鑰 / 聖劍傳說 2 / 聖劍傳說 3 / 大金剛國度
+- 七龍珠 Z Hyper Dimension / 超武鬥傳 / 超武鬥傳 2（兩個版本）
+- 快打旋風 Alpha 2 / 快打旋風 Zero 2
+
+Nintendo 64 (6 款)：
+- 薩爾達傳說 時之笛 / 瑪利歐賽車 64 / 超級瑪利歐 64
+- 瑪利歐網球 / 玩具總動員 2 / 水上摩托車 64
+
+> 《超級瑪利歐 RPG》需要 SA-1，《快打旋風 Alpha 2 / Zero 2》需要 S-DD1；目前自製 SNES 核心尚未支援這兩類特殊晶片，已完成分類與載入路由，但遊戲相容性仍待核心補齊。
 
 🕹️ FBNeo Arcade (17 款)：
 - Raiden / 雷電 (`raiden.zip`) — 直向射擊，前端左轉 90 度顯示
@@ -611,16 +632,22 @@ Z80：DAA H 旗標精確公式 (MAME/ZEXALL)、INI/IND B 遞減時序、RETN und
 | 協處理器 | DSP-1 Raster Output 無限迴圈 | SMK DSP-1 卡死 |
 | 協處理器 | CX4 協處理器未實作 | MMX2、MMX3 |
 
-### 🟣 SNES 遊戲列表 (9 款)
+### 🟣 SNES 遊戲列表 (17 款)
 - 🟣 超級瑪利歐世界 (Super Mario World)
+- 🟣 超級瑪利歐賽車 (Super Mario Kart)
+- 🟣 超級瑪利歐 RPG (Super Mario RPG) — SA-1 尚未支援
 - 🟣 洛克人 X (Rockman X)
 - 🟣 洛克人 X2 (Mega Man X2) — CX4 協處理器
 - 🟣 洛克人 X3 (Mega Man X3) — CX4 協處理器
 - 🟣 超時空之鑰 (Chrono Trigger)
 - 🟣 最終幻想 VI (Final Fantasy VI)
 - 🟣 聖劍傳說 2 (Secret of Mana)
-- 🟣 聖劍傳說 3 (Seiken Densetsu 3)
+- 🟣 聖劍傳說 3 (Seiken Densetsu 3，日版)
 - 🟣 大金剛國度 (Donkey Kong Country)
+- 🟣 七龍珠 Z Hyper Dimension
+- 🟣 七龍珠 Z 超武鬥傳 (Sample)
+- 🟣 七龍珠 Z 超武鬥傳 2 (V1.1 / Rev 1)
+- 🟣 快打旋風 Alpha 2 / Zero 2 — S-DD1 尚未支援
 
 ---
 
@@ -638,6 +665,10 @@ npm run build
 
 # 執行測試
 npm test
+
+# 需要重建 N64 fork 時（需 Docker）
+npm run n64:source
+npm run n64:build
 ```
 
 ### 部署到 GitHub Pages
@@ -681,7 +712,7 @@ h5-NES_TS/
 ├── public/
 │   ├── fbneo/             # FBNeo runtime assets
 │   └── roms.json          # ROM 列表配置 (NES + GB + GG + SMS + SNES + FBNeo)
-├── roms/                   # ROM 遊戲檔案 (.nes / .gb / .gg / .sms / .sfc / .smc / .zip)
+├── roms/                   # ROM 遊戲檔案 (.nes / .gb / .gg / .sms / .sfc / .smc / .fig / .z64 / .zip)
 ├── nes-wasm/              # Rust/WASM 核心 (單一二進位，多平台)
 │   └── src/
 │       ├── lib.rs         # WASM 入口 (EmuWasm 統一介面 + CoreType 分派)

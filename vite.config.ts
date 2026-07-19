@@ -79,9 +79,9 @@ function copyRomsPlugin() {
         
         const files = readdirSync(romsDir);
         files.forEach(file => {
-          // 支援 .nes, .NES, .gb, .gbc, .gg, .sms, .smc, .sfc, .z64, .zip 副檔名
+          // 支援家用主機 ROM 與 ZIP 封裝。
           const lower = file.toLowerCase();
-          if (lower.endsWith('.nes') || lower.endsWith('.gb') || lower.endsWith('.gbc') || lower.endsWith('.gg') || lower.endsWith('.sms') || lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64') || lower.endsWith('.zip')) {
+          if (lower.endsWith('.nes') || lower.endsWith('.gb') || lower.endsWith('.gbc') || lower.endsWith('.gg') || lower.endsWith('.sms') || lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig') || lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64') || lower.endsWith('.zip')) {
             copyFileSync(
               resolve(romsDir, file),
               resolve(distRomsDir, file)
@@ -94,7 +94,7 @@ function copyRomsPlugin() {
   };
 }
 
-// 在開發模式下正確處理 .smc/.sfc/.z64 ROM 檔案的二進位請求
+// 在開發模式下正確處理 Vite 不認識的 ROM 二進位請求。
 // (Vite 不認識這些副檔名，會誤觸 SPA fallback 回傳 index.html)
 function serveRomBinaryPlugin() {
   return {
@@ -103,7 +103,7 @@ function serveRomBinaryPlugin() {
       server.middlewares.use((req: any, res: any, next: any) => {
         const url = decodeURIComponent(req.url || '');
         const lower = url.toLowerCase();
-        if (lower.startsWith('/roms/') && (lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64') || lower.endsWith('.zip'))) {
+        if (lower.startsWith('/roms/') && (lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig') || lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64') || lower.endsWith('.zip'))) {
           const filePath = resolve(__dirname, url.slice(1)); // 去掉開頭的 /
           if (existsSync(filePath)) {
             const data = readFileSync(filePath);
@@ -248,7 +248,7 @@ export default defineConfig({
     exclude: ['nes-wasm']
   },
   // 將 WASM 及 ROM 檔案視為靜態資源
-  assetsInclude: ['**/*.wasm', '**/*.smc', '**/*.sfc', '**/*.z64', '**/*.n64', '**/*.v64', '**/*.zip'],
+  assetsInclude: ['**/*.wasm', '**/*.smc', '**/*.sfc', '**/*.fig', '**/*.z64', '**/*.n64', '**/*.v64', '**/*.zip'],
   // 將 public 目錄設為根目錄
   publicDir: 'public',
   build: {

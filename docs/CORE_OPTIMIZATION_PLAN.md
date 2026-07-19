@@ -2,7 +2,9 @@
 
 ## 本輪已完成
 
-- N64 所有手機 profile 固定為 320x240，並啟用 Rice `SkipFrame`；高階 iOS 保留 rAF 排程。
+- N64 所有手機 profile 固定為 320x240；iOS 使用 cached interpreter、rAF 與 no-SkipFrame，Android 依 profile 使用 dynamic recompiler、timer 與 SkipFrame。
+- 手機正式路徑改用可重建的 64 MiB Mupen fork與 Rice triangle streaming ring；桌機維持 npm runtime，並保留 `?n64Runtime=npm` 回退。
+- N64 SDL underrun 改為保留可播放前段、只將不足尾端補靜音；較大 iOS buffer 與 rectangle ring 因 A/B 未達門檻而不採用。
 - N64 首頁說明改為「建議在電腦上玩」。
 - 遊戲畫面下方 `H5-NES` 標題可返回主機選單；確認後先保存 SRAM、停止模擬與 N64 backend，再還原首頁。
 - N64 profile 測試與完整 production build 通過。
@@ -20,24 +22,25 @@
 
 ## N64 最終評估
 
-目前可玩後端已經是 `mupen64plus-web` 的 WebAssembly dynamic recompiler，搭配 Rice/WebGL2。`nes-wasm/src/n64` 只是尚無音訊、RCP、PIF/SI 與完整 CPU 的 scaffold，不能取代現有後端。
+目前可玩後端是 `mupen64plus-web` 1.5.7、Mupen64Plus 與 Rice/WebGL2；iOS 正式 profile 使用 cached interpreter，Android/desktop 使用 dynamic recompiler。`nes-wasm/src/n64` 只是尚無音訊、RCP、PIF/SI 與完整 CPU 的 scaffold，不能取代現有後端。固定 commit、Emscripten 3.1.25、版本化資產與 64 MiB initial memory 已讓 fork 可重建並避免 Asyncify rewind 越界與 Git/preload cache 混版。
 
 ### 問題判斷
 
-- Zelda 開場閃退：優先懷疑行動瀏覽器 Wasm heap/頁面記憶體上限、runtime heap growth 或 GPU driver/context loss。僅降低 canvas CSS 尺寸不會解決，降低 render target 與避免 ROM/backend 重複存活才有幫助。
-- Mario Kart 計時變慢：代表 VI/s 低於 real-time，主因是單執行緒 dynarec + Rice render workload；不是單純顯示幀率問題。
-- Mario 64 開場跑版：現有流程已建立獨立 WebGL canvas，並在 Mupen 啟動前後送 resize pulse、固定 4:3 backing store。本輪保留此修正；仍需真機截圖回歸。
+- 啟動越界：已定位為 instrumented fork 沿用 588-page initial memory，提升為 64 MiB 後三款驗收遊戲均能完成 Wasm/SDL/Rice 啟動。
+- 畫面裁切：已改為 SDL/Rice 初始化期間固定 profile 尺寸，第一個 VI 後才恢復 responsive CSS，不再依賴假的 resize/orientation pulse。
+- 速度瓶頸：Super Mario 64 true null-video 為 60.0 VI/s、Rice no-draw 為 59.98 VI/s；正常 Rice 只有 27.20 VI/s，約 27.84 ms/VI 位於 GL draw 入口與 WebGL 資料提交。
+- 已採用優化：triangle streaming ring 在 iPhone 固定場景由 16.71 提升至 38.22 VI/s，DList 由 48.16 降至 18.70 ms，audio underruns 由 706 降至 290。
+- 已否決調整：rectangle ring 為 37.7 VI/s、449 underruns；4096/2048 iOS buffer 為 37.9 VI/s、435 underruns，均未優於 triangle-only 的 38.22 VI/s、290 underruns。
 
 ### 建議路線
 
-1. **P0 真機量測與穩定性**
-   - 在 telemetry 增加 `performance.memory`（可用瀏覽器）、WebGL context lost、頁面 visibility、裝置/profile 與啟動階段標記。
-   - Android Chrome 與 iPhone Safari 各跑 Zelda 開場 10 分鐘、Mario Kart 3 場、Mario 64 開場，記錄 VI/s、long VI、recompile 與崩潰前最後階段。
-   - 設定驗收門檻：Mario Kart 平均至少 56 VI/s；Zelda 開場不閃退；Mario 64 首畫面保持 4:3 且無裁切。
+1. **P0 renderer batching 與同步等待**
+   - 以已採用的 triangle streaming ring 為唯一基準，細分 driver draw、buffer upload 與同步等待，不再重跑已結案的 baseline/full/audio buffer 組合。
+   - 評估跨 draw batching；每次大型調整先完成本機重建、三款遊戲 smoke test，再安排一次手機驗收。
+   - 最終驗收補 Android Chrome 與 iPhone Safari 各 15 分鐘穩定性，記錄 VI/s、long VI、draw timing、audio underruns 與 context loss。
 
 2. **P1 現有後端低風險優化**
-   - 比較 timer 與 rAF profile，不以裝置名稱猜測，依真機 telemetry 選擇。
-   - 檢查 Mupen heap 初始值/成長策略、ROM 所有權與停止後資源釋放；避免同時保留可回收的大型 buffer。
+   - 維持 iOS 3072/1024 audio buffers與 partial-underrun 輸出；剩餘爆音先從 renderer stall 處理，不再增加 buffer latency。
    - 逐遊戲測試 Rice 選項；影響正確性的選項只建立 game override，不全域關閉。
    - 加入 context-loss UI，讓 GPU context 被系統回收時能回首頁並顯示原因，而非整頁無訊息退出。
 
@@ -47,9 +50,9 @@
    - 只有 PoC 在目標手機比現有後端至少快 20%，且三款遊戲相容性不退步，才進行正式替換。
 
 4. **WebGPU 決策**
-   - WebGPU 只能改善 RDP 圖形工作，不能直接加速 VR4300/RSP 與 dynarec。
-   - 自行開發 WebGPU RDP backend 工作量高，包含 combiner、depth、coverage、framebuffer effects、texture cache 與大量遊戲例外，不列為短期修復。
-   - 建議等待或採用已有成熟 WebGPU renderer 的上游核心；保留 WebGL2 fallback，不能讓 WebGPU 成為唯一啟動條件。
+   - null-video/no-draw 已證明 renderer 有足夠改善空間，但仍先完成低風險 WebGL batching 與同步等待優化。
+   - 若 Rice 仍無法接近約 10.55 ms/VI 預算，再建立單一固定場景的 WebGPU prototype；整體提升至少 20%且三款遊戲無阻斷性圖形錯誤才擴大。
+   - WebGPU 只能改善 RDP 圖形工作，不能直接加速 VR4300/RSP；必須保留 WebGL2 fallback。
 
 ## 各主機掃描結果與計畫
 

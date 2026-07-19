@@ -59,13 +59,17 @@ Arcade 輸入以 32-bit bitmask 作為前端抽象：方向鍵佔 bit 0-3，A-F 
 
 CI/CD 方面，`package-lock.json` 已包含 `@mantou/fbneo`，GitHub Pages workflow 使用 `npm ci` 與 `npm run build`，Vite production build 會把 `fbneo-arcade-*.wasm` 打進 `dist/assets/`，並透過 `copyRomsPlugin()` 複製 `.zip` arcade ROM 到 `dist/roms/`。
 
-#### N64 初次啟動畫面適配
+#### N64 runtime、畫面與效能適配
 
-N64 模式必須使用全新的 WebGL canvas，不能沿用已建立 2D context 的 `#screen`。啟動流程中會先套用 `body.n64-mode`，等待 layout settle，再建立 Mupen 後端。因 Mupen/SDL 會在 start 後再次讀取 canvas 尺寸，`src/main.ts` 會在 start 前後執行 resize pulse，並依效能 profile 把 WebGL backing store 維持在桌機 `640x480` 或手機 `320x240`，避免首次啟動時遊戲內容縮放錯誤。
+N64 模式必須使用全新的 WebGL canvas，不能沿用已建立 2D context 的 `#screen`。啟動流程先套用 `body.n64-mode` 與 `body.n64-initializing`；SDL/Rice 初始化期間將 CSS 與 WebGL backing 固定在 profile 尺寸，等 Rice 第一個 VI 後才鎖定 backing 並恢復 responsive CSS。桌機使用 `640x480`，手機使用 `320x240`，可避免 SDL 在非同步啟動期間把手機 backing 改成 CSS 顯示尺寸而造成上方或右側裁切。
 
-`src/n64/performance.ts` 會依 user agent、觸控能力、CPU 邏輯核心數與可用記憶體選擇 desktop / ios-high-end / mobile / mobile-low-end profile。高階 iOS 使用 rAF，避免 Safari 對 1ms timer 的排程抖動持續搶占主執行緒，並把音頻次級緩衝降回 1024 samples 以減少延遲；其他手機仍用 timer。所有手機固定 `320x240`、啟用 Rice `SkipFrame`，並套用 trivial audio resampler、快速材質 CRC、16-bit texture、關閉 mipmap 與 OSD。ROM buffer 由重設流程共用，不再為 32-64 MB ROM 額外複製完整 `ArrayBuffer`。
+`src/n64/performance.ts` 會依 user agent、觸控能力、CPU 邏輯核心數與可用記憶體選擇 desktop / ios-high-end / mobile / mobile-low-end profile，並在寫入 IDBFS 前重寫 `mupen64plus.cfg`。iOS 使用 cached interpreter (`emuMode=1`)、rAF、關閉 SkipFrame 與 3072/1024 samples 音頻緩衝；Android 手機使用 dynamic recompiler (`emuMode=2`)、timer，並依 profile 啟用 SkipFrame。手機共同套用 trivial resampler、快速材質載入、16-bit texture、關閉 mipmap 與 OSD。ROM reset 共用原始 `ArrayBuffer`，避免為 32-64 MB ROM 製造額外記憶體尖峰。
 
-`src/n64/telemetry.ts` 透過 Mupen 的 `beginStats` / `endStats` hook 每五秒在主控台輸出 VI/s、平均/最長 VI 時間、長 VI 數量與動態重編譯次數。約 56 VI/s 以上代表 NTSC 遊戲接近 real-time；大量 recompiles 與單次長 VI 同時發生，表示卡頓主要來自 runtime Wasm 編譯，而不是畫面解析度。
+手機正常模式預設使用固定 commit 與 Emscripten 3.1.25 重建的 fork，並開啟已通過 iPhone A/B 的 Rice triangle streaming ring；桌機預設維持 npm 1.5.7，`?n64Runtime=npm` 可強制手機回退。rectangle ring 與較大的 4096/2048 iOS 音頻緩衝因沒有改善 VI/s、draw timing 或 underrun 數而維持停用。SDL callback 資料不足時會播放仍可安全 resample 的前段，只將缺少的尾端補靜音。
+
+`src/n64/telemetry.ts` 透過 Mupen 的 `beginStats` / `endStats` hook 每五秒輸出 VI/s、平均/最長 VI、long VI、recompiles、RSP/DList/RDP、triangle/rectangle draw timing/calls 與 audio underruns。約 56 VI/s 以上代表 NTSC 遊戲接近 real-time。true null-video 為 60.0 VI/s、Rice no-draw 為 59.98 VI/s，已把主要瓶頸定位到 Rice GL draw 入口與 WebGL 資料提交，而不是 R4300 或一般 DList parsing。
+
+重建 fork 時先執行 `npm run n64:source`，再以 Docker 執行 `npm run n64:build`。production build 會驗證 `artifacts/n64` 的 manifest、64 MiB initial memory，以及帶相同 asset version 的 bundle/Wasm/data 實體檔名；`.gitattributes` 必須將 `*.data` 視為 binary，避免 Git 換行正規化破壞 preload archive。完整 A/B 參數、實測數據與回退條件見 [N64 瀏覽器核心分階段優化計畫](N64_CORE_OPTIMIZATION_PLAN.md)。
 
 #### SNES APU 音效回歸修正
 
