@@ -67,12 +67,12 @@ export function resolveN64BenchmarkConfig(
     : null;
   const enabled = mobileTest !== null || params.get('n64Benchmark') === '1';
   const runtimeOverride = params.get('n64Runtime');
-  const normalMobileStream = !enabled
-    && profile.name !== 'desktop'
-    && runtimeOverride !== 'npm';
-  const runtime = normalMobileStream || mobileTest !== null || runtimeOverride === 'fork'
+  const runtime = mobileTest !== null || runtimeOverride === 'fork'
     ? 'fork'
     : 'npm';
+  const normalMobileStream = !enabled
+    && profile.name !== 'desktop'
+    && runtime === 'fork';
   const defaultEmuMode: N64EmuMode = profile.name === 'ios-high-end' ? 1 : 2;
   if (!enabled) {
     return {
