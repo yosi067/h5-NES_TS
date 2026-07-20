@@ -36,11 +36,11 @@ const archiveSystemByExtension = new Map([
 ]);
 const expectedSystemCounts = {
   nes: 30,
-  gb: 5,
+  gb: 6,
   gg: 4,
   sms: 1,
-  snes: 17,
-  arcade: 17,
+  snes: 44,
+  arcade: 37,
   n64: 6,
 };
 

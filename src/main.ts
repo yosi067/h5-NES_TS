@@ -1305,7 +1305,9 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer, loading
     powerLed?.classList.add('on');
     updateGameLoading(loadingSequence, '正在準備遊戲畫面…');
     await warmUpFbNeoVideo();
+    updateArcadeButtonCount(fbneoCore.getFireButtonCount());
     renderFbNeoFrame();
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
     console.log(`[FBNeo] ${romSet.gameName} loaded: ${width}x${height}${arcadeRotation === 'none' ? '' : ` rotated-${arcadeRotation}`}`);
     showToast(`FBNeo: ${romSet.gameName} OK`);
     startEmulation();
@@ -2417,6 +2419,7 @@ function startFbNeoEmulation(): void {
   const targetFrameTime = 1000 / 60;
   let lastFrameTime = performance.now();
   let accumulator = 0;
+  let guardedFrames = 180;
 
   const frameLoop = (currentTime: number): void => {
     if (!fbneoCore || !ctx || !imageData || !isRunning || !isFbNeoActive()) return;
@@ -2432,7 +2435,11 @@ function startFbNeoEmulation(): void {
       accumulator -= targetFrameTime;
     }
 
-    renderFrame();
+    const frameBuffer = fbneoCore.getFrameBufferView();
+    if (guardedFrames <= 0 || isPresentableFbNeoFrame(frameBuffer)) {
+      renderFrame();
+    }
+    if (guardedFrames > 0) guardedFrames--;
     animationId = requestAnimationFrame(frameLoop);
   };
 
@@ -2445,7 +2452,6 @@ function isPresentableFbNeoFrame(frameBuffer: Uint8Array): boolean {
   let redTotal = 0;
   let greenTotal = 0;
   let blueTotal = 0;
-  const colors = new Set<number>();
 
   for (let offset = 0; offset < frameBuffer.length; offset += 64) {
     const red = frameBuffer[offset];
@@ -2456,7 +2462,6 @@ function isPresentableFbNeoFrame(frameBuffer: Uint8Array): boolean {
     redTotal += red;
     greenTotal += green;
     blueTotal += blue;
-    if (colors.size < 32) colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4));
   }
 
   if (sampledPixels === 0 || nonBlackPixels < sampledPixels * 0.02) return false;
@@ -2465,8 +2470,7 @@ function isPresentableFbNeoFrame(frameBuffer: Uint8Array): boolean {
   const averageBlue = blueTotal / sampledPixels;
   const greenFlash = averageGreen > 36
     && averageGreen > averageRed * 1.55
-    && averageGreen > averageBlue * 1.55
-    && colors.size < 12;
+    && averageGreen > averageBlue * 1.55;
   return !greenFlash;
 }
 
@@ -2474,13 +2478,13 @@ async function warmUpFbNeoVideo(): Promise<void> {
   if (!fbneoCore) return;
 
   let stableSamples = 0;
-  for (let frame = 0; frame < 600; frame += 6) {
+  for (let frame = 0; frame < 900; frame += 6) {
     for (let step = 0; step < 6; step++) fbneoCore.stepFrame(0, 0);
     fbneoCore.consumeAudioSamples();
 
-    if (frame >= 60 && isPresentableFbNeoFrame(fbneoCore.getFrameBufferView())) {
+    if (frame >= 480 && isPresentableFbNeoFrame(fbneoCore.getFrameBufferView())) {
       stableSamples++;
-      if (stableSamples >= 3) return;
+      if (stableSamples >= 5) return;
     } else {
       stableSamples = 0;
     }
@@ -3021,6 +3025,15 @@ function updateControllerLayout(): void {
     if (n64Ctrl) n64Ctrl.style.display = 'none';
   }
   updateKeyboardGuide();
+}
+
+function updateArcadeButtonCount(buttonCount: number | null): void {
+  document.body.classList.toggle('arcade-no-buttons', buttonCount === 0);
+  document.querySelectorAll<HTMLElement>('#arcade-controller-area .arcade-face-btn').forEach((button, index) => {
+    button.hidden = buttonCount !== null && index >= buttonCount;
+  });
+  const grid = document.querySelector<HTMLElement>('#arcade-controller-area .arcade-face-grid');
+  if (grid) grid.dataset.buttonCount = buttonCount === null ? '6' : String(buttonCount);
 }
 
 function setupArcadeButtons(): void {

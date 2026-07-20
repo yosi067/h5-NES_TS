@@ -219,6 +219,11 @@ export class FbNeoArcadeCore {
     return { width: this.width, height: this.height };
   }
 
+  getFireButtonCount(): number | null {
+    const count = this.module?._getFireButtonCount?.();
+    return typeof count === 'number' && Number.isInteger(count) && count >= 0 && count <= 6 ? count : null;
+  }
+
   stepFrame(p1Input: number, p2Input: number): void {
     const module = this.requireModule();
     module._setEmInput(0, this.toMantouInput(p1Input), 0, 0, 0, 0);

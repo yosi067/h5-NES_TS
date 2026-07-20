@@ -92,6 +92,12 @@
       backdrop-filter: blur(8px);
     }
 
+    #game-loading-overlay {
+      background: #121016;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
     .game-loading-overlay[hidden] {
       display: none;
     }
@@ -991,6 +997,55 @@
       height: 52px;
       font-size: 18px;
     }
+
+    #arcade-controller-area .arcade-stick {
+      position: relative;
+      border-radius: 50%;
+      background: radial-gradient(circle at 50% 50%, #56565e 0 17%, #34343c 18% 36%, #202028 37% 100%);
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.38));
+    }
+
+    #arcade-controller-area .arcade-stick-touch {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      border-radius: 50%;
+      touch-action: none;
+    }
+
+    #arcade-controller-area .arcade-stick-knob {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 42%;
+      height: 42%;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: linear-gradient(145deg, #a9a99a, #737368);
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.24), inset 0 -3px 5px rgba(0,0,0,0.38);
+      pointer-events: none;
+    }
+
+    #arcade-controller-area .arcade-stick-arrow {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: rgba(255,255,255,0.42);
+      font-size: 12px;
+      font-weight: bold;
+      pointer-events: none;
+    }
+
+    #arcade-controller-area .arcade-stick-arrow.pressed {
+      color: #8bd4ff;
+      text-shadow: 0 0 8px #8bd4ff;
+    }
+
+    .arcade-stick-up { top: 8px; left: 50%; transform: translateX(-50%); }
+    .arcade-stick-down { bottom: 8px; left: 50%; transform: translateX(-50%); }
+    .arcade-stick-left { left: 10px; top: 50%; transform: translateY(-50%); }
+    .arcade-stick-right { right: 10px; top: 50%; transform: translateY(-50%); }
 
     .arcade-panel {
       display: flex;
@@ -3096,13 +3151,22 @@
 
       body.arcade-mode.arcade-vertical-mode #screen {
         width: auto;
+        height: min(52dvh, calc(var(--app-height, 100dvh) - 320px));
         max-width: 95vw;
-        max-height: max(220px, calc(var(--app-height, 100dvh) - 300px));
+        max-height: none;
       }
 
       body.arcade-mode.arcade-vertical-mode .screen-bezel {
         width: fit-content;
         max-width: calc(95vw + 16px);
+      }
+
+      body.arcade-mode.arcade-no-buttons #arcade-controller-area {
+        justify-content: center;
+      }
+
+      body.arcade-mode.arcade-no-buttons #arcade-controller-area .arcade-panel {
+        display: none;
       }
 
       body.n64-mode.n64-initializing #canvas {
@@ -5282,15 +5346,13 @@
       <!-- === Arcade 控制器 === -->
       <div id="arcade-controller-area" style="display:none; width:100%;">
         <div class="dpad-container">
-          <div class="dpad" id="arcade-dpad">
-            <div class="dpad-touch-area" id="arcade-dpad-touch-area"></div>
-            <div class="dpad-visual">
-              <div class="dpad-btn dpad-up" id="arcade-dpad-up"><span class="dpad-arrow">▲</span></div>
-              <div class="dpad-btn dpad-left" id="arcade-dpad-left"><span class="dpad-arrow">◀</span></div>
-              <div class="dpad-center"></div>
-              <div class="dpad-btn dpad-right" id="arcade-dpad-right"><span class="dpad-arrow">▶</span></div>
-              <div class="dpad-btn dpad-down" id="arcade-dpad-down"><span class="dpad-arrow">▼</span></div>
-            </div>
+          <div class="dpad arcade-stick" id="arcade-dpad">
+            <div class="arcade-stick-touch" id="arcade-dpad-touch-area"></div>
+            <div class="arcade-stick-knob"></div>
+            <span class="arcade-stick-arrow arcade-stick-up" id="arcade-dpad-up">▲</span>
+            <span class="arcade-stick-arrow arcade-stick-down" id="arcade-dpad-down">▼</span>
+            <span class="arcade-stick-arrow arcade-stick-left" id="arcade-dpad-left">◀</span>
+            <span class="arcade-stick-arrow arcade-stick-right" id="arcade-dpad-right">▶</span>
           </div>
         </div>
         <div class="arcade-panel">
