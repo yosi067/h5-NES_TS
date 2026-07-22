@@ -627,18 +627,24 @@ pub struct Apu {
     sample_counter: f64,
     /// 取樣間隔（每個取樣之間的 CPU 週期數）
     sample_interval: f64,
+    /// 兩個輸出取樣點之間的混音累加值，用於降採樣前抗混疊
+    sample_accumulator: f64,
+    sample_accumulator_count: u32,
     /// 音頻輸出緩衝區
     pub audio_buffer: Vec<f32>,
     /// 緩衝區寫入位置
     buffer_write_pos: usize,
 
     // 濾波器（減少爆音和直流偏移）
-    /// 低通濾波器累加器
+    /// 類比濾波器狀態與依取樣率計算的係數
     filter_accumulator: f32,
-    /// 高通濾波器前一個輸入值
-    highpass_prev: f32,
-    /// 高通濾波器前一個輸出值
-    highpass_output: f32,
+    highpass_90_prev: f32,
+    highpass_90_output: f32,
+    highpass_440_prev: f32,
+    highpass_440_output: f32,
+    lowpass_coeff: f32,
+    highpass_90_coeff: f32,
+    highpass_440_coeff: f32,
 
     /// DMC 記憶體讀取請求（需要由匯流排處理）
     pub dmc_read_request: Option<u16>,
@@ -663,11 +669,18 @@ impl Apu {
             sample_rate: 44100.0,
             sample_counter: 0.0,
             sample_interval: CPU_CLOCK_RATE / 44100.0,
+            sample_accumulator: 0.0,
+            sample_accumulator_count: 0,
             audio_buffer: vec![0.0; AUDIO_BUFFER_SIZE],
             buffer_write_pos: 0,
             filter_accumulator: 0.0,
-            highpass_prev: 0.0,
-            highpass_output: 0.0,
+            highpass_90_prev: 0.0,
+            highpass_90_output: 0.0,
+            highpass_440_prev: 0.0,
+            highpass_440_output: 0.0,
+            lowpass_coeff: Self::lowpass_coeff(14_000.0, 44_100.0),
+            highpass_90_coeff: Self::highpass_coeff(90.0, 44_100.0),
+            highpass_440_coeff: Self::highpass_coeff(440.0, 44_100.0),
             dmc_read_request: None,
         }
     }
@@ -685,16 +698,24 @@ impl Apu {
         self.pending_frame_counter_write = None;
         self.cycle = 0;
         self.sample_counter = 0.0;
+        self.sample_accumulator = 0.0;
+        self.sample_accumulator_count = 0;
         self.buffer_write_pos = 0;
         self.filter_accumulator = 0.0;
-        self.highpass_prev = 0.0;
-        self.highpass_output = 0.0;
+        self.highpass_90_prev = 0.0;
+        self.highpass_90_output = 0.0;
+        self.highpass_440_prev = 0.0;
+        self.highpass_440_output = 0.0;
     }
 
     /// 設定取樣率
     pub fn set_sample_rate(&mut self, rate: f64) {
+        let rate = rate.clamp(8_000.0, 192_000.0);
         self.sample_rate = rate;
         self.sample_interval = CPU_CLOCK_RATE / rate;
+        self.lowpass_coeff = Self::lowpass_coeff(14_000.0, rate);
+        self.highpass_90_coeff = Self::highpass_coeff(90.0, rate);
+        self.highpass_440_coeff = Self::highpass_coeff(440.0, rate);
     }
 
     // ===== 暫存器讀寫 =====
@@ -801,7 +822,9 @@ impl Apu {
         // 幀計數器
         self.clock_frame_counter();
 
-        // 音頻取樣
+        // 在 CPU 時脈域先積分，再降採樣，避免高頻方波直接抽樣造成混疊。
+        self.sample_accumulator += self.mix() as f64;
+        self.sample_accumulator_count += 1;
         self.sample_counter += 1.0;
         if self.sample_counter >= self.sample_interval {
             self.sample_counter -= self.sample_interval;
@@ -967,25 +990,35 @@ impl Apu {
 
     // ===== 混音與輸出 =====
 
+    fn lowpass_coeff(cutoff: f64, sample_rate: f64) -> f32 {
+        (1.0 - (-2.0 * std::f64::consts::PI * cutoff / sample_rate).exp()) as f32
+    }
+
+    fn highpass_coeff(cutoff: f64, sample_rate: f64) -> f32 {
+        (-2.0 * std::f64::consts::PI * cutoff / sample_rate).exp() as f32
+    }
+
     /// 輸出一個音頻取樣到緩衝區
     fn output_sample(&mut self) {
-        let mut sample = self.mix();
+        let count = self.sample_accumulator_count.max(1) as f64;
+        let mut sample = (self.sample_accumulator / count) as f32;
+        self.sample_accumulator = 0.0;
+        self.sample_accumulator_count = 0;
 
-        // 低通濾波器（模擬 NES 類比輸出 RC 濾波器）
-        // fc ≈ 14 kHz (α = e^(-2π×14000/44100) ≈ 0.14)
-        // 原始值 0.9 截止頻率僅 ~741 Hz，嚴重衰減 NES 音頻
-        const LOWPASS_COEFF: f32 = 0.14;
-        self.filter_accumulator = self.filter_accumulator * LOWPASS_COEFF +
-                                  sample * (1.0 - LOWPASS_COEFF);
-        sample = self.filter_accumulator;
-
-        // 高通濾波器（移除直流偏移，fc ≈ 28 Hz）
-        const HIGHPASS_COEFF: f32 = 0.996;
+        // NES 類比輸出常用近似：90 Hz、440 Hz 高通，再接 14 kHz 低通。
         let input = sample;
-        self.highpass_output = HIGHPASS_COEFF * self.highpass_output +
-                               input - self.highpass_prev;
-        self.highpass_prev = input;
-        sample = self.highpass_output;
+        self.highpass_90_output = self.highpass_90_coeff *
+            (self.highpass_90_output + input - self.highpass_90_prev);
+        self.highpass_90_prev = input;
+
+        let input = self.highpass_90_output;
+        self.highpass_440_output = self.highpass_440_coeff *
+            (self.highpass_440_output + input - self.highpass_440_prev);
+        self.highpass_440_prev = input;
+        sample = self.highpass_440_output;
+
+        self.filter_accumulator += self.lowpass_coeff * (sample - self.filter_accumulator);
+        sample = self.filter_accumulator;
 
         // 保留 headroom，避免額外增益與削波改變 NESdev mixer 的聲道比例。
         sample *= 0.95;

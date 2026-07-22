@@ -556,6 +556,8 @@ let romCatalog: RomInfo[] = [];
 
 // ===== 音頻設定 =====
 let audioMuted: boolean = false;    // 靜音旗標（同時停用 APU IRQ）
+const NES_OVERSCAN_TOP = 8;
+const NES_OVERSCAN_BOTTOM = 8;
 
 // ===== 初始化 =====
 
@@ -1362,15 +1364,17 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
     const coreType = nes.getCoreType();
     const screenW = nes.getScreenWidth();
     const screenH = nes.getScreenHeight();
+    const displayH = coreType === 'nes'
+      ? screenH - NES_OVERSCAN_TOP - NES_OVERSCAN_BOTTOM
+      : screenH;
     console.log(`ROM 載入成功 [${coreType.toUpperCase()}] ${screenW}×${screenH}，開始執行`);
 
     // 更新 Canvas 與 ImageData 為對應尺寸
     if (canvas && ctx) {
       canvas.width = screenW;
-      canvas.height = screenH;
-      imageData = ctx.createImageData(screenW, screenH);
-      // 更新 CSS aspect-ratio (NES = 256:240 ≈ 4:3, GB = 160:144 = 10:9)
-      canvas.style.aspectRatio = `${screenW} / ${screenH}`;
+      canvas.height = displayH;
+      imageData = ctx.createImageData(screenW, displayH);
+      canvas.style.aspectRatio = coreType === 'nes' ? '4 / 3' : `${screenW} / ${displayH}`;
     }
     
     // 隱藏選擇器，顯示遊戲畫面
@@ -2529,8 +2533,14 @@ function renderFrame(): void {
   const ptr = nes.getFrameBufferPtr();
   const len = nes.getFrameBufferLen();
   const frameBuffer = new Uint8Array(memory.buffer, ptr, len);
-  
-  imageData.data.set(frameBuffer);
+
+  if (nes.getCoreType() === 'nes') {
+    const rowStride = nes.getScreenWidth() * 4;
+    const visibleStart = NES_OVERSCAN_TOP * rowStride;
+    imageData.data.set(frameBuffer.subarray(visibleStart, visibleStart + imageData.data.length));
+  } else {
+    imageData.data.set(frameBuffer);
+  }
   ctx.putImageData(imageData, 0, 0);
 }
 

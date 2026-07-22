@@ -3,6 +3,8 @@ class EmulatorAudioProcessor extends AudioWorkletProcessor {
     super();
     this.chunks = [];
     this.chunkOffset = 0;
+    this.bufferedSamples = 0;
+    this.primed = false;
     this.lastSample = 0;
     this.running = false;
     this.muted = false;
@@ -12,8 +14,10 @@ class EmulatorAudioProcessor extends AudioWorkletProcessor {
       if (message.type === 'samples') {
         if (!this.muted && message.samples.length > 0) {
           this.chunks.push(message.samples);
+          this.bufferedSamples += message.samples.length;
           while (this.chunks.length > 24) {
-            this.chunks.shift();
+            const dropped = this.chunks.shift();
+            this.bufferedSamples -= dropped.length - this.chunkOffset;
             this.chunkOffset = 0;
           }
         }
@@ -30,21 +34,33 @@ class EmulatorAudioProcessor extends AudioWorkletProcessor {
   clearQueue() {
     this.chunks.length = 0;
     this.chunkOffset = 0;
+    this.bufferedSamples = 0;
+    this.primed = false;
     this.lastSample = 0;
   }
 
   nextSample() {
+    if (!this.primed) {
+      if (this.bufferedSamples < 1024) {
+        this.lastSample *= 0.995;
+        return this.lastSample;
+      }
+      this.primed = true;
+    }
+
     while (this.chunks.length > 0) {
       const chunk = this.chunks[0];
       if (this.chunkOffset < chunk.length) {
         this.lastSample = chunk[this.chunkOffset++];
+        this.bufferedSamples--;
         return this.lastSample;
       }
       this.chunks.shift();
       this.chunkOffset = 0;
     }
 
-    this.lastSample *= 0.999;
+    this.primed = false;
+    this.lastSample *= 0.995;
     return this.lastSample;
   }
 
