@@ -23,7 +23,8 @@ import {
   resolveN64BenchmarkConfig,
   type N64BenchmarkSession,
 } from './n64/benchmark';
-import { getN64RuntimeAssetUrl } from './n64/runtime-assets';
+import { getN64RuntimeAssetUrl, getN64RuntimeImportUrl } from './n64/runtime-assets';
+import { getRomAssetUrl, hasN64RomMagic } from './rom-assets';
 import { createN64Telemetry } from './n64/telemetry';
 
 type N64EmulatorControls = EmulatorControls & {
@@ -265,6 +266,12 @@ let n64Telemetry = createN64Telemetry({
       `${(report.rectDrawMs / report.viCount).toFixed(1)} ms, calls/VI ` +
       `${(report.triangleDrawCalls / report.viCount).toFixed(1)}/` +
       `${(report.rectDrawCalls / report.viCount).toFixed(1)}, ` +
+      `tri prepare/upload/submit/restore/other ` +
+      `${(report.trianglePrepareMs / report.viCount).toFixed(2)}/` +
+      `${(report.triangleUploadMs / report.viCount).toFixed(2)}/` +
+      `${(report.triangleSubmitMs / report.viCount).toFixed(2)}/` +
+      `${(report.triangleRestoreMs / report.viCount).toFixed(2)}/` +
+      `${(report.triangleOtherMs / report.viCount).toFixed(2)} ms, ` +
       `audio underruns ${report.audioUnderruns}`,
     );
 
@@ -293,6 +300,12 @@ let n64Telemetry = createN64Telemetry({
         `${summary.averageRectDrawMs.toFixed(1)} ms, calls/VI ` +
         `${summary.averageTriangleDrawCalls.toFixed(1)}/` +
         `${summary.averageRectDrawCalls.toFixed(1)}, ` +
+        `tri prepare/upload/submit/restore/other ` +
+        `${summary.averageTrianglePrepareMs.toFixed(2)}/` +
+        `${summary.averageTriangleUploadMs.toFixed(2)}/` +
+        `${summary.averageTriangleSubmitMs.toFixed(2)}/` +
+        `${summary.averageTriangleRestoreMs.toFixed(2)}/` +
+        `${summary.averageTriangleOtherMs.toFixed(2)} ms, ` +
         `audio underruns ${summary.audioUnderruns}, ` +
         `sample ${(summary.elapsedMs / 1000).toFixed(1)} s`,
       );
@@ -1133,7 +1146,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
   try {
     // 使用 Vite 的 BASE_URL 確保在 GitHub Pages 等子目錄部署時路徑正確
     const baseUrl = import.meta.env.BASE_URL;
-    const response = await fetch(`${baseUrl}roms/${encodeURIComponent(filename)}`);
+    const response = await fetch(getRomAssetUrl(baseUrl, filename));
     if (!response.ok) {
       throw new Error(`無法載入 ROM: ${filename}`);
     }
@@ -1408,6 +1421,10 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
 }
 
 async function startN64Game(romData: ArrayBuffer): Promise<void> {
+  if (!hasN64RomMagic(romData)) {
+    throw new Error(`無效的 N64 ROM 資料: ${currentRomFilename}`);
+  }
+
   if (!canvas) return;
 
   stopEmulation();
@@ -1486,7 +1503,7 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
     const baseUrl = import.meta.env.BASE_URL;
     await ensureMupen64Config(baseUrl, n64PerformanceProfile);
     const runtimeModule: typeof import('mupen64plus-web') = useRebuiltRuntime
-      ? await import(/* @vite-ignore */ getN64RuntimeAssetUrl(baseUrl, 'main.bundle.js', true))
+      ? await import(/* @vite-ignore */ getN64RuntimeImportUrl(document.baseURI, baseUrl))
       : await import('mupen64plus-web');
     const createMupen64PlusWeb = runtimeModule.default;
     console.info(`[N64] runtime: ${useRebuiltRuntime ? 'rebuilt fork' : 'npm 1.5.7'}`);
@@ -1514,6 +1531,10 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
         audioMs?: number,
         triangleDrawMs?: number,
         rectDrawMs?: number,
+        trianglePrepareMs?: number,
+        triangleUploadMs?: number,
+        triangleSubmitMs?: number,
+        triangleRestoreMs?: number,
         triangleDrawCalls?: number,
         rectDrawCalls?: number,
         audioUnderruns?: number,
@@ -1526,6 +1547,10 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
         audioMs,
         triangleDrawMs,
         rectDrawMs,
+        trianglePrepareMs,
+        triangleUploadMs,
+        triangleSubmitMs,
+        triangleRestoreMs,
         triangleDrawCalls,
         rectDrawCalls,
         audioUnderruns,

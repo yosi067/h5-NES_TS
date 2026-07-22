@@ -7,9 +7,9 @@
 - 每階段先用 Super Mario 64、Mario Kart 64 與 Ocarina of Time 驗證，再決定是否進入下一階段。
 - 效能以穩態 VI/s、平均/最長 VI、long VI 與 recompiles 判斷，不以主觀畫面順暢度取代數據。
 
-## 目前決策摘要（2026-07-19）
+## 目前決策摘要（2026-07-22）
 
-**目前位置**：階段 1 與階段 2 已完成。triangle streaming ring已通過iPhone A/B並保留；rectangle ring與較大iOS audio buffers均未達門檻。下一步回到renderer batching與同步等待，先做本機可驗證的大型調整。
+**目前位置**：階段 1 與階段 2 已完成。triangle streaming ring 已通過 iPhone A/B 並保留；rectangle ring 與較大 iOS audio buffers 均未達門檻。Rice triangle draw 已細分為 prepare、upload、submit、restore 與 other，下一步依手機固定場景的 dominant phase 選擇單一 renderer A/B。
 
 **已確認結論**：
 
@@ -21,6 +21,8 @@
 - rectangle full實測為37.7 VI/s、22.0 ms/VI、18.4 ms rectangle與449 underruns；相較stream的38.22 VI/s、21.39 ms、18.36 ms與290 underruns沒有客觀收益，因此不採用rectangle ring。使用者主觀感受整體較好但仍有輕微爆音，這可能是run-to-run狀態差異，不能推翻獨立draw指標與underrun結果。
 - SDL audio callback在資料不足時不再捨棄整個輸出區塊，會先播放可產生的樣本，只將不足尾端補靜音。4096/2048 audio buffer實測為37.9 VI/s、21.7 ms/VI與435 underruns，沒有優於stream的290次，使用者也感覺延遲稍增且體感沒有改善，因此否決並維持iOS 3072/1024。
 - N64 canvas在SDL/Rice初始化期間固定為profile尺寸，第一個VI開始後才鎖定WebGL backing並恢復responsive CSS，避免CSS顯示尺寸把手機backing改成390x292而造成上方/右側錯位。app AudioWorklet與N64 SDL各自的AudioContext都由persistent gesture、第一個VI及頁面回到visible時恢復；fork control必須使用`Module.SDL2.audioContext`。
+- Rice persistent triangle draw 現在於 C 端累加 prepare、buffer upload、draw submit 與 client-pointer restore，沿用每 VI 一次的 telemetry crossing；`other` 由 triangle total 扣除四個 phase 得出。production fork 的 Super Mario 64 與 Mario Kart 64 均已收到非零 phase report，後者穩態 smoke 達 60.2 VI/s，且兩者都沒有 page/backend error。
+- Ocarina of Time 未進入第一個 VI 的根因不是核心：`encodeURIComponent()` 將檔名逗號編成`%2C`後，Vite preview 未命中 production ROM 檔並以`index.html`回退，導致 Mupen 收到157,967 bytes HTML並回報`open_rom(): not a valid ROM image`。ROM URL 現只將逗號保留為合法字元，且 N64 啟動前驗證三種 byte-order magic；fork 的`emuMode=1/2`均已進入標題畫面並持續產生 phase report。
 
 | Super Mario 64路徑 | VI/s | VI average | DList | 結論 |
 | --- | ---: | ---: | ---: | --- |
@@ -34,7 +36,7 @@
 **下一輪量測**：
 
 1. baseline、stream、full與audio判定均已完成，目前不再要求手機短測；triangle stream作為後續唯一比較基準。
-2. 下一個大型調整先以現有draw telemetry細分driver draw/同步等待並評估跨draw batching；完成本機重建、三款遊戲smoke test後才安排一次手機驗收。
+2. 下一次手機固定場景先收集 triangle phase：upload 最大時調整 ring/orphan/upload 策略；restore 最大時保留 VBO state 並延後 client-pointer restoration；submit 最大時評估 draw batching 與 state consolidation；other 最大時再細分外層 `RenderFlushTris` state setup。每次只啟用一種改動。
 3. iOS維持3072/1024與partial-underrun輸出。15分鐘手機穩定性留到最終驗收，不再測更大的SDL buffers。
 4. 若低風險WebGL項目仍無法把Rice降到約10.55 ms/VI，建立單一固定場景的WebGPU prototype；只有整體提升至少20%且三款遊戲無阻斷性圖形錯誤，才考慮擴大。
 
@@ -80,6 +82,8 @@
 - iPhone Super Mario 64 true null-video達60.0 VI/s、6.13 ms average、9 ms max且無long VI；DList/RDP/present均為0。Rice移除後已達原生VI速率，確認目前首要瓶頸是Rice DList路徑，不是R4300或Safari Wasm吞吐量。60 VI/s的renderer預算約10.55 ms/VI，Rice目前28.08 ms，需降低至少62.4%。下一步先分離command parsing、texture/shader state與GL draw成本，再決定優化Rice backend或替換renderer。
 - iPhone Super Mario 64 Rice no-draw達59.98 VI/s、12.19 ms average；DList只剩0.24 ms。相較正常Rice DList 28.08 ms，約27.84 ms/VI集中在主要GL draw入口及其周邊WebGL資料提交，parser/ucode/texture/state不是首要瓶頸。正常Rice benchmark現會分別回報triangle/rectangle draw時間與calls/VI；用結果判斷優先導入persistent VBO/EBO或draw batching。WebGPU延後到WebGL backend低風險項目無法達標時。
 - triangle ring的iPhone A/B已通過：baseline/stream分別為16.71/38.22 VI/s、48.16/18.70 ms DList與706/290 underruns。第二個36-byte rectangle ring現由`PersistentRectBuffers`獨立控制；桌面full固定樣本為57.04 VI/s、17.22 ms average、1.01 ms DList、0.013 ms rectangle與6 underruns，3D標題畫面正常。桌面結果僅證明功能與telemetry，不取代一次iPhone full判定。
+- persistent triangle telemetry 已在 Rice draw 內細分 prepare/upload/submit/restore，並由 total 推導 other；core timing ABI、pure interpreter ABI、TypeScript window report 與 benchmark summary 同步擴充。Super Mario 64 production smoke 的第二個 report 為49.0 VI/s，phase為0.02/0.08/0.06/0.04/0.10 ms；Mario Kart 64為60.2 VI/s，phase為0.02/0.05/0.04/0.03/0.08 ms。這些桌面啟動數據只驗證欄位與runtime，不取代手機固定場景判定。
+- production rebuilt runtime 的 dynamic import URL 改以 `document.baseURI` 解析，避免 Vite `BASE_URL='./'` 從 hashed JS 所在的`/assets/`目錄誤載`/assets/n64-fork/`；本機相對 base 與 GitHub Pages repository base 均有單元測試。
 - SDL backend的既有`underrun_count`現以累積值送入telemetry，由TypeScript跨VI計算增量，避免漏掉兩個VI之間執行的主執行緒audio callback。資料不足時改為播放可安全resample的前段，只把尾端補靜音，降低整塊callback靜音造成的破碎；`[N64 perf]`與benchmark JSON新增`audioUnderruns`。
 - 2026-07-19重新驗收時，588-page artifact可在`start()`的Asyncify rewind穩定重現Wasm `memory access out of bounds`。fork加入telemetry、renderer與SDL修正後需要比npm baseline更大的啟動空間；固定64 MiB initial memory後同一路徑不再越界，build manifest與Vite production gate會共同防止舊artifact再次部署。
 - 版本化相容 patch 將 `INITIAL_HEAP` / `STACK_SIZE` link settings 對應為 Emscripten 3.1.25 的 `INITIAL_MEMORY` / `TOTAL_STACK`，並明確固定 npm artifact 實際使用的 588-page initial memory。

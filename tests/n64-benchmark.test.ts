@@ -40,6 +40,11 @@ function report(overrides: Partial<N64TelemetryReport> = {}): N64TelemetryReport
     audioMs: 20,
     triangleDrawMs: 60,
     rectDrawMs: 30,
+    trianglePrepareMs: 10,
+    triangleUploadMs: 20,
+    triangleSubmitMs: 15,
+    triangleRestoreMs: 5,
+    triangleOtherMs: 10,
     triangleDrawCalls: 500,
     rectDrawCalls: 200,
     audioUnderruns: 2,
@@ -212,6 +217,11 @@ describe('N64 benchmark controls', () => {
     expect(event.summary.averageDlistMs).toBeCloseTo(0.89, 2);
     expect(event.summary.averageTriangleDrawMs).toBeCloseTo(1.33, 2);
     expect(event.summary.averageRectDrawMs).toBeCloseTo(0.67, 2);
+    expect(event.summary.averageTrianglePrepareMs).toBeCloseTo(0.22, 2);
+    expect(event.summary.averageTriangleUploadMs).toBeCloseTo(0.44, 2);
+    expect(event.summary.averageTriangleSubmitMs).toBeCloseTo(0.33, 2);
+    expect(event.summary.averageTriangleRestoreMs).toBeCloseTo(0.11, 2);
+    expect(event.summary.averageTriangleOtherMs).toBeCloseTo(0.22, 2);
     expect(event.summary.averageTriangleDrawCalls).toBeCloseTo(11.11, 2);
     expect(event.summary.averageRectDrawCalls).toBeCloseTo(4.44, 2);
     expect(event.summary.audioUnderruns).toBe(4);

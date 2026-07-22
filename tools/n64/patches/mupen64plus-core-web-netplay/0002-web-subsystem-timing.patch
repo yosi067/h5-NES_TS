@@ -10,6 +10,8 @@ index 86a7d4bd..f59b2b15 100644
 +extern void endStats(uint32_t numRecompiles, double rspMs, double dlistMs,
 +                     double rdpMs, double presentMs, double audioMs,
 +                     double triangleDrawMs, double rectDrawMs,
++                     double trianglePrepareMs, double triangleUploadMs,
++                     double triangleSubmitMs, double triangleRestoreMs,
 +                     uint32_t triangleDrawCalls, uint32_t rectDrawCalls,
 +                     uint32_t audioUnderruns);
 +extern void n64_web_timing_reset(void);
@@ -20,6 +22,10 @@ index 86a7d4bd..f59b2b15 100644
 +extern double n64_web_timing_audio_ms(void);
 +extern double n64_web_timing_triangle_draw_ms(void);
 +extern double n64_web_timing_rect_draw_ms(void);
++extern double n64_web_timing_triangle_prepare_ms(void);
++extern double n64_web_timing_triangle_upload_ms(void);
++extern double n64_web_timing_triangle_submit_ms(void);
++extern double n64_web_timing_triangle_restore_ms(void);
 +extern uint32_t n64_web_timing_triangle_draw_calls(void);
 +extern uint32_t n64_web_timing_rect_draw_calls(void);
 +extern uint32_t n64_web_audio_underruns(void);
@@ -43,6 +49,8 @@ index 86a7d4bd..f59b2b15 100644
 +            n64_web_timing_dlist_ms(), n64_web_timing_rdp_ms(),
 +            n64_web_timing_present_ms(), n64_web_timing_audio_ms(),
 +            n64_web_timing_triangle_draw_ms(), n64_web_timing_rect_draw_ms(),
++            n64_web_timing_triangle_prepare_ms(), n64_web_timing_triangle_upload_ms(),
++            n64_web_timing_triangle_submit_ms(), n64_web_timing_triangle_restore_ms(),
 +            n64_web_timing_triangle_draw_calls(), n64_web_timing_rect_draw_calls(),
 +            n64_web_audio_underruns());
  }
@@ -117,10 +125,10 @@ index 4f6a769d..d3b95dbb 100644
    },
  
 -  endStats: function(numberOfRecompiles) {
-+  endStats: function(numberOfRecompiles, rspMs, dlistMs, rdpMs, presentMs, audioMs, triangleDrawMs, rectDrawMs, triangleDrawCalls, rectDrawCalls, audioUnderruns) {
++  endStats: function(numberOfRecompiles, rspMs, dlistMs, rdpMs, presentMs, audioMs, triangleDrawMs, rectDrawMs, trianglePrepareMs, triangleUploadMs, triangleSubmitMs, triangleRestoreMs, triangleDrawCalls, rectDrawCalls, audioUnderruns) {
      if (Module.endStats) {
 -      Module.endStats(numberOfRecompiles);
-+      Module.endStats(numberOfRecompiles, rspMs, dlistMs, rdpMs, presentMs, audioMs, triangleDrawMs, rectDrawMs, triangleDrawCalls, rectDrawCalls, audioUnderruns);
++      Module.endStats(numberOfRecompiles, rspMs, dlistMs, rdpMs, presentMs, audioMs, triangleDrawMs, rectDrawMs, trianglePrepareMs, triangleUploadMs, triangleSubmitMs, triangleRestoreMs, triangleDrawCalls, rectDrawCalls, audioUnderruns);
      }
    },
  
@@ -154,6 +162,10 @@ index 3d7ef0a8..6bdaa2fb 100644
 +extern void rice_web_draw_timing_reset(void);
 +extern double rice_web_triangle_draw_ms(void);
 +extern double rice_web_rect_draw_ms(void);
++extern double rice_web_triangle_prepare_ms(void);
++extern double rice_web_triangle_upload_ms(void);
++extern double rice_web_triangle_submit_ms(void);
++extern double rice_web_triangle_restore_ms(void);
 +extern uint32_t rice_web_triangle_draw_calls(void);
 +extern uint32_t rice_web_rect_draw_calls(void);
 +extern unsigned int audio_web_underrun_count(void);
@@ -185,6 +197,10 @@ index 3d7ef0a8..6bdaa2fb 100644
 +double n64_web_timing_audio_ms(void) { return web_audio_total; }
 +double n64_web_timing_triangle_draw_ms(void) { return rice_web_triangle_draw_ms(); }
 +double n64_web_timing_rect_draw_ms(void) { return rice_web_rect_draw_ms(); }
++double n64_web_timing_triangle_prepare_ms(void) { return rice_web_triangle_prepare_ms(); }
++double n64_web_timing_triangle_upload_ms(void) { return rice_web_triangle_upload_ms(); }
++double n64_web_timing_triangle_submit_ms(void) { return rice_web_triangle_submit_ms(); }
++double n64_web_timing_triangle_restore_ms(void) { return rice_web_triangle_restore_ms(); }
 +uint32_t n64_web_timing_triangle_draw_calls(void) { return rice_web_triangle_draw_calls(); }
 +uint32_t n64_web_timing_rect_draw_calls(void) { return rice_web_rect_draw_calls(); }
 +uint32_t n64_web_audio_underruns(void)

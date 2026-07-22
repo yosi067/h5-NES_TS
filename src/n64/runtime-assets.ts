@@ -15,3 +15,13 @@ export function getN64RuntimeAssetUrl(
   const fileName = useRebuiltRuntime ? getN64RebuiltAssetFileName(path) : path;
   return `${baseUrl}${directory}/${fileName}`;
 }
+
+export function getN64RuntimeImportUrl(
+  documentBaseUrl: string,
+  baseUrl: string,
+): string {
+  return new URL(
+    getN64RuntimeAssetUrl(baseUrl, 'main.bundle.js', true),
+    documentBaseUrl,
+  ).href;
+}

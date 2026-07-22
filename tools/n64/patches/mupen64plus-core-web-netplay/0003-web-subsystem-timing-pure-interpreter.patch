@@ -6,7 +6,9 @@ index 2265d63a..00000000 100644
 -extern void endStats(uint32_t numRecompiles);
 +extern void endStats(uint32_t numRecompiles, double rspMs, double dlistMs,
 +double rdpMs, double presentMs, double audioMs, double triangleDrawMs,
-+double rectDrawMs, uint32_t triangleDrawCalls, uint32_t rectDrawCalls,
++double rectDrawMs, double trianglePrepareMs, double triangleUploadMs,
++double triangleSubmitMs, double triangleRestoreMs,
++uint32_t triangleDrawCalls, uint32_t rectDrawCalls,
 +uint32_t audioUnderruns);
 +extern void n64_web_timing_reset(void);
 +extern double n64_web_timing_rsp_ms(void);
@@ -16,6 +18,10 @@ index 2265d63a..00000000 100644
 +extern double n64_web_timing_audio_ms(void);
 +extern double n64_web_timing_triangle_draw_ms(void);
 +extern double n64_web_timing_rect_draw_ms(void);
++extern double n64_web_timing_triangle_prepare_ms(void);
++extern double n64_web_timing_triangle_upload_ms(void);
++extern double n64_web_timing_triangle_submit_ms(void);
++extern double n64_web_timing_triangle_restore_ms(void);
 +extern uint32_t n64_web_timing_triangle_draw_calls(void);
 +extern uint32_t n64_web_timing_rect_draw_calls(void);
 +extern uint32_t n64_web_audio_underruns(void);
@@ -26,5 +32,7 @@ index 2265d63a..00000000 100644
 +endStats(0, n64_web_timing_rsp_ms(), n64_web_timing_dlist_ms(),
 +n64_web_timing_rdp_ms(), n64_web_timing_present_ms(),
 +n64_web_timing_audio_ms(), n64_web_timing_triangle_draw_ms(),
-+n64_web_timing_rect_draw_ms(), n64_web_timing_triangle_draw_calls(),
++n64_web_timing_rect_draw_ms(), n64_web_timing_triangle_prepare_ms(),
++n64_web_timing_triangle_upload_ms(), n64_web_timing_triangle_submit_ms(),
++n64_web_timing_triangle_restore_ms(), n64_web_timing_triangle_draw_calls(),
 +n64_web_timing_rect_draw_calls(), n64_web_audio_underruns());

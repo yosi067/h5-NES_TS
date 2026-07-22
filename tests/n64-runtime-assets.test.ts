@@ -3,6 +3,7 @@ import {
   N64_REBUILT_ASSET_VERSION,
   getN64RebuiltAssetFileName,
   getN64RuntimeAssetUrl,
+  getN64RuntimeImportUrl,
 } from '../src/n64/runtime-assets';
 
 describe('N64 runtime asset URLs', () => {
@@ -20,5 +21,12 @@ describe('N64 runtime asset URLs', () => {
   it('leaves npm runtime asset URLs unchanged', () => {
     expect(getN64RuntimeAssetUrl('/h5-NES_TS/', 'index.7f0ebbf78c.wasm', false))
       .toBe('/h5-NES_TS/n64-mupen/index.7f0ebbf78c.wasm');
+  });
+
+  it('resolves a relative Vite base from the document instead of the JS bundle', () => {
+    expect(getN64RuntimeImportUrl('http://127.0.0.1:4173/', './'))
+      .toBe('http://127.0.0.1:4173/n64-fork/main.bundle.7f0ebbf78c-64m2.js');
+    expect(getN64RuntimeImportUrl('https://example.test/h5-NES_TS/', '/h5-NES_TS/'))
+      .toBe('https://example.test/h5-NES_TS/n64-fork/main.bundle.7f0ebbf78c-64m2.js');
   });
 });

@@ -14,7 +14,12 @@ describe('N64 runtime telemetry', () => {
     for (let index = 0; index < 5; index++) {
       telemetry.beginStats();
       time += index === 4 ? 30 : 20;
-      telemetry.endStats(index === 2 ? 3 : 0, 4, 2, 1, 3, 1, 6, 2, 10, 4, (index + 1) * 2);
+      telemetry.endStats(
+        index === 2 ? 3 : 0,
+        4, 2, 1, 3, 1, 6, 2,
+        1, 2, 1.5, 0.5,
+        10, 4, (index + 1) * 2,
+      );
     }
 
     expect(onReport).toHaveBeenCalledOnce();
@@ -31,6 +36,11 @@ describe('N64 runtime telemetry', () => {
       audioMs: 5,
       triangleDrawMs: 30,
       rectDrawMs: 10,
+      trianglePrepareMs: 5,
+      triangleUploadMs: 10,
+      triangleSubmitMs: 7.5,
+      triangleRestoreMs: 2.5,
+      triangleOtherMs: 5,
       triangleDrawCalls: 50,
       rectDrawCalls: 20,
       audioUnderruns: 10,
@@ -50,7 +60,10 @@ describe('N64 runtime telemetry', () => {
     for (const cumulativeUnderruns of [3, 5, 1]) {
       telemetry.beginStats();
       time += 20;
-      telemetry.endStats(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, cumulativeUnderruns);
+      telemetry.endStats(
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, cumulativeUnderruns,
+      );
     }
 
     expect(onReport.mock.calls[0][0].audioUnderruns).toBe(6);

@@ -34,6 +34,11 @@ export interface N64BenchmarkSummary {
   averageAudioMs: number;
   averageTriangleDrawMs: number;
   averageRectDrawMs: number;
+  averageTrianglePrepareMs: number;
+  averageTriangleUploadMs: number;
+  averageTriangleSubmitMs: number;
+  averageTriangleRestoreMs: number;
+  averageTriangleOtherMs: number;
   averageTriangleDrawCalls: number;
   averageRectDrawCalls: number;
   audioUnderruns: number;
@@ -173,6 +178,11 @@ export function createN64BenchmarkSession(
   let audioMs = 0;
   let triangleDrawMs = 0;
   let rectDrawMs = 0;
+  let trianglePrepareMs = 0;
+  let triangleUploadMs = 0;
+  let triangleSubmitMs = 0;
+  let triangleRestoreMs = 0;
+  let triangleOtherMs = 0;
   let triangleDrawCalls = 0;
   let rectDrawCalls = 0;
   let audioUnderruns = 0;
@@ -201,6 +211,11 @@ export function createN64BenchmarkSession(
       audioMs += report.audioMs;
       triangleDrawMs += report.triangleDrawMs;
       rectDrawMs += report.rectDrawMs;
+      trianglePrepareMs += report.trianglePrepareMs;
+      triangleUploadMs += report.triangleUploadMs;
+      triangleSubmitMs += report.triangleSubmitMs;
+      triangleRestoreMs += report.triangleRestoreMs;
+      triangleOtherMs += report.triangleOtherMs;
       triangleDrawCalls += report.triangleDrawCalls;
       rectDrawCalls += report.rectDrawCalls;
       audioUnderruns += report.audioUnderruns;
@@ -225,6 +240,11 @@ export function createN64BenchmarkSession(
           averageAudioMs: viCount === 0 ? 0 : audioMs / viCount,
           averageTriangleDrawMs: viCount === 0 ? 0 : triangleDrawMs / viCount,
           averageRectDrawMs: viCount === 0 ? 0 : rectDrawMs / viCount,
+          averageTrianglePrepareMs: viCount === 0 ? 0 : trianglePrepareMs / viCount,
+          averageTriangleUploadMs: viCount === 0 ? 0 : triangleUploadMs / viCount,
+          averageTriangleSubmitMs: viCount === 0 ? 0 : triangleSubmitMs / viCount,
+          averageTriangleRestoreMs: viCount === 0 ? 0 : triangleRestoreMs / viCount,
+          averageTriangleOtherMs: viCount === 0 ? 0 : triangleOtherMs / viCount,
           averageTriangleDrawCalls: viCount === 0 ? 0 : triangleDrawCalls / viCount,
           averageRectDrawCalls: viCount === 0 ? 0 : rectDrawCalls / viCount,
           audioUnderruns,

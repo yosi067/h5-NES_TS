@@ -53,6 +53,10 @@ index efc7529..0000000 100644
 +
 +static double g_triangleDrawMs;
 +static double g_rectDrawMs;
++static double g_trianglePrepareMs;
++static double g_triangleUploadMs;
++static double g_triangleSubmitMs;
++static double g_triangleRestoreMs;
 +static uint32 g_triangleDrawCalls;
 +static uint32 g_rectDrawCalls;
 +
@@ -104,6 +108,7 @@ index efc7529..0000000 100644
 +
 +    RiceEnsurePersistentBuffers();
 +
++    double phaseStartedAt = emscripten_get_now();
 +    for (size_t i = 0; i < vertexCount; ++i)
 +    {
 +        RiceStreamVertex &target = g_streamVertices[i];
@@ -121,9 +126,11 @@ index efc7529..0000000 100644
 +        target.color[2] = g_oglVtxColors[i][2];
 +        target.color[3] = g_oglVtxColors[i][3];
 +    }
++    g_trianglePrepareMs += emscripten_get_now() - phaseStartedAt;
 +
 +    const size_t uploadSize = vertexCount * sizeof(RiceStreamVertex);
 +    const size_t bufferSize = sizeof(g_streamVertices) * RICE_STREAM_BUFFER_BATCHES;
++    phaseStartedAt = emscripten_get_now();
 +    glBindBuffer(GL_ARRAY_BUFFER, g_streamBuffer);
 +    if (g_streamNeedsOrphan || g_streamWriteOffset + uploadSize > bufferSize)
 +    {
@@ -132,8 +139,10 @@ index efc7529..0000000 100644
 +        g_streamNeedsOrphan = false;
 +    }
 +    glBufferSubData(GL_ARRAY_BUFFER, g_streamWriteOffset, uploadSize, g_streamVertices);
++    g_triangleUploadMs += emscripten_get_now() - phaseStartedAt;
 +
 +    const size_t baseOffset = g_streamWriteOffset;
++    phaseStartedAt = emscripten_get_now();
 +    glVertexAttribPointer(VS_POSITION, 4, GL_FLOAT, GL_FALSE,
 +        sizeof(RiceStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceStreamVertex, position)));
 +    glVertexAttribPointer(VS_FOG, 1, GL_FLOAT, GL_FALSE,
@@ -146,7 +155,9 @@ index efc7529..0000000 100644
 +        sizeof(RiceStreamVertex), (const GLvoid *)(baseOffset + offsetof(RiceStreamVertex, color)));
 +
 +    glDrawArrays(GL_TRIANGLES, 0, vertexCount);
++    g_triangleSubmitMs += emscripten_get_now() - phaseStartedAt;
 +    g_streamWriteOffset += uploadSize;
++    phaseStartedAt = emscripten_get_now();
 +    glBindBuffer(GL_ARRAY_BUFFER, 0);
 +    glVertexAttribPointer(VS_POSITION, 4, GL_FLOAT, GL_FALSE,
 +        sizeof(float) * 5, &(g_vtxProjected5[0][0]));
@@ -158,6 +169,7 @@ index efc7529..0000000 100644
 +        sizeof(TLITVERTEX), &(g_vtxBuffer[0].tcord[1].u));
 +    glVertexAttribPointer(VS_COLOR, 4, GL_UNSIGNED_BYTE, GL_TRUE,
 +        sizeof(uint8) * 4, &(g_oglVtxColors[0][0]));
++    g_triangleRestoreMs += emscripten_get_now() - phaseStartedAt;
 +    return true;
 +}
 +
@@ -242,6 +254,10 @@ index efc7529..0000000 100644
 +{
 +    g_triangleDrawMs = 0.0;
 +    g_rectDrawMs = 0.0;
++    g_trianglePrepareMs = 0.0;
++    g_triangleUploadMs = 0.0;
++    g_triangleSubmitMs = 0.0;
++    g_triangleRestoreMs = 0.0;
 +    g_triangleDrawCalls = 0;
 +    g_rectDrawCalls = 0;
 +    g_streamNeedsOrphan = true;
@@ -250,6 +266,10 @@ index efc7529..0000000 100644
 +
 +extern "C" double rice_web_triangle_draw_ms(void) { return g_triangleDrawMs; }
 +extern "C" double rice_web_rect_draw_ms(void) { return g_rectDrawMs; }
++extern "C" double rice_web_triangle_prepare_ms(void) { return g_trianglePrepareMs; }
++extern "C" double rice_web_triangle_upload_ms(void) { return g_triangleUploadMs; }
++extern "C" double rice_web_triangle_submit_ms(void) { return g_triangleSubmitMs; }
++extern "C" double rice_web_triangle_restore_ms(void) { return g_triangleRestoreMs; }
 +extern "C" uint32 rice_web_triangle_draw_calls(void) { return g_triangleDrawCalls; }
 +extern "C" uint32 rice_web_rect_draw_calls(void) { return g_rectDrawCalls; }
 +#else

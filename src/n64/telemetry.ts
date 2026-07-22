@@ -13,6 +13,11 @@ export interface N64TelemetryReport {
   audioMs: number;
   triangleDrawMs: number;
   rectDrawMs: number;
+  trianglePrepareMs: number;
+  triangleUploadMs: number;
+  triangleSubmitMs: number;
+  triangleRestoreMs: number;
+  triangleOtherMs: number;
   triangleDrawCalls: number;
   rectDrawCalls: number;
   audioUnderruns: number;
@@ -30,6 +35,10 @@ export interface N64Telemetry {
     audioMs?: number,
     triangleDrawMs?: number,
     rectDrawMs?: number,
+    trianglePrepareMs?: number,
+    triangleUploadMs?: number,
+    triangleSubmitMs?: number,
+    triangleRestoreMs?: number,
     triangleDrawCalls?: number,
     rectDrawCalls?: number,
     audioUnderruns?: number,
@@ -63,6 +72,10 @@ export function createN64Telemetry({
   let audioMs = 0;
   let triangleDrawMs = 0;
   let rectDrawMs = 0;
+  let trianglePrepareMs = 0;
+  let triangleUploadMs = 0;
+  let triangleSubmitMs = 0;
+  let triangleRestoreMs = 0;
   let triangleDrawCalls = 0;
   let rectDrawCalls = 0;
   let audioUnderruns = 0;
@@ -83,6 +96,10 @@ export function createN64Telemetry({
     audioMs = 0;
     triangleDrawMs = 0;
     rectDrawMs = 0;
+    trianglePrepareMs = 0;
+    triangleUploadMs = 0;
+    triangleSubmitMs = 0;
+    triangleRestoreMs = 0;
     triangleDrawCalls = 0;
     rectDrawCalls = 0;
     audioUnderruns = 0;
@@ -101,6 +118,10 @@ export function createN64Telemetry({
       viAudioMs = 0,
       viTriangleDrawMs = 0,
       viRectDrawMs = 0,
+      viTrianglePrepareMs = 0,
+      viTriangleUploadMs = 0,
+      viTriangleSubmitMs = 0,
+      viTriangleRestoreMs = 0,
       viTriangleDrawCalls = 0,
       viRectDrawCalls = 0,
       viAudioUnderruns = 0,
@@ -119,6 +140,10 @@ export function createN64Telemetry({
       audioMs += viAudioMs;
       triangleDrawMs += viTriangleDrawMs;
       rectDrawMs += viRectDrawMs;
+      trianglePrepareMs += viTrianglePrepareMs;
+      triangleUploadMs += viTriangleUploadMs;
+      triangleSubmitMs += viTriangleSubmitMs;
+      triangleRestoreMs += viTriangleRestoreMs;
       triangleDrawCalls += viTriangleDrawCalls;
       rectDrawCalls += viRectDrawCalls;
       audioUnderruns += viAudioUnderruns >= lastAudioUnderrunCount
@@ -144,6 +169,12 @@ export function createN64Telemetry({
         audioMs,
         triangleDrawMs,
         rectDrawMs,
+        trianglePrepareMs,
+        triangleUploadMs,
+        triangleSubmitMs,
+        triangleRestoreMs,
+        triangleOtherMs: Math.max(0, triangleDrawMs - trianglePrepareMs
+          - triangleUploadMs - triangleSubmitMs - triangleRestoreMs),
         triangleDrawCalls,
         rectDrawCalls,
         audioUnderruns,
