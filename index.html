@@ -4518,6 +4518,17 @@
       grid-template-rows: minmax(0, 1fr);
     }
 
+    body.mobile-landscape-mode.arcade-mode {
+      --arcade-landscape-side: clamp(126px, 20vw, 170px);
+      --landscape-screen-width: min(calc(100vw - var(--arcade-landscape-side) * 2 - var(--landscape-gap) * 2), calc((var(--app-height, 100dvh) - 4px) * 4 / 3));
+    }
+
+    body.mobile-landscape-mode.arcade-mode .gameboy-shell {
+      display: grid;
+      grid-template-columns: minmax(var(--arcade-landscape-side), 1fr) var(--landscape-screen-width) minmax(var(--arcade-landscape-side), 1fr);
+      grid-template-rows: minmax(0, 1fr);
+    }
+
     body.mobile-landscape-mode .screen-bezel,
     body.mobile-landscape-mode.arcade-mode .screen-bezel {
       flex: 0 1 var(--landscape-screen-width);
@@ -4559,10 +4570,23 @@
       justify-self: center;
     }
 
+    body.mobile-landscape-mode.arcade-mode .screen-bezel {
+      grid-column: 2;
+      grid-row: 1;
+      justify-self: center;
+    }
+
     body.mobile-landscape-mode:not(.arcade-mode) .dpad-container,
     body.mobile-landscape-mode:not(.arcade-mode) .n64-stick-block {
       grid-column: 1;
       grid-row: 1;
+      justify-self: center;
+    }
+
+    body.mobile-landscape-mode.arcade-mode .dpad-container {
+      grid-column: 1;
+      grid-row: 1;
+      width: min(100%, var(--arcade-landscape-side));
       justify-self: center;
     }
 
@@ -4572,6 +4596,28 @@
       grid-column: 3;
       grid-row: 1;
       justify-self: center;
+    }
+
+    body.mobile-landscape-mode.arcade-mode .arcade-panel {
+      grid-column: 3;
+      grid-row: 1;
+      width: min(100%, var(--arcade-landscape-side));
+      min-width: 0;
+      justify-self: center;
+    }
+
+    body.mobile-landscape-mode.arcade-mode .arcade-face-grid:not([data-button-count="4"]) {
+      --arcade-face-size: clamp(36px, 5.5vw, 46px);
+      --arcade-face-gap: clamp(5px, 0.8vw, 8px);
+      grid-template-columns: repeat(3, var(--arcade-face-size));
+      grid-auto-rows: var(--arcade-face-size);
+      gap: var(--arcade-face-gap);
+    }
+
+    body.mobile-landscape-mode.arcade-mode .arcade-face-grid:not([data-button-count="4"]) .arcade-face-btn {
+      width: var(--arcade-face-size);
+      height: var(--arcade-face-size);
+      font-size: 14px;
     }
 
     body.mobile-landscape-mode .dpad,

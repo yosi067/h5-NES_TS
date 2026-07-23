@@ -252,7 +252,7 @@ export default defineConfig({
   // 將 public 目錄設為根目錄
   publicDir: 'public',
   build: {
-    target: 'es2022',
+    target: 'es2018',
     emptyOutDir: true,
     sourcemap: true,
     rollupOptions: {

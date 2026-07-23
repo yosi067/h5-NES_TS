@@ -584,6 +584,9 @@ function setupAppShell(): boolean {
   gameboyShell = document.getElementById('gameboy-shell');
   powerLed = document.getElementById('power-led');
 
+  // 首頁清單不應依賴 Canvas、控制器或音訊 API，部分 Android WebView 可能在後續初始化提早失敗。
+  setupRomSelector();
+
   // 建立畫布
   canvas = document.getElementById('screen') as HTMLCanvasElement;
   if (!canvas) {
@@ -631,9 +634,6 @@ function setupAppShell(): boolean {
   // 設定觸控裝置 RWD 狀態（iPhone Safari 橫版可能仍落在桌機寬度斷點）
   setupResponsiveModeDetection();
   updateKeyboardGuide();
-
-  // 設定 ROM 選擇器
-  setupRomSelector();
 
   // 設定檔案選擇器
   setupFileInput();
@@ -1028,7 +1028,19 @@ async function loadRomList(): Promise<void> {
   try {
     // 使用 Vite 的 BASE_URL 確保在 GitHub Pages 等子目錄部署時路徑正確
     const baseUrl = import.meta.env.BASE_URL;
-    const response = await fetch(`${baseUrl}roms.json`);
+    const primaryUrl = `${baseUrl}roms.json`;
+    const fallbackUrl = new URL('roms.json', window.location.href).href;
+    const fetchCatalog = async (url: string): Promise<Response> => {
+      const timeout = new Promise<never>((_, reject) => {
+        window.setTimeout(() => reject(new Error('ROM 列表載入逾時')), 12000);
+      });
+      return Promise.race([fetch(url, { cache: 'no-store' }), timeout]);
+    };
+
+    let response = await fetchCatalog(primaryUrl);
+    if (!response.ok && fallbackUrl !== new URL(primaryUrl, window.location.href).href) {
+      response = await fetchCatalog(fallbackUrl);
+    }
     if (!response.ok) {
       throw new Error('無法載入 ROM 列表');
     }
