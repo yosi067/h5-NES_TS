@@ -1,5 +1,9 @@
 export const N64_REBUILT_ASSET_VERSION = '7f0ebbf78c-64m2';
 
+export function shouldRetryN64WithNpm(userAgent: string, forceNpmRuntime: boolean): boolean {
+  return !forceNpmRuntime && /Android/i.test(userAgent);
+}
+
 export function getN64RebuiltAssetFileName(path: string): string {
   const extensionIndex = path.lastIndexOf('.');
   if (extensionIndex < 0) return `${path}.${N64_REBUILT_ASSET_VERSION}`;

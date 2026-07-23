@@ -4,6 +4,7 @@ import {
   getN64RebuiltAssetFileName,
   getN64RuntimeAssetUrl,
   getN64RuntimeImportUrl,
+  shouldRetryN64WithNpm,
 } from '../src/n64/runtime-assets';
 
 describe('N64 runtime asset URLs', () => {
@@ -28,5 +29,11 @@ describe('N64 runtime asset URLs', () => {
       .toBe('http://127.0.0.1:4173/n64-fork/main.bundle.7f0ebbf78c-64m2.js');
     expect(getN64RuntimeImportUrl('https://example.test/h5-NES_TS/', '/h5-NES_TS/'))
       .toBe('https://example.test/h5-NES_TS/n64-fork/main.bundle.7f0ebbf78c-64m2.js');
+  });
+
+  it('limits the stable runtime fallback to the first Android failure', () => {
+    expect(shouldRetryN64WithNpm('Mozilla/5.0 (Linux; Android 10)', false)).toBe(true);
+    expect(shouldRetryN64WithNpm('Mozilla/5.0 (Linux; Android 10)', true)).toBe(false);
+    expect(shouldRetryN64WithNpm('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)', false)).toBe(false);
   });
 });

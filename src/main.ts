@@ -23,7 +23,11 @@ import {
   resolveN64BenchmarkConfig,
   type N64BenchmarkSession,
 } from './n64/benchmark';
-import { getN64RuntimeAssetUrl, getN64RuntimeImportUrl } from './n64/runtime-assets';
+import {
+  getN64RuntimeAssetUrl,
+  getN64RuntimeImportUrl,
+  shouldRetryN64WithNpm,
+} from './n64/runtime-assets';
 import { getRomAssetUrl, hasN64RomMagic } from './rom-assets';
 import { createN64Telemetry } from './n64/telemetry';
 import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
@@ -336,6 +340,7 @@ let fbneoCore: FbNeoArcadeCore | null = null;
 let currentFbNeoRomSet: FbNeoRomSet | null = null;
 let arcadeInputP1 = 0;
 let arcadeInputP2 = 0;
+let arcadeGamepadInputP1 = 0;
 let arcadeSourceWidth = 320;
 let arcadeSourceHeight = 240;
 let arcadeRotation: ArcadeRotation = 'none';
@@ -673,15 +678,22 @@ async function waitForWasmCore(): Promise<boolean> {
 }
 
 function setupResponsiveModeDetection(): void {
+  document.body.classList.toggle('android-device-mode', /Android/i.test(navigator.userAgent));
+
   const updateResponsiveMode = () => {
-    const viewportWidth = window.visualViewport?.width ?? window.innerWidth;
-    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+    const visualViewport = window.visualViewport;
+    const viewportWidth = visualViewport?.width ?? window.innerWidth;
+    const viewportHeight = visualViewport?.height ?? window.innerHeight;
+    const viewportOffsetLeft = visualViewport?.offsetLeft ?? 0;
+    const viewportOffsetTop = visualViewport?.offsetTop ?? 0;
     const isLandscape = viewportWidth > viewportHeight;
     const isTouchDevice = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
     const isCompressedLandscape = isLandscape && viewportHeight <= 560;
     const shouldUseMobileLandscape = isTouchDevice && isLandscape && (viewportWidth <= 1180 || isCompressedLandscape);
 
     document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+    document.documentElement.style.setProperty('--visual-viewport-center-x', `${viewportOffsetLeft + viewportWidth / 2}px`);
+    document.documentElement.style.setProperty('--visual-viewport-center-y', `${viewportOffsetTop + viewportHeight / 2}px`);
     document.body.classList.toggle('touch-device-mode', isTouchDevice);
     document.body.classList.toggle('mobile-landscape-mode', shouldUseMobileLandscape);
   };
@@ -771,6 +783,10 @@ const ARCADE_KEYBOARD_MAP: Record<string, number> = {
   'Enter': ArcadeInputBit.Start,
 };
 
+export function mergeArcadeInputSources(directInput: number, gamepadInput: number): number {
+  return directInput | gamepadInput;
+}
+
 function setArcadeInputBit(bit: number, pressed: boolean, player: 1 | 2 = 1): void {
   if (player === 1) {
     arcadeInputP1 = pressed ? (arcadeInputP1 | bit) : (arcadeInputP1 & ~bit);
@@ -789,7 +805,10 @@ function setArcadeKeyboardInput(code: string, pressed: boolean): boolean {
 function pollArcadeGamepads(): void {
   const pads = navigator.getGamepads?.() ?? [];
   const pad = pads[0];
-  if (!pad) return;
+  if (!pad) {
+    arcadeGamepadInputP1 = 0;
+    return;
+  }
 
   const pressed = (index: number) => pad.buttons[index]?.pressed ?? false;
   const axisPressed = (index: number, direction: -1 | 1) => {
@@ -797,7 +816,7 @@ function pollArcadeGamepads(): void {
     return direction < 0 ? value < -0.45 : value > 0.45;
   };
 
-  let mask = arcadeInputP1 & (ArcadeInputBit.Coin | ArcadeInputBit.Start);
+  let mask = 0;
   if (pressed(12) || axisPressed(1, -1)) mask |= ArcadeInputBit.Up;
   if (pressed(13) || axisPressed(1, 1)) mask |= ArcadeInputBit.Down;
   if (pressed(14) || axisPressed(0, -1)) mask |= ArcadeInputBit.Left;
@@ -810,7 +829,7 @@ function pollArcadeGamepads(): void {
   if (pressed(5)) mask |= ArcadeInputBit.ButtonF;
   if (pressed(8)) mask |= ArcadeInputBit.Coin;
   if (pressed(9)) mask |= ArcadeInputBit.Start;
-  arcadeInputP1 = mask;
+  arcadeGamepadInputP1 = mask;
 }
 
 function setupKeyboardInput(): void {
@@ -1292,6 +1311,7 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer, loading
   activeBackend = 'fbneo';
   arcadeInputP1 = 0;
   arcadeInputP2 = 0;
+  arcadeGamepadInputP1 = 0;
   clearAudioQueue();
 
   try {
@@ -1433,7 +1453,7 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
   }
 }
 
-async function startN64Game(romData: ArrayBuffer): Promise<void> {
+async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Promise<void> {
   if (!hasN64RomMagic(romData)) {
     throw new Error(`無效的 N64 ROM 資料: ${currentRomFilename}`);
   }
@@ -1462,7 +1482,7 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
     activeBackend = 'mupen64';
     currentN64RomData = romData;
     const benchmarkConfig = resolveN64BenchmarkConfig(selectN64PerformanceProfile());
-    const useRebuiltRuntime = benchmarkConfig.runtime === 'fork';
+    const useRebuiltRuntime = benchmarkConfig.runtime === 'fork' && !forceNpmRuntime;
     if (benchmarkConfig.enabled) {
       benchmarkConfig.label += useRebuiltRuntime ? '/fork' : '/npm';
       startupDiagnosticLabel = benchmarkConfig.label;
@@ -1621,6 +1641,12 @@ async function startN64Game(romData: ArrayBuffer): Promise<void> {
       postN64Diagnostic('backend-startup-failure', error, startupDiagnosticLabel);
     }
     await stopN64Backend();
+    if (shouldRetryN64WithNpm(navigator.userAgent, forceNpmRuntime)) {
+      console.warn('[N64] rebuilt Android runtime failed; retrying npm 1.5.7 runtime');
+      showToast('N64 相容模式重試中');
+      await startN64Game(romData, true);
+      return;
+    }
     await showRomSelector();
     await showAppAlert('N64 模擬器啟動失敗，請查看主控台錯誤');
   }
@@ -2472,7 +2498,7 @@ function startFbNeoEmulation(): void {
 
     while (accumulator >= targetFrameTime) {
       pollArcadeGamepads();
-      fbneoCore.stepFrame(arcadeInputP1, arcadeInputP2);
+      fbneoCore.stepFrame(mergeArcadeInputSources(arcadeInputP1, arcadeGamepadInputP1), arcadeInputP2);
       enqueueAudioSamples(fbneoCore.consumeAudioSamples());
       accumulator -= targetFrameTime;
     }

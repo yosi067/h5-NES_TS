@@ -1682,6 +1682,17 @@
       font-weight: 700;
     }
 
+    body.android-device-mode .machine-title,
+    body.android-device-mode .machine-meta {
+      display: block;
+      visibility: visible;
+      opacity: 1;
+      color: #1e1712;
+      -webkit-text-fill-color: #1e1712;
+      text-rendering: auto;
+      transform: translateZ(0);
+    }
+
     .machine-count {
       position: absolute;
       top: 0;
@@ -4618,6 +4629,47 @@
       width: var(--arcade-face-size);
       height: var(--arcade-face-size);
       font-size: 14px;
+    }
+
+    body.android-device-mode.mobile-landscape-mode.arcade-mode .screen-bezel {
+      position: fixed;
+      left: var(--visual-viewport-center-x, 50vw);
+      top: var(--visual-viewport-center-y, 50vh);
+      z-index: 2;
+      margin: 0;
+      transform: translate(-50%, -50%);
+    }
+
+    body.android-device-mode.mobile-landscape-mode.arcade-mode .dpad-container,
+    body.android-device-mode.mobile-landscape-mode.arcade-mode .arcade-panel {
+      position: fixed;
+      top: var(--visual-viewport-center-y, 50vh);
+      z-index: 3;
+      transform: translateY(-50%);
+    }
+
+    body.android-device-mode.mobile-landscape-mode.arcade-mode .dpad-container {
+      left: max(4px, env(safe-area-inset-left));
+    }
+
+    body.android-device-mode.mobile-landscape-mode.arcade-mode .arcade-panel {
+      right: max(4px, env(safe-area-inset-right));
+    }
+
+    body.android-device-mode.mobile-landscape-mode.arcade-mode .arcade-face-grid:not([data-button-count="4"]) {
+      --arcade-face-size: clamp(34px, 5.2vw, 44px);
+      --arcade-face-gap: clamp(4px, 0.7vw, 7px);
+    }
+
+    body.android-device-mode.mobile-landscape-mode.arcade-mode .arcade-face-grid[data-button-count="4"] {
+      --arcade-face-size: clamp(40px, 5.8vw, 48px);
+      --arcade-face-gap: clamp(6px, 0.9vw, 9px);
+    }
+
+    body.android-device-mode.mobile-landscape-mode.arcade-mode .arcade-face-grid[data-button-count="4"] .arcade-face-btn {
+      width: var(--arcade-face-size);
+      height: var(--arcade-face-size);
+      font-size: 15px;
     }
 
     body.mobile-landscape-mode .dpad,
