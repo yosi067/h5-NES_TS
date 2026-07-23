@@ -1019,11 +1019,17 @@
       left: 50%;
       width: 42%;
       height: 42%;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%) translate(var(--stick-x, 0px), var(--stick-y, 0px));
       border-radius: 50%;
       background: linear-gradient(145deg, #a9a99a, #737368);
       box-shadow: inset 0 2px 4px rgba(255,255,255,0.24), inset 0 -3px 5px rgba(0,0,0,0.38);
       pointer-events: none;
+      transition: transform 55ms ease-out, box-shadow 90ms ease-out, filter 90ms ease-out;
+    }
+
+    #arcade-controller-area .arcade-stick.engaged .arcade-stick-knob {
+      filter: brightness(1.16);
+      box-shadow: 0 0 20px 6px rgba(91, 199, 255, 0.52), inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -3px 5px rgba(0,0,0,0.38);
     }
 
     #arcade-controller-area .arcade-stick-arrow {
@@ -1091,11 +1097,26 @@
     .arcade-load-btn { background: linear-gradient(180deg, #356da6, #244a78); }
 
     .arcade-face-grid {
+      --arcade-face-size: 60px;
+      --arcade-face-gap: 14px;
       display: grid;
       grid-template-columns: repeat(3, 60px);
       grid-auto-rows: 60px;
       gap: 14px;
     }
+
+    .arcade-face-grid[data-button-count="4"] {
+      position: relative;
+      display: block;
+      width: calc(var(--arcade-face-size) * 3);
+      height: calc(var(--arcade-face-size) * 2 + var(--arcade-face-gap));
+    }
+
+    .arcade-face-grid[data-button-count="4"] .arcade-face-btn { position: absolute; }
+    .arcade-face-grid[data-button-count="4"] .arcade-face-btn:nth-child(1) { left: calc(var(--arcade-face-size) * 2); top: calc((var(--arcade-face-size) + var(--arcade-face-gap)) / 2); }
+    .arcade-face-grid[data-button-count="4"] .arcade-face-btn:nth-child(2) { left: var(--arcade-face-size); top: calc(var(--arcade-face-size) + var(--arcade-face-gap)); }
+    .arcade-face-grid[data-button-count="4"] .arcade-face-btn:nth-child(3) { left: var(--arcade-face-size); top: 0; }
+    .arcade-face-grid[data-button-count="4"] .arcade-face-btn:nth-child(4) { left: 0; top: calc((var(--arcade-face-size) + var(--arcade-face-gap)) / 2); }
 
     .arcade-face-btn {
       width: 60px;
@@ -1129,7 +1150,7 @@
       .arcade-panel { min-width: 204px; gap: 9px; }
       .arcade-system-row { grid-template-columns: repeat(4, 36px); gap: 6px; }
       .arcade-system-btn { width: 36px; height: 27px; font-size: 8px; }
-      .arcade-face-grid { grid-template-columns: repeat(3, 52px); grid-auto-rows: 52px; gap: 10px; }
+      .arcade-face-grid { --arcade-face-size: 52px; --arcade-face-gap: 10px; grid-template-columns: repeat(3, 52px); grid-auto-rows: 52px; gap: 10px; }
       .arcade-face-btn { width: 52px; height: 52px; font-size: 17px; }
     }
 
@@ -1280,11 +1301,17 @@
       left: 50%;
       width: 56px;
       height: 56px;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%, -50%) translate(var(--stick-x, 0px), var(--stick-y, 0px));
       border-radius: 50%;
       background: linear-gradient(145deg, #a9a99a, #737368);
       box-shadow: inset 0 2px 4px rgba(255,255,255,0.24), inset 0 -3px 5px rgba(0,0,0,0.38);
       pointer-events: none;
+      transition: transform 55ms ease-out, box-shadow 90ms ease-out, filter 90ms ease-out;
+    }
+
+    .n64-stick.engaged .n64-stick-knob {
+      filter: brightness(1.16);
+      box-shadow: 0 0 20px 6px rgba(91, 199, 255, 0.52), inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -3px 5px rgba(0,0,0,0.38);
     }
 
     .n64-stick-arrow,
@@ -3576,6 +3603,8 @@
       }
 
       .arcade-face-grid {
+        --arcade-face-size: clamp(44px, 6.6vw, 58px);
+        --arcade-face-gap: clamp(8px, 1.4vw, 13px);
         grid-template-columns: repeat(3, clamp(44px, 6.6vw, 58px));
         grid-auto-rows: clamp(44px, 6.6vw, 58px);
         gap: clamp(8px, 1.4vw, 13px);
@@ -4137,6 +4166,8 @@
     }
 
     body.mobile-landscape-mode .arcade-face-grid {
+      --arcade-face-size: clamp(42px, 6.4vw, 56px);
+      --arcade-face-gap: clamp(7px, 1.2vw, 12px);
       grid-template-columns: repeat(3, clamp(42px, 6.4vw, 56px));
       grid-auto-rows: clamp(42px, 6.4vw, 56px);
       gap: clamp(7px, 1.2vw, 12px);

@@ -26,6 +26,7 @@ import {
 import { getN64RuntimeAssetUrl, getN64RuntimeImportUrl } from './n64/runtime-assets';
 import { getRomAssetUrl, hasN64RomMagic } from './rom-assets';
 import { createN64Telemetry } from './n64/telemetry';
+import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
 
 type N64EmulatorControls = EmulatorControls & {
   resumeAudio?: () => Promise<void>;
@@ -3157,6 +3158,7 @@ function setupArcadeDpad(): void {
 
   let currentState: DpadState = { up: false, down: false, left: false, right: false };
   let mouseDown = false;
+  let pendingStateFrame: number | null = null;
 
   const applyState = (newState: DpadState) => {
     for (const direction of ['up', 'down', 'left', 'right'] as Array<keyof DpadState>) {
@@ -3175,7 +3177,14 @@ function setupArcadeDpad(): void {
     currentState = { ...newState };
   };
 
-  const clearState = () => applyState({ up: false, down: false, left: false, right: false });
+  const clearState = () => {
+    if (pendingStateFrame !== null) cancelAnimationFrame(pendingStateFrame);
+    pendingStateFrame = null;
+    dpad.classList.remove('engaged');
+    dpad.style.setProperty('--stick-x', '0px');
+    dpad.style.setProperty('--stick-y', '0px');
+    applyState({ up: false, down: false, left: false, right: false });
+  };
 
   const calculateState = (clientX: number, clientY: number): DpadState => {
     const rect = dpad.getBoundingClientRect();
@@ -3183,34 +3192,42 @@ function setupArcadeDpad(): void {
     const centerY = rect.top + rect.height / 2;
     const dx = clientX - centerX;
     const dy = clientY - centerY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
     const deadZone = rect.width / 2 * 0.15;
-    const state: DpadState = { up: false, down: false, left: false, right: false };
+    const distance = Math.hypot(dx, dy);
+    const maxTravel = rect.width * 0.24;
+    const travelScale = distance > maxTravel ? maxTravel / distance : 1;
+    dpad.classList.toggle('engaged', distance > deadZone);
+    dpad.style.setProperty('--stick-x', `${dx * travelScale}px`);
+    dpad.style.setProperty('--stick-y', `${dy * travelScale}px`);
+    return quantizeVirtualStick(dx, dy, deadZone);
+  };
 
-    if (distance > deadZone) {
-      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-      if (angle >= -22.5 && angle < 22.5) state.right = true;
-      else if (angle >= 22.5 && angle < 67.5) { state.right = true; state.down = true; }
-      else if (angle >= 67.5 && angle < 112.5) state.down = true;
-      else if (angle >= 112.5 && angle < 157.5) { state.left = true; state.down = true; }
-      else if (angle >= 157.5 || angle < -157.5) state.left = true;
-      else if (angle >= -157.5 && angle < -112.5) { state.left = true; state.up = true; }
-      else if (angle >= -112.5 && angle < -67.5) state.up = true;
-      else if (angle >= -67.5 && angle < -22.5) { state.right = true; state.up = true; }
+  const applyPointerState = (clientX: number, clientY: number) => {
+    const newState = calculateState(clientX, clientY);
+    const bridge = getBridgedDiagonal(currentState, newState);
+    if (pendingStateFrame !== null) cancelAnimationFrame(pendingStateFrame);
+    pendingStateFrame = null;
+    if (!bridge) {
+      applyState(newState);
+      return;
     }
-    return state;
+    applyState(bridge);
+    pendingStateFrame = requestAnimationFrame(() => {
+      pendingStateFrame = null;
+      applyState(newState);
+    });
   };
 
   touchArea.addEventListener('touchstart', (event) => {
     event.preventDefault();
     const touch = event.changedTouches[0];
-    if (touch) applyState(calculateState(touch.clientX, touch.clientY));
+    if (touch) applyPointerState(touch.clientX, touch.clientY);
   }, { passive: false });
 
   touchArea.addEventListener('touchmove', (event) => {
     event.preventDefault();
     const touch = event.changedTouches[0];
-    if (touch) applyState(calculateState(touch.clientX, touch.clientY));
+    if (touch) applyPointerState(touch.clientX, touch.clientY);
   }, { passive: false });
 
   touchArea.addEventListener('touchend', (event) => { event.preventDefault(); clearState(); }, { passive: false });
@@ -3219,11 +3236,11 @@ function setupArcadeDpad(): void {
   touchArea.addEventListener('mousedown', (event) => {
     event.preventDefault();
     mouseDown = true;
-    applyState(calculateState(event.clientX, event.clientY));
+    applyPointerState(event.clientX, event.clientY);
   });
 
   document.addEventListener('mousemove', (event) => {
-    if (mouseDown) applyState(calculateState(event.clientX, event.clientY));
+    if (mouseDown) applyPointerState(event.clientX, event.clientY);
   });
 
   document.addEventListener('mouseup', () => {
@@ -3325,6 +3342,7 @@ function setupN64DirectionalPad(
 
   let currentState: DpadState = { up: false, down: false, left: false, right: false };
   let mouseDown = false;
+  let pendingStateFrame: number | null = null;
 
   const applyState = (newState: DpadState) => {
     for (const direction of ['up', 'down', 'left', 'right'] as Array<keyof DpadState>) {
@@ -3336,7 +3354,14 @@ function setupN64DirectionalPad(
     currentState = { ...newState };
   };
 
-  const clearState = () => applyState({ up: false, down: false, left: false, right: false });
+  const clearState = () => {
+    if (pendingStateFrame !== null) cancelAnimationFrame(pendingStateFrame);
+    pendingStateFrame = null;
+    pad.classList.remove('engaged');
+    pad.style.setProperty('--stick-x', '0px');
+    pad.style.setProperty('--stick-y', '0px');
+    applyState({ up: false, down: false, left: false, right: false });
+  };
 
   const calculateState = (clientX: number, clientY: number): DpadState => {
     const rect = pad.getBoundingClientRect();
@@ -3344,35 +3369,42 @@ function setupN64DirectionalPad(
     const centerY = rect.top + rect.height / 2;
     const dx = clientX - centerX;
     const dy = clientY - centerY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
     const deadZone = rect.width / 2 * 0.15;
-    const state: DpadState = { up: false, down: false, left: false, right: false };
+    const distance = Math.hypot(dx, dy);
+    const maxTravel = rect.width * 0.24;
+    const travelScale = distance > maxTravel ? maxTravel / distance : 1;
+    pad.classList.toggle('engaged', distance > deadZone);
+    pad.style.setProperty('--stick-x', `${dx * travelScale}px`);
+    pad.style.setProperty('--stick-y', `${dy * travelScale}px`);
+    return quantizeVirtualStick(dx, dy, deadZone);
+  };
 
-    if (distance > deadZone) {
-      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-      if (angle >= -22.5 && angle < 22.5) state.right = true;
-      else if (angle >= 22.5 && angle < 67.5) { state.right = true; state.down = true; }
-      else if (angle >= 67.5 && angle < 112.5) state.down = true;
-      else if (angle >= 112.5 && angle < 157.5) { state.left = true; state.down = true; }
-      else if (angle >= 157.5 || angle < -157.5) state.left = true;
-      else if (angle >= -157.5 && angle < -112.5) { state.left = true; state.up = true; }
-      else if (angle >= -112.5 && angle < -67.5) state.up = true;
-      else if (angle >= -67.5 && angle < -22.5) { state.right = true; state.up = true; }
+  const applyPointerState = (clientX: number, clientY: number) => {
+    const newState = calculateState(clientX, clientY);
+    const bridge = getBridgedDiagonal(currentState, newState);
+    if (pendingStateFrame !== null) cancelAnimationFrame(pendingStateFrame);
+    pendingStateFrame = null;
+    if (!bridge) {
+      applyState(newState);
+      return;
     }
-
-    return state;
+    applyState(bridge);
+    pendingStateFrame = requestAnimationFrame(() => {
+      pendingStateFrame = null;
+      applyState(newState);
+    });
   };
 
   touchArea.addEventListener('touchstart', (event) => {
     event.preventDefault();
     const touch = event.changedTouches[0];
-    if (touch) applyState(calculateState(touch.clientX, touch.clientY));
+    if (touch) applyPointerState(touch.clientX, touch.clientY);
   }, { passive: false });
 
   touchArea.addEventListener('touchmove', (event) => {
     event.preventDefault();
     const touch = event.changedTouches[0];
-    if (touch) applyState(calculateState(touch.clientX, touch.clientY));
+    if (touch) applyPointerState(touch.clientX, touch.clientY);
   }, { passive: false });
 
   touchArea.addEventListener('touchend', (event) => { event.preventDefault(); clearState(); }, { passive: false });
@@ -3381,11 +3413,11 @@ function setupN64DirectionalPad(
   touchArea.addEventListener('mousedown', (event) => {
     event.preventDefault();
     mouseDown = true;
-    applyState(calculateState(event.clientX, event.clientY));
+    applyPointerState(event.clientX, event.clientY);
   });
 
   document.addEventListener('mousemove', (event) => {
-    if (mouseDown) applyState(calculateState(event.clientX, event.clientY));
+    if (mouseDown) applyPointerState(event.clientX, event.clientY);
   });
 
   document.addEventListener('mouseup', () => {
