@@ -64,7 +64,11 @@ interface KeyboardBindingView {
 }
 
 const FBNEO_SUPPORTED_GAMES = [
+  'garou',
   'knights',
+  'kof2000',
+  'kof2001',
+  'kof2003',
   'kof94',
   'kof95',
   'kof96',
@@ -78,7 +82,15 @@ const FBNEO_SUPPORTED_GAMES = [
   'mslug2t',
   'mslug3',
   'mslug4',
+  'mslug3b6',
+  'neocup98',
   'kof2002',
+  'rbffspec',
+  'samsh5sp',
+  'samsho5',
+  'sengoku3',
+  'sonicwi3',
+  'svc',
   'pacman',
   'tetris',
   'outrun',

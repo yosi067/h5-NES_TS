@@ -29,8 +29,10 @@ const CLOCKS_PER_FRAME: u32 = CLOCKS_PER_SCANLINE * SCANLINES;
 const CPU_SLOW_DIV: u32 = 8;
 /// CPU 快速除數 (6 master clocks)
 const CPU_FAST_DIV: u32 = 6;
-/// SPC700 除數 (21 master clocks ≈ 1.024 MHz)
-const APU_DIV: u32 = 21;
+/// SPC700 clock frequency
+const APU_CLOCK: u64 = 1_024_000;
+/// SNES master clock frequency
+const MASTER_CLOCK_HZ: u64 = 21_477_272;
 /// DRAM 刷新消耗 (每掃描線 40 master clocks)
 const DRAM_REFRESH_CYCLES: u32 = 40;
 
@@ -85,8 +87,8 @@ pub struct SnesEmulator {
     track_cpu_bus_timing: bool,
     /// 當前掃描線已執行的 APU 週期
     apu_cycles_this_scanline: u32,
-    /// APU master clock 餘數累加器 (每掃描線 1364 % 21 = 20 的殘餘)
-    apu_master_remainder: u32,
+    /// APU 相對 master clock 的分數相位累加器
+    apu_master_remainder: u64,
     /// 開放匯流排
     open_bus: u8,
 
@@ -333,9 +335,10 @@ impl SnesEmulator {
         self.run_cpu_for(available_cycles);
 
         // 執行 APU（掃描線結尾追趕剩餘週期，含餘數累加）
-        let total_master = CLOCKS_PER_SCANLINE + self.apu_master_remainder;
-        let total_apu_cycles = total_master / APU_DIV;
-        self.apu_master_remainder = total_master % APU_DIV;
+        let apu_phase = self.apu_master_remainder
+            + CLOCKS_PER_SCANLINE as u64 * APU_CLOCK;
+        let total_apu_cycles = (apu_phase / MASTER_CLOCK_HZ) as u32;
+        self.apu_master_remainder = apu_phase % MASTER_CLOCK_HZ;
         if total_apu_cycles > self.apu_cycles_this_scanline {
             self.apu.run_cycles(total_apu_cycles - self.apu_cycles_this_scanline);
         }
@@ -509,7 +512,9 @@ impl SnesEmulator {
 
     /// APU 追趕：將 APU 推進到 CPU 目前的時間點
     fn catchup_apu(&mut self) {
-        let target_apu_cycles = self.cpu_cycles_this_line / APU_DIV;
+        let apu_phase = self.apu_master_remainder
+            + self.cpu_cycles_this_line as u64 * APU_CLOCK;
+        let target_apu_cycles = (apu_phase / MASTER_CLOCK_HZ) as u32;
         if target_apu_cycles > self.apu_cycles_this_scanline {
             let delta = target_apu_cycles - self.apu_cycles_this_scanline;
             self.apu.run_cycles(delta);

@@ -237,13 +237,30 @@ impl Cartridge {
         if offset < self.rom.len() {
             self.rom[offset]
         } else {
-            // ROM 鏡像（wrap around）
             if self.rom.is_empty() {
                 0
             } else {
-                self.rom[offset % self.rom.len()]
+                self.rom[Self::mirror_rom_offset(offset, self.rom.len())]
             }
         }
+    }
+
+    fn mirror_rom_offset(mut offset: usize, mut rom_size: usize) -> usize {
+        let mut base = 0;
+        let mut mirror_size = 1usize << (usize::BITS - 1);
+
+        while offset >= rom_size {
+            while offset & mirror_size == 0 {
+                mirror_size >>= 1;
+            }
+            offset -= mirror_size;
+            if rom_size > mirror_size {
+                rom_size -= mirror_size;
+                base += mirror_size;
+            }
+            mirror_size >>= 1;
+        }
+        base + offset
     }
 
     /// 計算 ROM 偏移量
@@ -286,5 +303,21 @@ impl Cartridge {
     /// 重置
     pub fn reset(&mut self) {
         // SRAM 保留（電池備份），只重置內部狀態
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Cartridge;
+
+    #[test]
+    fn mirrors_non_power_of_two_rom_like_snes_address_decoding() {
+        let size = 0x180000;
+
+        assert_eq!(Cartridge::mirror_rom_offset(0x17FFFF, size), 0x17FFFF);
+        assert_eq!(Cartridge::mirror_rom_offset(0x180000, size), 0x100000);
+        assert_eq!(Cartridge::mirror_rom_offset(0x200000, size), 0x000000);
+        assert_eq!(Cartridge::mirror_rom_offset(0x280000, size), 0x080000);
+        assert_eq!(Cartridge::mirror_rom_offset(0x300000, size), 0x100000);
     }
 }
