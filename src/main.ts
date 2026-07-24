@@ -31,6 +31,7 @@ import {
 import { getRomAssetUrl, hasN64RomMagic } from './rom-assets';
 import { createN64Telemetry } from './n64/telemetry';
 import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
+import { shouldUseSnes9x, startSnes9xBackend, type Snes9xBackend } from './snes/snes9x-backend';
 
 type N64EmulatorControls = EmulatorControls & {
   resumeAudio?: () => Promise<void>;
@@ -190,7 +191,7 @@ const SnesButton = {
 
 // 判斷當前是否為 SNES 核心
 function isSnesCore(): boolean {
-  return nes?.getCoreType() === 'snes';
+  return activeBackend === 'snes9x' || nes?.getCoreType() === 'snes';
 }
 
 // ===== 全域變數 =====
@@ -206,7 +207,8 @@ let audioWorkletNode: AudioWorkletNode | null = null;
 let wasmInitPromise: Promise<void> | null = null;
 let isRunning: boolean = false;
 let currentRomFilename: string = '';
-let activeBackend: 'wasm' | 'mupen64' | 'fbneo' = 'wasm';
+let activeBackend: 'wasm' | 'mupen64' | 'fbneo' | 'snes9x' = 'wasm';
+let snes9xBackend: Snes9xBackend | null = null;
 let n64Controls: N64EmulatorControls | null = null;
 let currentN64RomData: ArrayBuffer | null = null;
 let n64PerformanceProfile: N64PerformanceProfile = selectN64PerformanceProfile();
@@ -368,6 +370,21 @@ function isMupenN64Active(): boolean {
 
 function isFbNeoActive(): boolean {
   return activeBackend === 'fbneo';
+}
+
+function isSnes9xActive(): boolean {
+  return activeBackend === 'snes9x';
+}
+
+function setSnesButton(button: number, pressed: boolean): void {
+  if (isSnes9xActive()) snes9xBackend?.setButton(button, pressed);
+  else nes?.setButton(0, button, pressed);
+}
+
+function stopSnes9xBackend(): void {
+  snes9xBackend?.stop();
+  snes9xBackend = null;
+  document.getElementById('screen')?.style.removeProperty('display');
 }
 
 function isFbNeoArcadeRomName(filename: string): boolean {
@@ -851,14 +868,14 @@ function setupKeyboardInput(): void {
       if (setArcadeKeyboardInput(e.code, true)) e.preventDefault();
       return;
     }
-    if (!nes) return;
     if (isSnesCore()) {
       const button = KEYBOARD_MAP_SNES[e.code];
       if (button !== undefined) {
-        nes.setButton(0, button, true);
+        setSnesButton(button, true);
         e.preventDefault();
       }
     } else {
+      if (!nes) return;
       const button = KEYBOARD_MAP_P1[e.code];
       if (button !== undefined) {
         nes.setButton(0, button, true);
@@ -872,14 +889,14 @@ function setupKeyboardInput(): void {
       if (setArcadeKeyboardInput(e.code, false)) e.preventDefault();
       return;
     }
-    if (!nes) return;
     if (isSnesCore()) {
       const button = KEYBOARD_MAP_SNES[e.code];
       if (button !== undefined) {
-        nes.setButton(0, button, false);
+        setSnesButton(button, false);
         e.preventDefault();
       }
     } else {
+      if (!nes) return;
       const button = KEYBOARD_MAP_P1[e.code];
       if (button !== undefined) {
         nes.setButton(0, button, false);
@@ -1393,12 +1410,19 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
     return;
   }
 
+  if ((lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig'))
+      && shouldUseSnes9x(romBytes, currentRomFilename)) {
+    await startSnes9xGame(romBytes);
+    return;
+  }
+
   if (!(await waitForWasmCore()) || !nes) {
     await showAppAlert('模擬器核心尚未初始化完成，請稍候再試。');
     return;
   }
 
   await stopN64Backend();
+  stopSnes9xBackend();
   activeBackend = 'wasm';
   let loaded = false;
   if (lower.endsWith('.gg')) {
@@ -1462,6 +1486,31 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
   } else {
     console.error('ROM 載入失敗');
     await showAppAlert('此 ROM 格式、Mapper 或特殊晶片目前不受支援。');
+  }
+}
+
+async function startSnes9xGame(romBytes: Uint8Array): Promise<void> {
+  const screen = document.getElementById('screen');
+  const host = screen?.parentElement;
+  if (!screen || !host) throw new Error('找不到遊戲畫面容器');
+
+  stopEmulation();
+  await stopN64Backend();
+  stopSnes9xBackend();
+  activeBackend = 'snes9x';
+  screen.style.display = 'none';
+
+  try {
+    snes9xBackend = await startSnes9xBackend(host, romBytes, currentRomFilename);
+    isRunning = true;
+    hideRomSelector();
+    updateControllerLayout();
+    powerLed?.classList.add('on');
+    showToast('Snes9x SA-1 核心已啟動');
+  } catch (error) {
+    activeBackend = 'wasm';
+    stopSnes9xBackend();
+    throw error;
   }
 }
 
@@ -2267,6 +2316,8 @@ function setupDesktopControls(): void {
   document.getElementById('btn-reset')?.addEventListener('click', async () => {
     if (isMupenN64Active() && currentN64RomData) {
       await startN64Game(currentN64RomData);
+    } else if (isSnes9xActive()) {
+      snes9xBackend?.reset();
     } else {
       nes?.reset();
     }
@@ -2331,6 +2382,11 @@ function setupFileInput(): void {
  */
 function startEmulation(): void {
   resumeAudio();
+  if (isSnes9xActive()) {
+    isRunning = true;
+    snes9xBackend?.resume();
+    return;
+  }
   if (isMupenN64Active()) {
     isRunning = true;
     syncAudioWorkletState();
@@ -2579,6 +2635,10 @@ async function warmUpFbNeoVideo(): Promise<void> {
 function stopEmulation(): void {
   isRunning = false;
   syncAudioWorkletState();
+  if (isSnes9xActive()) {
+    snes9xBackend?.pause();
+    return;
+  }
   if (isMupenN64Active()) {
     void n64Controls?.pause().catch((error) => console.warn('[N64] 暫停失敗:', error));
     return;
@@ -2594,7 +2654,7 @@ function stopEmulation(): void {
  * 渲染一幀到畫布
  */
 function renderFrame(): void {
-  if (isMupenN64Active()) return;
+  if (isMupenN64Active() || isSnes9xActive()) return;
   if (isFbNeoActive()) {
     renderFbNeoFrame();
     return;
@@ -2849,7 +2909,10 @@ function dispatchN64SaveLoadHotkey(key: 'F5' | 'F7'): void {
  * 取得帶有核心類型 + ROM 名稱的存檔 key（每個遊戲獨立存檔）
  */
 function getSaveKey(slot: number): string {
-  const coreType = isMupenN64Active() ? 'n64' : isFbNeoActive() ? 'fbneo' : (nes?.getCoreType() || 'nes');
+  const coreType = isMupenN64Active() ? 'n64'
+    : isFbNeoActive() ? 'fbneo'
+    : isSnes9xActive() ? 'snes9x'
+    : (nes?.getCoreType() || 'nes');
   // Use ROM filename to isolate saves per game
   const romId = currentRomFilename
     ? currentRomFilename.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '_').substring(0, 60)
@@ -2923,6 +2986,18 @@ function showToast(message: string): void {
 }
 
 function saveState(slot: number = 0): boolean {
+  if (isSnes9xActive()) {
+    if (!snes9xBackend) return false;
+    try {
+      const saveData = snes9xBackend.saveState();
+      localStorage.setItem(getSaveKey(slot), bytesToBase64(saveData));
+      console.log(`[Snes9x] 即時存檔成功 ROM="${currentRomFilename}" slot=${slot} size=${saveData.length}`);
+      return true;
+    } catch (error) {
+      console.error('[Snes9x] 即時存檔失敗:', error);
+      return false;
+    }
+  }
   if (isFbNeoActive()) {
     if (!fbneoCore) return false;
     try {
@@ -2956,6 +3031,19 @@ function saveState(slot: number = 0): boolean {
 }
 
 function loadState(slot: number = 0): boolean {
+  if (isSnes9xActive()) {
+    if (!snes9xBackend) return false;
+    try {
+      const saveData = localStorage.getItem(getSaveKey(slot));
+      if (!saveData) return false;
+      snes9xBackend.loadState(base64ToBytes(saveData));
+      console.log(`[Snes9x] 即時讀檔成功 ROM="${currentRomFilename}" slot=${slot}`);
+      return true;
+    } catch (error) {
+      console.error('[Snes9x] 即時讀檔失敗:', error);
+      return false;
+    }
+  }
   if (isFbNeoActive()) {
     if (!fbneoCore) return false;
     try {
@@ -3508,7 +3596,7 @@ function setupSnesButtons(): void {
       for (const t of Array.from(e.changedTouches)) {
         touches.add(t.identifier);
       }
-      nes?.setButton(0, btn, true);
+      setSnesButton(btn, true);
       el.classList.add('pressed');
     }, { passive: false });
 
@@ -3520,7 +3608,7 @@ function setupSnesButtons(): void {
         touches.delete(t.identifier);
       }
       if (touches.size === 0) {
-        nes?.setButton(0, btn, false);
+        setSnesButton(btn, false);
         el.classList.remove('pressed');
       }
     }, { passive: false });
@@ -3532,7 +3620,7 @@ function setupSnesButtons(): void {
         touches.delete(t.identifier);
       }
       if (touches.size === 0) {
-        nes?.setButton(0, btn, false);
+        setSnesButton(btn, false);
         el.classList.remove('pressed');
       }
     }, { passive: false });
@@ -3540,16 +3628,16 @@ function setupSnesButtons(): void {
     // Mouse events (for desktop testing)
     el.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      nes?.setButton(0, btn, true);
+      setSnesButton(btn, true);
       el.classList.add('pressed');
     });
     el.addEventListener('mouseup', (e) => {
       e.preventDefault();
-      nes?.setButton(0, btn, false);
+      setSnesButton(btn, false);
       el.classList.remove('pressed');
     });
     el.addEventListener('mouseleave', () => {
-      nes?.setButton(0, btn, false);
+      setSnesButton(btn, false);
       el.classList.remove('pressed');
     });
   }
@@ -3563,12 +3651,12 @@ function setupSnesButtons(): void {
     const btnType = el.dataset.snesBtn;
     const btnId = btnType === 'start' ? SnesButton.Start : SnesButton.Select;
 
-    el.addEventListener('touchstart', (e) => { e.preventDefault(); nes?.setButton(0, btnId, true); el.classList.add('pressed'); }, { passive: false });
-    el.addEventListener('touchend', (e) => { e.preventDefault(); nes?.setButton(0, btnId, false); el.classList.remove('pressed'); }, { passive: false });
-    el.addEventListener('touchcancel', (e) => { e.preventDefault(); nes?.setButton(0, btnId, false); el.classList.remove('pressed'); }, { passive: false });
-    el.addEventListener('mousedown', (e) => { e.preventDefault(); nes?.setButton(0, btnId, true); el.classList.add('pressed'); });
-    el.addEventListener('mouseup', (e) => { e.preventDefault(); nes?.setButton(0, btnId, false); el.classList.remove('pressed'); });
-    el.addEventListener('mouseleave', () => { nes?.setButton(0, btnId, false); el.classList.remove('pressed'); });
+    el.addEventListener('touchstart', (e) => { e.preventDefault(); setSnesButton(btnId, true); el.classList.add('pressed'); }, { passive: false });
+    el.addEventListener('touchend', (e) => { e.preventDefault(); setSnesButton(btnId, false); el.classList.remove('pressed'); }, { passive: false });
+    el.addEventListener('touchcancel', (e) => { e.preventDefault(); setSnesButton(btnId, false); el.classList.remove('pressed'); }, { passive: false });
+    el.addEventListener('mousedown', (e) => { e.preventDefault(); setSnesButton(btnId, true); el.classList.add('pressed'); });
+    el.addEventListener('mouseup', (e) => { e.preventDefault(); setSnesButton(btnId, false); el.classList.remove('pressed'); });
+    el.addEventListener('mouseleave', () => { setSnesButton(btnId, false); el.classList.remove('pressed'); });
   });
 
   // SNES D-Pad (reuse same logic)
@@ -3579,10 +3667,10 @@ function setupSnesButtons(): void {
     let snesCurrentDpad: DpadState = { up: false, down: false, left: false, right: false };
 
     const applySnesDpad = (newState: DpadState) => {
-      if (newState.up !== snesCurrentDpad.up) nes?.setButton(0, SnesButton.Up, newState.up);
-      if (newState.down !== snesCurrentDpad.down) nes?.setButton(0, SnesButton.Down, newState.down);
-      if (newState.left !== snesCurrentDpad.left) nes?.setButton(0, SnesButton.Left, newState.left);
-      if (newState.right !== snesCurrentDpad.right) nes?.setButton(0, SnesButton.Right, newState.right);
+      if (newState.up !== snesCurrentDpad.up) setSnesButton(SnesButton.Up, newState.up);
+      if (newState.down !== snesCurrentDpad.down) setSnesButton(SnesButton.Down, newState.down);
+      if (newState.left !== snesCurrentDpad.left) setSnesButton(SnesButton.Left, newState.left);
+      if (newState.right !== snesCurrentDpad.right) setSnesButton(SnesButton.Right, newState.right);
       document.getElementById('snes-dpad-up')?.classList.toggle('pressed', newState.up);
       document.getElementById('snes-dpad-down')?.classList.toggle('pressed', newState.down);
       document.getElementById('snes-dpad-left')?.classList.toggle('pressed', newState.left);

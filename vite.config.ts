@@ -223,6 +223,55 @@ function mupen64AssetsPlugin() {
   };
 }
 
+function emulatorJsAssetsPlugin() {
+  const hostDataDir = resolve(__dirname, 'node_modules/@emulatorjs/emulatorjs/data');
+  const coreDir = resolve(__dirname, 'node_modules/@emulatorjs/core-snes9x');
+  const publicPath = '/emulatorjs/data/';
+
+  const resolveAsset = (relativePath: string): string => {
+    if (relativePath.startsWith('cores/reports/')) {
+      return resolve(coreDir, 'reports', relativePath.slice('cores/reports/'.length));
+    }
+    if (relativePath.startsWith('cores/')) {
+      return resolve(coreDir, relativePath.slice('cores/'.length));
+    }
+    return resolve(hostDataDir, relativePath);
+  };
+
+  return {
+    name: 'emulatorjs-assets',
+    configureServer(server: any) {
+      server.middlewares.use((req: any, res: any, next: any) => {
+        const url = decodeURIComponent(req.url || '').split('?')[0];
+        if (!url.startsWith(publicPath)) return next();
+        const filePath = resolveAsset(url.slice(publicPath.length));
+        if (!existsSync(filePath) || !statSync(filePath).isFile()) return next();
+        const stat = statSync(filePath);
+        const contentType = filePath.endsWith('.js') ? 'text/javascript'
+          : filePath.endsWith('.css') ? 'text/css'
+          : filePath.endsWith('.json') ? 'application/json'
+          : 'application/octet-stream';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', stat.size);
+        res.end(readFileSync(filePath));
+      });
+    },
+    writeBundle() {
+      const distDataDir = resolve(__dirname, 'dist/emulatorjs/data');
+      copyDirectory(hostDataDir, distDataDir);
+      const distCoresDir = resolve(distDataDir, 'cores');
+      mkdirSync(resolve(distCoresDir, 'reports'), { recursive: true });
+      for (const file of readdirSync(coreDir)) {
+        if (file.endsWith('.data')) {
+          copyFileSync(resolve(coreDir, file), resolve(distCoresDir, file));
+        }
+      }
+      copyDirectory(resolve(coreDir, 'reports'), resolve(distCoresDir, 'reports'));
+      console.log('Copied EmulatorJS Snes9x runtime');
+    },
+  };
+}
+
 export default defineConfig({
   // GitHub Pages 部署需要設定正確的 base 路徑
   // 使用環境變數 VITE_BASE_PATH，預設為 './' (本地開發)
@@ -261,7 +310,7 @@ export default defineConfig({
       },
     },
   },
-  plugins: [copyRomsPlugin(), serveRomBinaryPlugin(), mupen64AssetsPlugin()],
+  plugins: [copyRomsPlugin(), serveRomBinaryPlugin(), mupen64AssetsPlugin(), emulatorJsAssetsPlugin()],
   test: {
     globals: true,
     environment: 'jsdom',

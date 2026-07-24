@@ -37,6 +37,8 @@
     "html5"
   ],
   "dependencies": {
+    "@emulatorjs/core-snes9x": "^4.2.3",
+    "@emulatorjs/emulatorjs": "^4.2.3",
     "@mantou/fbneo": "^0.0.4",
     "jszip": "^3.10.1",
     "mupen64plus-web": "^1.5.7"

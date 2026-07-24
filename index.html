@@ -320,6 +320,16 @@
       mix-blend-mode: screen;
     }
 
+    #snes9x-screen {
+      width: 100%;
+      max-width: 320px;
+      height: auto;
+      aspect-ratio: 4 / 3;
+      border: 0;
+      background: #000;
+      display: block;
+    }
+
     .screen-label {
       position: absolute;
       top: -18px;
@@ -3093,7 +3103,8 @@
       }
 
       #screen,
-      #canvas {
+      #canvas,
+      #snes9x-screen {
         width: min(512px, calc(100vw - 112px), calc((var(--app-height, 100vh) - 218px) * 1.0667));
         height: auto;
         max-width: 100%;
@@ -3110,7 +3121,8 @@
       }
 
       body.controls-open #screen,
-      body.controls-open #canvas {
+      body.controls-open #canvas,
+      body.controls-open #snes9x-screen {
         width: min(512px, calc(100vw - 112px), calc((var(--app-height, 100vh) - 362px) * 1.0667));
         max-height: calc(var(--app-height, 100vh) - 362px);
       }
@@ -3176,7 +3188,8 @@
 
       /* 手機直版：畫面更大，邊框更小 */
       #screen,
-      #canvas {
+      #canvas,
+      #snes9x-screen {
         width: 100%;
         max-width: 95vw;
         height: auto;
@@ -4020,7 +4033,8 @@
     }
 
     body.mobile-landscape-mode #screen,
-    body.mobile-landscape-mode #canvas {
+    body.mobile-landscape-mode #canvas,
+    body.mobile-landscape-mode #snes9x-screen {
       width: 100%;
       height: auto;
       max-width: 100%;
@@ -4320,7 +4334,8 @@
     }
 
     body.fullscreen-active #screen,
-    body.fullscreen-active #canvas {
+    body.fullscreen-active #canvas,
+    body.fullscreen-active #snes9x-screen {
       object-fit: contain;
       background: #000;
     }
@@ -4340,7 +4355,8 @@
       }
 
       body.fullscreen-active #screen,
-      body.fullscreen-active #canvas {
+      body.fullscreen-active #canvas,
+      body.fullscreen-active #snes9x-screen {
         width: 100%;
         height: auto;
       }
@@ -5065,7 +5081,8 @@
       }
 
       body:not(.touch-device-mode):not(.mobile-landscape-mode) #screen,
-      body:not(.touch-device-mode):not(.mobile-landscape-mode) #canvas {
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) #canvas,
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) #snes9x-screen {
         width: min(512px, calc(100vw - 112px), calc((var(--app-height, 100vh) - 218px) * 1.0667));
         height: auto;
         max-width: 100%;
@@ -5073,7 +5090,8 @@
       }
 
       body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #screen,
-      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #canvas {
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #canvas,
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #snes9x-screen {
         width: min(512px, calc(100vw - 112px), calc((var(--app-height, 100vh) - 362px) * 1.0667));
         max-height: calc(var(--app-height, 100vh) - 362px);
       }
@@ -5109,8 +5127,10 @@
 
       body.fullscreen-active:not(.touch-device-mode):not(.mobile-landscape-mode) #screen,
       body.fullscreen-active:not(.touch-device-mode):not(.mobile-landscape-mode) #canvas,
+      body.fullscreen-active:not(.touch-device-mode):not(.mobile-landscape-mode) #snes9x-screen,
       body.fullscreen-active:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #screen,
-      body.fullscreen-active:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #canvas {
+      body.fullscreen-active:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #canvas,
+      body.fullscreen-active:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #snes9x-screen {
         width: 100%;
         max-width: none;
         height: 100%;

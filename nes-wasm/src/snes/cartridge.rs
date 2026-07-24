@@ -11,6 +11,8 @@
 pub enum MapMode {
     LoROM,   // Mode $20
     HiROM,   // Mode $21
+    ExHiROM, // Mode $25/$35
+    SA1,     // Mode $23
 }
 
 /// SNES 卡帶
@@ -84,13 +86,27 @@ impl Cartridge {
     fn detect_map_mode(&mut self) {
         // 嘗試 HiROM 標頭位置 ($FFD5)
         let hirom_score = self.score_header(0xFFD5);
+        // ExHiROM 的原始標頭通常位於 ROM offset $40FFD5
+        let exhirom_score = self.score_header(0x40FFD5);
         // 嘗試 LoROM 標頭位置 ($7FD5)
         let lorom_score = self.score_header(0x7FD5);
 
-        if hirom_score > lorom_score {
-            self.map_mode = MapMode::HiROM;
+        if exhirom_score > hirom_score && exhirom_score > lorom_score {
+            self.map_mode = MapMode::ExHiROM;
+        } else if hirom_score > lorom_score {
+            let mode = self.rom.get(0xFFD5).copied().unwrap_or(0) & 0x0F;
+            if mode == 0x05 && self.rom.len() > 0x400000 {
+                self.map_mode = MapMode::ExHiROM;
+            } else {
+                self.map_mode = MapMode::HiROM;
+            }
         } else {
-            self.map_mode = MapMode::LoROM;
+            let mode = self.rom.get(0x7FD5).copied().unwrap_or(0) & 0x0F;
+            if mode == 0x03 {
+                self.map_mode = MapMode::SA1;
+            } else {
+                self.map_mode = MapMode::LoROM;
+            }
         }
     }
 
@@ -149,7 +165,7 @@ impl Cartridge {
             }
 
             // 標題字元合理性 (offset $FFC0-$FFD4 / $7FC0-$7FD4)
-            let title_base = if map_mode_addr > 0x8000 { 0xFFC0 } else { 0x7FC0 };
+            let title_base = map_mode_addr - 0x15;
             if title_base + 20 < self.rom.len() {
                 let mut valid_chars = 0;
                 for i in 0..21 {
@@ -169,7 +185,8 @@ impl Cartridge {
     fn parse_header(&mut self) {
         let header_base = match self.map_mode {
             MapMode::HiROM => 0xFFC0,
-            MapMode::LoROM => 0x7FC0,
+            MapMode::ExHiROM => 0x40FFC0,
+            MapMode::LoROM | MapMode::SA1 => 0x7FC0,
         };
 
         if header_base + 0x20 > self.rom.len() {
@@ -273,6 +290,18 @@ impl Cartridge {
                 let mapped_bank = (bank & 0x3F) as usize;
                 (mapped_bank << 16) | (addr as usize)
             }
+            MapMode::ExHiROM => {
+                let mapped_bank = (bank & 0x3F) as usize;
+                let half = if bank & 0x80 == 0 { 0x400000 } else { 0 };
+                half | (mapped_bank << 16) | addr as usize
+            }
+            MapMode::SA1 => {
+                if bank >= 0xC0 {
+                    (((bank & 0x3F) as usize) << 16) | addr as usize
+                } else {
+                    (((bank & 0x3F) as usize) << 15) | (addr as usize & 0x7FFF)
+                }
+            }
             MapMode::LoROM => {
                 // LoROM: 每 bank 只用 $8000-$FFFF
                 let mapped_bank = (bank & 0x7F) as usize;
@@ -308,7 +337,7 @@ impl Cartridge {
 
 #[cfg(test)]
 mod tests {
-    use super::Cartridge;
+    use super::{Cartridge, MapMode};
 
     #[test]
     fn mirrors_non_power_of_two_rom_like_snes_address_decoding() {
@@ -319,5 +348,27 @@ mod tests {
         assert_eq!(Cartridge::mirror_rom_offset(0x200000, size), 0x000000);
         assert_eq!(Cartridge::mirror_rom_offset(0x280000, size), 0x080000);
         assert_eq!(Cartridge::mirror_rom_offset(0x300000, size), 0x100000);
+    }
+
+    #[test]
+    fn maps_exhirom_banks_to_both_rom_halves() {
+        let mut cartridge = Cartridge::new();
+        cartridge.map_mode = MapMode::ExHiROM;
+
+        assert_eq!(cartridge.map_rom_offset(0x00, 0x8000), 0x408000);
+        assert_eq!(cartridge.map_rom_offset(0x40, 0x0000), 0x400000);
+        assert_eq!(cartridge.map_rom_offset(0x80, 0x8000), 0x008000);
+        assert_eq!(cartridge.map_rom_offset(0xC0, 0x0000), 0x000000);
+    }
+
+    #[test]
+    fn maps_sa1_linear_and_lorom_windows() {
+        let mut cartridge = Cartridge::new();
+        cartridge.map_mode = MapMode::SA1;
+
+        assert_eq!(cartridge.map_rom_offset(0x00, 0x8000), 0x000000);
+        assert_eq!(cartridge.map_rom_offset(0x3F, 0xFFFF), 0x1FFFFF);
+        assert_eq!(cartridge.map_rom_offset(0xC0, 0x0088), 0x000088);
+        assert_eq!(cartridge.map_rom_offset(0xFF, 0xFFFF), 0x3FFFFF);
     }
 }

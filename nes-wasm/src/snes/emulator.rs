@@ -200,10 +200,10 @@ impl SnesEmulator {
         self.cpu = Cpu65816::new();
         // 從 Reset 向量讀取 PC
         let (lo, hi) = match self.cart.map_mode {
-            super::cartridge::MapMode::HiROM => {
+            super::cartridge::MapMode::HiROM | super::cartridge::MapMode::ExHiROM => {
                 (self.read(0x00FFFC), self.read(0x00FFFD))
             }
-            super::cartridge::MapMode::LoROM => {
+            super::cartridge::MapMode::LoROM | super::cartridge::MapMode::SA1 => {
                 (self.read(0x00FFFC), self.read(0x00FFFD))
             }
         };
@@ -572,6 +572,12 @@ impl SnesEmulator {
             return val;
         }
 
+        if self.cart.map_mode == crate::snes::cartridge::MapMode::SA1 && bank >= 0xC0 {
+            let val = self.cart.read_rom(bank, addr);
+            self.open_bus = val;
+            return val;
+        }
+
         let effective = bank & 0x7F; // $80-$FF mirrors $00-$7F
 
         let val = match effective {
@@ -593,7 +599,7 @@ impl SnesEmulator {
                 0x4300..=0x43FF => self.dma.read_register(addr - 0x4300),
                 0x6000..=0x7FFF => {
                     match self.cart.map_mode {
-                        crate::snes::cartridge::MapMode::HiROM => {
+                        crate::snes::cartridge::MapMode::HiROM | crate::snes::cartridge::MapMode::ExHiROM => {
                             if self.dsp1.present && effective < 0x20 {
                                 // DSP-1: $00-$1F:$6000-$6FFF = DR, $7000-$7FFF = SR
                                 if addr < 0x7000 {
@@ -608,7 +614,7 @@ impl SnesEmulator {
                                 self.open_bus
                             }
                         }
-                        crate::snes::cartridge::MapMode::LoROM => {
+                        crate::snes::cartridge::MapMode::LoROM | crate::snes::cartridge::MapMode::SA1 => {
                             // CX4: $00-$3F/$80-$BF:$6000-$7FFF → CX4 RAM/IO
                             if self.cx4.present {
                                 self.cx4.read(addr - 0x6000)
@@ -629,7 +635,7 @@ impl SnesEmulator {
             // === Banks $40-$6F: ROM area (with LoROM lower half = HW mirrors) ===
             0x40..=0x6F => {
                 match self.cart.map_mode {
-                    crate::snes::cartridge::MapMode::LoROM => {
+                    crate::snes::cartridge::MapMode::LoROM | crate::snes::cartridge::MapMode::SA1 => {
                         if addr >= 0x8000 {
                             self.cart.read_rom(bank, addr)
                         } else {
@@ -637,7 +643,7 @@ impl SnesEmulator {
                             self.bus_read_system_low(effective, addr)
                         }
                     }
-                    crate::snes::cartridge::MapMode::HiROM => {
+                    crate::snes::cartridge::MapMode::HiROM | crate::snes::cartridge::MapMode::ExHiROM => {
                         // HiROM: full 64KB is ROM
                         self.cart.read_rom(bank, addr)
                     }
@@ -649,7 +655,7 @@ impl SnesEmulator {
             // Physical WRAM $7E/$7F is handled above before this match
             0x70..=0x7F => {
                 match self.cart.map_mode {
-                    crate::snes::cartridge::MapMode::LoROM => {
+                    crate::snes::cartridge::MapMode::LoROM | crate::snes::cartridge::MapMode::SA1 => {
                         if addr < 0x8000 && effective <= 0x7D {
                             // LoROM SRAM: $70-$7D:$0000-$7FFF
                             let sram_addr = ((effective as usize - 0x70) * 0x8000) + addr as usize;
@@ -658,7 +664,7 @@ impl SnesEmulator {
                             self.cart.read_rom(bank, addr)
                         }
                     }
-                    crate::snes::cartridge::MapMode::HiROM => {
+                    crate::snes::cartridge::MapMode::HiROM | crate::snes::cartridge::MapMode::ExHiROM => {
                         self.cart.read_rom(bank, addr)
                     }
                 }
@@ -749,7 +755,7 @@ impl SnesEmulator {
                 }
                 0x6000..=0x7FFF => {
                     match self.cart.map_mode {
-                        crate::snes::cartridge::MapMode::HiROM => {
+                        crate::snes::cartridge::MapMode::HiROM | crate::snes::cartridge::MapMode::ExHiROM => {
                             if self.dsp1.present && effective < 0x20 {
                                 // DSP-1: 寫入 DR ($6000-$6FFF), SR ($7000+) 為唯讀
                                 if addr < 0x7000 {
@@ -760,7 +766,7 @@ impl SnesEmulator {
                                 self.cart.write_sram(sram_addr, val);
                             }
                         }
-                        crate::snes::cartridge::MapMode::LoROM => {
+                        crate::snes::cartridge::MapMode::LoROM | crate::snes::cartridge::MapMode::SA1 => {
                             // CX4: $00-$3F/$80-$BF:$6000-$7FFF → CX4 RAM/IO
                             if self.cx4.present {
                                 self.cx4_write(addr, val);
@@ -778,13 +784,13 @@ impl SnesEmulator {
             // === Banks $40-$6F: LoROM has HW writes in $0000-$7FFF ===
             0x40..=0x6F => {
                 match self.cart.map_mode {
-                    crate::snes::cartridge::MapMode::LoROM => {
+                    crate::snes::cartridge::MapMode::LoROM | crate::snes::cartridge::MapMode::SA1 => {
                         if addr < 0x8000 {
                             self.bus_write_system_low(effective, addr, val);
                         }
                         // $8000-$FFFF = ROM, ignore writes
                     }
-                    crate::snes::cartridge::MapMode::HiROM => {
+                    crate::snes::cartridge::MapMode::HiROM | crate::snes::cartridge::MapMode::ExHiROM => {
                         // ROM, ignore writes
                     }
                 }
@@ -794,14 +800,14 @@ impl SnesEmulator {
             // Note: effective $7E/$7F come from banks $FE/$FF (after & 0x7F)
             0x70..=0x7F => {
                 match self.cart.map_mode {
-                    crate::snes::cartridge::MapMode::LoROM => {
+                    crate::snes::cartridge::MapMode::LoROM | crate::snes::cartridge::MapMode::SA1 => {
                         if addr < 0x8000 && effective <= 0x7D {
                             let sram_addr = ((effective as usize - 0x70) * 0x8000) + addr as usize;
                             self.cart.write_sram(sram_addr, val);
                         }
                         // $8000-$FFFF = ROM, ignore writes
                     }
-                    crate::snes::cartridge::MapMode::HiROM => {
+                    crate::snes::cartridge::MapMode::HiROM | crate::snes::cartridge::MapMode::ExHiROM => {
                         // ROM, ignore writes
                     }
                 }
