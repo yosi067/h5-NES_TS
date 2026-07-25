@@ -1493,12 +1493,12 @@ async function startGame(romData: ArrayBuffer, signal?: AbortSignal): Promise<vo
   }
 
   if (lower.endsWith('.nes')) {
-    await startSnes9xGame(romBytes, 'nes', signal);
+    await startSnes9xGame(romData, 'nes', signal);
     return;
   }
 
   if (lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig')) {
-    await startSnes9xGame(romBytes, 'snes', signal);
+    await startSnes9xGame(romData, 'snes', signal);
     return;
   }
 
@@ -1577,7 +1577,7 @@ async function startGame(romData: ArrayBuffer, signal?: AbortSignal): Promise<vo
 }
 
 async function startSnes9xGame(
-  romBytes: Uint8Array,
+  romData: ArrayBuffer,
   core: 'snes' | 'nes' = 'snes',
   signal?: AbortSignal,
 ): Promise<void> {
@@ -1595,7 +1595,7 @@ async function startSnes9xGame(
   screen.style.display = 'none';
 
   try {
-    snes9xBackend = await startSnes9xBackend(host, romBytes, currentRomFilename, core, signal);
+    snes9xBackend = await startSnes9xBackend(host, romData, currentRomFilename, core, signal);
     isRunning = true;
     hideRomSelector();
     updateControllerLayout();
@@ -2426,7 +2426,7 @@ function setupDesktopControls(): void {
     }
   });
   document.getElementById('btn-select-game')?.addEventListener('click', () => {
-    void showRomSelector();
+    void confirmReturnToMachineMenu();
   });
   
   // 存檔/讀取按鈕 (電腦版)
@@ -3844,9 +3844,10 @@ function setupKeyboardShortcuts(): void {
       const slot = parseInt(e.key);
       loadState(slot);
     }
-    // ESC 鍵返回選擇畫面
-    if (e.key === 'Escape') {
-      void showRomSelector();
+    // 瀏覽器返回手勢與退出全螢幕也可能送出 Escape，避免直接銷毀遊戲核心。
+    if (e.key === 'Escape' && !e.repeat && !document.fullscreenElement) {
+      e.preventDefault();
+      void confirmReturnToMachineMenu();
     }
   });
 }

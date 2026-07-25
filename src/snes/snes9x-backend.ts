@@ -34,14 +34,14 @@ function escapeInlineScript(value: string): string {
 
 export async function startSnes9xBackend(
   host: HTMLElement,
-  rom: Uint8Array,
+  rom: ArrayBuffer,
   romName: string,
   core: 'snes' | 'nes' = 'snes',
   signal?: AbortSignal,
 ): Promise<Snes9xBackend> {
   const runtimeUrl = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/loader.js`, window.location.href).href;
   const dataPath = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/`, window.location.href).href;
-  const romBlob = new Blob([rom.slice()], { type: 'application/octet-stream' });
+  const romBlob = new Blob([rom], { type: 'application/octet-stream' });
   const romUrl = URL.createObjectURL(romBlob);
   const iframe = document.createElement('iframe');
   iframe.id = 'snes9x-screen';
@@ -56,6 +56,10 @@ html,body,#game{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
 .ejs_canvas{object-fit:contain}
 .ejs_virtualGamepad_parent,.ejs_virtualGamepad_open,.ejs_menu_bar,.ejs_context_menu,.ejs_settings_parent{display:none!important}
 </style></head><body><div id="game"></div><script>
+window.addEventListener('unhandledrejection',event=>{
+const reason=event.reason;
+if(reason&&reason.name==='NotAllowedError'&&/wake\s*lock|WakeLock/i.test(reason.message||''))event.preventDefault();
+});
 window.EJS_player='#game';
 window.EJS_core=${escapeInlineScript(core)};
 window.EJS_gameUrl=${escapeInlineScript(romUrl)};
@@ -70,12 +74,18 @@ window.EJS_language='en-US';
   host.appendChild(iframe);
 
   let disposed = false;
+  let romUrlRevoked = false;
+  const revokeRomUrl = () => {
+    if (romUrlRevoked) return;
+    romUrlRevoked = true;
+    URL.revokeObjectURL(romUrl);
+  };
   const dispose = () => {
     if (disposed) return;
     disposed = true;
     (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator?.callEvent?.('exit');
     iframe.remove();
-    URL.revokeObjectURL(romUrl);
+    revokeRomUrl();
   };
 
   try {
@@ -113,6 +123,7 @@ window.EJS_language='en-US';
     dispose();
     throw error;
   }
+  revokeRomUrl();
 
   const getEmulator = (): EmulatorJsInstance | undefined =>
     (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator;
