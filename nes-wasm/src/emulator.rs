@@ -44,6 +44,9 @@ pub struct Emulator {
 
     /// 音頻啟用旗標 (false = 靜音且停用 APU IRQ)
     pub audio_enabled: bool,
+
+    dmc_dma_address: Option<u16>,
+    dmc_dma_cycles: u8,
 }
 
 impl Emulator {
@@ -59,6 +62,8 @@ impl Emulator {
             ctrl2: Controller::new(),
             system_clock: 0,
             audio_enabled: true,
+            dmc_dma_address: None,
+            dmc_dma_cycles: 0,
         }
     }
 
@@ -84,6 +89,8 @@ impl Emulator {
         self.apu.reset();
         self.bus.reset();
         self.system_clock = 0;
+        self.dmc_dma_address = None;
+        self.dmc_dma_cycles = 0;
 
         // 同步 Mapper 狀態到 PPU（鏡像模式和 CHR bank 映射）
         self.sync_mapper_to_ppu();
@@ -124,6 +131,14 @@ impl Emulator {
                     &mut self.ppu, &mut self.apu, &self.cartridge,
                     &mut self.ctrl1, &mut self.ctrl2,
                 );
+            } else if self.dmc_dma_cycles > 0 {
+                self.dmc_dma_cycles -= 1;
+                if self.dmc_dma_cycles == 0 {
+                    if let Some(addr) = self.dmc_dma_address.take() {
+                        let data = self.bus_read(addr);
+                        self.apu.dmc_provide_sample(data);
+                    }
+                }
             } else {
                 // 執行 CPU
                 self.cpu_clock();
@@ -133,9 +148,11 @@ impl Emulator {
             self.apu.clock();
 
             // 處理 DMC 讀取請求
-            if let Some(addr) = self.apu.dmc_read_request.take() {
-                let data = self.bus_read(addr);
-                self.apu.dmc_provide_sample(data);
+            if self.dmc_dma_address.is_none() {
+                if let Some(addr) = self.apu.dmc_read_request.take() {
+                    self.dmc_dma_address = Some(addr);
+                    self.dmc_dma_cycles = 4;
+                }
             }
 
             // Mapper CPU 週期計時（用於 Bandai FCG 等）
@@ -1022,6 +1039,30 @@ mod tests {
         emulator.frame();
 
         assert_eq!(emulator.system_clock - start_clock, 262 * 341);
+    }
+
+    #[test]
+    fn dmc_sample_dma_stalls_cpu_for_four_cycles() {
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&nrom_with_program(&[0xEA, 0xEA, 0xEA])));
+        emulator.apu.dmc_read_request = Some(0x8000);
+
+        emulator.clock();
+        let cpu_cycles = emulator.cpu.cycles;
+        assert_eq!(emulator.dmc_dma_cycles, 4);
+
+        for _ in 0..12 {
+            emulator.clock();
+        }
+
+        assert_eq!(emulator.dmc_dma_cycles, 0);
+        assert_eq!(emulator.cpu.cycles, cpu_cycles);
+        assert!(emulator.dmc_dma_address.is_none());
+
+        for _ in 0..3 {
+            emulator.clock();
+        }
+        assert!(emulator.cpu.cycles < cpu_cycles);
     }
 
     #[test]

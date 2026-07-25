@@ -3,9 +3,10 @@ class EmulatorAudioProcessor extends AudioWorkletProcessor {
     super();
     this.chunks = [];
     this.chunkOffset = 0;
-    this.bufferedSamples = 0;
+    this.bufferedFrames = 0;
     this.primed = false;
-    this.lastSample = 0;
+    this.lastLeft = 0;
+    this.lastRight = 0;
     this.running = false;
     this.muted = false;
 
@@ -13,11 +14,12 @@ class EmulatorAudioProcessor extends AudioWorkletProcessor {
       const message = event.data;
       if (message.type === 'samples') {
         if (!this.muted && message.samples.length > 0) {
-          this.chunks.push(message.samples);
-          this.bufferedSamples += message.samples.length;
+          const channels = message.channels === 2 ? 2 : 1;
+          this.chunks.push({ samples: message.samples, channels });
+          this.bufferedFrames += message.samples.length / channels;
           while (this.chunks.length > 24) {
             const dropped = this.chunks.shift();
-            this.bufferedSamples -= dropped.length - this.chunkOffset;
+            this.bufferedFrames -= (dropped.samples.length - this.chunkOffset) / dropped.channels;
             this.chunkOffset = 0;
           }
         }
@@ -34,47 +36,61 @@ class EmulatorAudioProcessor extends AudioWorkletProcessor {
   clearQueue() {
     this.chunks.length = 0;
     this.chunkOffset = 0;
-    this.bufferedSamples = 0;
+    this.bufferedFrames = 0;
     this.primed = false;
-    this.lastSample = 0;
+    this.lastLeft = 0;
+    this.lastRight = 0;
   }
 
-  nextSample() {
+  writeNextFrame(left, right, index) {
     if (!this.primed) {
-      if (this.bufferedSamples < 1024) {
-        this.lastSample *= 0.995;
-        return this.lastSample;
+      if (this.bufferedFrames < 1024) {
+        this.lastLeft *= 0.995;
+        this.lastRight *= 0.995;
+        left[index] = this.lastLeft;
+        right[index] = this.lastRight;
+        return;
       }
       this.primed = true;
     }
 
     while (this.chunks.length > 0) {
       const chunk = this.chunks[0];
-      if (this.chunkOffset < chunk.length) {
-        this.lastSample = chunk[this.chunkOffset++];
-        this.bufferedSamples--;
-        return this.lastSample;
+      if (this.chunkOffset < chunk.samples.length) {
+        this.lastLeft = chunk.samples[this.chunkOffset];
+        this.lastRight = chunk.channels === 2
+          ? chunk.samples[this.chunkOffset + 1]
+          : this.lastLeft;
+        this.chunkOffset += chunk.channels;
+        this.bufferedFrames--;
+        left[index] = this.lastLeft;
+        right[index] = this.lastRight;
+        return;
       }
       this.chunks.shift();
       this.chunkOffset = 0;
     }
 
     this.primed = false;
-    this.lastSample *= 0.995;
-    return this.lastSample;
+    this.lastLeft *= 0.995;
+    this.lastRight *= 0.995;
+    left[index] = this.lastLeft;
+    right[index] = this.lastRight;
   }
 
   process(_inputs, outputs) {
-    const output = outputs[0][0];
-    if (!output) return true;
+    const left = outputs[0][0];
+    const right = outputs[0][1];
+    if (!left || !right) return true;
 
     if (!this.running || this.muted) {
-      output.fill(0);
+      left.fill(0);
+      right.fill(0);
       return true;
     }
 
-    for (let index = 0; index < output.length; index++) {
-      output[index] = this.nextSample();
+    for (let index = 0; index < left.length; index++) {
+      this.writeNextFrame(left, right, index);
     }
     return true;
   }

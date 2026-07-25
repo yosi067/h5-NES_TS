@@ -32,6 +32,20 @@ function escapeInlineScript(value: string): string {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
+export function shouldUseSnes9x(rom: Uint8Array, romName: string): boolean {
+  const copierHeaderSize = rom.length % 0x8000 === 512 ? 512 : 0;
+  for (const headerOffset of [0x7FD5, 0xFFD5, 0x40FFD5]) {
+    const mapMode = rom[copierHeaderSize + headerOffset];
+    const cartridgeType = rom[copierHeaderSize + headerOffset + 1];
+    if (mapMode !== undefined && (mapMode & 0x3F) === 0x23) return true;
+    if (cartridgeType === 0x43 || cartridgeType === 0x45) return true;
+    if ([0x13, 0x14, 0x15, 0x1A, 0xF5, 0xF9].includes(cartridgeType)) return true;
+  }
+  return /(?:^|\s)super mario kart(?:\s|\.|$)/i.test(romName)
+    || /super butouden 3|超武鬥傳3|超武斗传3/i.test(romName)
+    || /seiken densetsu 3|聖劍傳說3|圣剑传说3/i.test(romName);
+}
+
 export async function startSnes9xBackend(
   host: HTMLElement,
   rom: ArrayBuffer,

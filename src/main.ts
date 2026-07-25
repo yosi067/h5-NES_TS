@@ -31,7 +31,7 @@ import {
 import { getRomAssetUrl, hasN64RomMagic } from './rom-assets';
 import { createN64Telemetry } from './n64/telemetry';
 import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
-import { startSnes9xBackend, type Snes9xBackend } from './snes/snes9x-backend';
+import { shouldUseSnes9x, startSnes9xBackend, type Snes9xBackend } from './snes/snes9x-backend';
 
 type N64EmulatorControls = EmulatorControls & {
   resumeAudio?: () => Promise<void>;
@@ -1310,7 +1310,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
       loadController.signal.throwIfAborted();
       currentRomFilename = romFileName.split('/').pop() || romFileName;
       updateGameLoading(loadingSequence, '正在啟動模擬器…');
-      await startGame(romBuffer, loadController.signal);
+      await startGame(romBuffer, loadController.signal, filename);
     } else {
       currentRomFilename = filename;
       await startGame(buffer, loadController.signal);
@@ -1384,7 +1384,7 @@ async function loadRomFromFile(file: File): Promise<void> {
 
     currentRomFilename = romName;
     updateGameLoading(loadingSequence, '正在啟動模擬器…');
-    await startGame(buffer, loadController.signal);
+    await startGame(buffer, loadController.signal, file.name);
   } catch (error) {
     if (isAbortError(error)) return;
     console.error('載入 ROM 失敗:', error);
@@ -1480,7 +1480,11 @@ async function startFbNeoGame(
 /**
  * 開始遊戲
  */
-async function startGame(romData: ArrayBuffer, signal?: AbortSignal): Promise<void> {
+async function startGame(
+  romData: ArrayBuffer,
+  signal?: AbortSignal,
+  sourceName = currentRomFilename,
+): Promise<void> {
   signal?.throwIfAborted();
   const romBytes = new Uint8Array(romData);
   
@@ -1492,13 +1496,17 @@ async function startGame(romData: ArrayBuffer, signal?: AbortSignal): Promise<vo
     return;
   }
 
-  if (lower.endsWith('.nes')) {
-    await startSnes9xGame(romData, 'nes', signal);
+  const isSnesRom = lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig');
+  if (isSnesRom && shouldUseSnes9x(romBytes, currentRomFilename)) {
+    await startSnes9xGame(romData, 'snes', signal);
     return;
   }
 
-  if (lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig')) {
-    await startSnes9xGame(romData, 'snes', signal);
+  const sourceBaseName = sourceName.replace(/\.zip$/i, '');
+  const requiresFceumm = sourceBaseName === '機器貓小叮噹冒險'
+    || sourceBaseName === '机器猫小叮当冒险';
+  if (lower.endsWith('.nes') && requiresFceumm) {
+    await startSnes9xGame(romData, 'nes', signal);
     return;
   }
 
@@ -1516,7 +1524,7 @@ async function startGame(romData: ArrayBuffer, signal?: AbortSignal): Promise<vo
     loaded = nes.loadGgRom(romBytes);
   } else if (lower.endsWith('.sms')) {
     loaded = nes.loadSmsRom(romBytes);
-  } else if (lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig')) {
+  } else if (isSnesRom) {
     console.log(`[SNES] Attempting loadSnesRom, data size: ${romBytes.length}, first 4 bytes: ${romBytes[0].toString(16)} ${romBytes[1].toString(16)} ${romBytes[2].toString(16)} ${romBytes[3].toString(16)}`);
     try {
       loaded = nes.loadSnesRom(romBytes);
@@ -1525,7 +1533,26 @@ async function startGame(romData: ArrayBuffer, signal?: AbortSignal): Promise<vo
       console.error('[SNES] loadSnesRom threw:', e);
     }
   } else {
-    loaded = nes.loadRom(romBytes);
+    try {
+      loaded = nes.loadRom(romBytes);
+    } catch (error) {
+      if (!lower.endsWith('.nes')) throw error;
+      console.warn(`[NES] 原生 WASM 核心拒絕 ${currentRomFilename}，改用 FCEUmm`, error);
+    }
+  }
+
+  if (!loaded && lower.endsWith('.nes')) {
+    signal?.throwIfAborted();
+    console.warn(`[NES] 原生 WASM 核心不支援 ${currentRomFilename}，改用 FCEUmm`);
+    await startSnes9xGame(romData, 'nes', signal);
+    return;
+  }
+
+  if (!loaded && isSnesRom) {
+    signal?.throwIfAborted();
+    console.warn(`[SNES] 原生 WASM 核心不支援 ${currentRomFilename}，改用 Snes9x`);
+    await startSnes9xGame(romData, 'snes', signal);
+    return;
   }
 
   if (loaded) {
@@ -2833,7 +2860,7 @@ function resetAudioDiagWindow(): void {
   audioDiag.clipCount = 0;
 }
 
-function enqueueAudioSamples(samples: Float32Array): void {
+function enqueueAudioSamples(samples: Float32Array, channels = 1): void {
   if (audioMuted || samples.length === 0 || !audioWorkletNode) return;
 
   if (audioDiag.active && audioContext) {
@@ -2862,7 +2889,7 @@ function enqueueAudioSamples(samples: Float32Array): void {
 
   const transferableSamples = samples.slice();
   audioWorkletNode.port.postMessage(
-    { type: 'samples', samples: transferableSamples },
+    { type: 'samples', samples: transferableSamples, channels },
     [transferableSamples.buffer],
   );
 }
@@ -2894,7 +2921,7 @@ function drainWasmAudioToWorklet(): void {
   const memory = nes.getWasmMemory() as WebAssembly.Memory;
   const ptr = nes.getAudioBufferPtr();
   const samples = new Float32Array(memory.buffer, ptr, available);
-  enqueueAudioSamples(samples);
+  enqueueAudioSamples(samples, nes.getCoreType() === 'snes' ? 2 : 1);
 
   nes.consumeAudioSamples();
 }
@@ -2915,7 +2942,7 @@ async function initAudio(): Promise<void> {
     audioWorkletNode = new AudioWorkletNode(audioContext, 'emulator-audio-processor', {
       numberOfInputs: 0,
       numberOfOutputs: 1,
-      outputChannelCount: [1],
+      outputChannelCount: [2],
     });
     audioWorkletNode.connect(audioContext.destination);
     

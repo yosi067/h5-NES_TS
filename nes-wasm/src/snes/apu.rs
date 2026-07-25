@@ -43,6 +43,20 @@ static GAUSS_TABLE: [i16; 512] = [
     1299, 1300, 1300, 1301, 1302, 1302, 1303, 1303, 1303, 1304, 1304, 1304, 1304, 1304, 1305, 1305,
 ];
 
+const DSP_COUNTER_RANGE: u32 = 30_720;
+const DSP_COUNTER_RATES: [u32; 32] = [
+    DSP_COUNTER_RANGE + 1, 2048, 1536, 1280, 1024, 768, 640, 512,
+    384, 320, 256, 192, 160, 128, 96, 80,
+    64, 48, 40, 32, 24, 20, 16, 12,
+    10, 8, 6, 5, 4, 3, 2, 1,
+];
+const DSP_COUNTER_OFFSETS: [u32; 32] = [
+    1, 0, 1040, 536, 0, 1040, 536, 0,
+    1040, 536, 0, 1040, 536, 0, 1040, 536,
+    0, 1040, 536, 0, 1040, 536, 0, 1040,
+    536, 0, 1040, 536, 0, 1040, 0, 0,
+];
+
 /// S-DSP 聲道
 pub(crate) struct DspVoice {
     /// BRR 起始位址 (source number)
@@ -65,8 +79,6 @@ pub(crate) struct DspVoice {
     gain: u8,
     pub(crate) env_mode: EnvMode,
     pub(crate) env_level: i32,
-    /// Internal envelope counter for rate timing
-    env_counter: u16,
     /// 音量
     pub(crate) vol_l: i8,
     pub(crate) vol_r: i8,
@@ -106,7 +118,6 @@ impl DspVoice {
             gain: 0,
             env_mode: EnvMode::Release,
             env_level: 0,
-            env_counter: 0,
             vol_l: 0,
             vol_r: 0,
             key_on: false,
@@ -158,7 +169,6 @@ pub struct Dsp {
     echo_hist_pos: usize,
     /// 雜訊 LFSR
     noise_lfsr: i16,
-    noise_counter: u16,
     /// 內部計時
     counter: u32,
     /// Debug: voice mute mask (bit N = mute voice N)
@@ -187,7 +197,6 @@ impl Dsp {
             echo_hist_r: [0; 8],
             echo_hist_pos: 0,
             noise_lfsr: 0x4000,
-            noise_counter: 0,
             counter: 0,
             voice_mute_mask: 0,
         }
@@ -315,7 +324,6 @@ impl Dsp {
         v.brr_old1 = 0;
         v.brr_old2 = 0;
         v.env_level = 0;
-        v.env_counter = 0;
         v.env_mode = EnvMode::Attack;
         v.active = true;
         v.key_on = true;
@@ -409,6 +417,8 @@ impl Dsp {
             // Soft reset / mute
             return (0, 0);
         }
+
+        self.advance_counter();
 
         // 更新雜訊
         self.update_noise();
@@ -570,39 +580,29 @@ impl Dsp {
     }
 
     fn update_noise(&mut self) {
-        // Noise clock uses the same rate system as envelope
-        static NOISE_RATE_TABLE: [u16; 32] = [
-            0,     // 0: no noise update
-            2048, 1536, 1280, 1024, 768, 640, 512,  // 1-7
-            384,  320,  256,  192,  160, 128,  96,   // 8-14
-            80,    64,   48,   40,   32,  24,  20,   // 15-21
-            16,    12,   10,    8,    6,   4,   3,   // 22-28
-            2,     1,    1,                           // 29-31
-        ];
         let rate = (self.flg & 0x1F) as usize;
-        let period = NOISE_RATE_TABLE[rate];
-        if period == 0 { return; }
-        self.noise_counter += 1;
-        if self.noise_counter >= period {
-            self.noise_counter = 0;
+        if Self::rate_fires(self.counter, rate) {
             // LFSR: bit = (lfsr ^ (lfsr >> 1)) & 1; lfsr = (lfsr >> 1) | (bit << 14)
             let bit = (self.noise_lfsr ^ (self.noise_lfsr >> 1)) & 1;
             self.noise_lfsr = (self.noise_lfsr >> 1) | (bit << 14);
         }
     }
 
-    fn update_envelope(&mut self, idx: usize) {
-        let v = &mut self.voices[idx];
+    fn rate_fires(counter: u32, rate: usize) -> bool {
+        (counter + DSP_COUNTER_OFFSETS[rate]) % DSP_COUNTER_RATES[rate] == 0
+    }
 
-        // SNES DSP envelope rate table (approximate periods in 32kHz samples)
-        static ENV_RATE_TABLE: [u16; 32] = [
-            0,     // 0: infinity (no change)
-            2048, 1536, 1280, 1024, 768, 640, 512,  // 1-7
-            384,  320,  256,  192,  160, 128,  96,   // 8-14
-            80,    64,   48,   40,   32,  24,  20,   // 15-21
-            16,    12,   10,    8,    6,   4,   3,   // 22-28
-            2,     1,    1,                           // 29-31
-        ];
+    fn advance_counter(&mut self) {
+        self.counter = if self.counter == 0 {
+            DSP_COUNTER_RANGE - 1
+        } else {
+            self.counter - 1
+        };
+    }
+
+    fn update_envelope(&mut self, idx: usize) {
+        let counter = self.counter;
+        let v = &mut self.voices[idx];
 
         if v.env_mode == EnvMode::Release {
             v.env_level = (v.env_level - 8).max(0);
@@ -618,48 +618,33 @@ impl Dsp {
                 EnvMode::Attack => {
                     let ar = (v.adsr1 & 0x0F) as usize;
                     let dsp_rate = if ar == 15 { 31 } else { ar * 2 + 1 };
-                    let period = ENV_RATE_TABLE[dsp_rate];
-                    if period > 0 {
-                        v.env_counter = v.env_counter.wrapping_add(1);
-                        if v.env_counter >= period {
-                            v.env_counter = 0;
-                            let step = if ar == 15 { 1024 } else { 32 };
-                            v.env_level += step;
-                            if v.env_level >= 0x7FF {
-                                v.env_level = 0x7FF;
-                                v.env_mode = EnvMode::Decay;
-                            }
+                    if Self::rate_fires(counter, dsp_rate) {
+                        let step = if ar == 15 { 1024 } else { 32 };
+                        v.env_level += step;
+                        if v.env_level >= 0x7FF {
+                            v.env_level = 0x7FF;
+                            v.env_mode = EnvMode::Decay;
                         }
                     }
                 }
                 EnvMode::Decay => {
                     let dr = ((v.adsr1 >> 4) & 0x07) as usize;
                     let dsp_rate = dr * 2 + 16;
-                    let period = ENV_RATE_TABLE[dsp_rate.min(31)];
-                    if period > 0 {
-                        v.env_counter = v.env_counter.wrapping_add(1);
-                        if v.env_counter >= period {
-                            v.env_counter = 0;
-                            v.env_level -= ((v.env_level - 1) >> 8) + 1;
-                            let sustain_level = ((v.adsr2 >> 5) as i32 + 1) * 0x100;
-                            if v.env_level <= sustain_level {
-                                v.env_level = sustain_level;
-                                v.env_mode = EnvMode::Sustain;
-                            }
+                    if Self::rate_fires(counter, dsp_rate.min(31)) {
+                        v.env_level -= ((v.env_level - 1) >> 8) + 1;
+                        let sustain_level = ((v.adsr2 >> 5) as i32 + 1) * 0x100;
+                        if v.env_level <= sustain_level {
+                            v.env_level = sustain_level;
+                            v.env_mode = EnvMode::Sustain;
                         }
                     }
                 }
                 EnvMode::Sustain => {
                     let sr = (v.adsr2 & 0x1F) as usize;
                     if sr == 0 { v.env_level = v.env_level.max(0).min(0x7FF); return; }
-                    let period = ENV_RATE_TABLE[sr];
-                    if period > 0 {
-                        v.env_counter = v.env_counter.wrapping_add(1);
-                        if v.env_counter >= period {
-                            v.env_counter = 0;
-                            v.env_level -= ((v.env_level - 1) >> 8) + 1;
-                            if v.env_level < 0 { v.env_level = 0; }
-                        }
+                    if Self::rate_fires(counter, sr) {
+                        v.env_level -= ((v.env_level - 1) >> 8) + 1;
+                        if v.env_level < 0 { v.env_level = 0; }
                     }
                 }
                 _ => {}
@@ -673,12 +658,8 @@ impl Dsp {
             } else {
                 let mode = (gain >> 5) & 0x03;
                 let rate = (gain & 0x1F) as usize;
-                let period = ENV_RATE_TABLE[rate];
-                if period > 0 {
-                    v.env_counter = v.env_counter.wrapping_add(1);
-                    if v.env_counter >= period {
-                        v.env_counter = 0;
-                        match mode {
+                if Self::rate_fires(counter, rate) {
+                    match mode {
                             0 => { // Linear decrease
                                 v.env_level -= 32;
                                 if v.env_level < 0 { v.env_level = 0; }
@@ -699,8 +680,7 @@ impl Dsp {
                                 }
                                 if v.env_level > 0x7FF { v.env_level = 0x7FF; }
                             }
-                            _ => {}
-                        }
+                        _ => {}
                     }
                 }
             }
@@ -881,6 +861,27 @@ impl Apu {
 
     pub fn set_sample_rate(&mut self, rate: f64) {
         self.sample_rate = rate;
+    }
+
+    fn emit_resampled_stereo(&mut self, cur_l: f32, cur_r: f32) {
+        let ratio = self.sample_rate / 32000.0;
+        let prev_counter = self.sample_counter;
+        self.sample_counter += ratio;
+        let samples_to_emit = self.sample_counter as u32 - prev_counter as u32;
+        for sample_index in 0..samples_to_emit {
+            let frac = if samples_to_emit > 1 {
+                (sample_index + 1) as f32 / samples_to_emit as f32
+            } else {
+                1.0
+            };
+            let left = self.prev_dsp_l * (1.0 - frac) + cur_l * frac;
+            let right = self.prev_dsp_r * (1.0 - frac) + cur_r * frac;
+            self.audio_buffer.push(left);
+            self.audio_buffer.push(right);
+        }
+
+        self.prev_dsp_l = cur_l;
+        self.prev_dsp_r = cur_r;
     }
 
     // === CPU 側 Port 存取 ===
@@ -1100,21 +1101,7 @@ impl Apu {
                 let cur_l = l as f32 / 32768.0;
                 let cur_r = r as f32 / 32768.0;
 
-                // 線性插值重取樣 32000 Hz → target sample rate
-                // 每個 DSP sample 產生 sample_rate/32000 ≈ 1.378 個輸出 sample
-                let ratio = self.sample_rate / 32000.0;
-                let prev_counter = self.sample_counter;
-                self.sample_counter += ratio;
-                let samples_to_emit = self.sample_counter as u32 - prev_counter as u32;
-                for s in 0..samples_to_emit {
-                    let frac = if samples_to_emit > 1 { (s + 1) as f32 / samples_to_emit as f32 } else { 1.0 };
-                    let out = (self.prev_dsp_l * (1.0 - frac) + cur_l * frac
-                             + self.prev_dsp_r * (1.0 - frac) + cur_r * frac) * 0.5;
-                    self.audio_buffer.push(out);
-                }
-
-                self.prev_dsp_l = cur_l;
-                self.prev_dsp_r = cur_r;
+                self.emit_resampled_stereo(cur_l, cur_r);
             }
         }
     }
@@ -1769,5 +1756,34 @@ impl Apu {
         // Restore echo_length from EDL
         let edl = self.dsp.edl & 0x0F;
         self.dsp.echo_length = if edl == 0 { 4 } else { edl as usize * 2048 };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Apu, Dsp, DSP_COUNTER_RANGE};
+
+    #[test]
+    fn dsp_counter_uses_hardware_rate_periods() {
+        let fires = (0..DSP_COUNTER_RANGE)
+            .filter(|&counter| Dsp::rate_fires(counter, 27))
+            .count();
+
+        assert_eq!(fires, (DSP_COUNTER_RANGE / 5) as usize);
+    }
+
+    #[test]
+    fn dsp_counter_applies_rate_phase_offsets() {
+        assert!(Dsp::rate_fires(496, 2));
+        assert!(!Dsp::rate_fires(495, 2));
+    }
+
+    #[test]
+    fn resampler_preserves_left_and_right_channels() {
+        let mut apu = Apu::new();
+        apu.set_sample_rate(64_000.0);
+        apu.emit_resampled_stereo(1.0, -1.0);
+
+        assert_eq!(apu.audio_buffer, vec![0.5, -0.5, 1.0, -1.0]);
     }
 }
