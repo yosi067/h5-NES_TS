@@ -1,4 +1,3 @@
-            // H-scroll preserves the target BG's existing low 3 bits.
 // ============================================================
 // SNES PPU - Picture Processing Unit
 // ============================================================
@@ -389,12 +388,13 @@ impl Ppu {
                 self.bg_chr_addr[3] = (val as u16 >> 4) << 13;
             }
             // $210D-$2114 - BG 捲軸
-            // H-scroll preserves the target BG's existing low 3 bits:
-            // value = (data << 8) | (shared_latch & ~7) | (BGnHOFS & 7)
+            // H-scroll uses two shared latches:
+            // value = (data << 8) | (latch1 & ~7) | (latch2 & 7)
             // V-scroll uses one latch:    value = (data << 8) | scroll_latch
             0x210D => { // BG1 H Scroll (also M7HOFS)
-                self.bg_hscroll[0] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | (self.bg_hscroll[0] & 7);
+                self.bg_hscroll[0] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | ((self.scroll_latch2 as u16) & 7);
                 self.scroll_latch = val;
+                self.scroll_latch2 = val;
                 // Mode 7
                 self.m7hofs = (((val as u16) << 8) | (self.m7_latch as u16)) as i16;
                 self.m7_latch = val;
@@ -405,11 +405,11 @@ impl Ppu {
                 self.m7vofs = (((val as u16) << 8) | (self.m7_latch as u16)) as i16;
                 self.m7_latch = val;
             }
-            0x210F => { self.bg_hscroll[1] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | (self.bg_hscroll[1] & 7); self.scroll_latch = val; }
+            0x210F => { self.bg_hscroll[1] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | ((self.scroll_latch2 as u16) & 7); self.scroll_latch = val; self.scroll_latch2 = val; }
             0x2110 => { self.bg_vscroll[1] = ((val as u16) << 8) | (self.scroll_latch as u16); self.scroll_latch = val; }
-            0x2111 => { self.bg_hscroll[2] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | (self.bg_hscroll[2] & 7); self.scroll_latch = val; }
+            0x2111 => { self.bg_hscroll[2] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | ((self.scroll_latch2 as u16) & 7); self.scroll_latch = val; self.scroll_latch2 = val; }
             0x2112 => { self.bg_vscroll[2] = ((val as u16) << 8) | (self.scroll_latch as u16); self.scroll_latch = val; }
-            0x2113 => { self.bg_hscroll[3] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | (self.bg_hscroll[3] & 7); self.scroll_latch = val; }
+            0x2113 => { self.bg_hscroll[3] = ((val as u16) << 8) | ((self.scroll_latch as u16) & !7) | ((self.scroll_latch2 as u16) & 7); self.scroll_latch = val; self.scroll_latch2 = val; }
             0x2114 => { self.bg_vscroll[3] = ((val as u16) << 8) | (self.scroll_latch as u16); self.scroll_latch = val; }
             // $2115 - VMAIN: VRAM 位址設定
             0x2115 => {
@@ -1035,11 +1035,12 @@ impl Ppu {
         let sub_enabled = self.ts & (1 << bg_idx) != 0;
         let main_win = self.tmw & (1 << bg_idx) != 0;
         let sub_win = self.tsw & (1 << bg_idx) != 0;
+        let hires_hscroll = (hscroll as usize) << 1;
 
         for screen_x in 0..256usize {
             // Mode 5/6 hires: sub screen gets even hires pixel, main screen gets odd hires pixel
-            let hires_even = (screen_x * 2 + hscroll as usize) & h_mask;
-            let hires_odd = (screen_x * 2 + 1 + hscroll as usize) & h_mask;
+            let hires_even = (screen_x * 2 + hires_hscroll) & h_mask;
+            let hires_odd = (screen_x * 2 + 1 + hires_hscroll) & h_mask;
 
             // --- Sub screen pixel (even hires column) ---
             if sub_enabled {
@@ -1646,18 +1647,14 @@ mod tests {
     }
 
     #[test]
-    fn horizontal_scroll_preserves_each_background_fine_offset() {
-        let mut ppu = Ppu::new();
-        ppu.bg_hscroll[0] = 5;
-        ppu.bg_hscroll[1] = 2;
+    fn horizontal_scroll_updates_every_fine_pixel() {
+        for scroll in 0u16..16 {
+            let mut ppu = Ppu::new();
+            ppu.write_register(0x210D, scroll as u8);
+            ppu.write_register(0x210D, (scroll >> 8) as u8);
 
-        ppu.write_register(0x210D, 0x3B);
-        ppu.write_register(0x210D, 0x01);
-        ppu.write_register(0x210F, 0x64);
-        ppu.write_register(0x210F, 0x02);
-
-        assert_eq!(ppu.bg_hscroll[0], 0x013D);
-        assert_eq!(ppu.bg_hscroll[1], 0x0262);
+            assert_eq!(ppu.bg_hscroll[0], scroll);
+        }
     }
 
     #[test]
@@ -1682,5 +1679,25 @@ mod tests {
 
         write_tilemap_entry(&mut ppu, 0, 0xa020);
         assert_eq!(ppu.offset_per_tile_coords(0, 8, 10), (8, 42));
+    }
+
+    #[test]
+    fn hires_horizontal_scroll_uses_low_resolution_pixel_units() {
+        let mut ppu = Ppu::new();
+        ppu.bg_mode = 5;
+        ppu.bg_hscroll[0] = 8;
+        ppu.bg_tilemap_addr[0] = 0x1000;
+        ppu.tm = 0x01;
+        ppu.cgram[1] = 0x001f;
+        ppu.cgram[2] = 0x03e0;
+
+        write_tilemap_entry(&mut ppu, 0x1000, 0);
+        write_tilemap_entry(&mut ppu, 0x1002, 2);
+        ppu.vram[32] = 0xff;
+        ppu.vram[64 + 1] = 0xff;
+
+        ppu.render_bg_hires(0, 0, 4, 4, 8);
+
+        assert_eq!(ppu.main_buf[0], bgr15_to_rgba(ppu.cgram[2]));
     }
 }

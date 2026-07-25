@@ -120,6 +120,7 @@
 
 **解決**：新增 `render_bg_hires()` 方法：
 - 每個輸出像素 x 映射到 hi-res 座標 x*2
+- 水平捲動暫存器仍以 256px 座標計數，取樣前必須乘 2；否則字形會在 tile N/N+1 邊界錯位
 - tilemap entry 覆蓋 16 hi-res 像素，tile N = 左 8px，tile N+1 = 右 8px
 - 支援 flip_x/flip_y 和 16px 高 tile
 - Mode 4/5/6 各自正確路由
@@ -195,6 +196,16 @@
 2. 新增 `direct_color_to_rgba()` 與 `uses_direct_color()`，在一般 BG 與 Mode 5/6 hires sampler 中支援 BG1 8bpp direct color。
 
 **影響遊戲**：Secret of Mana / 聖劍傳說 2、Seiken Densetsu 3，以及依賴 sub screen 半透明、fixed color 加減法或 direct color 的 SFC 遊戲。
+
+---
+
+### Q8.2: 水平捲動量化成 8px — 超時空之鑰背景移動卡頓
+
+**現象**：開頭部分場景橫向移動時，背景不是逐像素平滑捲動，而是停住後一次跳動約 8px。
+
+**原因**：`$210D/$210F/$2111/$2113` 水平捲動需要 PPU1/PPU2 兩個共享 latch。舊實作只使用一個 latch，低 3 位錯誤地沿用該 BG 的舊值，使 1-7px 的細捲動被丟棄。
+
+**解決**：水平寫入改為 `data << 8 | (latch1 & ~7) | (latch2 & 7)`，並在每次 H-scroll 寫入後同步更新兩個 latch。回歸測試逐一驗證 0-15px 都能正確寫入。
 
 ---
 

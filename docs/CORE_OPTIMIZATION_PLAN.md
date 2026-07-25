@@ -18,7 +18,7 @@
 - NES 正式 Rust 核心已加入 NTSC frame PPU clock 基線測試。
 - NES IRQ 改為由 APU/Mapper 當前 level 重算；MMC3 IRQ 只在 `$E000` acknowledge 後解除，修正 Captain Tsubasa II 的幽靈 IRQ/stack frame 損壞。
 - NES 2.0 已安全接受既有 mapper、submapper 0 與標準容量編碼；擴充 mapper/submapper/容量仍明確拒絕。
-- SNES BG1-BG4 水平捲動各自保留 fine offset，修正 Mode 5 英文字形 0-7 px 位移。
+- SNES 水平捲動改用硬體的 PPU1/PPU2 雙 latch，細捲動可逐像素更新，不再量化成 8px 階梯。
 
 ## N64 最終評估
 
@@ -73,7 +73,7 @@
 - **P0**：建立 SPC700 全 256 opcode 的 cycle 與旗標測試；跑 Secret of Mana、Chrono Trigger、FF6 音訊回歸。
 - **已完成一部分**：修正 16-bit decimal ADC carry 並加入邊界回歸測試；後續仍需補 binary/decimal ADC/SBC 表格測試及 NMI/IRQ、WAI/STP、emulation/native mode 測試。
 - **P0**：建立 PPU screenshot/hash suite，涵蓋 Mode 5/7、window/color math、OAM priority、HDMA 與 overscan/interlace。
-- **已完成一部分**：BG1-BG4 水平捲動 latch 不再共用 fine offset，並有 register-level 回歸測試；仍需在 Secret of Mana 與 Seiken Densetsu 3 的英文對話畫面做 screenshot 驗證。
+- **已完成一部分**：BG 水平捲動改用 PPU1/PPU2 雙 latch，並有 0-15px register-level 回歸測試；仍需建立實機場景 screenshot/hash 驗證。
 - **P1（進行中）**：slow/fast ROM 與 I/O bus penalty 已接入一般 CPU 指令；後續補 NMI/IRQ、WAI 與 DMA/HDMA 邊界同步測試。
 - **P2**：特殊晶片按 ROM 需求選擇成熟核心整合或個別實作。SA-1、SuperFX、S-DD1、SPC7110 遊戲在完成前明確標示不支援。
 
