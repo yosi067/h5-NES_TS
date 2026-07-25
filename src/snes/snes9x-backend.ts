@@ -37,6 +37,7 @@ export async function startSnes9xBackend(
   rom: Uint8Array,
   romName: string,
   core: 'snes' | 'nes' = 'snes',
+  signal?: AbortSignal,
 ): Promise<Snes9xBackend> {
   const runtimeUrl = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/loader.js`, window.location.href).href;
   const dataPath = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/`, window.location.href).href;
@@ -68,29 +69,50 @@ window.EJS_language='en-US';
 </script><script src=${escapeInlineScript(runtimeUrl)}></script></body></html>`;
   host.appendChild(iframe);
 
-  await new Promise<void>((resolve, reject) => {
-    const timeout = window.setTimeout(() => {
-      cleanup();
-      reject(new Error(`${core === 'nes' ? 'NES' : 'Snes9x'} 核心啟動逾時`));
-    }, START_TIMEOUT_MS);
-    const poll = window.setInterval(() => {
-      const emulator = (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator;
-      if (emulator?.gameManager && emulator.started) {
+  let disposed = false;
+  const dispose = () => {
+    if (disposed) return;
+    disposed = true;
+    (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator?.callEvent?.('exit');
+    iframe.remove();
+    URL.revokeObjectURL(romUrl);
+  };
+
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(() => {
         cleanup();
-        resolve();
-      }
-    }, 50);
-    const onError = () => {
-      cleanup();
-      reject(new Error(`${core === 'nes' ? 'NES' : 'Snes9x'} runtime 載入失敗`));
-    };
-    const cleanup = () => {
-      window.clearTimeout(timeout);
-      window.clearInterval(poll);
-      iframe.removeEventListener('error', onError);
-    };
-    iframe.addEventListener('error', onError);
-  });
+        reject(new Error(`${core === 'nes' ? 'NES' : 'Snes9x'} 核心啟動逾時`));
+      }, START_TIMEOUT_MS);
+      const poll = window.setInterval(() => {
+        const emulator = (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator;
+        if (emulator?.gameManager && emulator.started) {
+          cleanup();
+          resolve();
+        }
+      }, 50);
+      const onError = () => {
+        cleanup();
+        reject(new Error(`${core === 'nes' ? 'NES' : 'Snes9x'} runtime 載入失敗`));
+      };
+      const onAbort = () => {
+        cleanup();
+        reject(new DOMException('遊戲載入已取消', 'AbortError'));
+      };
+      const cleanup = () => {
+        window.clearTimeout(timeout);
+        window.clearInterval(poll);
+        iframe.removeEventListener('error', onError);
+        signal?.removeEventListener('abort', onAbort);
+      };
+      iframe.addEventListener('error', onError);
+      if (signal?.aborted) onAbort();
+      else signal?.addEventListener('abort', onAbort, { once: true });
+    });
+  } catch (error) {
+    dispose();
+    throw error;
+  }
 
   const getEmulator = (): EmulatorJsInstance | undefined =>
     (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator;
@@ -119,9 +141,7 @@ window.EJS_language='en-US';
       getEmulator()?.gameManager?.restart();
     },
     stop() {
-      getEmulator()?.callEvent?.('exit');
-      iframe.remove();
-      URL.revokeObjectURL(romUrl);
+      dispose();
     },
   };
 }

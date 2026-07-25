@@ -404,6 +404,23 @@ function stopSnes9xBackend(): void {
   document.getElementById('screen')?.style.removeProperty('display');
 }
 
+function stopFbNeoBackend(): void {
+  fbneoCore = null;
+  currentFbNeoRomSet = null;
+  arcadeInputP1 = 0;
+  arcadeInputP2 = 0;
+  arcadeGamepadInputP1 = 0;
+  if (activeBackend === 'fbneo') activeBackend = 'wasm';
+}
+
+function resetWasmCore(): void {
+  if (!nes) return;
+  nes.free();
+  nes = new EmuWasm();
+  if (audioContext) nes.setAudioSampleRate(audioContext.sampleRate);
+  window.nes = nes;
+}
+
 function isFbNeoArcadeRomName(filename: string): boolean {
   return filename.toLowerCase().endsWith('.zip') && getFbNeoGameName(filename) !== null;
 }
@@ -926,8 +943,27 @@ function setupKeyboardInput(): void {
 // ===== ROM 選擇器 =====
 
 let gameLoadingSequence = 0;
+let gameLoadAbortController: AbortController | null = null;
 let appDialogResolve: ((confirmed: boolean) => void) | null = null;
 let appDialogPreviousFocus: HTMLElement | null = null;
+
+function beginGameLoad(): AbortController {
+  gameLoadAbortController?.abort();
+  gameLoadAbortController = new AbortController();
+  return gameLoadAbortController;
+}
+
+function cancelPendingGameLoad(): void {
+  gameLoadingSequence++;
+  gameLoadAbortController?.abort();
+  gameLoadAbortController = null;
+  const overlay = document.getElementById('game-loading-overlay');
+  if (overlay) overlay.hidden = true;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
 
 function closeAppDialog(confirmed: boolean): void {
   const overlay = document.getElementById('app-dialog-overlay');
@@ -1220,22 +1256,24 @@ function renderRomList(system: SystemKey): void {
  * 從伺服器載入 ROM（支援 ZIP）
  */
 async function loadRomFromServer(filename: string): Promise<void> {
+  const loadController = beginGameLoad();
   const loadingSequence = await showGameLoading(filename, '正在下載遊戲檔案…');
   try {
     // 使用 Vite 的 BASE_URL 確保在 GitHub Pages 等子目錄部署時路徑正確
     const baseUrl = import.meta.env.BASE_URL;
-    const response = await fetch(getRomAssetUrl(baseUrl, filename));
+    const response = await fetch(getRomAssetUrl(baseUrl, filename), { signal: loadController.signal });
     if (!response.ok) {
       throw new Error(`無法載入 ROM: ${filename}`);
     }
     
     const buffer = await readResponseWithProgress(response, loadingSequence);
+    loadController.signal.throwIfAborted();
     const lower = filename.toLowerCase();
     updateGameLoading(loadingSequence, '正在啟動模擬器…');
 
     if (isFbNeoArcadeRomName(filename)) {
       currentRomFilename = filename;
-      await startFbNeoGame(filename, buffer, loadingSequence);
+      await startFbNeoGame(filename, buffer, loadingSequence, loadController.signal);
       return;
     }
 
@@ -1269,17 +1307,20 @@ async function loadRomFromServer(filename: string): Promise<void> {
           `正在解壓縮遊戲檔案… ${Math.round(metadata.percent)}%`,
         );
       });
+      loadController.signal.throwIfAborted();
       currentRomFilename = romFileName.split('/').pop() || romFileName;
       updateGameLoading(loadingSequence, '正在啟動模擬器…');
-      await startGame(romBuffer);
+      await startGame(romBuffer, loadController.signal);
     } else {
       currentRomFilename = filename;
-      await startGame(buffer);
+      await startGame(buffer, loadController.signal);
     }
   } catch (error) {
+    if (isAbortError(error)) return;
     console.error('載入 ROM 失敗:', error);
     await showAppAlert('載入遊戲失敗，請重試');
   } finally {
+    if (gameLoadAbortController === loadController) gameLoadAbortController = null;
     hideGameLoading(loadingSequence);
   }
 }
@@ -1288,6 +1329,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
  * 從檔案載入 ROM（支援 ZIP）
  */
 async function loadRomFromFile(file: File): Promise<void> {
+  const loadController = beginGameLoad();
   const loadingSequence = await showGameLoading(file.name, '正在讀取遊戲檔案…');
   try {
     const lower = file.name.toLowerCase();
@@ -1297,9 +1339,10 @@ async function loadRomFromFile(file: File): Promise<void> {
     if (lower.endsWith('.zip')) {
       if (isFbNeoArcadeRomName(file.name)) {
         const zipBuffer = await file.arrayBuffer();
+        loadController.signal.throwIfAborted();
         currentRomFilename = file.name;
         updateGameLoading(loadingSequence, '正在啟動模擬器…');
-        await startFbNeoGame(file.name, zipBuffer, loadingSequence);
+        await startFbNeoGame(file.name, zipBuffer, loadingSequence, loadController.signal);
         return;
       }
 
@@ -1332,6 +1375,7 @@ async function loadRomFromFile(file: File): Promise<void> {
           `正在解壓縮遊戲檔案… ${Math.round(metadata.percent)}%`,
         );
       });
+      loadController.signal.throwIfAborted();
       // Use the actual ROM filename inside the ZIP for extension detection
       romName = romFileName.split('/').pop() || romFileName;
     } else {
@@ -1340,20 +1384,31 @@ async function loadRomFromFile(file: File): Promise<void> {
 
     currentRomFilename = romName;
     updateGameLoading(loadingSequence, '正在啟動模擬器…');
-    await startGame(buffer);
+    await startGame(buffer, loadController.signal);
   } catch (error) {
+    if (isAbortError(error)) return;
     console.error('載入 ROM 失敗:', error);
     await showAppAlert('載入遊戲失敗，請重試');
   } finally {
+    if (gameLoadAbortController === loadController) gameLoadAbortController = null;
     hideGameLoading(loadingSequence);
   }
 }
 
-async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer, loadingSequence: number): Promise<void> {
+async function startFbNeoGame(
+  archiveName: string,
+  zipData: ArrayBuffer,
+  loadingSequence: number,
+  signal?: AbortSignal,
+): Promise<void> {
   if (!canvas || !ctx) return;
+  let coreInstance: FbNeoArcadeCore | null = null;
 
   stopEmulation();
   await stopN64Backend();
+  stopSnes9xBackend();
+  stopFbNeoBackend();
+  resetWasmCore();
   activeBackend = 'fbneo';
   arcadeInputP1 = 0;
   arcadeInputP2 = 0;
@@ -1362,12 +1417,16 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer, loading
 
   try {
     const { FbNeoArcadeCore, extractFbNeoRomSet } = await import('./arcade/fbneo-core');
-    fbneoCore = new FbNeoArcadeCore();
+    signal?.throwIfAborted();
+    coreInstance = new FbNeoArcadeCore();
+    fbneoCore = coreInstance;
     const romSet = await extractFbNeoRomSet(archiveName, zipData);
+    signal?.throwIfAborted();
     currentFbNeoRomSet = romSet;
     currentRomFilename = archiveName;
 
-    const validity = await fbneoCore.checkRomValidity(romSet);
+    const validity = await coreInstance.checkRomValidity(romSet);
+    signal?.throwIfAborted();
     if (!validity.ok) {
       activeBackend = 'wasm';
       console.error(`[FBNeo] ROM 校驗失敗:\n${validity.log}`);
@@ -1375,15 +1434,16 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer, loading
       return;
     }
 
-    const loaded = await fbneoCore.loadGame(romSet.gameName);
+    const loaded = await coreInstance.loadGame(romSet.gameName);
+    signal?.throwIfAborted();
     if (!loaded) {
       activeBackend = 'wasm';
-      const log = fbneoCore.getLog();
+      const log = coreInstance.getLog();
       await showAppAlert(`FBNeo 載入 ${archiveName} 失敗\n\n${log}`);
       return;
     }
 
-    const { width, height } = fbneoCore.getResolution();
+    const { width, height } = coreInstance.getResolution();
     arcadeSourceWidth = width;
     arcadeSourceHeight = height;
     arcadeRotation = FBNEO_ROTATIONS[romSet.gameName] ?? 'none';
@@ -1398,16 +1458,20 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer, loading
     updateControllerLayout();
     powerLed?.classList.add('on');
     updateGameLoading(loadingSequence, '正在準備遊戲畫面…');
-    await warmUpFbNeoVideo();
-    updateArcadeButtonCount(fbneoCore.getFireButtonCount());
+    await warmUpFbNeoVideo(coreInstance, signal);
+    signal?.throwIfAborted();
+    updateArcadeButtonCount(coreInstance.getFireButtonCount());
     renderFbNeoFrame();
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
     console.log(`[FBNeo] ${romSet.gameName} loaded: ${width}x${height}${arcadeRotation === 'none' ? '' : ` rotated-${arcadeRotation}`}`);
     showToast(`FBNeo: ${romSet.gameName} OK`);
     startEmulation();
   } catch (error) {
-    activeBackend = 'wasm';
-    currentFbNeoRomSet = null;
+    if (fbneoCore === coreInstance) {
+      activeBackend = 'wasm';
+      stopFbNeoBackend();
+    }
+    if (isAbortError(error)) return;
     console.error('[FBNeo] 啟動失敗:', error);
     await showAppAlert(error instanceof Error ? error.message : 'FBNeo 啟動失敗');
   }
@@ -1416,7 +1480,8 @@ async function startFbNeoGame(archiveName: string, zipData: ArrayBuffer, loading
 /**
  * 開始遊戲
  */
-async function startGame(romData: ArrayBuffer): Promise<void> {
+async function startGame(romData: ArrayBuffer, signal?: AbortSignal): Promise<void> {
+  signal?.throwIfAborted();
   const romBytes = new Uint8Array(romData);
   
   // 根據副檔名選擇對應的載入方法
@@ -1428,12 +1493,12 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
   }
 
   if (lower.endsWith('.nes')) {
-    await startSnes9xGame(romBytes, 'nes');
+    await startSnes9xGame(romBytes, 'nes', signal);
     return;
   }
 
   if (lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig')) {
-    await startSnes9xGame(romBytes);
+    await startSnes9xGame(romBytes, 'snes', signal);
     return;
   }
 
@@ -1444,6 +1509,7 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
 
   await stopN64Backend();
   stopSnes9xBackend();
+  stopFbNeoBackend();
   activeBackend = 'wasm';
   let loaded = false;
   if (lower.endsWith('.gg')) {
@@ -1510,7 +1576,11 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
   }
 }
 
-async function startSnes9xGame(romBytes: Uint8Array, core: 'snes' | 'nes' = 'snes'): Promise<void> {
+async function startSnes9xGame(
+  romBytes: Uint8Array,
+  core: 'snes' | 'nes' = 'snes',
+  signal?: AbortSignal,
+): Promise<void> {
   const screen = document.getElementById('screen');
   const host = screen?.parentElement;
   if (!screen || !host) throw new Error('找不到遊戲畫面容器');
@@ -1518,12 +1588,14 @@ async function startSnes9xGame(romBytes: Uint8Array, core: 'snes' | 'nes' = 'sne
   stopEmulation();
   await stopN64Backend();
   stopSnes9xBackend();
+  stopFbNeoBackend();
+  resetWasmCore();
   activeBackend = 'snes9x';
   emulatorJsCore = core;
   screen.style.display = 'none';
 
   try {
-    snes9xBackend = await startSnes9xBackend(host, romBytes, currentRomFilename, core);
+    snes9xBackend = await startSnes9xBackend(host, romBytes, currentRomFilename, core, signal);
     isRunning = true;
     hideRomSelector();
     updateControllerLayout();
@@ -1545,6 +1617,9 @@ async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Prom
 
   stopEmulation();
   await stopN64Backend();
+  stopSnes9xBackend();
+  stopFbNeoBackend();
+  resetWasmCore();
   let startupDiagnosticLabel: string | null = null;
 
   const graphicsCapability = getN64GraphicsCapability();
@@ -1808,6 +1883,7 @@ async function stopN64Backend(): Promise<void> {
     }
     n64Controls = null;
   }
+  currentN64RomData = null;
 
   restoreWasmCanvas();
   if (activeBackend === 'mupen64') {
@@ -1827,9 +1903,14 @@ function hideRomSelector(): void {
  * 顯示 ROM 選擇器
  */
 async function showRomSelector(): Promise<void> {
+  cancelPendingGameLoad();
   saveSram();
   stopEmulation();
   await stopN64Backend();
+  stopSnes9xBackend();
+  stopFbNeoBackend();
+  resetWasmCore();
+  clearAudioQueue();
   currentN64RomData = null;
   powerLed?.classList.remove('on');
   if (romCatalog.length > 0) renderMachineSelector();
@@ -2632,15 +2713,14 @@ function isPresentableFbNeoFrame(frameBuffer: Uint8Array): boolean {
   return !greenFlash;
 }
 
-async function warmUpFbNeoVideo(): Promise<void> {
-  if (!fbneoCore) return;
-
+async function warmUpFbNeoVideo(core: FbNeoArcadeCore, signal?: AbortSignal): Promise<void> {
   let stableSamples = 0;
   for (let frame = 0; frame < 900; frame += 6) {
-    for (let step = 0; step < 6; step++) fbneoCore.stepFrame(0, 0);
-    fbneoCore.consumeAudioSamples();
+    signal?.throwIfAborted();
+    for (let step = 0; step < 6; step++) core.stepFrame(0, 0);
+    core.consumeAudioSamples();
 
-    if (frame >= 480 && isPresentableFbNeoFrame(fbneoCore.getFrameBufferView())) {
+    if (frame >= 480 && isPresentableFbNeoFrame(core.getFrameBufferView())) {
       stableSamples++;
       if (stableSamples >= 5) return;
     } else {
