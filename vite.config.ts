@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
-import { copyFileSync, mkdirSync, readdirSync, existsSync, readFileSync, statSync } from 'fs';
+import { copyFileSync, mkdirSync, readdirSync, existsSync, readFileSync, statSync, writeFileSync } from 'fs';
 import { getN64RebuiltAssetFileName } from './src/n64/runtime-assets';
 
 function copyDirectory(sourceDir: string, destinationDir: string): void {
@@ -71,6 +71,44 @@ function copyRomsPlugin() {
     writeBundle() {
       const romsDir = resolve(__dirname, 'roms');
       const distRomsDir = resolve(__dirname, 'dist/roms');
+      const isPagesDeploy = process.env.PAGES_DEPLOY === 'true';
+      const catalogPath = resolve(__dirname, 'public/roms.json');
+      const catalog = JSON.parse(readFileSync(catalogPath, 'utf8')) as {
+        roms: Array<{ file: string; system: string }>;
+      };
+      const pagesExcludedRomFiles = new Set([
+        'samsh5sp.zip',
+        'kof2001.zip',
+        'kof2002.zip',
+        'kof2003.zip',
+        'tmnt.zip',
+        'sengoku3.zip',
+        'captcomm.zip',
+        'strider.zip',
+        'knights.zip',
+        'sonicwi3.zip',
+        'punisher.zip',
+        'snowbros.zip',
+        'tetris.zip',
+        '1943.zip',
+        '1200合1.zip',
+        '6合1.zip',
+        '6in1.zip',
+        '54合1.zip',
+        '0009 - 天使之翼5 (繁)(劇情漢化)(Angel_Poon).SMC',
+        '0030 - 哆啦A夢4-大雄和月之王國 (簡)(少量漢化)(hxr-dc).SMC',
+        '0002 - GO!GO!惡魔少年 (繁)(V1.01)(模擬中文網漢化小組).zip',
+        '0033 - 斬3 (繁)(V1.0)(天空漢化組).zip',
+        '0028 - 風塵英雄 (簡)(V0.1)(fenghaim14).zip',
+        '0037 - 釣魚太郎 (繁)(完全漢化)(Angel_Poon等).zip',
+        'rbffspec.zip',
+        'garou.zip',
+        'mslug3b6.zip',
+      ]);
+      const deployedRoms = isPagesDeploy
+        ? catalog.roms.filter(rom => !pagesExcludedRomFiles.has(rom.file))
+        : catalog.roms;
+      const deployedFiles = new Set(deployedRoms.map(rom => rom.file));
       
       if (existsSync(romsDir)) {
         if (!existsSync(distRomsDir)) {
@@ -81,7 +119,7 @@ function copyRomsPlugin() {
         files.forEach(file => {
           // 支援家用主機 ROM 與 ZIP 封裝。
           const lower = file.toLowerCase();
-          if (lower.endsWith('.nes') || lower.endsWith('.gb') || lower.endsWith('.gbc') || lower.endsWith('.gg') || lower.endsWith('.sms') || lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig') || lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64') || lower.endsWith('.zip')) {
+          if (deployedFiles.has(file) && (lower.endsWith('.nes') || lower.endsWith('.gb') || lower.endsWith('.gbc') || lower.endsWith('.gg') || lower.endsWith('.sms') || lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig') || lower.endsWith('.z64') || lower.endsWith('.n64') || lower.endsWith('.v64') || lower.endsWith('.zip'))) {
             copyFileSync(
               resolve(romsDir, file),
               resolve(distRomsDir, file)
@@ -89,6 +127,14 @@ function copyRomsPlugin() {
             console.log(`Copied: ${file}`);
           }
         });
+      }
+
+      if (isPagesDeploy) {
+        writeFileSync(
+          resolve(__dirname, 'dist/roms.json'),
+          `${JSON.stringify({ ...catalog, roms: deployedRoms }, null, 2)}\n`,
+        );
+        console.log(`GitHub Pages catalog excludes ${catalog.roms.length - deployedRoms.length} ROMs`);
       }
     }
   };
