@@ -970,6 +970,12 @@ function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === 'AbortError';
 }
 
+function throwIfSignalAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new DOMException('遊戲載入已取消', 'AbortError');
+  }
+}
+
 function closeAppDialog(confirmed: boolean): void {
   const overlay = document.getElementById('app-dialog-overlay');
   if (!overlay || overlay.hidden || !appDialogResolve) return;
@@ -1349,7 +1355,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
     }
     
     const buffer = await readResponseWithProgress(response, loadingSequence);
-    loadController.signal.throwIfAborted();
+    throwIfSignalAborted(loadController.signal);
     const lower = filename.toLowerCase();
     updateGameLoading(loadingSequence, '正在啟動模擬器…');
 
@@ -1389,7 +1395,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
           `正在解壓縮遊戲檔案… ${Math.round(metadata.percent)}%`,
         );
       });
-      loadController.signal.throwIfAborted();
+      throwIfSignalAborted(loadController.signal);
       currentRomFilename = romFileName.split('/').pop() || romFileName;
       updateGameLoading(loadingSequence, '正在啟動模擬器…');
       await startGame(romBuffer, loadController.signal, filename);
@@ -1421,7 +1427,7 @@ async function loadRomFromFile(file: File): Promise<void> {
     if (lower.endsWith('.zip')) {
       if (isFbNeoArcadeRomName(file.name)) {
         const zipBuffer = await file.arrayBuffer();
-        loadController.signal.throwIfAborted();
+        throwIfSignalAborted(loadController.signal);
         currentRomFilename = file.name;
         updateGameLoading(loadingSequence, '正在啟動模擬器…');
         await startFbNeoGame(file.name, zipBuffer, loadingSequence, loadController.signal);
@@ -1457,7 +1463,7 @@ async function loadRomFromFile(file: File): Promise<void> {
           `正在解壓縮遊戲檔案… ${Math.round(metadata.percent)}%`,
         );
       });
-      loadController.signal.throwIfAborted();
+      throwIfSignalAborted(loadController.signal);
       // Use the actual ROM filename inside the ZIP for extension detection
       romName = romFileName.split('/').pop() || romFileName;
     } else {
@@ -1499,16 +1505,16 @@ async function startFbNeoGame(
 
   try {
     const { FbNeoArcadeCore, extractFbNeoRomSet } = await import('./arcade/fbneo-core');
-    signal?.throwIfAborted();
+    throwIfSignalAborted(signal);
     coreInstance = new FbNeoArcadeCore();
     fbneoCore = coreInstance;
     const romSet = await extractFbNeoRomSet(archiveName, zipData);
-    signal?.throwIfAborted();
+    throwIfSignalAborted(signal);
     currentFbNeoRomSet = romSet;
     currentRomFilename = archiveName;
 
     const validity = await coreInstance.checkRomValidity(romSet);
-    signal?.throwIfAborted();
+    throwIfSignalAborted(signal);
     if (!validity.ok) {
       activeBackend = 'wasm';
       console.error(`[FBNeo] ROM 校驗失敗:\n${validity.log}`);
@@ -1517,7 +1523,7 @@ async function startFbNeoGame(
     }
 
     const loaded = await coreInstance.loadGame(romSet.gameName);
-    signal?.throwIfAborted();
+    throwIfSignalAborted(signal);
     if (!loaded) {
       activeBackend = 'wasm';
       const log = coreInstance.getLog();
@@ -1541,7 +1547,7 @@ async function startFbNeoGame(
     powerLed?.classList.add('on');
     updateGameLoading(loadingSequence, '正在準備遊戲畫面…');
     await warmUpFbNeoVideo(coreInstance, signal);
-    signal?.throwIfAborted();
+    throwIfSignalAborted(signal);
     updateArcadeButtonCount(coreInstance.getFireButtonCount());
     renderFbNeoFrame();
     await nextAnimationFrameOrTimeout();
@@ -1567,7 +1573,7 @@ async function startGame(
   signal?: AbortSignal,
   sourceName = currentRomFilename,
 ): Promise<void> {
-  signal?.throwIfAborted();
+  throwIfSignalAborted(signal);
   const romBytes = new Uint8Array(romData);
   
   // 根據副檔名選擇對應的載入方法
@@ -1624,14 +1630,14 @@ async function startGame(
   }
 
   if (!loaded && lower.endsWith('.nes')) {
-    signal?.throwIfAborted();
+    throwIfSignalAborted(signal);
     console.warn(`[NES] 原生 WASM 核心不支援 ${currentRomFilename}，改用 FCEUmm`);
     await startSnes9xGame(romData, 'nes', signal);
     return;
   }
 
   if (!loaded && isSnesRom) {
-    signal?.throwIfAborted();
+    throwIfSignalAborted(signal);
     console.warn(`[SNES] 原生 WASM 核心不支援 ${currentRomFilename}，改用 Snes9x`);
     await startSnes9xGame(romData, 'snes', signal);
     return;
@@ -2826,7 +2832,7 @@ async function warmUpFbNeoVideo(core: FbNeoArcadeCore, signal?: AbortSignal): Pr
   const deadline = performance.now() + 4_000;
   let stableSamples = 0;
   for (let frame = 0; frame < 900; frame += 6) {
-    signal?.throwIfAborted();
+    throwIfSignalAborted(signal);
     for (let step = 0; step < 6; step++) core.stepFrame(0, 0);
     core.consumeAudioSamples();
 
