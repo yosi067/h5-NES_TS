@@ -1,0 +1,889 @@
+#rom-selector.rom-selector {
+  --mag-red: #a52824;
+  --mag-ink: #171713;
+  --mag-green: #304b3d;
+  --mag-paper: #e2d4aa;
+  --mag-paper-light: #f0e4c2;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: clamp(10px, 2.5vh, 26px);
+  overflow-y: auto;
+  color: var(--mag-ink);
+  font-family: "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(91, 64, 30, 0.11) 0 1px, transparent 2px),
+    radial-gradient(circle at 79% 62%, rgba(109, 73, 33, 0.08) 0 2px, transparent 3px),
+    repeating-linear-gradient(93deg, rgba(57, 43, 24, 0.025) 0 1px, transparent 1px 5px),
+    #c7b78d;
+}
+
+.rom-selector::before {
+  display: block;
+  inset: 0;
+  opacity: 0.34;
+  background:
+    repeating-radial-gradient(circle at 0 0, rgba(43, 35, 22, 0.13) 0 0.7px, transparent 0.8px 4px),
+    linear-gradient(90deg, rgba(67, 45, 18, 0.14), transparent 7% 93%, rgba(67, 45, 18, 0.14));
+  filter: none;
+}
+
+.rom-selector::after {
+  opacity: 0.22;
+  background: radial-gradient(ellipse at center, transparent 55%, #342b1d 130%);
+}
+
+.rom-selector .rom-selector-content,
+body:not(.mobile-landscape-mode) .rom-selector .rom-selector-content {
+  width: min(1120px, 100%);
+  max-width: 1120px;
+  height: auto;
+  min-height: calc(100vh - clamp(20px, 5vh, 52px));
+  max-height: none;
+  margin: 0 auto;
+  padding: clamp(12px, 2vw, 24px);
+  border: 1px solid #75694e;
+  border-radius: 1px;
+  overflow: visible;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 1px), rgba(65, 48, 25, 0.16) 50%, transparent calc(50% + 2px)),
+    radial-gradient(circle at 15% 11%, rgba(119, 82, 31, 0.08) 0 2px, transparent 3px),
+    radial-gradient(circle at 88% 81%, rgba(88, 59, 27, 0.08) 0 3px, transparent 4px),
+    repeating-linear-gradient(0deg, rgba(47, 36, 22, 0.025) 0 1px, transparent 1px 4px),
+    var(--mag-paper);
+  box-shadow: 0 3px 0 #544a34, 0 14px 34px rgba(38, 29, 17, 0.36), inset 0 0 54px rgba(96, 68, 30, 0.12);
+}
+
+.rom-selector .rom-selector-content::before,
+body:not(.mobile-landscape-mode) .rom-selector .rom-selector-content::before {
+  display: none;
+}
+
+.rom-selector .rom-selector-header,
+body:not(.mobile-landscape-mode) .rom-selector .rom-selector-header {
+  min-height: 0;
+  margin: 0 0 18px;
+  padding: 8px 12px 13px;
+  border: 0;
+  border-top: 9px solid var(--mag-ink);
+  border-bottom: 4px solid var(--mag-red);
+  text-align: left;
+  position: relative;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cover-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(23, 23, 19, 0.7);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.rom-selector .rom-selector-header .brand-name,
+body:not(.mobile-landscape-mode) .rom-selector .rom-selector-header .brand-name {
+  margin-top: 5px;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-size: clamp(56px, 9vw, 112px);
+  font-style: normal;
+  line-height: 0.82;
+  letter-spacing: 0;
+  color: var(--mag-ink);
+  text-shadow: 3px 3px 0 rgba(255, 249, 221, 0.65);
+}
+
+.rom-selector .brand-logo-red {
+  color: var(--mag-red);
+  text-shadow: 3px 3px 0 var(--mag-ink);
+}
+
+.rom-selector .brand-logo-white {
+  color: var(--mag-ink);
+}
+
+.cover-deck {
+  margin-top: 7px;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", sans-serif;
+  font-size: clamp(16px, 2.2vw, 27px);
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--mag-green);
+}
+
+.rom-selector .rom-selector-header h2,
+body:not(.mobile-landscape-mode) .rom-selector .rom-selector-header h2 {
+  width: auto;
+  margin: 9px 0 0;
+  border: 0;
+  overflow: visible;
+  white-space: normal;
+  animation: none;
+  font-size: clamp(16px, 2vw, 24px);
+  line-height: 1.1;
+  color: var(--mag-ink);
+  text-shadow: none;
+}
+
+.rom-selector .selector-subtitle,
+body:not(.mobile-landscape-mode) .rom-selector .selector-subtitle {
+  display: block;
+  width: auto;
+  margin-top: 5px;
+  border: 0;
+  overflow: visible;
+  animation: none;
+  font: 800 10px/1.2 "Arial Narrow", sans-serif;
+  letter-spacing: 0;
+  color: var(--mag-red);
+  text-shadow: none;
+}
+
+.cover-issue {
+  position: absolute;
+  right: 12px;
+  top: 35px;
+  padding: 5px 8px;
+  border: 2px solid var(--mag-ink);
+  background: #d2b43e;
+  font: 900 13px/1 Impact, sans-serif;
+  box-shadow: 2px 2px 0 var(--mag-ink);
+}
+
+.rom-selector .machine-grid,
+body:not(.mobile-landscape-mode) .rom-selector .machine-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+  padding: 0 5px 16px;
+  overflow: visible;
+  scrollbar-color: var(--mag-red) var(--mag-paper-light);
+}
+
+.rom-selector .machine-card-shell,
+body:not(.mobile-landscape-mode) .rom-selector .machine-card-shell {
+  min-height: 236px;
+  padding: 0;
+}
+
+.rom-selector .machine-card,
+body:not(.mobile-landscape-mode) .rom-selector .machine-card {
+  width: 100%;
+  min-height: 236px;
+  padding: 12px 13px 10px;
+  border: 1px solid #786d51;
+  border-radius: 0;
+  display: grid;
+  grid-template: "folio folio" auto "art copy" 1fr "footer footer" auto / 38% minmax(0, 1fr);
+  gap: 10px 14px;
+  overflow: hidden;
+  color: var(--mag-ink);
+  text-align: left;
+  background:
+    radial-gradient(circle at 8% 16%, rgba(92, 61, 23, 0.09) 0 1px, transparent 2px),
+    repeating-linear-gradient(87deg, rgba(51, 40, 24, 0.025) 0 1px, transparent 1px 4px),
+    var(--mag-paper-light);
+  box-shadow: 3px 4px 0 rgba(58, 45, 26, 0.62), inset 0 0 24px rgba(103, 72, 31, 0.09);
+  filter: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  image-rendering: auto;
+}
+
+.rom-selector .machine-card::before {
+  inset: 0;
+  height: auto;
+  opacity: 0.26;
+  background: repeating-radial-gradient(circle, rgba(28, 26, 20, 0.18) 0 0.55px, transparent 0.7px 4px);
+  pointer-events: none;
+}
+
+.rom-selector .machine-card::after {
+  display: none;
+}
+
+.rom-selector .machine-card:hover,
+.rom-selector .machine-card:focus-visible,
+body:not(.mobile-landscape-mode) .rom-selector .machine-card:hover,
+body:not(.mobile-landscape-mode) .rom-selector .machine-card:focus-visible {
+  transform: translateY(-3px) rotate(-0.15deg);
+  filter: none;
+  outline: 2px solid var(--mag-red);
+  outline-offset: 2px;
+  box-shadow: 5px 8px 0 rgba(58, 45, 26, 0.5), inset 0 0 24px rgba(103, 72, 31, 0.09);
+}
+
+.machine-folio {
+  grid-area: folio;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding-bottom: 6px;
+  border-bottom: 3px solid var(--mag-red);
+  font: 900 11px/1 "Arial Narrow", sans-serif;
+  letter-spacing: 0;
+}
+
+.machine-section {
+  color: var(--mag-red);
+  font-size: 13px;
+}
+
+.machine-issue {
+  padding: 3px 5px;
+  color: var(--mag-paper-light);
+  background: var(--mag-green);
+}
+
+.rom-selector .machine-art,
+body:not(.mobile-landscape-mode) .rom-selector .machine-art {
+  grid-area: art;
+  align-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+  border: 0;
+  border-right: 1px solid rgba(23, 23, 19, 0.55);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.rom-selector .machine-art.gb,
+.rom-selector .machine-art.gg,
+.rom-selector .machine-art.sms,
+.rom-selector .machine-art.snes,
+.rom-selector .machine-art.n64,
+.rom-selector .machine-art.arcade {
+  background: transparent;
+}
+
+.rom-selector .machine-art-img {
+  width: 100%;
+  height: 100%;
+  padding: 4px 10px 4px 0;
+  object-fit: contain;
+  filter: grayscale(0.12) sepia(0.12) drop-shadow(3px 4px 0 rgba(45, 36, 23, 0.25));
+  image-rendering: auto;
+}
+
+.machine-copy {
+  grid-area: copy;
+  align-self: center;
+  min-width: 0;
+}
+
+.rom-selector .machine-title,
+body:not(.mobile-landscape-mode) .rom-selector .machine-title {
+  display: block;
+  padding: 0;
+  font-family: Impact, Haettenschweiler, "Arial Narrow Bold", "Noto Sans TC", sans-serif;
+  font-size: clamp(25px, 3.2vw, 39px);
+  line-height: 0.96;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+  color: var(--mag-ink);
+  text-shadow: none;
+}
+
+.rom-selector .machine-meta,
+body:not(.mobile-landscape-mode) .rom-selector .machine-meta,
+body.android-device-mode .rom-selector .machine-meta {
+  display: block;
+  margin-top: 9px;
+  padding: 8px 0 0;
+  border-top: 1px solid rgba(23, 23, 19, 0.45);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #25251f;
+  -webkit-text-fill-color: #25251f;
+  text-shadow: none;
+}
+
+.machine-card-footer {
+  grid-area: footer;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px dashed #615a46;
+  font: 900 10px/1 "Arial Narrow", sans-serif;
+  letter-spacing: 0;
+}
+
+.rom-selector .machine-count {
+  position: static;
+  min-width: 0;
+  height: auto;
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--mag-ink);
+  background: transparent;
+  box-shadow: none;
+}
+
+.machine-count b {
+  color: var(--mag-red);
+}
+
+.machine-tag {
+  color: var(--mag-green);
+  text-align: center;
+}
+
+.machine-page {
+  padding-left: 8px;
+  border-left: 3px solid var(--mag-red);
+}
+
+.rom-selector .rom-selector-footer {
+  margin: 4px 5px 0;
+  padding: 13px 0 0;
+  border-top: 4px solid var(--mag-ink);
+  text-align: right;
+}
+
+.rom-selector .rom-selector-footer::before,
+.rom-selector .rom-selector-footer::after {
+  display: none;
+}
+
+.rom-selector .upload-btn,
+body:not(.mobile-landscape-mode) .rom-selector .upload-btn {
+  width: auto;
+  min-width: min(100%, 330px);
+  padding: 11px 18px 10px 25px;
+  border: 0;
+  border-left: 10px solid var(--mag-ink);
+  border-radius: 0;
+  background: var(--mag-red);
+  color: #f5e9c6;
+  font-size: 13px;
+  line-height: 1.2;
+  text-align: left;
+  text-shadow: none;
+  box-shadow: 3px 3px 0 #5d4f36;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rom-selector .upload-btn:hover,
+.rom-selector .upload-btn:focus-visible {
+  transform: translateY(-2px);
+  filter: none;
+  outline: 2px solid var(--mag-ink);
+  outline-offset: 2px;
+  box-shadow: 4px 5px 0 #5d4f36;
+}
+
+.rom-selector .rom-browser-header[data-system="nes"], .rom-selector .rom-list[data-system="nes"] { --system-color: #c63b3b; --system-dark: #782424; }
+.rom-selector .rom-browser-header[data-system="gb"], .rom-selector .rom-list[data-system="gb"] { --system-color: #6b7d58; --system-dark: #3d4b31; }
+.rom-selector .rom-browser-header[data-system="snes"], .rom-selector .rom-list[data-system="snes"] { --system-color: #7a6ca8; --system-dark: #4b426c; }
+.rom-selector .rom-browser-header[data-system="gg"], .rom-selector .rom-list[data-system="gg"] { --system-color: #345b8c; --system-dark: #233d5e; }
+.rom-selector .rom-browser-header[data-system="arcade"], .rom-selector .rom-list[data-system="arcade"] { --system-color: #c87a2a; --system-dark: #754516; }
+.rom-selector .rom-browser-header[data-system="sms"], .rom-selector .rom-list[data-system="sms"] { --system-color: #a83d3d; --system-dark: #5f2626; }
+.rom-selector .rom-browser-header[data-system="n64"], .rom-selector .rom-list[data-system="n64"] { --system-color: #3f7650; --system-dark: #25472f; }
+
+.rom-selector .rom-browser-header {
+  --system-color: var(--mag-red);
+  --system-dark: var(--mag-green);
+  min-height: 226px;
+  align-items: stretch;
+  gap: 0;
+  margin: 0 5px 18px;
+  padding: 0;
+  border: 1px solid #786d51;
+  border-top: 10px solid var(--system-color);
+  border-bottom: 4px solid var(--system-dark);
+  background:
+    repeating-linear-gradient(0deg, rgba(44, 35, 21, 0.026) 0 1px, transparent 1px 4px),
+    var(--mag-paper-light);
+  box-shadow: 4px 5px 0 rgba(58, 45, 26, 0.5);
+}
+
+.rom-selector .rom-browser-header.is-visible {
+  display: flex;
+}
+
+.rom-selector .rom-back-btn {
+  align-self: flex-start;
+  flex: 0 0 auto;
+  margin: 13px 0 0 13px;
+  border: 0;
+  border-left: 8px solid var(--system-color);
+  border-radius: 0;
+  padding: 9px 13px;
+  color: var(--mag-paper-light);
+  background: var(--system-dark);
+  box-shadow: 2px 3px 0 #5d4f36;
+}
+
+.rom-feature-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 13px 20px 16px;
+  text-align: center;
+}
+
+.rom-feature-folio {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 14px;
+  padding-bottom: 7px;
+  border-bottom: 2px solid var(--system-color);
+  color: var(--mag-ink);
+  font: 900 12px/1 "Arial Narrow", sans-serif;
+}
+
+.rom-feature-folio span:first-child {
+  color: var(--system-color);
+  text-align: left;
+}
+
+.rom-feature-folio span:last-child {
+  padding: 2px 5px;
+  color: var(--mag-paper-light);
+  background: var(--system-dark);
+}
+
+.rom-selector .rom-browser-title {
+  margin-top: 18px;
+  color: var(--mag-ink);
+  font-family: Impact, "Noto Sans TC", sans-serif;
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 0.9;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+.rom-feature-label {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 3px 22px;
+  color: var(--mag-paper-light);
+  background: var(--system-color);
+  font-weight: 900;
+}
+
+.rom-feature-summary {
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.rom-feature-art {
+  flex: 0 0 230px;
+  display: grid;
+  place-items: center;
+  margin: 13px;
+  border-left: 1px dashed #6d644f;
+}
+
+.rom-feature-art img {
+  display: block;
+  width: 190px;
+  height: 160px;
+  object-fit: contain;
+  filter: sepia(0.12) drop-shadow(4px 5px 0 rgba(40, 32, 20, 0.22));
+}
+
+.rom-selector .rom-list {
+  --system-color: var(--mag-red);
+  --system-dark: var(--mag-green);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+  margin: 0 5px;
+  max-height: none;
+  padding: 0 0 16px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  scrollbar-color: var(--system-color) var(--mag-paper-light);
+}
+
+.rom-selector .rom-item {
+  min-height: 234px;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #786d51;
+  border-top: 7px solid var(--system-color);
+  border-radius: 0;
+  display: grid;
+  grid-template: "number number" auto "name name" minmax(66px, 1fr) "meta meta" auto "play play" auto / minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  color: var(--mag-ink);
+  text-align: left;
+  background:
+    repeating-radial-gradient(circle, rgba(43, 35, 22, 0.08) 0 0.6px, transparent 0.8px 4px),
+    var(--mag-paper-light);
+  box-shadow: 3px 4px 0 rgba(58, 45, 26, 0.48);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.rom-item-number {
+  grid-area: number;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #675f4b;
+  color: var(--system-color);
+  font: 900 13px/1 "Arial Narrow", sans-serif;
+}
+
+.rom-selector .rom-name {
+  grid-area: name;
+  align-self: center;
+  font-family: Impact, "Noto Sans TC", sans-serif;
+  font-size: clamp(22px, 2.7vw, 34px);
+  line-height: 1.08;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.rom-item-meta {
+  grid-area: meta;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #7b725b;
+  border-bottom: 1px solid #7b725b;
+}
+
+.rom-item-meta > span {
+  min-width: 0;
+  padding: 7px 8px;
+  font: 900 11px/1.2 "Arial Narrow", "Noto Sans TC", sans-serif;
+  overflow-wrap: anywhere;
+}
+
+.rom-item-meta > span + span {
+  border-left: 1px solid #7b725b;
+}
+
+.rom-item-meta small {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--system-color);
+  font-size: 9px;
+}
+
+.rom-selector .rom-arrow {
+  grid-area: play;
+  justify-self: end;
+  padding: 6px 12px;
+  color: var(--mag-paper-light);
+  background: var(--system-dark);
+  font: 900 12px/1 "Arial Narrow", sans-serif;
+}
+
+.rom-scroll-top {
+  position: fixed;
+  right: 5px;
+  bottom: 18px;
+  z-index: 20;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid var(--mag-ink);
+  border-radius: 0;
+  color: var(--mag-paper-light);
+  background: var(--mag-red);
+  font: 900 24px/1 "Arial Narrow", sans-serif;
+  box-shadow: 3px 4px 0 rgba(40, 31, 18, 0.55);
+  cursor: pointer;
+}
+
+.rom-scroll-top[hidden] {
+  display: none;
+}
+
+.rom-selector .rom-item:hover,
+.rom-selector .rom-item:focus-visible {
+  transform: translateY(-2px);
+  filter: none;
+  outline: 2px solid var(--system-color);
+  outline-offset: 2px;
+  box-shadow: 4px 6px 0 rgba(58, 45, 26, 0.42);
+}
+
+@media (max-width: 760px) {
+  .rom-selector {
+    padding: 8px;
+  }
+
+  .rom-selector .rom-selector-content,
+  body:not(.mobile-landscape-mode) .rom-selector .rom-selector-content {
+    min-height: calc(100vh - 16px);
+    padding: 10px 8px 14px;
+    background:
+      radial-gradient(circle at 15% 11%, rgba(119, 82, 31, 0.08) 0 2px, transparent 3px),
+      repeating-linear-gradient(0deg, rgba(47, 36, 22, 0.025) 0 1px, transparent 1px 4px),
+      var(--mag-paper);
+  }
+
+  .rom-selector .rom-selector-header,
+  body:not(.mobile-landscape-mode) .rom-selector .rom-selector-header {
+    margin-bottom: 12px;
+    padding-inline: 7px;
+  }
+
+  .rom-selector .rom-selector-header .brand-name,
+  body:not(.mobile-landscape-mode) .rom-selector .rom-selector-header .brand-name {
+    padding-right: 66px;
+    font-size: clamp(52px, 19vw, 78px);
+  }
+
+  .cover-issue {
+    right: 7px;
+    top: 34px;
+  }
+
+  .rom-selector .machine-grid,
+  body:not(.mobile-landscape-mode) .rom-selector .machine-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding-inline: 2px;
+  }
+
+  .rom-selector .machine-card-shell,
+  body:not(.mobile-landscape-mode) .rom-selector .machine-card-shell,
+  .rom-selector .machine-card,
+  body:not(.mobile-landscape-mode) .rom-selector .machine-card {
+    min-height: 156px;
+  }
+
+  .rom-selector .machine-card,
+  body:not(.mobile-landscape-mode) .rom-selector .machine-card {
+    grid-template: "folio folio" auto "art copy" 1fr "footer footer" auto / 31% minmax(0, 1fr);
+    padding: 8px;
+    gap: 5px 9px;
+  }
+
+  .rom-selector .machine-folio {
+    padding-bottom: 4px;
+  }
+
+  .rom-selector .machine-art,
+  body:not(.mobile-landscape-mode) .rom-selector .machine-art {
+    min-height: 76px;
+  }
+
+  .rom-selector .machine-title,
+  body:not(.mobile-landscape-mode) .rom-selector .machine-title {
+    font-size: clamp(24px, 8vw, 32px);
+  }
+
+  .rom-selector .machine-meta,
+  body:not(.mobile-landscape-mode) .rom-selector .machine-meta {
+    margin-top: 5px;
+    padding-top: 5px;
+    font-size: 11px;
+    line-height: 1.3;
+  }
+
+  .machine-tag {
+    display: none;
+  }
+
+  .machine-card-footer {
+    grid-template-columns: 1fr auto;
+    padding-top: 5px;
+  }
+
+  .rom-selector .upload-btn,
+  body:not(.mobile-landscape-mode) .rom-selector .upload-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .rom-selector .rom-browser-header.is-visible {
+    min-height: 0;
+    display: grid;
+    grid-template: "back art" auto "copy copy" auto / 1fr 92px;
+    margin-inline: 2px;
+  }
+
+  .rom-selector .rom-back-btn {
+    grid-area: back;
+    justify-self: start;
+    margin: 10px;
+  }
+
+  .rom-feature-copy {
+    grid-area: copy;
+    padding: 4px 12px 15px;
+  }
+
+  .rom-feature-art {
+    grid-area: art;
+    width: 82px;
+    height: 68px;
+    margin: 7px 7px 0 0;
+    border: 0;
+  }
+
+  .rom-feature-art img {
+    width: 78px;
+    height: 64px;
+  }
+
+  .rom-selector .rom-browser-title {
+    margin-top: 15px;
+    font-size: clamp(38px, 15vw, 58px);
+  }
+
+  .rom-selector .rom-list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-inline: 2px;
+  }
+
+  .rom-selector .rom-item {
+    min-height: 108px;
+    padding: 7px 9px;
+    grid-template: "number play" auto "name name" auto "meta meta" auto / minmax(0, 1fr) auto;
+    gap: 4px 8px;
+  }
+
+  .rom-selector .rom-name {
+    font-size: clamp(18px, 5.5vw, 22px);
+    line-height: 1.15;
+  }
+
+  .rom-selector .rom-item-number {
+    align-self: center;
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .rom-selector .rom-arrow {
+    align-self: center;
+    padding: 5px 9px;
+  }
+
+  .rom-item-meta > span {
+    padding-block: 5px;
+  }
+
+  .rom-item-meta small {
+    margin-bottom: 3px;
+  }
+}
+
+@media (max-width: 380px) {
+  .cover-topline span:last-child,
+  .rom-selector .selector-subtitle,
+  body:not(.mobile-landscape-mode) .rom-selector .selector-subtitle {
+    display: none;
+  }
+
+  .rom-selector .machine-card,
+  body:not(.mobile-landscape-mode) .rom-selector .machine-card {
+    grid-template: "folio folio" auto "art copy" 1fr "footer footer" auto / 33% minmax(0, 1fr);
+  }
+
+  .rom-selector .machine-title,
+  body:not(.mobile-landscape-mode) .rom-selector .machine-title {
+    font-size: 25px;
+  }
+
+  .rom-feature-folio {
+    gap: 7px;
+    font-size: 10px;
+  }
+
+  .rom-item-meta > span {
+    padding-inline: 5px;
+    font-size: 9px;
+    word-break: keep-all;
+  }
+
+  .rom-item-meta small {
+    font-size: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rom-selector .machine-card,
+  .rom-selector .upload-btn,
+  .rom-selector .rom-item {
+    transition: none;
+  }
+}
+
+/* Android WebView fallback: fixed values avoid depending on min()/clamp(). */
+body.android-device-mode #rom-selector.rom-selector {
+  padding: 16px;
+  background:
+    repeating-linear-gradient(0deg, rgba(57, 43, 24, 0.04) 0 1px, transparent 1px 5px),
+    #c7b78d;
+}
+
+body.android-device-mode .rom-selector .rom-selector-content {
+  width: 100%;
+  max-width: 1120px;
+  min-height: calc(100vh - 32px);
+  padding: 20px;
+  background:
+    repeating-linear-gradient(90deg, rgba(47, 36, 22, 0.03) 0 1px, transparent 1px 5px),
+    var(--mag-paper);
+}
+
+body.android-device-mode .rom-selector .machine-card,
+body.android-device-mode .rom-selector .rom-item {
+  background:
+    repeating-linear-gradient(0deg, rgba(51, 40, 24, 0.03) 0 1px, transparent 1px 4px),
+    var(--mag-paper-light);
+}
+
+body.android-device-mode .rom-selector .rom-selector-header .brand-name {
+  font-size: 84px;
+}
+
+body.android-device-mode .rom-selector .rom-selector-header h2 {
+  font-size: 22px;
+}
+
+body.android-device-mode .rom-selector .machine-title {
+  font-size: 34px;
+}
+
+body.android-device-mode .rom-selector .rom-browser-title {
+  font-size: 58px;
+}
+
+body.android-device-mode .rom-selector .rom-name {
+  font-size: 30px;
+}
+
+body.android-device-mode .rom-selector .upload-btn {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  body.android-device-mode #rom-selector.rom-selector {
+    padding: 8px;
+  }
+
+  body.android-device-mode .rom-selector .rom-selector-content {
+    min-height: calc(100vh - 16px);
+    padding: 10px 8px 14px;
+  }
+
+  body.android-device-mode .rom-selector .rom-selector-header .brand-name {
+    font-size: 60px;
+  }
+
+  body.android-device-mode .rom-selector .machine-title {
+    font-size: 30px;
+  }
+
+  body.android-device-mode .rom-selector .rom-browser-title {
+    font-size: 44px;
+  }
+
+  body.android-device-mode .rom-selector .rom-name {
+    font-size: 19px;
+  }
+}

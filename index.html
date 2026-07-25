@@ -5302,6 +5302,7 @@
       outline: none;
     }
   </style>
+  <link rel="stylesheet" href="/magazine-selector.css">
 </head>
 <body>
   <div class="game-loading-overlay" id="game-loading-overlay" role="status" aria-live="polite" aria-busy="true" hidden>
@@ -5331,9 +5332,15 @@
   <div class="rom-selector" id="rom-selector">
     <div class="rom-selector-content">
       <div class="rom-selector-header">
+        <div class="cover-topline">
+          <span>復古電玩收藏誌</span>
+          <span>1995 / WINTER</span>
+        </div>
         <div class="brand-name"><span class="brand-logo-red">H5</span><span class="brand-logo-white">-EMU</span></div>
+        <div class="cover-deck">RETRO GAMES MAGAZINE</div>
         <h2>你手機上的電動玩具店</h2>
         <div class="selector-subtitle">選一台主機，再挑選你要懷舊的遊戲。</div>
+        <div class="cover-issue">VOL.01</div>
       </div>
 
       <div class="machine-grid" id="machine-grid" aria-label="選擇主機">
@@ -5342,7 +5349,19 @@
 
       <div class="rom-browser-header" id="rom-browser-header">
         <button class="rom-back-btn" id="rom-back-btn" type="button">← 機台</button>
-        <div class="rom-browser-title" id="rom-browser-title">遊戲列表</div>
+        <div class="rom-feature-copy">
+          <div class="rom-feature-folio">
+            <span>FEATURE</span>
+            <span id="rom-browser-year">1991</span>
+            <span id="rom-browser-issue">VOL.01</span>
+          </div>
+          <div class="rom-browser-title" id="rom-browser-title">遊戲列表</div>
+          <div class="rom-feature-label">專題</div>
+          <div class="rom-feature-summary" id="rom-browser-summary">本月精選作品</div>
+        </div>
+        <div class="rom-feature-art" aria-hidden="true">
+          <img id="rom-browser-art" alt="">
+        </div>
       </div>
       
       <div class="rom-list" id="rom-list">
@@ -5356,6 +5375,7 @@
         </label>
         <input type="file" id="rom-file-input" accept=".nes,.gb,.gbc,.gg,.sms,.smc,.sfc,.fig,.z64,.n64,.v64,.zip" style="display: none;">
       </div>
+      <button class="rom-scroll-top" id="rom-scroll-top" type="button" aria-label="回到遊戲列表最上方" title="回到最上方" hidden>↑</button>
     </div>
   </div>
 

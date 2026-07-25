@@ -11,6 +11,7 @@
 
 import init, { EmuWasm } from './wasm/nes_wasm.js';
 import JSZip from 'jszip';
+import { getRomMagazineMeta } from './data/rom-metadata';
 import type { EmulatorControls } from 'mupen64plus-web';
 import type { FbNeoArcadeCore, FbNeoRomSet } from './arcade/fbneo-core';
 import {
@@ -57,6 +58,10 @@ interface MachineInfo {
   label: string;
   artClass: string;
   artFile: string;
+  section: string;
+  issue: string;
+  year: string;
+  page: string;
 }
 
 interface KeyboardBindingView {
@@ -147,13 +152,13 @@ function getFbNeoGameName(filename: string): FbNeoGameName | null {
 }
 
 const MACHINES: MachineInfo[] = [
-  { key: 'nes', title: 'FC/NES', label: '經典中的經典，傳說的紅白機。', artClass: 'nes', artFile: 'nes.svg' },
-  { key: 'gb', title: 'Game Boy', label: '最想帶去學校還有躲在棉被裡玩的好東西。', artClass: 'gb', artFile: 'gb.svg' },
-  { key: 'snes', title: 'SFC 超任', label: '無數經典的超任，是你爸媽最想藏起來不讓你碰的東西。', artClass: 'snes', artFile: 'snes.svg' },
-  { key: 'arcade', title: '大型電玩', label: '雜貨店外面那些有搖桿的街機，要投錢幣的那種。', artClass: 'arcade', artFile: 'arcade.svg' },
-  { key: 'gg', title: 'Game Gear', label: '經典的彩色掌機還可以看電視，一次吃你六顆鹼性電池的小怪物。', artClass: 'gg', artFile: 'gg.svg' },
-  { key: 'sms', title: 'Master System', label: '電動店總是會放這台讓音速小子跑一整天。', artClass: 'sms', artFile: 'sms.svg' },
-  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，不過手機還跑不動，建議先在電腦上玩。', artClass: 'n64', artFile: 'n64.svg' },
+  { key: 'nes', title: 'FC/NES', label: '經典中的經典，傳說的紅白機。', artClass: 'nes', artFile: 'nes.svg', section: 'FEATURE', issue: 'VOL.01', year: '1988', page: '012' },
+  { key: 'gb', title: 'Game Boy', label: '最想帶去學校還有躲在棉被裡玩的好東西。', artClass: 'gb', artFile: 'gb.svg', section: 'SPECIAL', issue: 'NO.08', year: '1989', page: '024' },
+  { key: 'snes', title: 'SFC 超任', label: '無數經典的超任，是你爸媽最想藏起來不讓你碰的東西。', artClass: 'snes', artFile: 'snes.svg', section: 'CLASSIC', issue: 'VOL.16', year: '1990', page: '036' },
+  { key: 'arcade', title: '大型電玩', label: '雜貨店外面那些有搖桿的街機，要投錢幣的那種。', artClass: 'arcade', artFile: 'arcade.svg', section: 'ARCADE', issue: 'NO.88', year: '1992', page: '048' },
+  { key: 'gg', title: 'Game Gear', label: '經典的彩色掌機還可以看電視，一次吃你六顆鹼性電池的小怪物。', artClass: 'gg', artFile: 'gg.svg', section: 'RETRO', issue: 'VOL.06', year: '1991', page: '060' },
+  { key: 'sms', title: 'Master System', label: '電動店總是會放這台讓音速小子跑一整天。', artClass: 'sms', artFile: 'sms.svg', section: 'HARDWARE', issue: 'NO.16', year: '1988', page: '072' },
+  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，不過手機還跑不動，建議先在電腦上玩。', artClass: 'n64', artFile: 'n64.svg', section: 'NEW', issue: 'VOL.64', year: '1995', page: '084' },
 ];
 
 function getPublicAssetUrl(path: string): string {
@@ -1121,6 +1126,17 @@ function setupRomSelector(): void {
   loadRomList();
 
   document.getElementById('rom-back-btn')?.addEventListener('click', renderMachineSelector);
+  const selectorEl = document.getElementById('rom-selector');
+  const scrollTopButton = document.getElementById('rom-scroll-top') as HTMLButtonElement | null;
+  selectorEl?.addEventListener('scroll', () => {
+    if (scrollTopButton) {
+      scrollTopButton.hidden = scrollTopButton.dataset.enabled !== 'true' || selectorEl.scrollTop < 480;
+    }
+  }, { passive: true });
+  scrollTopButton?.addEventListener('click', () => {
+    if (selectorEl) selectorEl.scrollTop = 0;
+    scrollTopButton.hidden = true;
+  });
   
   // 設定檔案上傳
   const fileInput = document.getElementById('rom-file-input') as HTMLInputElement;
@@ -1182,9 +1198,12 @@ async function loadRomList(): Promise<void> {
  * 渲染機台選擇畫面
  */
 function renderMachineSelector(): void {
+  const selectorEl = document.getElementById('rom-selector');
   const machineGridEl = document.getElementById('machine-grid');
   const romListEl = document.getElementById('rom-list');
   const browserHeader = document.getElementById('rom-browser-header');
+  const coverHeader = document.querySelector('#rom-selector > .rom-selector-content > .rom-selector-header') as HTMLElement | null;
+  const scrollTopButton = document.getElementById('rom-scroll-top') as HTMLButtonElement | null;
   if (!machineGridEl || !romListEl) return;
 
   if (romCatalog.length === 0) {
@@ -1192,7 +1211,16 @@ function renderMachineSelector(): void {
     return;
   }
 
-  if (browserHeader) browserHeader.style.display = 'none';
+  if (browserHeader) {
+    browserHeader.classList.remove('is-visible');
+    browserHeader.style.removeProperty('display');
+  }
+  if (coverHeader) coverHeader.style.removeProperty('display');
+  if (selectorEl) selectorEl.scrollTop = 0;
+  if (scrollTopButton) {
+    scrollTopButton.dataset.enabled = 'false';
+    scrollTopButton.hidden = true;
+  }
   romListEl.style.display = 'none';
   machineGridEl.style.display = 'grid';
 
@@ -1202,13 +1230,24 @@ function renderMachineSelector(): void {
     return `
       <div class="machine-card-shell">
         <button class="machine-card" type="button" data-system="${machine.key}" ${disabled}>
+          <span class="machine-folio">
+            <span class="machine-section">${escapeHtml(machine.section)}</span>
+            <span class="machine-year">${escapeHtml(machine.year)}</span>
+            <span class="machine-issue">${escapeHtml(machine.issue)}</span>
+          </span>
           <span class="machine-art ${machine.artClass}" aria-hidden="true">
             <img class="machine-art-img" src="${getPublicAssetUrl(`assets/machines/${machine.artFile}`)}" alt="" loading="eager" decoding="async">
           </span>
-          <span class="machine-title">${escapeHtml(machine.title)}</span>
-          <span class="machine-meta">${escapeHtml(machine.label)}</span>
+          <span class="machine-copy">
+            <span class="machine-title">${escapeHtml(machine.title)}</span>
+            <span class="machine-meta">${escapeHtml(machine.label)}</span>
+          </span>
+          <span class="machine-card-footer">
+            <span class="machine-count"><b aria-hidden="true">■</b> ${count} GAMES</span>
+            <span class="machine-tag">COLLECTOR'S ARCHIVE</span>
+            <span class="machine-page">P.${escapeHtml(machine.page)}</span>
+          </span>
         </button>
-        <span class="machine-count" aria-hidden="true">${count}</span>
       </div>
     `;
   }).join('');
@@ -1225,19 +1264,41 @@ function renderMachineSelector(): void {
  * 渲染 ROM 列表
  */
 function renderRomList(system: SystemKey): void {
+  const selectorEl = document.getElementById('rom-selector');
   const machineGridEl = document.getElementById('machine-grid');
   const romListEl = document.getElementById('rom-list');
   const browserHeader = document.getElementById('rom-browser-header');
   const browserTitle = document.getElementById('rom-browser-title');
+  const browserYear = document.getElementById('rom-browser-year');
+  const browserIssue = document.getElementById('rom-browser-issue');
+  const browserSummary = document.getElementById('rom-browser-summary');
+  const browserArt = document.getElementById('rom-browser-art') as HTMLImageElement | null;
+  const coverHeader = document.querySelector('#rom-selector > .rom-selector-content > .rom-selector-header') as HTMLElement | null;
+  const scrollTopButton = document.getElementById('rom-scroll-top') as HTMLButtonElement | null;
   if (!romListEl) return;
 
   const roms = romCatalog.filter((rom) => detectRomSystem(rom) === system);
   const machine = MACHINES.find((item) => item.key === system);
+  if (scrollTopButton) {
+    scrollTopButton.dataset.enabled = String(roms.length > 20);
+    scrollTopButton.hidden = true;
+  }
 
   if (machineGridEl) machineGridEl.style.display = 'none';
-  if (browserHeader) browserHeader.style.display = 'flex';
-  if (browserTitle) browserTitle.textContent = `${machine?.title ?? '遊戲列表'} (${roms.length})`;
-  romListEl.style.display = 'block';
+  if (coverHeader) coverHeader.style.display = 'none';
+  if (selectorEl) selectorEl.scrollTop = 0;
+  if (browserHeader) {
+    browserHeader.classList.add('is-visible');
+    browserHeader.style.removeProperty('display');
+  }
+  if (browserHeader) browserHeader.dataset.system = system;
+  romListEl.dataset.system = system;
+  if (browserTitle) browserTitle.textContent = machine?.title ?? '遊戲列表';
+  if (browserYear) browserYear.textContent = machine?.year ?? '';
+  if (browserIssue) browserIssue.textContent = machine?.issue ?? '';
+  if (browserSummary) browserSummary.textContent = `本月精選 ${roms.length} 款作品`;
+  if (browserArt && machine) browserArt.src = getPublicAssetUrl(`assets/machines/${machine.artFile}`);
+  romListEl.style.display = 'grid';
 
   if (roms.length === 0) {
     romListEl.innerHTML = '<div class="rom-empty">沒有可用的遊戲</div>';
@@ -1245,11 +1306,18 @@ function renderRomList(system: SystemKey): void {
   }
 
   romListEl.innerHTML = roms.map((rom, index) => {
+    const meta = getRomMagazineMeta(rom);
+    const number = String(index + 1).padStart(3, '0');
     return `
       <button class="rom-item" data-index="${index}" data-system="${system}" data-file="${encodeURIComponent(rom.file)}">
-        <span class="rom-icon ${system}" aria-hidden="true"></span>
+        <span class="rom-item-number">No.${number}</span>
         <span class="rom-name">${escapeHtml(getRomDisplayName(rom))}</span>
-        <span class="rom-arrow">▶</span>
+        <span class="rom-item-meta">
+          <span><small>發售年份</small>${escapeHtml(meta.year)}</span>
+          <span><small>遊戲類型</small>${escapeHtml(meta.genre)}</span>
+          <span><small>玩家人數</small>${escapeHtml(meta.players)}</span>
+        </span>
+        <span class="rom-arrow">▶ PLAY</span>
       </button>
     `;
   }).join('');

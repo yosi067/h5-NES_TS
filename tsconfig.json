@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2018",
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
@@ -16,12 +16,11 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "baseUrl": ".",
     "paths": {
-      "@core/*": ["src/core/*"],
-      "@mappers/*": ["src/mappers/*"],
-      "@utils/*": ["src/utils/*"],
-      "@ui/*": ["src/ui/*"]
+      "@core/*": ["./src/core/*"],
+      "@mappers/*": ["./src/mappers/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@ui/*": ["./src/ui/*"]
     }
   },
   "include": ["src/**/*"],
