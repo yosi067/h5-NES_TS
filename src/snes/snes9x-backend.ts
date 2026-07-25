@@ -32,30 +32,6 @@ function escapeInlineScript(value: string): string {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
-export function isSa1Rom(rom: Uint8Array): boolean {
-  const copierHeaderSize = rom.length % 0x8000 === 512 ? 512 : 0;
-  for (const headerOffset of [0x7FD5, 0xFFD5, 0x40FFD5]) {
-    const mapMode = rom[copierHeaderSize + headerOffset];
-    if (mapMode !== undefined && (mapMode & 0x3F) === 0x23) return true;
-  }
-  return false;
-}
-
-function isSdd1Rom(rom: Uint8Array): boolean {
-  const copierHeaderSize = rom.length % 0x8000 === 512 ? 512 : 0;
-  for (const headerOffset of [0x7FD6, 0xFFD6, 0x40FFD6]) {
-    const cartridgeType = rom[copierHeaderSize + headerOffset];
-    if (cartridgeType === 0x43 || cartridgeType === 0x45) return true;
-  }
-  return false;
-}
-
-export function shouldUseSnes9x(rom: Uint8Array, romName: string): boolean {
-  return isSa1Rom(rom)
-    || isSdd1Rom(rom)
-    || /(?:^|\s)super mario kart(?:\s|\.|$)/i.test(romName);
-}
-
 export async function startSnes9xBackend(
   host: HTMLElement,
   rom: Uint8Array,
@@ -77,7 +53,7 @@ html,body,#game{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
 .ejs_parent{width:100%!important;height:100%!important;min-height:0!important}
 .ejs_game,.ejs_canvas_parent,.ejs_canvas{width:100%!important;height:100%!important}
 .ejs_canvas{object-fit:contain}
-.ejs_virtualGamepad_parent{display:none!important}
+.ejs_virtualGamepad_parent,.ejs_virtualGamepad_open,.ejs_menu_bar,.ejs_context_menu,.ejs_settings_parent{display:none!important}
 </style></head><body><div id="game"></div><script>
 window.EJS_player='#game';
 window.EJS_core=${escapeInlineScript(core)};

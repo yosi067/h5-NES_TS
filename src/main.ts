@@ -31,7 +31,7 @@ import {
 import { getRomAssetUrl, hasN64RomMagic } from './rom-assets';
 import { createN64Telemetry } from './n64/telemetry';
 import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
-import { shouldUseSnes9x, startSnes9xBackend, type Snes9xBackend } from './snes/snes9x-backend';
+import { startSnes9xBackend, type Snes9xBackend } from './snes/snes9x-backend';
 
 type N64EmulatorControls = EmulatorControls & {
   resumeAudio?: () => Promise<void>;
@@ -191,7 +191,7 @@ const SnesButton = {
 
 // 判斷當前是否為 SNES 核心
 function isSnesCore(): boolean {
-  return activeBackend === 'snes9x' || nes?.getCoreType() === 'snes';
+  return (activeBackend === 'snes9x' && emulatorJsCore === 'snes') || nes?.getCoreType() === 'snes';
 }
 
 // ===== 全域變數 =====
@@ -209,6 +209,7 @@ let isRunning: boolean = false;
 let currentRomFilename: string = '';
 let activeBackend: 'wasm' | 'mupen64' | 'fbneo' | 'snes9x' = 'wasm';
 let snes9xBackend: Snes9xBackend | null = null;
+let emulatorJsCore: 'snes' | 'nes' | null = null;
 let n64Controls: N64EmulatorControls | null = null;
 let currentN64RomData: ArrayBuffer | null = null;
 let n64PerformanceProfile: N64PerformanceProfile = selectN64PerformanceProfile();
@@ -376,6 +377,21 @@ function isSnes9xActive(): boolean {
   return activeBackend === 'snes9x';
 }
 
+function isEmulatorJsNesActive(): boolean {
+  return isSnes9xActive() && emulatorJsCore === 'nes';
+}
+
+function setNesButton(button: ControllerButton, pressed: boolean): void {
+  if (isEmulatorJsNesActive()) {
+    const libretroButton = button === ControllerButton.A ? 8
+      : button === ControllerButton.B ? 0
+      : button;
+    snes9xBackend?.setButton(libretroButton, pressed);
+  } else {
+    nes?.setButton(0, button, pressed);
+  }
+}
+
 function setSnesButton(button: number, pressed: boolean): void {
   if (isSnes9xActive()) snes9xBackend?.setButton(button, pressed);
   else nes?.setButton(0, button, pressed);
@@ -384,6 +400,7 @@ function setSnesButton(button: number, pressed: boolean): void {
 function stopSnes9xBackend(): void {
   snes9xBackend?.stop();
   snes9xBackend = null;
+  emulatorJsCore = null;
   document.getElementById('screen')?.style.removeProperty('display');
 }
 
@@ -878,7 +895,7 @@ function setupKeyboardInput(): void {
       if (!nes) return;
       const button = KEYBOARD_MAP_P1[e.code];
       if (button !== undefined) {
-        nes.setButton(0, button, true);
+        setNesButton(button, true);
         e.preventDefault();
       }
     }
@@ -899,7 +916,7 @@ function setupKeyboardInput(): void {
       if (!nes) return;
       const button = KEYBOARD_MAP_P1[e.code];
       if (button !== undefined) {
-        nes.setButton(0, button, false);
+        setNesButton(button, false);
         e.preventDefault();
       }
     }
@@ -1410,20 +1427,12 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
     return;
   }
 
-  const nesCompatibilityRoms = new Set([
-    'binary land (j).nes',
-    'family tennis (j).nes',
-    'onyanko town (j).nes',
-    '热血曲棍球(j).nes',
-    '热血高校足球(j).nes',
-  ]);
-  if (nesCompatibilityRoms.has(lower)) {
+  if (lower.endsWith('.nes')) {
     await startSnes9xGame(romBytes, 'nes');
     return;
   }
 
-  if ((lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig'))
-      && shouldUseSnes9x(romBytes, currentRomFilename)) {
+  if (lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig')) {
     await startSnes9xGame(romBytes);
     return;
   }
@@ -1453,12 +1462,6 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
     loaded = nes.loadRom(romBytes);
   }
 
-  if (!loaded && lower.endsWith('.nes')) {
-    console.warn(`[NES] WASM core does not support this mapper; falling back to EmulatorJS: ${currentRomFilename}`);
-    await startSnes9xGame(romBytes, 'nes');
-    return;
-  }
-  
   if (loaded) {
     // 取得核心類型及對應的螢幕尺寸
     const coreType = nes.getCoreType();
@@ -1516,6 +1519,7 @@ async function startSnes9xGame(romBytes: Uint8Array, core: 'snes' | 'nes' = 'sne
   await stopN64Backend();
   stopSnes9xBackend();
   activeBackend = 'snes9x';
+  emulatorJsCore = core;
   screen.style.display = 'none';
 
   try {
@@ -1524,7 +1528,7 @@ async function startSnes9xGame(romBytes: Uint8Array, core: 'snes' | 'nes' = 'sne
     hideRomSelector();
     updateControllerLayout();
     powerLed?.classList.add('on');
-    showToast(core === 'nes' ? 'NES 相容核心已啟動' : 'Snes9x SA-1 核心已啟動');
+    showToast(core === 'nes' ? 'FC 核心已啟動' : 'SFC 核心已啟動');
   } catch (error) {
     activeBackend = 'wasm';
     stopSnes9xBackend();
@@ -2069,16 +2073,16 @@ function applyDpadState(newState: DpadState): void {
 
   // 更新控制器（透過 WASM 介面）
   if (!isFbNeoActive() && newState.up !== currentDpadState.up) {
-    nes?.setButton(0, ControllerButton.Up, newState.up);
+    setNesButton(ControllerButton.Up, newState.up);
   }
   if (!isFbNeoActive() && newState.down !== currentDpadState.down) {
-    nes?.setButton(0, ControllerButton.Down, newState.down);
+    setNesButton(ControllerButton.Down, newState.down);
   }
   if (!isFbNeoActive() && newState.left !== currentDpadState.left) {
-    nes?.setButton(0, ControllerButton.Left, newState.left);
+    setNesButton(ControllerButton.Left, newState.left);
   }
   if (!isFbNeoActive() && newState.right !== currentDpadState.right) {
-    nes?.setButton(0, ControllerButton.Right, newState.right);
+    setNesButton(ControllerButton.Right, newState.right);
   }
   
   // 更新視覺
@@ -2103,7 +2107,7 @@ function setupABButtons(): void {
       if (isFbNeoActive()) {
         setArcadeInputBit(buttonType === ControllerButton.A ? ArcadeInputBit.ButtonA : ArcadeInputBit.ButtonB, pressed);
       } else {
-        nes?.setButton(0, buttonType, pressed);
+        setNesButton(buttonType, pressed);
       }
     };
     
@@ -2173,7 +2177,7 @@ function setupFunctionButtons(): void {
       if (isFbNeoActive()) {
         setArcadeInputBit(btnType === 'start' ? ArcadeInputBit.Start : ArcadeInputBit.Coin, pressed);
       } else {
-        nes?.setButton(0, buttonEnum, pressed);
+        setNesButton(buttonEnum, pressed);
       }
     };
 
