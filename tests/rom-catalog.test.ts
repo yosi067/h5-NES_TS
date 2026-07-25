@@ -35,14 +35,26 @@ const archiveSystemByExtension = new Map([
   ['.v64', 'n64'],
 ]);
 const expectedSystemCounts = {
-  nes: 30,
-  gb: 6,
+  nes: 110,
+  gb: 5,
   gg: 4,
   sms: 1,
-  snes: 44,
-  arcade: 37,
+  snes: 39,
+  arcade: 44,
   n64: 6,
 };
+const intentionallyHiddenFiles = new Set([
+  '0073 - 無人島物語 (繁)(部分漢化)(天空漢化組).zip',
+  '68合1(內含煙山坦克，即可消草的90坦克).zip',
+  'Captain Tsubasa II - Super Striker (Japan).nes',
+  'Dragon Ball Z - Super Butouden (Japan) (Sample).zip',
+  'FC塞尔达传说汉化版.nes',
+  'Final Fantasy III - Walk Through Walls (Hack).nes',
+  'Pokemon_ Yellow Version - Special Pikachu Edition.zip',
+  'Rockman 6 - Shijou Saidai no Tatakai (Rockman 6 Hack).nes',
+  'pang.zip',
+  '热血曲棍球(J).nes',
+]);
 
 function extensionOf(filename: string): string {
   const dot = filename.lastIndexOf('.');
@@ -53,7 +65,9 @@ describe('ROM catalog', () => {
   it('matches every publishable top-level ROM file exactly once', () => {
     const catalogFiles = catalog.roms.map(rom => rom.file).sort();
     const diskFiles = readdirSync(romsDir, { withFileTypes: true })
-      .filter(entry => entry.isFile() && publishedExtensions.has(extensionOf(entry.name)))
+      .filter(entry => entry.isFile()
+        && publishedExtensions.has(extensionOf(entry.name))
+        && !intentionallyHiddenFiles.has(entry.name))
       .map(entry => entry.name)
       .sort();
 

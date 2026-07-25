@@ -1033,9 +1033,23 @@ async function showGameLoading(gameName: string, status: string): Promise<number
   if (progressBar) progressBar.style.width = '0%';
   if (overlay) overlay.hidden = false;
 
-  // 先讓瀏覽器畫出動畫，再開始 fetch、解壓縮或核心初始化等較重工作。
-  await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+  // 先讓瀏覽器畫出動畫；背景分頁暫停 rAF 時仍要繼續載入。
+  await nextAnimationFrameOrTimeout();
   return sequence;
+}
+
+function nextAnimationFrameOrTimeout(timeoutMs = 100): Promise<void> {
+  return new Promise<void>(resolve => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      resolve();
+    };
+    const timeoutId = window.setTimeout(finish, timeoutMs);
+    requestAnimationFrame(finish);
+  });
 }
 
 function updateGameLoading(sequence: number, status: string): void {
@@ -1462,7 +1476,7 @@ async function startFbNeoGame(
     signal?.throwIfAborted();
     updateArcadeButtonCount(coreInstance.getFireButtonCount());
     renderFbNeoFrame();
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    await nextAnimationFrameOrTimeout();
     console.log(`[FBNeo] ${romSet.gameName} loaded: ${width}x${height}${arcadeRotation === 'none' ? '' : ` rotated-${arcadeRotation}`}`);
     showToast(`FBNeo: ${romSet.gameName} OK`);
     startEmulation();
@@ -2741,6 +2755,7 @@ function isPresentableFbNeoFrame(frameBuffer: Uint8Array): boolean {
 }
 
 async function warmUpFbNeoVideo(core: FbNeoArcadeCore, signal?: AbortSignal): Promise<void> {
+  const deadline = performance.now() + 4_000;
   let stableSamples = 0;
   for (let frame = 0; frame < 900; frame += 6) {
     signal?.throwIfAborted();
@@ -2754,7 +2769,8 @@ async function warmUpFbNeoVideo(core: FbNeoArcadeCore, signal?: AbortSignal): Pr
       stableSamples = 0;
     }
 
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    if (performance.now() >= deadline) return;
+    await nextAnimationFrameOrTimeout(50);
   }
 }
 
