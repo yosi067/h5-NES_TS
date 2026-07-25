@@ -225,15 +225,21 @@ function mupen64AssetsPlugin() {
 
 function emulatorJsAssetsPlugin() {
   const hostDataDir = resolve(__dirname, 'node_modules/@emulatorjs/emulatorjs/data');
-  const coreDir = resolve(__dirname, 'node_modules/@emulatorjs/core-snes9x');
+  const coreDirs = [
+    resolve(__dirname, 'node_modules/@emulatorjs/core-snes9x'),
+    resolve(__dirname, 'node_modules/@emulatorjs/core-fceumm'),
+  ];
   const publicPath = '/emulatorjs/data/';
 
   const resolveAsset = (relativePath: string): string => {
-    if (relativePath.startsWith('cores/reports/')) {
-      return resolve(coreDir, 'reports', relativePath.slice('cores/reports/'.length));
-    }
     if (relativePath.startsWith('cores/')) {
-      return resolve(coreDir, relativePath.slice('cores/'.length));
+      const corePath = relativePath.slice('cores/'.length);
+      for (const coreDir of coreDirs) {
+        const candidate = corePath.startsWith('reports/')
+          ? resolve(coreDir, 'reports', corePath.slice('reports/'.length))
+          : resolve(coreDir, corePath);
+        if (existsSync(candidate)) return candidate;
+      }
     }
     return resolve(hostDataDir, relativePath);
   };
@@ -261,13 +267,15 @@ function emulatorJsAssetsPlugin() {
       copyDirectory(hostDataDir, distDataDir);
       const distCoresDir = resolve(distDataDir, 'cores');
       mkdirSync(resolve(distCoresDir, 'reports'), { recursive: true });
-      for (const file of readdirSync(coreDir)) {
-        if (file.endsWith('.data')) {
-          copyFileSync(resolve(coreDir, file), resolve(distCoresDir, file));
+      for (const coreDir of coreDirs) {
+        for (const file of readdirSync(coreDir)) {
+          if (file.endsWith('.data')) {
+            copyFileSync(resolve(coreDir, file), resolve(distCoresDir, file));
+          }
         }
+        copyDirectory(resolve(coreDir, 'reports'), resolve(distCoresDir, 'reports'));
       }
-      copyDirectory(resolve(coreDir, 'reports'), resolve(distCoresDir, 'reports'));
-      console.log('Copied EmulatorJS Snes9x runtime');
+      console.log('Copied EmulatorJS Snes9x and FCEUmm runtimes');
     },
   };
 }

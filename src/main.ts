@@ -1410,6 +1410,18 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
     return;
   }
 
+  const nesCompatibilityRoms = new Set([
+    'binary land (j).nes',
+    'family tennis (j).nes',
+    'onyanko town (j).nes',
+    '热血曲棍球(j).nes',
+    '热血高校足球(j).nes',
+  ]);
+  if (nesCompatibilityRoms.has(lower)) {
+    await startSnes9xGame(romBytes, 'nes');
+    return;
+  }
+
   if ((lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig'))
       && shouldUseSnes9x(romBytes, currentRomFilename)) {
     await startSnes9xGame(romBytes);
@@ -1439,6 +1451,12 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
     }
   } else {
     loaded = nes.loadRom(romBytes);
+  }
+
+  if (!loaded && lower.endsWith('.nes')) {
+    console.warn(`[NES] WASM core does not support this mapper; falling back to EmulatorJS: ${currentRomFilename}`);
+    await startSnes9xGame(romBytes, 'nes');
+    return;
   }
   
   if (loaded) {
@@ -1489,7 +1507,7 @@ async function startGame(romData: ArrayBuffer): Promise<void> {
   }
 }
 
-async function startSnes9xGame(romBytes: Uint8Array): Promise<void> {
+async function startSnes9xGame(romBytes: Uint8Array, core: 'snes' | 'nes' = 'snes'): Promise<void> {
   const screen = document.getElementById('screen');
   const host = screen?.parentElement;
   if (!screen || !host) throw new Error('找不到遊戲畫面容器');
@@ -1501,12 +1519,12 @@ async function startSnes9xGame(romBytes: Uint8Array): Promise<void> {
   screen.style.display = 'none';
 
   try {
-    snes9xBackend = await startSnes9xBackend(host, romBytes, currentRomFilename);
+    snes9xBackend = await startSnes9xBackend(host, romBytes, currentRomFilename, core);
     isRunning = true;
     hideRomSelector();
     updateControllerLayout();
     powerLed?.classList.add('on');
-    showToast('Snes9x SA-1 核心已啟動');
+    showToast(core === 'nes' ? 'NES 相容核心已啟動' : 'Snes9x SA-1 核心已啟動');
   } catch (error) {
     activeBackend = 'wasm';
     stopSnes9xBackend();

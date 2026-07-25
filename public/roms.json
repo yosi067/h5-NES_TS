@@ -25,9 +25,6 @@
     {"name": "勇者鬥惡龍 3", "file": "勇者鬥惡龍3.zip", "system": "nes"},
     {"name": "勇者鬥惡龍 4", "file": "勇者鬥惡龍4.zip", "system": "nes"},
 
-    {"name": "聖火降魔錄 暗黑龍與光之劍", "file": "火炎之紋章(聖火徽章).zip", "system": "nes"},
-    {"name": "聖火降魔錄外傳", "file": "火炎之紋章外傳(聖火徽章外傳).zip", "system": "nes"},
-
     {"name": "小叮噹", "file": "機器貓小叮噹冒險.zip", "system": "nes"},
     {"name": "小叮噹 基加殭屍的逆襲", "file": "機器貓小叮噹冒險RPG(日版).zip", "system": "nes"},
 
@@ -65,7 +62,6 @@
 
     {"name": "七寶奇謀", "file": "七寶奇謀.zip", "system": "nes"},
     {"name": "七寶奇謀 2", "file": "七寶奇謀2.zip", "system": "nes"},
-    {"name": "大盜五右衛門", "file": "大盜伍佑衛門.zip", "system": "nes"},
     {"name": "大盜五右衛門 2", "file": "大盜伍佑衛門2.zip", "system": "nes"},
     {"name": "聖鬥士星矢 黃金傳說", "file": "聖鬥士星矢.zip", "system": "nes"},
     {"name": "聖鬥士星矢 黃金傳說完結篇", "file": "聖鬥士星矢2.zip", "system": "nes"},

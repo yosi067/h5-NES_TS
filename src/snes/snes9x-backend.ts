@@ -60,6 +60,7 @@ export async function startSnes9xBackend(
   host: HTMLElement,
   rom: Uint8Array,
   romName: string,
+  core: 'snes' | 'nes' = 'snes',
 ): Promise<Snes9xBackend> {
   const runtimeUrl = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/loader.js`, window.location.href).href;
   const dataPath = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/`, window.location.href).href;
@@ -79,7 +80,7 @@ html,body,#game{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
 .ejs_virtualGamepad_parent{display:none!important}
 </style></head><body><div id="game"></div><script>
 window.EJS_player='#game';
-window.EJS_core='snes';
+window.EJS_core=${escapeInlineScript(core)};
 window.EJS_gameUrl=${escapeInlineScript(romUrl)};
 window.EJS_gameName=${escapeInlineScript(romName)};
 window.EJS_pathtodata=${escapeInlineScript(dataPath)};
@@ -94,7 +95,7 @@ window.EJS_language='en-US';
   await new Promise<void>((resolve, reject) => {
     const timeout = window.setTimeout(() => {
       cleanup();
-      reject(new Error('Snes9x 啟動逾時'));
+      reject(new Error(`${core === 'nes' ? 'NES' : 'Snes9x'} 核心啟動逾時`));
     }, START_TIMEOUT_MS);
     const poll = window.setInterval(() => {
       const emulator = (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator;
@@ -105,7 +106,7 @@ window.EJS_language='en-US';
     }, 50);
     const onError = () => {
       cleanup();
-      reject(new Error('Snes9x runtime 載入失敗'));
+      reject(new Error(`${core === 'nes' ? 'NES' : 'Snes9x'} runtime 載入失敗`));
     };
     const cleanup = () => {
       window.clearTimeout(timeout);

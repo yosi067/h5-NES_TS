@@ -836,12 +836,71 @@ impl Ppu {
 
     // === 背景渲染 ===
 
+    fn tilemap_entry_at(&self, bg_idx: usize, x: usize, y: usize, hires: bool) -> u16 {
+        let map_size = self.bg_tilemap_size[bg_idx];
+        let tile_w = if hires { 16 } else if self.bg_tile_size[bg_idx] { 16 } else { 8 };
+        let tile_h = if self.bg_tile_size[bg_idx] { 16 } else { 8 };
+        let tile_col = x / tile_w;
+        let tile_row = y / tile_h;
+        let mut map_addr = self.bg_tilemap_addr[bg_idx] as usize;
+
+        if map_size & 0x01 != 0 && tile_col & 0x20 != 0 {
+            map_addr += 0x800;
+        }
+        if map_size & 0x02 != 0 && tile_row & 0x20 != 0 {
+            map_addr += if map_size & 0x01 != 0 { 0x1000 } else { 0x800 };
+        }
+
+        let entry_addr = (map_addr + (((tile_row & 0x1f) * 32 + (tile_col & 0x1f)) * 2)) & 0xffff;
+        self.vram[entry_addr] as u16 | ((self.vram[(entry_addr + 1) & 0xffff] as u16) << 8)
+    }
+
+    fn offset_per_tile_coords(&self, bg_idx: usize, screen_x: usize, scanline: usize) -> (usize, usize) {
+        let hscroll = self.bg_hscroll[bg_idx] as usize & 0x03ff;
+        let vscroll = self.bg_vscroll[bg_idx] as usize & 0x03ff;
+        let mut x = screen_x + hscroll;
+        let mut y = scanline + vscroll;
+
+        if bg_idx >= 2 || !matches!(self.bg_mode, 2 | 4) {
+            return (x, y);
+        }
+
+        let tile_w = if self.bg_tile_size[bg_idx] { 16 } else { 8 };
+        let offset_x = screen_x + (hscroll & 7);
+        if offset_x < tile_w {
+            return (x, y);
+        }
+
+        let lookup_x = offset_x - tile_w + (self.bg_hscroll[2] as usize & !7);
+        let lookup_y = self.bg_vscroll[2] as usize;
+        let valid_bit = 0x2000u16 << bg_idx;
+        let hlookup = self.tilemap_entry_at(2, lookup_x, lookup_y, false);
+
+        if self.bg_mode == 4 {
+            if hlookup & valid_bit != 0 {
+                if hlookup & 0x8000 == 0 {
+                    x = offset_x + (hlookup as usize & 0x03f8);
+                } else {
+                    y = scanline + (hlookup as usize & 0x03ff);
+                }
+            }
+        } else {
+            let vlookup = self.tilemap_entry_at(2, lookup_x, lookup_y + 8, false);
+            if hlookup & valid_bit != 0 {
+                x = offset_x + (hlookup as usize & 0x03f8);
+            }
+            if vlookup & valid_bit != 0 {
+                y = scanline + (vlookup as usize & 0x03ff);
+            }
+        }
+
+        (x, y)
+    }
+
     /// render a BG layer. pri_lo/pri_hi = effective priority values for tile priority 0/1.
     fn render_bg(&mut self, bg_idx: usize, scanline: u16, bpp: u8, pri_lo: u8, pri_hi: u8) {
         let tilemap_addr = self.bg_tilemap_addr[bg_idx] as usize;
         let chr_addr = self.bg_chr_addr[bg_idx] as usize;
-        let hscroll = self.bg_hscroll[bg_idx] & 0x03FF; // 10-bit scroll
-        let vscroll = self.bg_vscroll[bg_idx] & 0x03FF;
         let map_size = self.bg_tilemap_size[bg_idx];
         let tile16 = self.bg_tile_size[bg_idx];
 
@@ -856,18 +915,17 @@ impl Ppu {
         let h_mask = h_total - 1;
         let v_mask = v_total - 1;
 
-        let y_scroll = (scanline as usize + vscroll as usize) & v_mask;
-        let fine_y_global = y_scroll & (tile_px - 1); // 0-7 or 0-15
-
         // 遍歷可見像素（改為逐像素以正確處理 16x16）
         for screen_x in 0..256usize {
-            let x_scroll = (screen_x + hscroll as usize) & h_mask;
+            let (source_x, source_y) = self.offset_per_tile_coords(bg_idx, screen_x, scanline as usize);
+            let x_scroll = source_x & h_mask;
+            let y_scroll = source_y & v_mask;
 
             // 計算 tilemap 中的 tile 座標
             let tile_col_full = x_scroll / tile_px;
             let tile_row_full = y_scroll / tile_px;
             let fine_x = x_scroll & (tile_px - 1);
-            let fine_y = fine_y_global;
+            let fine_y = y_scroll & (tile_px - 1);
 
             // Tilemap 座標（每個 screen 是 32x32 tiles，但大地圖可以是 64x64 of 8x8-tile entries）
             // 如果是 16x16 tile 模式，tilemap 仍使用 8x8 的 grid 來排列——但 $2105 的 16x16 mode
@@ -1582,6 +1640,11 @@ impl Ppu {
 mod tests {
     use super::*;
 
+    fn write_tilemap_entry(ppu: &mut Ppu, address: usize, value: u16) {
+        ppu.vram[address] = value as u8;
+        ppu.vram[address + 1] = (value >> 8) as u8;
+    }
+
     #[test]
     fn horizontal_scroll_preserves_each_background_fine_offset() {
         let mut ppu = Ppu::new();
@@ -1595,5 +1658,29 @@ mod tests {
 
         assert_eq!(ppu.bg_hscroll[0], 0x013D);
         assert_eq!(ppu.bg_hscroll[1], 0x0262);
+    }
+
+    #[test]
+    fn mode2_uses_bg3_horizontal_and_vertical_offsets_after_first_tile() {
+        let mut ppu = Ppu::new();
+        ppu.bg_mode = 2;
+        ppu.bg_hscroll[0] = 3;
+        ppu.bg_vscroll[0] = 5;
+        write_tilemap_entry(&mut ppu, 0, 0x2040);
+        write_tilemap_entry(&mut ppu, 64, 0x2020);
+
+        assert_eq!(ppu.offset_per_tile_coords(0, 0, 10), (3, 15));
+        assert_eq!(ppu.offset_per_tile_coords(0, 8, 10), (75, 42));
+    }
+
+    #[test]
+    fn mode4_selects_horizontal_or_vertical_offset_with_bit15() {
+        let mut ppu = Ppu::new();
+        ppu.bg_mode = 4;
+        write_tilemap_entry(&mut ppu, 0, 0x2040);
+        assert_eq!(ppu.offset_per_tile_coords(0, 8, 10), (72, 10));
+
+        write_tilemap_entry(&mut ppu, 0, 0xa020);
+        assert_eq!(ppu.offset_per_tile_coords(0, 8, 10), (8, 42));
     }
 }
