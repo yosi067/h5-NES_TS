@@ -42,10 +42,11 @@ describe('SFC core routing', () => {
     expect(shouldUseSnes9x(makeRom(0x20, 0x03), 'Super Mario Kart (Japan).sfc')).toBe(true);
   });
 
-  it.each([
-    'Dragon Ball Z - Super Butouden 3 (Japan).sfc',
-    'Seiken Densetsu 3 (Japan).sfc',
-  ])('preserves the known graphics fallback for %s', romName => {
-    expect(shouldUseSnes9x(makeRom(0x20, 0x00), romName)).toBe(true);
+  it('preserves the known Super Butouden 3 graphics fallback', () => {
+    expect(shouldUseSnes9x(makeRom(0x20, 0x00), 'Dragon Ball Z - Super Butouden 3 (Japan).sfc')).toBe(true);
+  });
+
+  it('keeps Seiken Densetsu 3 on the native core', () => {
+    expect(shouldUseSnes9x(makeRom(0x20, 0x00), 'Seiken Densetsu 3 (Japan).sfc')).toBe(false);
   });
 });

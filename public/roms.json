@@ -4,7 +4,6 @@
     {"name": "超級瑪利歐兄弟 3", "file": "SuperMarioBros3.nes", "system": "nes"},
 
     {"name": "薩爾達傳說 (日版)", "file": "薩爾達傳說.zip", "system": "nes"},
-    {"name": "薩爾達傳說 (中文版)", "file": "FC塞尔达传说汉化版.nes", "system": "nes"},
 
     {"name": "洛克人", "file": "洛克人.zip", "system": "nes"},
     {"name": "洛克人 2 威利博士之謎", "file": "洛克人2.zip", "system": "nes"},
@@ -12,13 +11,11 @@
     {"name": "洛克人 4 新的野心！！", "file": "洛克人4.zip", "system": "nes"},
     {"name": "洛克人 5 布魯斯的陷阱！？", "file": "洛克人5.zip", "system": "nes"},
     {"name": "洛克人 6 史上最大戰爭！！", "file": "洛克人6.zip", "system": "nes"},
-    {"name": "洛克人 6 (改版)", "file": "Rockman 6 - Shijou Saidai no Tatakai (Rockman 6 Hack).nes", "system": "nes"},
     {"name": "洛克人 7 (FC 版)", "file": "洛克人7.zip", "system": "nes"},
 
     {"name": "太空戰士", "file": "最終幻想(太空戰士).zip", "system": "nes"},
     {"name": "太空戰士 2", "file": "最終幻想2(太空戰士2).zip", "system": "nes"},
     {"name": "太空戰士 3", "file": "最終幻想3(太空戰士3).zip", "system": "nes"},
-    {"name": "太空戰士 3 (穿牆版)", "file": "Final Fantasy III - Walk Through Walls (Hack).nes", "system": "nes"},
 
     {"name": "勇者鬥惡龍", "file": "勇者鬥惡龍.zip", "system": "nes"},
     {"name": "勇者鬥惡龍 2", "file": "勇者鬥惡龍2.zip", "system": "nes"},
@@ -34,7 +31,6 @@
 
     {"name": "足球小將", "file": "天使之翼(足球小將).zip", "system": "nes"},
     {"name": "足球小將 2 超級前鋒", "file": "天使之翼2(足球小將2).zip", "system": "nes"},
-    {"name": "足球小將 2 超級前鋒 (原版卡帶)", "file": "Captain Tsubasa II - Super Striker (Japan).nes", "system": "nes"},
 
     {"name": "熱血高校躲避球部", "file": "热血高校躲避球(J).nes", "system": "nes"},
     {"name": "熱血物語 (中文版)", "file": "热血物语中文版.nes", "system": "nes"},
@@ -42,7 +38,6 @@
     {"name": "熱血進行曲 (中文版)", "file": "热血进行曲中文版.nes", "system": "nes"},
     {"name": "熱血時代劇", "file": "熱血時代劇(熱血道中記).zip", "system": "nes"},
     {"name": "熱血曲棍球部", "file": "熱血曲棍球(熱血冰球).zip", "system": "nes"},
-    {"name": "熱血曲棍球部 (原版卡帶)", "file": "热血曲棍球(J).nes", "system": "nes"},
     {"name": "熱血新紀錄", "file": "热血新记录.nes", "system": "nes"},
     {"name": "熱血格鬥傳說 (中文版)", "file": "热血格斗中文.nes", "system": "nes"},
     {"name": "熱血足球 3", "file": "热血足球3.NES", "system": "nes"},
@@ -124,7 +119,6 @@
     {"name": "6 合 1 (Caltron)", "file": "6合1.zip", "system": "nes"},
     {"name": "6 合 1", "file": "6in1.zip", "system": "nes"},
     {"name": "54 合 1", "file": "54合1.zip", "system": "nes"},
-    {"name": "68 合 1 (含煙山坦克)", "file": "68合1(內含煙山坦克，即可消草的90坦克).zip", "system": "nes"},
     {"name": "110 合 1", "file": "110合1.zip", "system": "nes"},
     {"name": "115 合 1", "file": "115合1.zip", "system": "nes"},
     {"name": "260 合 1 (150 合 1)", "file": "260合1(150合1).zip", "system": "nes"},
@@ -133,7 +127,6 @@
 
     {"name": "超級瑪利歐樂園 2 六個金幣", "file": "Super Mario Land 2 - 6 Golden Coins (USA, Europe) (Rev 2).gb", "system": "gb"},
     {"name": "神奇寶貝黃 (繁體中文加強版)", "file": "口袋妖怪黃 (繁) (加強版) (unknown).gb", "system": "gb"},
-    {"name": "神奇寶貝黃 (美版)", "file": "Pokemon_ Yellow Version - Special Pikachu Edition.zip", "system": "gb"},
     {"name": "神奇寶貝 Yishiluo (卡帶標題)", "file": "5d049351ad7a1b6f4d9dd1cacfaf8be0a53be23e5a85d6fd0ef3d119d442892d.gb.zip", "system": "gb"},
     {"name": "聖劍傳說 (簡體中文版)", "file": "圣剑传说(简)(v1.1)(RangerMarsh)(4Mb).gb", "system": "gb"},
     {"name": "熱鬥格鬥拳王 '96 (簡體中文版)", "file": "热斗拳皇96(简)(v1.0)(Stephen+湮没骑士の镇魂歌+落榜の美术生)(8Mb).gb", "system": "gb"},
@@ -173,7 +166,6 @@
     {"name": "第 3 次超級機器人大戰 (繁體中文 V0.99)", "file": "0035 - 第3次超級機器人大戰 (繁)(V0.99)(Mszl100等).zip", "system": "snes"},
     {"name": "第 4 次超級機器人大戰 (簡體中文)", "file": "0070 - 第4次超級機器人大戰 (簡)(選單漢化)(following等).SMC", "system": "snes"},
 
-    {"name": "七龍珠 Z 超武鬥傳 (Sample)", "file": "Dragon Ball Z - Super Butouden (Japan) (Sample).zip", "system": "snes"},
     {"name": "七龍珠 Z 超武鬥傳 2 (Rev 1)", "file": "Dragon Ball Z - Super Butouden 2 (Japan) (Rev 1).zip", "system": "snes"},
     {"name": "七龍珠 Z 超武鬥傳 3 (日版)", "file": "Dragon Ball Z - Super Butouden 3 (Japan).zip", "system": "snes"},
     {"name": "七龍珠 Z 超悟空傳 突擊篇 (簡體中文)", "file": "0004 - 七龍珠Z超悟空傳-突激篇 (簡)(90%)(野獸).zip", "system": "snes"},
@@ -192,7 +184,6 @@
     {"name": "雷霆任務 (繁體中文 V1.04)", "file": "0055 - 雷霆任務 (繁)(V1.04)(Chrono+Mankee610).SMC", "system": "snes"},
     {"name": "薩爾達傳說 眾神的三角神力 (繁體中文部分漢化)", "file": "0064 - 薩爾達傳說 (繁)(部分漢化)(Dark_Link).SMC", "system": "snes"},
     {"name": "灌籃高手 2 (簡體中文 V0.3)", "file": "0066 - 灌籃高手2 (簡)(V0.3)(勇者漢化組).SMC", "system": "snes"},
-    {"name": "無人島物語 (繁體中文)", "file": "0073 - 無人島物語 (繁)(部分漢化)(天空漢化組).zip", "system": "snes"},
     {"name": "NBA Jam (美版 Rev 1)", "file": "NBA Jam (USA) (Rev 1).sfc", "system": "snes"},
 
     {"name": "小精靈", "file": "pacman.zip", "system": "arcade"},
@@ -214,7 +205,6 @@
     {"name": "辛普森家庭", "file": "simpsons.zip", "system": "arcade"},
     {"name": "雪人兄弟", "file": "snowbros.zip", "system": "arcade"},
     {"name": "泡泡龍", "file": "bublbobl.zip", "system": "arcade"},
-    {"name": "砰！", "file": "pang.zip", "system": "arcade"},
     {"name": "快打旋風 2", "file": "sf2.zip", "system": "arcade"},
 
     {"name": "格鬥拳王 '94", "file": "kof94.zip", "system": "arcade"},

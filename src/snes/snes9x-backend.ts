@@ -42,8 +42,7 @@ export function shouldUseSnes9x(rom: Uint8Array, romName: string): boolean {
     if ([0x13, 0x14, 0x15, 0x1A, 0xF5, 0xF9].includes(cartridgeType)) return true;
   }
   return /(?:^|\s)super mario kart(?:\s|\.|$)/i.test(romName)
-    || /super butouden 3|超武鬥傳3|超武斗传3/i.test(romName)
-    || /seiken densetsu 3|聖劍傳說3|圣剑传说3/i.test(romName);
+    || /super butouden 3|超武鬥傳3|超武斗传3/i.test(romName);
 }
 
 export async function startSnes9xBackend(
