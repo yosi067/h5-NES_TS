@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { shouldUseSnes9x } from '../src/snes/snes9x-backend';
+import { shouldForceLegacySnesCore, shouldUseSnes9x } from '../src/snes/snes9x-backend';
 
 function makeRom(mapMode: number, cartridgeType: number, copierHeader = false): Uint8Array {
   const prefix = copierHeader ? 512 : 0;
@@ -48,5 +48,19 @@ describe('SFC core routing', () => {
 
   it('keeps Seiken Densetsu 3 on the native core', () => {
     expect(shouldUseSnes9x(makeRom(0x20, 0x00), 'Seiken Densetsu 3 (Japan).sfc')).toBe(false);
+  });
+});
+
+describe('Snes9x browser compatibility', () => {
+  it('forces the legacy core on Android Chrome 80', () => {
+    expect(shouldForceLegacySnesCore(
+      'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/80.0.3987.149 Mobile Safari/537.36',
+    )).toBe(true);
+  });
+
+  it('uses the modern core on Chrome 91 and newer', () => {
+    expect(shouldForceLegacySnesCore(
+      'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/91.0.4472.120 Mobile Safari/537.36',
+    )).toBe(false);
   });
 });

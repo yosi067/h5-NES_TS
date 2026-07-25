@@ -3575,37 +3575,65 @@ function setupArcadeDpad(): void {
     });
   };
 
-  touchArea.addEventListener('touchstart', (event) => {
-    event.preventDefault();
-    const touch = event.changedTouches[0];
-    if (touch) applyPointerState(touch.clientX, touch.clientY);
-  }, { passive: false });
-
-  touchArea.addEventListener('touchmove', (event) => {
-    event.preventDefault();
-    const touch = event.changedTouches[0];
-    if (touch) applyPointerState(touch.clientX, touch.clientY);
-  }, { passive: false });
-
-  touchArea.addEventListener('touchend', (event) => { event.preventDefault(); clearState(); }, { passive: false });
-  touchArea.addEventListener('touchcancel', (event) => { event.preventDefault(); clearState(); }, { passive: false });
-
-  touchArea.addEventListener('mousedown', (event) => {
-    event.preventDefault();
-    mouseDown = true;
-    applyPointerState(event.clientX, event.clientY);
-  });
-
-  document.addEventListener('mousemove', (event) => {
-    if (mouseDown) applyPointerState(event.clientX, event.clientY);
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (mouseDown) {
-      mouseDown = false;
+  if (typeof PointerEvent !== 'undefined') {
+    let activePointerId: number | null = null;
+    touchArea.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      if (activePointerId !== null) return;
+      activePointerId = event.pointerId;
+      applyPointerState(event.clientX, event.clientY);
+      try {
+        touchArea.setPointerCapture(event.pointerId);
+      } catch {
+        // Older Android Chrome can reject capture while still delivering pointer events.
+      }
+    });
+    touchArea.addEventListener('pointermove', (event) => {
+      if (event.pointerId !== activePointerId) return;
+      event.preventDefault();
+      applyPointerState(event.clientX, event.clientY);
+    });
+    const releasePointer = (event: PointerEvent) => {
+      if (event.pointerId !== activePointerId) return;
+      event.preventDefault();
+      activePointerId = null;
       clearState();
-    }
-  });
+    };
+    touchArea.addEventListener('pointerup', releasePointer);
+    touchArea.addEventListener('pointercancel', releasePointer);
+  } else {
+    touchArea.addEventListener('touchstart', (event) => {
+      event.preventDefault();
+      const touch = event.changedTouches[0];
+      if (touch) applyPointerState(touch.clientX, touch.clientY);
+    }, { passive: false });
+
+    touchArea.addEventListener('touchmove', (event) => {
+      event.preventDefault();
+      const touch = event.changedTouches[0];
+      if (touch) applyPointerState(touch.clientX, touch.clientY);
+    }, { passive: false });
+
+    touchArea.addEventListener('touchend', (event) => { event.preventDefault(); clearState(); }, { passive: false });
+    touchArea.addEventListener('touchcancel', (event) => { event.preventDefault(); clearState(); }, { passive: false });
+
+    touchArea.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      mouseDown = true;
+      applyPointerState(event.clientX, event.clientY);
+    });
+
+    document.addEventListener('mousemove', (event) => {
+      if (mouseDown) applyPointerState(event.clientX, event.clientY);
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (mouseDown) {
+        mouseDown = false;
+        clearState();
+      }
+    });
+  }
 }
 
 function setupN64Buttons(): void {

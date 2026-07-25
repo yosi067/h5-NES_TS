@@ -45,6 +45,11 @@ export function shouldUseSnes9x(rom: Uint8Array, romName: string): boolean {
     || /super butouden 3|超武鬥傳3|超武斗传3/i.test(romName);
 }
 
+export function shouldForceLegacySnesCore(userAgent: string): boolean {
+  const chromeVersion = /(?:Chrome|CriOS)\/(\d+)/i.exec(userAgent);
+  return chromeVersion !== null && Number(chromeVersion[1]) < 91;
+}
+
 export async function startSnes9xBackend(
   host: HTMLElement,
   rom: ArrayBuffer,
@@ -54,6 +59,7 @@ export async function startSnes9xBackend(
 ): Promise<Snes9xBackend> {
   const runtimeUrl = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/loader.js`, window.location.href).href;
   const dataPath = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/`, window.location.href).href;
+  const forceLegacyCore = shouldForceLegacySnesCore(navigator.userAgent);
   const romBlob = new Blob([rom], { type: 'application/octet-stream' });
   const romUrl = URL.createObjectURL(romBlob);
   const iframe = document.createElement('iframe');
@@ -81,6 +87,7 @@ window.EJS_pathtodata=${escapeInlineScript(dataPath)};
 window.EJS_startOnLoaded=true;
 window.EJS_DEBUG_XX=true;
 window.EJS_threads=false;
+window.EJS_forceLegacyCores=${forceLegacyCore};
 window.EJS_disableAutoLang=true;
 window.EJS_language='en-US';
 </script><script src=${escapeInlineScript(runtimeUrl)}></script></body></html>`;
