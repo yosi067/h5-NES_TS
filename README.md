@@ -4,6 +4,12 @@ H5-EMU 是一個在瀏覽器中運行的多平台模擬器研究專案，將 **N
 
 它既是一間數位電玩店，也是一個持續往下一個硬體世代推進的系統工程實驗。
 
+> [!NOTE]
+> **向模擬器先行者致敬**
+>
+> H5-EMU 能在前人的研究上繼續前進，仰賴 Near 對精確模擬與保存的堅持，以及 Snes9x 歷代開發者讓超任跨越平台與年代的長期投入。
+> 閱讀：[把一台主機留給未來：Near 與 Snes9x 團隊的模擬器故事](docs/NEAR_AND_SNES9X_TRIBUTE.md)
+
 > [!IMPORTANT]
 > **本專案僅供學術、技術研究與個人學習使用。** 專案不主張任何遊戲內容、商標、角色或主機品牌的權利；相關版權均屬原遊戲公司與權利人所有。使用者應自行取得並僅使用依法持有的 ROM、BIOS 與其他遊戲資料。
 
@@ -111,6 +117,7 @@ docs/                # 技術、除錯、規格與優化文件
 
 最新進展、實測結果與細節不再堆疊於 README：
 
+- [Near 與 Snes9x 團隊的模擬器故事與致敬](docs/NEAR_AND_SNES9X_TRIBUTE.md)
 - [技術概覽與完整架構](docs/TECHNICAL_OVERVIEW.md)
 - [開發指南](docs/DEVELOPMENT.md)
 - [問題與修復紀錄](docs/TROUBLESHOOTING.md)
