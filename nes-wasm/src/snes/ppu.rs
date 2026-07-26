@@ -768,7 +768,7 @@ impl Ppu {
         // 計算 Window Mask
         self.compute_window_masks();
 
-        let y = scanline - 1;
+        let output_y = scanline - 1;
 
         // 依 BG 模式渲染
         match self.bg_mode {
@@ -776,59 +776,59 @@ impl Ppu {
                 // Mode 0: 4 BG, 每層 2bpp(4色)
                 // Back→Front: BG4p0(1) BG3p0(2) OBJ0(3) BG4p1(4) BG3p1(5) OBJ1(6)
                 //   BG2p0(7) BG1p0(8) OBJ2(9) BG2p1(10) BG1p1(11) OBJ3(12)
-                self.render_bg(3, y, 2, 1, 4);
-                self.render_bg(2, y, 2, 2, 5);
-                self.render_bg(1, y, 2, 7, 10);
-                self.render_bg(0, y, 2, 8, 11);
+                self.render_bg(3, scanline, 2, 1, 4);
+                self.render_bg(2, scanline, 2, 2, 5);
+                self.render_bg(1, scanline, 2, 7, 10);
+                self.render_bg(0, scanline, 2, 8, 11);
             }
             1 => {
                 // Mode 1: BG1/BG2=4bpp(16色), BG3=2bpp(4色)
                 if self.bg3_priority {
                     // BG3 priority: BG3p0(1) OBJ0(2) OBJ1(3) BG2p0(4) BG1p0(5)
                     //   OBJ2(6) BG2p1(7) BG1p1(8) OBJ3(9) BG3p1(10)
-                    self.render_bg(2, y, 2, 1, 10);
-                    self.render_bg(1, y, 4, 4, 7);
-                    self.render_bg(0, y, 4, 5, 8);
+                    self.render_bg(2, scanline, 2, 1, 10);
+                    self.render_bg(1, scanline, 4, 4, 7);
+                    self.render_bg(0, scanline, 4, 5, 8);
                 } else {
                     // Normal: BG3p0(2) OBJ0(3) BG3p1(4) OBJ1(5) BG2p0(6)
                     //   BG1p0(7) OBJ2(8) BG2p1(9) BG1p1(10) OBJ3(11)
-                    self.render_bg(2, y, 2, 2, 4);
-                    self.render_bg(1, y, 4, 6, 9);
-                    self.render_bg(0, y, 4, 7, 10);
+                    self.render_bg(2, scanline, 2, 2, 4);
+                    self.render_bg(1, scanline, 4, 6, 9);
+                    self.render_bg(0, scanline, 4, 7, 10);
                 }
             }
             2 => {
                 // Mode 2: BG1/BG2=4bpp, offset-per-tile
-                self.render_bg(1, y, 4, 2, 6);
-                self.render_bg(0, y, 4, 4, 8);
+                self.render_bg(1, scanline, 4, 2, 6);
+                self.render_bg(0, scanline, 4, 4, 8);
             }
             3 => {
                 // Mode 3: BG1=8bpp(256色), BG2=4bpp
-                self.render_bg(1, y, 4, 2, 6);
-                self.render_bg(0, y, 8, 4, 8);
+                self.render_bg(1, scanline, 4, 2, 6);
+                self.render_bg(0, scanline, 8, 4, 8);
             }
             4 => {
                 // Mode 4: BG1=8bpp, BG2=2bpp (offset-per-tile)
-                self.render_bg(1, y, 2, 2, 6);
-                self.render_bg(0, y, 8, 4, 8);
+                self.render_bg(1, scanline, 2, 2, 6);
+                self.render_bg(0, scanline, 8, 4, 8);
             }
             5 => {
                 // Mode 5: BG1=4bpp, BG2=2bpp, hi-res (512px wide)
-                self.render_bg_hires(1, y, 2, 2, 6);
-                self.render_bg_hires(0, y, 4, 4, 8);
+                self.render_bg_hires(1, scanline, 2, 2, 6);
+                self.render_bg_hires(0, scanline, 4, 4, 8);
             }
             6 => {
                 // Mode 6: BG1=4bpp, hi-res (offset-per-tile)
-                self.render_bg_hires(0, y, 4, 4, 8);
+                self.render_bg_hires(0, scanline, 4, 4, 8);
             }
             7 => {
-                self.render_mode7(y);
+                self.render_mode7(output_y);
             }
             _ => {}
         }
 
         // 渲染 OBJ (Sprites)
-        self.render_sprites(y);
+        self.render_sprites(output_y);
 
         // 合成 Main + Sub Screen (Color Math)
         self.composite_scanline(scanline);
@@ -1497,8 +1497,8 @@ impl Ppu {
         let subtract = self.cgadsub & 0x80 != 0;
         let brightness = self.brightness as u32;
 
-        // Hires modes (5, 6) or pseudo-hires: blend main+sub for 256px output
-        let hires = self.bg_mode == 5 || self.bg_mode == 6 || (self.setini & 0x08 != 0);
+        let true_hires = self.bg_mode == 5 || self.bg_mode == 6;
+        let pseudo_hires = self.setini & 0x08 != 0;
 
         for x in 0..SCREEN_WIDTH {
             let main_rgba = self.main_buf[x];
@@ -1576,9 +1576,12 @@ impl Ppu {
                 };
 
                 r | (g << 8) | (b << 16) | 0xFF000000
-            } else if hires {
-                // Average paired hires dots only when both contain layer pixels. At transparent
-                // edges, mixing one layer dot with backdrop creates colors not present in CGRAM.
+            } else if true_hires {
+                // The framebuffer is 256 pixels wide, so retain one real dot from each 512-dot
+                // pair. RGB averaging invents colors that flicker along high-contrast tile edges.
+                let sampled = if self.main_src[x] != 5 { main_rgba } else { sub_rgba };
+                (sampled & 0x00ffffff) | 0xff000000
+            } else if pseudo_hires {
                 if self.main_src[x] != 5 && self.sub_src[x] != 5 {
                     let sr = sub_rgba & 0xFF;
                     let sg = (sub_rgba >> 8) & 0xFF;
@@ -1641,6 +1644,10 @@ impl Ppu {
 mod tests {
     use super::*;
 
+    fn rgba_bytes(color: u32) -> [u8; 3] {
+        [color as u8, (color >> 8) as u8, (color >> 16) as u8]
+    }
+
     fn write_tilemap_entry(ppu: &mut Ppu, address: usize, value: u16) {
         ppu.vram[address] = value as u8;
         ppu.vram[address + 1] = (value >> 8) as u8;
@@ -1702,7 +1709,29 @@ mod tests {
     }
 
     #[test]
-    fn hires_asymmetric_edge_does_not_create_a_blended_color() {
+    fn hires_vertical_scroll_uses_visible_v_counter() {
+        let mut ppu = Ppu::new();
+        ppu.bg_mode = 5;
+        ppu.brightness = 15;
+        ppu.force_blank = false;
+        ppu.bg_vscroll[0] = 7;
+        ppu.bg_tilemap_addr[0] = 0x1000;
+        ppu.tm = 0x01;
+        ppu.cgram[1] = 0x001f;
+        ppu.cgram[2] = 0x03e0;
+
+        write_tilemap_entry(&mut ppu, 0x1000, 0);
+        write_tilemap_entry(&mut ppu, 0x1040, 2);
+        ppu.vram[14] = 0xff;
+        ppu.vram[64 + 1] = 0xff;
+
+        ppu.render_visible_scanline(1);
+
+        assert_eq!(&ppu.framebuffer[0..3], &rgba_bytes(bgr15_to_rgba(ppu.cgram[2])));
+    }
+
+    #[test]
+    fn hires_uses_sub_dot_when_main_dot_is_transparent() {
         let mut ppu = Ppu::new();
         ppu.bg_mode = 5;
         ppu.brightness = 15;
@@ -1714,13 +1743,23 @@ mod tests {
 
         ppu.composite_scanline(1);
 
-        assert_eq!(
-            &ppu.framebuffer[0..3],
-            &[
-                (main_color & 0xff) as u8,
-                ((main_color >> 8) & 0xff) as u8,
-                ((main_color >> 16) & 0xff) as u8,
-            ]
-        );
+        let sub_color = ppu.sub_buf[0];
+        assert_eq!(&ppu.framebuffer[0..3], &rgba_bytes(sub_color));
+    }
+
+    #[test]
+    fn hires_downsample_does_not_synthesize_a_third_color() {
+        let mut ppu = Ppu::new();
+        ppu.bg_mode = 5;
+        ppu.brightness = 15;
+        let main_color = bgr15_to_rgba(0x03e0);
+        ppu.main_buf[0] = main_color;
+        ppu.main_src[0] = 0;
+        ppu.sub_buf[0] = bgr15_to_rgba(0x001f);
+        ppu.sub_src[0] = 0;
+
+        ppu.composite_scanline(1);
+
+        assert_eq!(&ppu.framebuffer[0..3], &rgba_bytes(main_color));
     }
 }
