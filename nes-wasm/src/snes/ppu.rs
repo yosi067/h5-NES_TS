@@ -1577,10 +1577,17 @@ impl Ppu {
 
                 r | (g << 8) | (b << 16) | 0xFF000000
             } else if true_hires {
-                // The framebuffer is 256 pixels wide, so retain one real dot from each 512-dot
-                // pair. RGB averaging invents colors that flicker along high-contrast tile edges.
-                let sampled = if self.main_src[x] != 5 { main_rgba } else { sub_rgba };
-                (sampled & 0x00ffffff) | 0xff000000
+                // Preserve both dots when reducing the 512-dot hires pair to one framebuffer
+                // pixel. Dropping either dot removes one-pixel-wide Mode 5 glyph strokes.
+                if self.main_src[x] != 5 && self.sub_src[x] != 5 {
+                    let sr = sub_rgba & 0xFF;
+                    let sg = (sub_rgba >> 8) & 0xFF;
+                    let sb = (sub_rgba >> 16) & 0xFF;
+                    ((mr + sr) >> 1) | (((mg + sg) >> 1) << 8) | (((mb + sb) >> 1) << 16) | 0xFF000000
+                } else {
+                    let sampled = if self.main_src[x] != 5 { main_rgba } else { sub_rgba };
+                    (sampled & 0x00ffffff) | 0xff000000
+                }
             } else if pseudo_hires {
                 if self.main_src[x] != 5 && self.sub_src[x] != 5 {
                     let sr = sub_rgba & 0xFF;
@@ -1748,7 +1755,7 @@ mod tests {
     }
 
     #[test]
-    fn hires_downsample_does_not_synthesize_a_third_color() {
+    fn hires_downsample_preserves_both_dots_of_a_glyph_stroke() {
         let mut ppu = Ppu::new();
         ppu.bg_mode = 5;
         ppu.brightness = 15;
@@ -1760,6 +1767,6 @@ mod tests {
 
         ppu.composite_scanline(1);
 
-        assert_eq!(&ppu.framebuffer[0..3], &rgba_bytes(main_color));
+        assert_eq!(&ppu.framebuffer[0..3], &[124, 124, 0]);
     }
 }
