@@ -1076,8 +1076,20 @@
       display: none;
     }
 
+    body.arcade-digital-fallback #arcade-controller-area .arcade-stick-touch {
+      display: none;
+    }
+
     body.arcade-digital-fallback #arcade-controller-area .arcade-fallback-dpad {
       display: block;
+      z-index: 10;
+      pointer-events: auto;
+    }
+
+    body.arcade-digital-fallback #arcade-controller-area .arcade-fallback-dpad .dpad-btn {
+      pointer-events: auto;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .arcade-stick-up { top: 8px; left: 50%; transform: translateX(-50%); }
@@ -5567,11 +5579,11 @@
             <span class="arcade-stick-arrow arcade-stick-left" id="arcade-dpad-left">◀</span>
             <span class="arcade-stick-arrow arcade-stick-right" id="arcade-dpad-right">▶</span>
             <div class="dpad-visual arcade-fallback-dpad">
-              <div class="dpad-btn dpad-up"><span class="dpad-arrow">▲</span></div>
-              <div class="dpad-btn dpad-left"><span class="dpad-arrow">◀</span></div>
+              <button class="dpad-btn dpad-up" type="button" data-arcade-bit="up" aria-label="上"><span class="dpad-arrow">▲</span></button>
+              <button class="dpad-btn dpad-left" type="button" data-arcade-bit="left" aria-label="左"><span class="dpad-arrow">◀</span></button>
               <div class="dpad-center"></div>
-              <div class="dpad-btn dpad-right"><span class="dpad-arrow">▶</span></div>
-              <div class="dpad-btn dpad-down"><span class="dpad-arrow">▼</span></div>
+              <button class="dpad-btn dpad-right" type="button" data-arcade-bit="right" aria-label="右"><span class="dpad-arrow">▶</span></button>
+              <button class="dpad-btn dpad-down" type="button" data-arcade-bit="down" aria-label="下"><span class="dpad-arrow">▼</span></button>
             </div>
           </div>
         </div>

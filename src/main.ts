@@ -860,11 +860,15 @@ export function mergeArcadeInputSources(directInput: number, gamepadInput: numbe
   return directInput | gamepadInput;
 }
 
+export function updateArcadeInputMask(mask: number, bit: number, pressed: boolean): number {
+  return pressed ? (mask | bit) : (mask & ~bit);
+}
+
 function setArcadeInputBit(bit: number, pressed: boolean, player: 1 | 2 = 1): void {
   if (player === 1) {
-    arcadeInputP1 = pressed ? (arcadeInputP1 | bit) : (arcadeInputP1 & ~bit);
+    arcadeInputP1 = updateArcadeInputMask(arcadeInputP1, bit, pressed);
   } else {
-    arcadeInputP2 = pressed ? (arcadeInputP2 | bit) : (arcadeInputP2 & ~bit);
+    arcadeInputP2 = updateArcadeInputMask(arcadeInputP2, bit, pressed);
   }
 }
 
