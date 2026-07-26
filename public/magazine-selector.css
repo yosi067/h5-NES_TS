@@ -264,8 +264,8 @@ body:not(.mobile-landscape-mode) .rom-selector .machine-art {
   height: 100%;
   padding: 4px 10px 4px 0;
   object-fit: contain;
-  filter: grayscale(0.12) sepia(0.12) drop-shadow(3px 4px 0 rgba(45, 36, 23, 0.25));
-  image-rendering: auto;
+  filter: grayscale(0.03) sepia(0.04) drop-shadow(3px 4px 0 rgba(45, 36, 23, 0.25));
+  image-rendering: pixelated;
 }
 
 .machine-copy {

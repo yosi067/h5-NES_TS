@@ -50,6 +50,31 @@ export function shouldForceLegacySnesCore(userAgent: string): boolean {
   return chromeVersion !== null && Number(chromeVersion[1]) < 91;
 }
 
+export function shouldUseDigitalArcadeDpad(userAgent: string, hasPointerEvents: boolean): boolean {
+  if (!/Android/i.test(userAgent)) return false;
+  const androidVersion = /Android\s+(\d+)/i.exec(userAgent);
+  const chromeVersion = /(?:Chrome|CriOS)\/(\d+)/i.exec(userAgent);
+  return !hasPointerEvents
+    || (androidVersion !== null && Number(androidVersion[1]) <= 8)
+    || (chromeVersion !== null && Number(chromeVersion[1]) < 91);
+}
+
+export function getSnes9xUnsupportedReason(
+  userAgent: string,
+  deviceMemory: number | undefined,
+  hasWebAssembly: boolean,
+): string | null {
+  if (!hasWebAssembly) return '此瀏覽器不支援 WebAssembly，無法啟動 SFC 核心。';
+  if (/Android/i.test(userAgent) && deviceMemory !== undefined && deviceMemory <= 1) {
+    return `裝置回報僅 ${deviceMemory} GB 記憶體，無法穩定啟動 SFC 核心。`;
+  }
+  const chromeVersion = /Chrome\/(\d+)/i.exec(userAgent);
+  if (/Android/i.test(userAgent) && chromeVersion !== null && Number(chromeVersion[1]) < 61) {
+    return 'Android 瀏覽器版本過舊，無法啟動 SFC 核心，請更新瀏覽器。';
+  }
+  return null;
+}
+
 export async function startSnes9xBackend(
   host: HTMLElement,
   rom: ArrayBuffer,
@@ -57,6 +82,14 @@ export async function startSnes9xBackend(
   core: 'snes' | 'nes' = 'snes',
   signal?: AbortSignal,
 ): Promise<Snes9xBackend> {
+  const navigatorWithMemory = navigator as Navigator & { deviceMemory?: number };
+  const unsupportedReason = getSnes9xUnsupportedReason(
+    navigator.userAgent,
+    navigatorWithMemory.deviceMemory,
+    typeof WebAssembly !== 'undefined',
+  );
+  if (unsupportedReason) throw new Error(unsupportedReason);
+
   const runtimeUrl = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/loader.js`, window.location.href).href;
   const dataPath = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/`, window.location.href).href;
   const forceLegacyCore = shouldForceLegacySnesCore(navigator.userAgent);

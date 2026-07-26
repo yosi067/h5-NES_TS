@@ -32,7 +32,12 @@ import {
 import { getRomAssetUrl, hasN64RomMagic } from './rom-assets';
 import { createN64Telemetry } from './n64/telemetry';
 import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
-import { shouldUseSnes9x, startSnes9xBackend, type Snes9xBackend } from './snes/snes9x-backend';
+import {
+  shouldUseDigitalArcadeDpad,
+  shouldUseSnes9x,
+  startSnes9xBackend,
+  type Snes9xBackend,
+} from './snes/snes9x-backend';
 
 type N64EmulatorControls = EmulatorControls & {
   resumeAudio?: () => Promise<void>;
@@ -3391,6 +3396,10 @@ function updateControllerLayout(): void {
   const n64Ctrl = document.getElementById('n64-controller-area');
   document.body.classList.toggle('n64-mode', isMupenN64Active());
   document.body.classList.toggle('arcade-mode', isFbNeoActive());
+  document.body.classList.toggle(
+    'arcade-digital-fallback',
+    isFbNeoActive() && shouldUseDigitalArcadeDpad(navigator.userAgent, typeof PointerEvent !== 'undefined'),
+  );
   document.body.classList.toggle('arcade-vertical-mode', isFbNeoActive() && arcadeRotation !== 'none');
   document.body.classList.toggle('snes-mode', !isMupenN64Active() && !isFbNeoActive() && isSnesCore());
   if (isMupenN64Active()) {
@@ -3516,6 +3525,10 @@ function setupArcadeDpad(): void {
   let currentState: DpadState = { up: false, down: false, left: false, right: false };
   let mouseDown = false;
   let pendingStateFrame: number | null = null;
+  const useDigitalFallback = shouldUseDigitalArcadeDpad(
+    navigator.userAgent,
+    typeof PointerEvent !== 'undefined',
+  );
 
   const applyState = (newState: DpadState) => {
     for (const direction of ['up', 'down', 'left', 'right'] as Array<keyof DpadState>) {
@@ -3575,7 +3588,7 @@ function setupArcadeDpad(): void {
     });
   };
 
-  if (typeof PointerEvent !== 'undefined') {
+  if (typeof PointerEvent !== 'undefined' && !useDigitalFallback) {
     let activePointerId: number | null = null;
     touchArea.addEventListener('pointerdown', (event) => {
       event.preventDefault();

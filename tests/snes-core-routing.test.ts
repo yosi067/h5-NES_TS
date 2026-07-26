@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { shouldForceLegacySnesCore, shouldUseSnes9x } from '../src/snes/snes9x-backend';
+import {
+  getSnes9xUnsupportedReason,
+  shouldForceLegacySnesCore,
+  shouldUseDigitalArcadeDpad,
+  shouldUseSnes9x,
+} from '../src/snes/snes9x-backend';
 
 function makeRom(mapMode: number, cartridgeType: number, copierHeader = false): Uint8Array {
   const prefix = copierHeader ? 512 : 0;
@@ -62,5 +67,28 @@ describe('Snes9x browser compatibility', () => {
     expect(shouldForceLegacySnesCore(
       'Mozilla/5.0 (Linux; Android 12) AppleWebKit/537.36 Chrome/91.0.4472.120 Mobile Safari/537.36',
     )).toBe(false);
+  });
+
+  it('uses a digital arcade pad only on affected Android browsers', () => {
+    expect(shouldUseDigitalArcadeDpad(
+      'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/80.0.3987.149 Mobile Safari/537.36',
+      true,
+    )).toBe(true);
+    expect(shouldUseDigitalArcadeDpad(
+      'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/126.0.0.0 Mobile Safari/537.36',
+      true,
+    )).toBe(false);
+    expect(shouldUseDigitalArcadeDpad('Mozilla/5.0 (iPhone) Safari/605.1.15', false)).toBe(false);
+  });
+
+  it('rejects clearly underpowered Android devices before core startup', () => {
+    expect(getSnes9xUnsupportedReason('Mozilla/5.0 (Linux; Android 10) Chrome/100.0', 1, true))
+      .toContain('1 GB');
+    expect(getSnes9xUnsupportedReason('Mozilla/5.0 (Linux; Android 10) Chrome/100.0', undefined, true))
+      .toBeNull();
+  });
+
+  it('rejects browsers without WebAssembly', () => {
+    expect(getSnes9xUnsupportedReason('Mozilla/5.0', 4, false)).toContain('WebAssembly');
   });
 });

@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#C4C4A6">
-  <title>H5-NES 模擬器</title>
+  <title>H5-EMU 模擬器</title>
   <style>
     /* ===== 基礎重置 ===== */
     * {
@@ -916,14 +916,19 @@
       align-items: center;
     }
     .snes-abxy-diamond {
-      display: flex;
-      flex-direction: column;
+      display: grid;
+      grid-template-columns: 62px 44px 62px;
+      grid-template-rows: 62px 44px 62px;
       align-items: center;
-      gap: 4px;
+      justify-items: center;
     }
-    .snes-abxy-row {
-      display: flex;
-      gap: 44px;
+    .snes-x { grid-column: 2; grid-row: 1; }
+    .snes-y { grid-column: 1; grid-row: 2; }
+    .snes-a { grid-column: 3; grid-row: 2; }
+    .snes-b { grid-column: 2; grid-row: 3; }
+    .snes-abxy-diamond .snes-face-btn {
+      width: 62px;
+      height: 62px;
     }
     .snes-face-btn {
       width: 62px;
@@ -1056,6 +1061,23 @@
     #arcade-controller-area .arcade-stick-arrow.pressed {
       color: #8bd4ff;
       text-shadow: 0 0 8px #8bd4ff;
+    }
+
+    #arcade-controller-area .arcade-fallback-dpad {
+      display: none;
+    }
+
+    body.arcade-digital-fallback #arcade-controller-area .arcade-stick {
+      background: transparent;
+    }
+
+    body.arcade-digital-fallback #arcade-controller-area .arcade-stick-knob,
+    body.arcade-digital-fallback #arcade-controller-area .arcade-stick-arrow {
+      display: none;
+    }
+
+    body.arcade-digital-fallback #arcade-controller-area .arcade-fallback-dpad {
+      display: block;
     }
 
     .arcade-stick-up { top: 8px; left: 50%; transform: translateX(-50%); }
@@ -3291,6 +3313,29 @@
         padding: 8px 12px;
       }
 
+      #nes-controller-area .ab-container,
+      #snes-controller-area .snes-right-area {
+        align-self: flex-start;
+        margin-top: -10px;
+      }
+
+      #nes-controller-area .ab-buttons {
+        gap: clamp(28px, 8vw, 34px);
+        transform: rotate(-15deg);
+      }
+
+      #snes-controller-area .snes-abxy-diamond {
+        --snes-face-size: clamp(54px, 15vw, 62px);
+        --snes-face-center-gap: clamp(34px, 11vw, 44px);
+        grid-template-columns: var(--snes-face-size) var(--snes-face-center-gap) var(--snes-face-size);
+        grid-template-rows: var(--snes-face-size) var(--snes-face-center-gap) var(--snes-face-size);
+      }
+
+      #snes-controller-area .snes-abxy-diamond .snes-face-btn {
+        width: var(--snes-face-size);
+        height: var(--snes-face-size);
+      }
+
       /* 調整 D-Pad 大小 */
       .dpad {
         width: 130px;
@@ -3325,7 +3370,7 @@
       }
 
       .ab-buttons {
-        gap: 10px;
+        gap: 28px;
       }
     }
 
@@ -3353,8 +3398,9 @@
       }
 
       .ab-buttons {
-        gap: 8px;
+        gap: 24px;
       }
+
     }
 
     /* ===== 手機橫向模式 ===== */
@@ -5404,7 +5450,7 @@
     <!-- 品牌 -->
     <div class="brand-area">
       <div class="brand-nintendo">NINTENDO</div>
-      <div class="brand-name" id="game-home-link" role="button" tabindex="0" aria-label="返回遊戲主機選單">H5-NES</div>
+      <div class="brand-name" id="game-home-link" role="button" tabindex="0" aria-label="返回遊戲主機選單">H5-EMU</div>
     </div>
 
     <!-- 電腦版控制按鈕 -->
@@ -5498,14 +5544,12 @@
               </div>
             </div>
           </div>
-          <!-- ABXY 菱形 -->
+          <!-- ABXY 等距菱形排列 -->
           <div class="snes-right-area">
             <div class="snes-abxy-diamond">
               <button class="snes-face-btn snes-x" id="snes-btn-x">X</button>
-              <div class="snes-abxy-row">
-                <button class="snes-face-btn snes-y" id="snes-btn-y">Y</button>
-                <button class="snes-face-btn snes-a" id="snes-btn-a">A</button>
-              </div>
+              <button class="snes-face-btn snes-y" id="snes-btn-y">Y</button>
+              <button class="snes-face-btn snes-a" id="snes-btn-a">A</button>
               <button class="snes-face-btn snes-b" id="snes-btn-b">B</button>
             </div>
           </div>
@@ -5522,6 +5566,13 @@
             <span class="arcade-stick-arrow arcade-stick-down" id="arcade-dpad-down">▼</span>
             <span class="arcade-stick-arrow arcade-stick-left" id="arcade-dpad-left">◀</span>
             <span class="arcade-stick-arrow arcade-stick-right" id="arcade-dpad-right">▶</span>
+            <div class="dpad-visual arcade-fallback-dpad">
+              <div class="dpad-btn dpad-up"><span class="dpad-arrow">▲</span></div>
+              <div class="dpad-btn dpad-left"><span class="dpad-arrow">◀</span></div>
+              <div class="dpad-center"></div>
+              <div class="dpad-btn dpad-right"><span class="dpad-arrow">▶</span></div>
+              <div class="dpad-btn dpad-down"><span class="dpad-arrow">▼</span></div>
+            </div>
           </div>
         </div>
         <div class="arcade-panel">
