@@ -75,6 +75,8 @@ interface KeyboardBindingView {
 }
 
 const FBNEO_SUPPORTED_GAMES = [
+  'ddonpach',
+  'ddp2100',
   'garou',
   'knights',
   'kof2000',
@@ -120,6 +122,7 @@ const FBNEO_SUPPORTED_GAMES = [
   'bublbobl',
   'pang',
   'sf2',
+  'sf2rb2',
   '1943',
   'area88',
   'rtype',
@@ -131,6 +134,8 @@ type FbNeoGameName = typeof FBNEO_SUPPORTED_GAMES[number];
 type ArcadeRotation = 'none' | 'left' | 'right';
 
 const FBNEO_ROTATIONS: Partial<Record<FbNeoGameName, Exclude<ArcadeRotation, 'none'>>> = {
+  ddonpach: 'left',
+  ddp2100: 'left',
   pacman: 'right',
   raiden: 'left',
   '1943': 'left',

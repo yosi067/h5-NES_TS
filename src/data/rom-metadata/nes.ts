@@ -10,7 +10,6 @@ const entries: Array<[string, string, string, string]> = [
   ['洛克人 4 新的野心！！', '1991', 'ACTION', '1'],
   ['洛克人 5 布魯斯的陷阱！？', '1992', 'ACTION', '1'],
   ['洛克人 6 史上最大戰爭！！', '1993', 'ACTION', '1'],
-  ['洛克人 7 (FC 版)', '2008', 'ACTION / HOMEBREW', '1'],
   ['太空戰士', '1987', 'RPG', '1'],
   ['太空戰士 2', '1988', 'RPG', '1'],
   ['太空戰士 3', '1990', 'RPG', '1'],
@@ -103,14 +102,10 @@ const entries: Array<[string, string, string, string]> = [
   ['五子棋', '1983', 'BOARD', '1–2'],
   ['台灣 16 張麻將 (中文版)', '1990年代', 'TABLE', '1'],
   ['企鵝先生', '1985', 'ACTION', '1–2'],
-  ['6 合 1 (Caltron)', '1990年代', 'COMPILATION', '1–2'],
-  ['6 合 1', '1990年代', 'COMPILATION', '1–2'],
-  ['54 合 1', '1990年代', 'COMPILATION', '1–2'],
   ['110 合 1', '1990年代', 'COMPILATION', '1–2'],
   ['115 合 1', '1990年代', 'COMPILATION', '1–2'],
   ['260 合 1 (150 合 1)', '1990年代', 'COMPILATION', '1–2'],
   ['1200 合 1', '1990年代', 'COMPILATION', '1–2'],
-  ['1200 合 1 (另一版本)', '1990年代', 'COMPILATION', '1–2'],
 ];
 
 export const NES_METADATA: RomMetadataTable = {};

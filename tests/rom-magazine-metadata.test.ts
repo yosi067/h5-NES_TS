@@ -18,7 +18,7 @@ describe('ROM magazine metadata', () => {
     });
 
     expect(unresolved.map((rom) => rom.name)).toEqual([]);
-    expect(catalog.roms).toHaveLength(209);
+    expect(catalog.roms).toHaveLength(188);
   });
 
   it.each(['Rockman 4', 'Mega Man 4', '洛克人4'])(
@@ -37,9 +37,9 @@ describe('ROM magazine metadata', () => {
       (rom) => rom.system === 'nes' && /合 1/.test(rom.name),
     );
 
-    expect(compilations).toHaveLength(8);
+    expect(compilations).toHaveLength(4);
     expect(compilations.map((rom) => getRomMagazineMeta(rom).year)).toEqual(
-      Array(8).fill('1990年代'),
+      Array(4).fill('1990年代'),
     );
   });
 });

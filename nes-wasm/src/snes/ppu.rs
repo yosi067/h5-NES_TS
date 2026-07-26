@@ -1577,9 +1577,9 @@ impl Ppu {
 
                 r | (g << 8) | (b << 16) | 0xFF000000
             } else if hires {
-                // Hires/pseudo-hires downscale: only blend when the sub screen has a real pixel.
-                // If sub is just backdrop, averaging it with main makes transparent areas look faded.
-                if self.sub_src[x] != 5 {
+                // Average paired hires dots only when both contain layer pixels. At transparent
+                // edges, mixing one layer dot with backdrop creates colors not present in CGRAM.
+                if self.main_src[x] != 5 && self.sub_src[x] != 5 {
                     let sr = sub_rgba & 0xFF;
                     let sg = (sub_rgba >> 8) & 0xFF;
                     let sb = (sub_rgba >> 16) & 0xFF;
@@ -1699,5 +1699,28 @@ mod tests {
         ppu.render_bg_hires(0, 0, 4, 4, 8);
 
         assert_eq!(ppu.main_buf[0], bgr15_to_rgba(ppu.cgram[2]));
+    }
+
+    #[test]
+    fn hires_asymmetric_edge_does_not_create_a_blended_color() {
+        let mut ppu = Ppu::new();
+        ppu.bg_mode = 5;
+        ppu.brightness = 15;
+        let main_color = bgr15_to_rgba(0x7fff);
+        ppu.main_buf[0] = main_color;
+        ppu.main_src[0] = 5;
+        ppu.sub_buf[0] = bgr15_to_rgba(0x001f);
+        ppu.sub_src[0] = 0;
+
+        ppu.composite_scanline(1);
+
+        assert_eq!(
+            &ppu.framebuffer[0..3],
+            &[
+                (main_color & 0xff) as u8,
+                ((main_color >> 8) & 0xff) as u8,
+                ((main_color >> 16) & 0xff) as u8,
+            ]
+        );
     }
 }

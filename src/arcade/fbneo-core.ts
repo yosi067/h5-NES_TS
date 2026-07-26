@@ -3,6 +3,8 @@ import initFbNeo from '@mantou/fbneo/fbneo-arcade';
 import fbneoWasmUrl from '@mantou/fbneo/fbneo-arcade.wasm?url';
 
 export const FBNEO_SUPPORTED_GAMES = [
+  'ddonpach',
+  'ddp2100',
   'garou',
   'knights',
   'kof2000',
@@ -48,6 +50,7 @@ export const FBNEO_SUPPORTED_GAMES = [
   'bublbobl',
   'pang',
   'sf2',
+  'sf2rb2',
   '1943',
   'area88',
   'rtype',

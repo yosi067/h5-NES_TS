@@ -35,12 +35,12 @@ const archiveSystemByExtension = new Map([
   ['.v64', 'n64'],
 ]);
 const expectedSystemCounts = {
-  nes: 110,
+  nes: 105,
   gb: 5,
   gg: 4,
   sms: 1,
-  snes: 39,
-  arcade: 44,
+  snes: 37,
+  arcade: 30,
   n64: 6,
 };
 const intentionallyHiddenFiles = new Set([
