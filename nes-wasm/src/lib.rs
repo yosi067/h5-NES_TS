@@ -453,6 +453,15 @@ impl EmuWasm {
     #[wasm_bindgen(js_name = "exportSram")]
     pub fn export_sram(&self) -> String {
         match &self.core {
+            CoreType::Nes(emu) if emu.cartridge.header.has_battery => {
+                snes::emulator::SnesEmulator::encode_base64(&emu.cartridge.prg_ram)
+            }
+            CoreType::Gb(emu) if emu.cartridge.has_battery && !emu.cartridge.ram.is_empty() => {
+                snes::emulator::SnesEmulator::encode_base64(&emu.cartridge.ram)
+            }
+            CoreType::Gg(emu) => {
+                snes::emulator::SnesEmulator::encode_base64(&emu.cartridge.ram)
+            }
             CoreType::Snes(emu) => {
                 if emu.cart.sram_size > 0 {
                     snes::emulator::SnesEmulator::encode_base64(&emu.cart.sram)
@@ -467,15 +476,38 @@ impl EmuWasm {
     /// Import SRAM (battery-backed save) from base64 string
     #[wasm_bindgen(js_name = "importSram")]
     pub fn import_sram(&mut self, data: &str) -> bool {
+        let Some(bytes) = snes::emulator::SnesEmulator::decode_base64(data.trim()) else {
+            return false;
+        };
+
         match &mut self.core {
-            CoreType::Snes(emu) => {
-                if let Some(bytes) = snes::emulator::SnesEmulator::decode_base64(data.trim()) {
-                    let len = bytes.len().min(emu.cart.sram.len());
-                    emu.cart.sram[..len].copy_from_slice(&bytes[..len]);
-                    true
-                } else {
-                    false
+            CoreType::Nes(emu) => {
+                if !emu.cartridge.header.has_battery || bytes.len() != emu.cartridge.prg_ram.len() {
+                    return false;
                 }
+                emu.cartridge.prg_ram.copy_from_slice(&bytes);
+                true
+            }
+            CoreType::Gb(emu) => {
+                if !emu.cartridge.has_battery || bytes.len() != emu.cartridge.ram.len() {
+                    return false;
+                }
+                emu.cartridge.ram.copy_from_slice(&bytes);
+                true
+            }
+            CoreType::Gg(emu) => {
+                if bytes.len() != emu.cartridge.ram.len() {
+                    return false;
+                }
+                emu.cartridge.ram.copy_from_slice(&bytes);
+                true
+            }
+            CoreType::Snes(emu) => {
+                if bytes.len() != emu.cart.sram.len() {
+                    return false;
+                }
+                emu.cart.sram.copy_from_slice(&bytes);
+                true
             }
             _ => false,
         }
@@ -691,5 +723,104 @@ impl EmuWasm {
             CoreType::Snes(emu) => emu.debug_get_trap_log(),
             _ => String::new(),
         }
+    }
+}
+
+#[cfg(test)]
+mod sram_tests {
+    use super::*;
+
+    #[test]
+    fn native_sram_round_trips_for_supported_cores() {
+        let mut nes = emulator::Emulator::new();
+        nes.cartridge.header.has_battery = true;
+        nes.cartridge.prg_ram[123] = 0x5a;
+        let mut wrapper = EmuWasm { core: CoreType::Nes(nes) };
+        let saved = wrapper.export_sram();
+        if let CoreType::Nes(emu) = &mut wrapper.core { emu.cartridge.prg_ram.fill(0); }
+        assert!(wrapper.import_sram(&saved));
+        assert!(matches!(&wrapper.core, CoreType::Nes(emu) if emu.cartridge.prg_ram[123] == 0x5a));
+
+        let mut gb = gb::emulator::GbEmulator::new();
+        gb.cartridge.has_battery = true;
+        gb.cartridge.ram = vec![0; 8192];
+        gb.cartridge.ram[456] = 0xa5;
+        let mut wrapper = EmuWasm { core: CoreType::Gb(gb) };
+        let saved = wrapper.export_sram();
+        if let CoreType::Gb(emu) = &mut wrapper.core { emu.cartridge.ram.fill(0); }
+        assert!(wrapper.import_sram(&saved));
+        assert!(matches!(&wrapper.core, CoreType::Gb(emu) if emu.cartridge.ram[456] == 0xa5));
+
+        let gg = gg::emulator::GgEmulator::new();
+        let mut zeroed_wrapper = EmuWasm { core: CoreType::Gg(gg) };
+        let zeroed_save = zeroed_wrapper.export_sram();
+        assert!(!zeroed_save.is_empty());
+        assert!(zeroed_wrapper.import_sram(&zeroed_save));
+
+        let mut gg = gg::emulator::GgEmulator::new();
+        gg.cartridge.ram[789] = 0x3c;
+        let mut wrapper = EmuWasm { core: CoreType::Gg(gg) };
+        let saved = wrapper.export_sram();
+        if let CoreType::Gg(emu) = &mut wrapper.core { emu.cartridge.ram.fill(0); }
+        assert!(wrapper.import_sram(&saved));
+        assert!(matches!(&wrapper.core, CoreType::Gg(emu) if emu.cartridge.ram[789] == 0x3c));
+
+        let mut snes = snes::emulator::SnesEmulator::new();
+        snes.cart.sram_size = snes.cart.sram.len();
+        snes.cart.sram[321] = 0xc3;
+        let mut wrapper = EmuWasm { core: CoreType::Snes(snes) };
+        let saved = wrapper.export_sram();
+        if let CoreType::Snes(emu) = &mut wrapper.core { emu.cart.sram.fill(0); }
+        assert!(wrapper.import_sram(&saved));
+        assert!(matches!(&wrapper.core, CoreType::Snes(emu) if emu.cart.sram[321] == 0xc3));
+    }
+
+    #[test]
+    fn native_sram_rejects_non_battery_and_wrong_size_data() {
+        let wrapper = EmuWasm { core: CoreType::Nes(emulator::Emulator::new()) };
+        assert!(wrapper.export_sram().is_empty());
+
+        let mut gb = gb::emulator::GbEmulator::new();
+        gb.cartridge.has_battery = true;
+        gb.cartridge.ram = vec![0; 8192];
+        let mut wrapper = EmuWasm { core: CoreType::Gb(gb) };
+        let wrong_size = snes::emulator::SnesEmulator::encode_base64(&[1, 2, 3]);
+        assert!(!wrapper.import_sram(&wrong_size));
+    }
+
+    #[test]
+    fn emulator_save_state_round_trips_for_supported_cores() {
+        let mut nes = emulator::Emulator::new();
+        nes.cartridge.prg_ram[123] = 0x5a;
+        let mut wrapper = EmuWasm { core: CoreType::Nes(nes) };
+        let saved = wrapper.export_save_state();
+        if let CoreType::Nes(emu) = &mut wrapper.core { emu.cartridge.prg_ram.fill(0); }
+        assert!(wrapper.import_save_state(&saved));
+        assert!(matches!(&wrapper.core, CoreType::Nes(emu) if emu.cartridge.prg_ram[123] == 0x5a));
+
+        let mut gb = gb::emulator::GbEmulator::new();
+        gb.cartridge.ram = vec![0; 8192];
+        gb.cartridge.ram[456] = 0xa5;
+        let mut wrapper = EmuWasm { core: CoreType::Gb(gb) };
+        let saved = wrapper.export_save_state();
+        if let CoreType::Gb(emu) = &mut wrapper.core { emu.cartridge.ram.fill(0); }
+        assert!(wrapper.import_save_state(&saved));
+        assert!(matches!(&wrapper.core, CoreType::Gb(emu) if emu.cartridge.ram[456] == 0xa5));
+
+        let mut gg = gg::emulator::GgEmulator::new();
+        gg.cartridge.ram[789] = 0x3c;
+        let mut wrapper = EmuWasm { core: CoreType::Gg(gg) };
+        let saved = wrapper.export_save_state();
+        if let CoreType::Gg(emu) = &mut wrapper.core { emu.cartridge.ram.fill(0); }
+        assert!(wrapper.import_save_state(&saved));
+        assert!(matches!(&wrapper.core, CoreType::Gg(emu) if emu.cartridge.ram[789] == 0x3c));
+
+        let mut snes = snes::emulator::SnesEmulator::new();
+        snes.cart.sram[321] = 0xc3;
+        let mut wrapper = EmuWasm { core: CoreType::Snes(snes) };
+        let saved = wrapper.export_save_state();
+        if let CoreType::Snes(emu) = &mut wrapper.core { emu.cart.sram.fill(0); }
+        assert!(wrapper.import_save_state(&saved));
+        assert!(matches!(&wrapper.core, CoreType::Snes(emu) if emu.cart.sram[321] == 0xc3));
     }
 }

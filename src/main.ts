@@ -31,6 +31,7 @@ import {
 } from './n64/runtime-assets';
 import { getRomAssetUrl, hasN64RomMagic } from './rom-assets';
 import { createN64Telemetry } from './n64/telemetry';
+import { getTouchContactTargetIds } from './ui/touch-contact';
 import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
 import {
   shouldUseDigitalArcadeDpad,
@@ -2307,70 +2308,102 @@ function applyDpadState(newState: DpadState): void {
 /**
  * 設定 A/B 按鈕 (支援多點觸控同時按)
  */
+interface ThumbContactButton {
+  id: string;
+  element: HTMLElement;
+  setPressed: (pressed: boolean) => void;
+}
+
+function setupThumbContactButtons(container: HTMLElement | null, buttons: ThumbContactButton[]): void {
+  if (!container || buttons.length === 0 || container.dataset.thumbContactWired) return;
+  container.dataset.thumbContactWired = '1';
+
+  const touchHits = new Map<number, Set<string>>();
+  const pressedStates = new Map(buttons.map(button => [button.id, false]));
+
+  const syncPressedStates = () => {
+    for (const button of buttons) {
+      const pressed = Array.from(touchHits.values()).some(hits => hits.has(button.id));
+      if (pressedStates.get(button.id) === pressed) continue;
+      pressedStates.set(button.id, pressed);
+      button.setPressed(pressed);
+      button.element.classList.toggle('pressed', pressed);
+    }
+  };
+
+  const updateTouchHits = (touch: Touch) => {
+    touchHits.set(touch.identifier, getTouchContactTargetIds(
+      touch,
+      buttons.map(button => ({ id: button.id, rect: button.element.getBoundingClientRect() })),
+    ));
+  };
+
+  container.addEventListener('touchstart', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    for (const touch of Array.from(event.changedTouches)) updateTouchHits(touch);
+    syncPressedStates();
+  }, { passive: false });
+
+  container.addEventListener('touchmove', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    for (const touch of Array.from(event.changedTouches)) updateTouchHits(touch);
+    syncPressedStates();
+  }, { passive: false });
+
+  const releaseTouches = (event: TouchEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    for (const touch of Array.from(event.changedTouches)) touchHits.delete(touch.identifier);
+    syncPressedStates();
+  };
+
+  container.addEventListener('touchend', releaseTouches, { passive: false });
+  container.addEventListener('touchcancel', releaseTouches, { passive: false });
+
+  for (const button of buttons) {
+    button.element.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      button.setPressed(true);
+      button.element.classList.add('pressed');
+    });
+    button.element.addEventListener('mouseup', (event) => {
+      event.preventDefault();
+      button.setPressed(false);
+      button.element.classList.remove('pressed');
+    });
+    button.element.addEventListener('mouseleave', () => {
+      button.setPressed(false);
+      button.element.classList.remove('pressed');
+    });
+  }
+}
+
 function setupABButtons(): void {
   const btnA = document.getElementById('btn-a');
   const btnB = document.getElementById('btn-b');
-  
-  const setupButton = (btn: HTMLElement | null, buttonType: ControllerButton, elementId: string) => {
-    if (!btn) return;
-    const setPressed = (pressed: boolean) => {
-      if (isFbNeoActive()) {
-        setArcadeInputBit(buttonType === ControllerButton.A ? ArcadeInputBit.ButtonA : ArcadeInputBit.ButtonB, pressed);
-      } else {
-        setNesButton(buttonType, pressed);
-      }
-    };
-    
-    btn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      for (const touch of Array.from(e.changedTouches)) {
-        activeTouches.set(touch.identifier, { identifier: touch.identifier, element: elementId });
-      }
-      setPressed(true);
-      btn.classList.add('pressed');
-    }, { passive: false });
+  const buttons: ThumbContactButton[] = [];
 
-    btn.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      for (const touch of Array.from(e.changedTouches)) {
-        activeTouches.delete(touch.identifier);
-      }
-      setPressed(false);
-      btn.classList.remove('pressed');
-    }, { passive: false });
-
-    btn.addEventListener('touchcancel', (e) => {
-      e.preventDefault();
-      for (const touch of Array.from(e.changedTouches)) {
-        activeTouches.delete(touch.identifier);
-      }
-      setPressed(false);
-      btn.classList.remove('pressed');
-    }, { passive: false });
-
-    // 滑鼠事件
-    btn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      setPressed(true);
-      btn.classList.add('pressed');
+  for (const { id, element, buttonType } of [
+    { id: 'a', element: btnA, buttonType: ControllerButton.A },
+    { id: 'b', element: btnB, buttonType: ControllerButton.B },
+  ]) {
+    if (!element) continue;
+    buttons.push({
+      id,
+      element,
+      setPressed: (pressed) => {
+        if (isFbNeoActive()) {
+          setArcadeInputBit(buttonType === ControllerButton.A ? ArcadeInputBit.ButtonA : ArcadeInputBit.ButtonB, pressed);
+        } else {
+          setNesButton(buttonType, pressed);
+        }
+      },
     });
+  }
 
-    btn.addEventListener('mouseup', (e) => {
-      e.preventDefault();
-      setPressed(false);
-      btn.classList.remove('pressed');
-    });
-
-    btn.addEventListener('mouseleave', () => {
-      setPressed(false);
-      btn.classList.remove('pressed');
-    });
-  };
-
-  setupButton(btnA, ControllerButton.A, 'a');
-  setupButton(btnB, ControllerButton.B, 'b');
+  setupThumbContactButtons(document.getElementById('ab-buttons'), buttons);
 }
 
 /**
@@ -3097,7 +3130,6 @@ function toggleMute(): void {
 // ===== 存檔系統 =====
 
 const SAVE_STATE_PREFIX = 'emu_savestate_';
-const N64_INTERNAL_HOTKEY = '__h5N64SaveLoadHotkey';
 
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -3115,27 +3147,6 @@ function base64ToBytes(base64: string): Uint8Array {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
-}
-
-function dispatchN64SaveLoadHotkey(key: 'F5' | 'F7'): void {
-  const keyCode = key === 'F5' ? 116 : 118;
-  const targets: EventTarget[] = [document.getElementById('canvas'), document, window].filter(Boolean) as EventTarget[];
-
-  for (const eventType of ['keydown', 'keyup']) {
-    for (const target of targets) {
-      const event = new KeyboardEvent(eventType, {
-        key,
-        code: key,
-        bubbles: true,
-        cancelable: true,
-        repeat: false,
-      });
-      Object.defineProperty(event, 'keyCode', { get: () => keyCode });
-      Object.defineProperty(event, 'which', { get: () => keyCode });
-      Object.defineProperty(event, N64_INTERNAL_HOTKEY, { value: true });
-      target.dispatchEvent(event);
-    }
-  }
 }
 
 /**
@@ -3244,10 +3255,8 @@ function saveState(slot: number = 0): boolean {
     }
   }
   if (isMupenN64Active()) {
-    dispatchN64SaveLoadHotkey('F5');
-    void n64Controls?.forceDumpSaveFiles?.();
-    console.log(`[N64] 已送出 Mupen64Plus 即時存檔快捷鍵，slot=${slot}`);
-    return true;
+    console.warn('[N64] Mupen64Plus-web 未提供可靠的即時狀態存檔 API');
+    return false;
   }
   if (!nes) return false;
   
@@ -3294,9 +3303,8 @@ function loadState(slot: number = 0): boolean {
     }
   }
   if (isMupenN64Active()) {
-    dispatchN64SaveLoadHotkey('F7');
-    console.log(`[N64] 已送出 Mupen64Plus 即時讀檔快捷鍵，slot=${slot}`);
-    return true;
+    console.warn('[N64] Mupen64Plus-web 未提供可靠的即時狀態讀檔 API');
+    return false;
   }
   if (!nes) return false;
   
@@ -3364,8 +3372,7 @@ function getSramKey(): string {
 
 /** 將 SRAM 儲存到 localStorage */
 function saveSram(): void {
-  if (!nes || !currentRomFilename) return;
-  if (nes.getCoreType() !== 'snes') return;
+  if (activeBackend !== 'wasm' || !nes || !currentRomFilename) return;
   
   try {
     const sramData = nes.exportSram();
@@ -3379,8 +3386,7 @@ function saveSram(): void {
 
 /** 從 localStorage 讀取 SRAM */
 function loadSram(): void {
-  if (!nes || !currentRomFilename) return;
-  if (nes.getCoreType() !== 'snes') return;
+  if (activeBackend !== 'wasm' || !nes || !currentRomFilename) return;
   
   try {
     const sramData = localStorage.getItem(getSramKey());
@@ -3462,6 +3468,21 @@ function setupArcadeButtons(): void {
     coin: ArcadeInputBit.Coin,
     start: ArcadeInputBit.Start,
   };
+
+  const faceButtons: ThumbContactButton[] = [];
+  document.querySelectorAll<HTMLElement>('#arcade-controller-area .arcade-face-btn').forEach((button) => {
+    const bitName = button.dataset.arcadeBit;
+    if (!bitName || button.dataset.arcadeWired) return;
+    const bit = buttonBits[bitName];
+    if (bit === undefined) return;
+    button.dataset.arcadeWired = '1';
+    faceButtons.push({
+      id: bitName,
+      element: button,
+      setPressed: pressed => setArcadeInputBit(bit, pressed),
+    });
+  });
+  setupThumbContactButtons(document.querySelector('#arcade-controller-area .arcade-face-grid'), faceButtons);
 
   document.querySelectorAll('#arcade-controller-area [data-arcade-bit]').forEach((node) => {
     const button = node as HTMLElement;
@@ -3722,7 +3743,7 @@ function setupN64Buttons(): void {
   if (saveButton && !saveButton.dataset.n64Wired) {
     saveButton.dataset.n64Wired = '1';
     saveButton.addEventListener('click', () => {
-      if (saveState(0)) showToast('✅ 存檔成功'); else showToast('❌ 存檔失敗');
+      showToast('N64 即時存檔尚未支援，遊戲內存檔會自動保存');
     });
   }
 
@@ -3730,7 +3751,7 @@ function setupN64Buttons(): void {
   if (loadButton && !loadButton.dataset.n64Wired) {
     loadButton.dataset.n64Wired = '1';
     loadButton.addEventListener('click', () => {
-      if (loadState(0)) showToast('✅ 讀取成功'); else showToast('❌ 沒有存檔');
+      showToast('N64 即時讀檔尚未支援，遊戲內存檔會自動載入');
     });
   }
 
@@ -3839,29 +3860,41 @@ function setupN64DirectionalPad(
  * 設定 SNES 按鈕觸控/滑鼠事件 (支援多點觸控)
  */
 function setupSnesButtons(): void {
-  // --- ABXY + L/R: multi-touch aware ---
+  // --- ABXY: thumb-contact and multi-touch aware ---
   const faceBtnDefs: { id: string; btn: number }[] = [
     { id: 'snes-btn-a', btn: SnesButton.A },
     { id: 'snes-btn-b', btn: SnesButton.B },
     { id: 'snes-btn-x', btn: SnesButton.X },
     { id: 'snes-btn-y', btn: SnesButton.Y },
+  ];
+  const faceButtons: ThumbContactButton[] = [];
+
+  for (const { id, btn } of faceBtnDefs) {
+    const element = document.getElementById(id);
+    if (!element) continue;
+    faceButtons.push({ id, element, setPressed: pressed => setSnesButton(btn, pressed) });
+  }
+
+  setupThumbContactButtons(document.querySelector('.snes-abxy-diamond'), faceButtons);
+
+  // --- L/R: conventional multi-touch buttons ---
+  const shoulderBtnDefs: { id: string; btn: number }[] = [
     { id: 'snes-btn-l', btn: SnesButton.L },
     { id: 'snes-btn-r', btn: SnesButton.R },
   ];
 
-  // Track active touches per button for proper multi-touch
-  const activeTouches = new Map<string, Set<number>>(); // id → Set<touchId>
+  const shoulderTouches = new Map<string, Set<number>>();
 
-  for (const { id, btn } of faceBtnDefs) {
+  for (const { id, btn } of shoulderBtnDefs) {
     const el = document.getElementById(id);
     if (!el || el.dataset.snesWired) continue;
     el.dataset.snesWired = '1';
-    activeTouches.set(id, new Set());
+    shoulderTouches.set(id, new Set());
 
     el.addEventListener('touchstart', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const touches = activeTouches.get(id)!;
+      const touches = shoulderTouches.get(id)!;
       for (const t of Array.from(e.changedTouches)) {
         touches.add(t.identifier);
       }
@@ -3872,7 +3905,7 @@ function setupSnesButtons(): void {
     el.addEventListener('touchend', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const touches = activeTouches.get(id)!;
+      const touches = shoulderTouches.get(id)!;
       for (const t of Array.from(e.changedTouches)) {
         touches.delete(t.identifier);
       }
@@ -3884,7 +3917,7 @@ function setupSnesButtons(): void {
 
     el.addEventListener('touchcancel', (e) => {
       e.preventDefault();
-      const touches = activeTouches.get(id)!;
+      const touches = shoulderTouches.get(id)!;
       for (const t of Array.from(e.changedTouches)) {
         touches.delete(t.identifier);
       }
@@ -3980,19 +4013,26 @@ function setupSnesButtons(): void {
     document.addEventListener('mouseup', () => { if (md) { md = false; clearSnesDpad(); } });
   }
   // SNES Save/Load buttons
-  document.getElementById('snes-mobile-save')?.addEventListener('click', () => {
-    if (saveState(0)) showToast('✅ 存檔成功'); else showToast('❌ 存檔失敗');
-  });
-  document.getElementById('snes-mobile-load')?.addEventListener('click', () => {
-    if (loadState(0)) showToast('✅ 讀取成功'); else showToast('❌ 沒有存檔');
-  });
+  const snesSaveButton = document.getElementById('snes-mobile-save');
+  if (snesSaveButton && !snesSaveButton.dataset.stateWired) {
+    snesSaveButton.dataset.stateWired = '1';
+    snesSaveButton.addEventListener('click', () => {
+      if (saveState(0)) showToast('✅ 存檔成功'); else showToast('❌ 存檔失敗');
+    });
+  }
+  const snesLoadButton = document.getElementById('snes-mobile-load');
+  if (snesLoadButton && !snesLoadButton.dataset.stateWired) {
+    snesLoadButton.dataset.stateWired = '1';
+    snesLoadButton.addEventListener('click', () => {
+      if (loadState(0)) showToast('✅ 讀取成功'); else showToast('❌ 沒有存檔');
+    });
+  }
 }
 
 // ===== 鍵盤快捷鍵 =====
 
 function setupKeyboardShortcuts(): void {
   document.addEventListener('keydown', (e) => {
-    if ((e as KeyboardEvent & Record<string, unknown>)[N64_INTERNAL_HOTKEY]) return;
     if (e.key === 'F5') {
       e.preventDefault();
       saveState(0);
@@ -4079,7 +4119,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown', resumeAudio);
   document.addEventListener('touchstart', resumeAudio, { passive: true });
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) resumeAudio();
+    if (document.hidden) saveSram();
+    else resumeAudio();
   });
 
   wasmInitPromise = initWasm().catch((error) => {
@@ -4112,4 +4153,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('beforeunload', () => {
     saveSram();
   });
+  window.addEventListener('pagehide', saveSram);
 });

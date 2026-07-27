@@ -4133,6 +4133,11 @@
       height: clamp(96px, 17vw, 126px);
     }
 
+    body.mobile-landscape-mode:not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad {
+      width: clamp(102px, 18vw, 134px);
+      height: clamp(102px, 18vw, 134px);
+    }
+
     body.mobile-landscape-mode #arcade-controller-area .dpad {
       width: clamp(110px, 18.2vw, 140px);
       height: clamp(110px, 18.2vw, 140px);
@@ -4141,6 +4146,11 @@
     body.mobile-landscape-mode .dpad-visual {
       width: clamp(82px, 14.5vw, 108px);
       height: clamp(82px, 14.5vw, 108px);
+    }
+
+    body.mobile-landscape-mode:not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-visual {
+      width: clamp(87px, 15.4vw, 115px);
+      height: clamp(87px, 15.4vw, 115px);
     }
 
     body.mobile-landscape-mode #arcade-controller-area .dpad-visual {
@@ -4155,6 +4165,12 @@
       font-size: 13px;
     }
 
+    body.mobile-landscape-mode:not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-btn,
+    body.mobile-landscape-mode:not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-center {
+      width: clamp(32px, 5.6vw, 43px);
+      height: clamp(32px, 5.6vw, 43px);
+    }
+
     body.mobile-landscape-mode .ab-touch-area {
       width: clamp(50px, 8.7vw, 64px);
       height: clamp(50px, 8.7vw, 64px);
@@ -4162,6 +4178,17 @@
 
     body.mobile-landscape-mode .ab-buttons {
       gap: clamp(6px, 1.1vw, 10px);
+      transform: none;
+      touch-action: none;
+    }
+
+    body.mobile-landscape-mode:not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-container,
+    body.mobile-landscape-mode:not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .ab-container {
+      transform: translateY(-6px);
+    }
+
+    body.mobile-landscape-mode .snes-abxy-diamond {
+      touch-action: none;
     }
 
     body.mobile-landscape-mode .btn-label {
@@ -4845,7 +4872,7 @@
     body.mobile-landscape-mode #nes-controller-area .func-btn,
     body.mobile-landscape-mode .arcade-system-btn {
       position: fixed;
-      top: max(6px, env(safe-area-inset-top));
+      top: max(16px, calc(env(safe-area-inset-top) + 10px));
       z-index: 20;
       width: clamp(42px, 6.8vw, 52px);
       height: clamp(25px, 4.2vw, 31px);
@@ -4874,7 +4901,7 @@
 
     body.mobile-landscape-mode #nes-controller-area .center-btns {
       position: fixed;
-      inset: max(6px, env(safe-area-inset-top)) 0 auto;
+      inset: max(16px, calc(env(safe-area-inset-top) + 10px)) 0 auto;
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) var(--landscape-screen-width) minmax(0, 1fr) minmax(0, 1fr);
       align-items: start;
@@ -4915,7 +4942,7 @@
     body.mobile-landscape-mode .snes-shoulder-btn,
     body.mobile-landscape-mode .snes-mini-btn {
       position: fixed;
-      top: max(6px, env(safe-area-inset-top));
+      top: max(2px, env(safe-area-inset-top));
       z-index: 20;
       height: 27px;
     }
@@ -5329,6 +5356,100 @@
         animation: none;
         border-right: 0;
       }
+    }
+
+    @media (max-width: 430px) and (orientation: portrait) {
+      body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad {
+        width: 144px;
+        height: 144px;
+      }
+
+      body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-visual {
+        width: 122px;
+        height: 122px;
+      }
+
+      body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-btn,
+      body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-center {
+        width: 45px;
+        height: 45px;
+      }
+
+      body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-container {
+        transform: translateY(-12px);
+      }
+
+      body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .ab-container {
+        transform: translateY(37px);
+      }
+
+      body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .ab-buttons {
+        transform: none;
+        touch-action: none;
+      }
+
+      body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .center-btns {
+        transform: translate(-50%, 18px);
+      }
+
+      body.touch-device-mode.snes-mode:not(.mobile-landscape-mode) .snes-top-row {
+        transform: translateY(-18px);
+      }
+
+      body.touch-device-mode.arcade-mode:not(.mobile-landscape-mode) #arcade-controller-area .dpad {
+        width: clamp(120px, 42vw, 132px);
+        height: clamp(120px, 42vw, 132px);
+      }
+
+      body.touch-device-mode.arcade-mode:not(.mobile-landscape-mode) #arcade-controller-area .dpad-visual {
+        width: clamp(106px, 36vw, 116px);
+        height: clamp(106px, 36vw, 116px);
+      }
+
+      body.touch-device-mode.arcade-mode:not(.mobile-landscape-mode) #arcade-controller-area .dpad-container {
+        flex: 0 0 clamp(120px, 42vw, 132px);
+        width: clamp(120px, 42vw, 132px);
+        transform: translateY(-6px);
+      }
+
+      body.touch-device-mode.arcade-mode:not(.mobile-landscape-mode) #arcade-controller-area .arcade-panel {
+        flex: 1 1 0;
+        width: auto;
+        min-width: 0;
+        transform: translateY(-6px);
+      }
+
+      body.touch-device-mode.arcade-mode:not(.mobile-landscape-mode) #arcade-controller-area .arcade-system-row {
+        transform: translate(-50%, 10px);
+      }
+
+      body.touch-device-mode.arcade-mode:not(.mobile-landscape-mode) #arcade-controller-area .arcade-face-grid {
+        --arcade-face-size: clamp(40px, 13vw, 44px);
+        --arcade-face-gap: clamp(4px, 1.8vw, 6px);
+        grid-template-columns: repeat(3, var(--arcade-face-size));
+        grid-auto-rows: var(--arcade-face-size);
+        gap: var(--arcade-face-gap);
+        touch-action: none;
+      }
+
+      body.touch-device-mode.arcade-mode:not(.mobile-landscape-mode) #arcade-controller-area .arcade-face-btn {
+        width: var(--arcade-face-size);
+        height: var(--arcade-face-size);
+      }
+    }
+
+    body.mobile-landscape-mode.arcade-mode:not(.android-device-mode) #arcade-controller-area .dpad-container,
+    body.mobile-landscape-mode.arcade-mode:not(.android-device-mode) #arcade-controller-area .arcade-panel {
+      transform: translateY(-6px);
+    }
+
+    body.android-device-mode.mobile-landscape-mode.arcade-mode #arcade-controller-area .dpad-container,
+    body.android-device-mode.mobile-landscape-mode.arcade-mode #arcade-controller-area .arcade-panel {
+      transform: translateY(calc(-50% - 6px));
+    }
+
+    body.mobile-landscape-mode.arcade-mode #arcade-controller-area .arcade-face-grid {
+      touch-action: none;
     }
 
     /* ===== 觸控回饋動畫 ===== */
