@@ -5358,25 +5358,339 @@
       }
     }
 
+    /* Lobby CRT feature */
+    .rom-selector .rom-selector-header.lobby-cover-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(190px, 28vw, 238px);
+      align-items: center;
+      gap: clamp(16px, 3vw, 34px);
+      min-height: 196px;
+      padding: 12px 20px 14px;
+      text-align: left;
+    }
+
+    .lobby-cover-copy {
+      min-width: 0;
+    }
+
+    .lobby-cover-header .cover-topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 9px;
+      padding-bottom: 5px;
+      border-bottom: 2px solid #84322f;
+      color: #36372f;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .rom-selector .lobby-cover-header .brand-name {
+      font-size: clamp(42px, 7vw, 66px);
+      line-height: 0.86;
+      margin-top: 0;
+      padding-right: 0;
+    }
+
+    .lobby-cover-header .cover-deck {
+      margin-top: 8px;
+      color: #30372f;
+      font-size: 17px;
+      font-weight: 950;
+    }
+
+    .rom-selector .lobby-cover-header h2,
+    .rom-selector .lobby-cover-header .selector-subtitle {
+      width: auto;
+      max-width: none;
+      margin-left: 0;
+      margin-right: 0;
+      overflow: visible;
+      white-space: normal;
+      border: 0;
+      animation: none;
+    }
+
+    .rom-selector .lobby-cover-header h2 {
+      margin-top: 11px;
+      font-size: clamp(22px, 3.5vw, 30px);
+    }
+
+    .rom-selector .lobby-cover-header .selector-subtitle {
+      font-size: 13px;
+    }
+
+    .lobby-cover-header .cover-issue {
+      position: static;
+      display: inline-flex;
+      margin-top: 8px;
+      padding: 3px 7px;
+      border: 2px solid #26392f;
+      background: #26392f;
+      color: #f4ecd6;
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .lobby-crt {
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      cursor: pointer;
+      transform: translateZ(0);
+      transition: transform 140ms ease, filter 140ms ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .lobby-crt:hover,
+    .lobby-crt:focus-visible {
+      outline: none;
+      filter: brightness(1.08);
+      transform: translateY(-3px) rotate(-0.4deg);
+    }
+
+    .lobby-crt:active {
+      transform: translateY(1px) scale(0.985);
+    }
+
+    .crt-cabinet {
+      display: block;
+      position: relative;
+      padding: 9px 9px 20px;
+      border: 3px solid #2d302e;
+      border-radius: 13px 13px 9px 9px;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,0.16), transparent 14% 84%, rgba(0,0,0,0.16)),
+        linear-gradient(180deg, #9b9d91, #777b73 74%, #656961);
+      box-shadow:
+        0 8px 0 #343733,
+        0 12px 12px rgba(33, 31, 25, 0.36),
+        inset 0 0 0 2px #c7c5b3;
+    }
+
+    .crt-cabinet::after {
+      content: '';
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      bottom: -8px;
+      height: 8px;
+      border-radius: 0 0 5px 5px;
+      background: #3d403c;
+      box-shadow: 0 3px 4px rgba(0,0,0,0.35);
+    }
+
+    .crt-bezel {
+      display: block;
+      padding: 7px;
+      border: 3px solid #343936;
+      border-radius: 11px;
+      background: linear-gradient(145deg, #565b57, #252a28 68%);
+      box-shadow: inset 0 0 0 2px #777b73, 0 2px 0 #c0bdab;
+    }
+
+    .crt-glass {
+      display: block;
+      position: relative;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      border: 2px solid #111513;
+      border-radius: 14% / 10%;
+      background: #010201;
+      box-shadow:
+        inset 0 0 14px 5px #000,
+        inset 9px 0 16px rgba(0,0,0,0.8),
+        inset -9px 0 16px rgba(0,0,0,0.8),
+        0 0 8px rgba(171, 216, 182, 0.18);
+      transform: perspective(420px) rotateX(0.8deg);
+      isolation: isolate;
+    }
+
+    #lobby-crt-screen {
+      position: relative;
+      z-index: 1;
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      image-rendering: pixelated;
+      filter: contrast(1.08) saturate(1.1) drop-shadow(0 0 3px rgba(183, 231, 190, 0.34));
+    }
+
+    .crt-glass::before,
+    .crt-glass::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .crt-glass::before {
+      background:
+        repeating-linear-gradient(0deg, rgba(0,0,0,0.2) 0 1px, rgba(255,255,255,0.025) 1px 2px, transparent 2px 4px),
+        repeating-linear-gradient(90deg, rgba(255,35,35,0.055) 0 1px, rgba(35,255,90,0.04) 1px 2px, rgba(40,100,255,0.055) 2px 3px, transparent 3px 4px);
+      mix-blend-mode: screen;
+      opacity: 0.74;
+    }
+
+    .crt-glass::after {
+      background:
+        radial-gradient(ellipse at center, transparent 46%, rgba(0,0,0,0.25) 72%, rgba(0,0,0,0.78) 100%),
+        linear-gradient(105deg, rgba(255,255,255,0.08), transparent 26% 100%);
+      box-shadow: inset 0 0 11px #000;
+    }
+
+    .crt-power-sweep {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      background: #f4fff4;
+      opacity: 0;
+      transform: scale(0.02);
+      box-shadow: 0 0 16px 5px rgba(235,255,236,0.95);
+      pointer-events: none;
+    }
+
+    .lobby-crt.is-powering .crt-power-sweep {
+      animation: crt-power-on-sweep 780ms cubic-bezier(0.2, 0.72, 0.25, 1) both;
+    }
+
+    .crt-controls {
+      position: absolute;
+      right: 15px;
+      bottom: 7px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .crt-speaker {
+      width: 34px;
+      height: 5px;
+      background: repeating-linear-gradient(90deg, #30332f 0 2px, transparent 2px 5px);
+      opacity: 0.75;
+    }
+
+    .crt-power-led {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #592d2b;
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.15);
+    }
+
+    .lobby-crt.is-ready .crt-power-led,
+    .lobby-crt.is-powering .crt-power-led {
+      background: #73c76e;
+      box-shadow: 0 0 6px #7ee27b;
+    }
+
+    @keyframes crt-power-on-sweep {
+      0% { opacity: 0; transform: scaleX(0.02) scaleY(0.02); }
+      12% { opacity: 1; transform: scaleX(0.08) scaleY(0.018); }
+      42% { opacity: 1; transform: scaleX(1) scaleY(0.022); }
+      74% { opacity: 0.92; transform: scaleX(1) scaleY(1); }
+      100% { opacity: 0; transform: scaleX(1) scaleY(1); }
+    }
+
+    @media (max-width: 620px) {
+      .rom-selector-content::before {
+        top: 184px;
+      }
+
+      .rom-selector .rom-selector-header.lobby-cover-header {
+        grid-template-columns: minmax(0, 1fr) clamp(126px, 39vw, 154px);
+        gap: 10px;
+        min-height: 166px;
+        margin-bottom: 10px;
+        padding: 8px 8px 10px;
+      }
+
+      .lobby-cover-header .cover-topline {
+        margin-bottom: 6px;
+        font-size: 9px;
+      }
+
+      .rom-selector .lobby-cover-header .brand-name {
+        font-size: clamp(34px, 11vw, 44px);
+      }
+
+      .lobby-cover-header .cover-deck {
+        margin-top: 6px;
+        font-size: 10px;
+      }
+
+      .rom-selector .lobby-cover-header h2 {
+        margin-top: 7px;
+        font-size: clamp(16px, 5vw, 21px);
+      }
+
+      .rom-selector .lobby-cover-header .selector-subtitle {
+        display: block;
+        font-size: 10px;
+        line-height: 1.2;
+      }
+
+      .lobby-cover-header .cover-issue {
+        margin-top: 5px;
+        padding: 2px 5px;
+        font-size: 9px;
+      }
+
+      .crt-cabinet {
+        padding: 6px 6px 15px;
+        border-width: 2px;
+        border-radius: 9px 9px 6px 6px;
+        box-shadow: 0 5px 0 #343733, 0 8px 8px rgba(33,31,25,0.34), inset 0 0 0 1px #c7c5b3;
+      }
+
+      .crt-bezel {
+        padding: 4px;
+        border-width: 2px;
+        border-radius: 8px;
+      }
+
+      .crt-controls {
+        right: 9px;
+        bottom: 4px;
+      }
+
+      .crt-speaker {
+        width: 24px;
+        height: 4px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lobby-crt,
+      .lobby-crt.is-powering .crt-power-sweep {
+        transition: none;
+        animation-duration: 1ms;
+      }
+    }
+
     @media (max-width: 430px) and (orientation: portrait) {
       body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad {
-        width: 144px;
-        height: 144px;
+        width: 152px;
+        height: 152px;
       }
 
       body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-visual {
-        width: 122px;
-        height: 122px;
+        width: 130px;
+        height: 130px;
       }
 
       body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-btn,
       body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-center {
-        width: 45px;
-        height: 45px;
+        width: 48px;
+        height: 48px;
       }
 
       body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .dpad-container {
-        transform: translateY(-12px);
+        transform: translateY(-20px);
       }
 
       body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .ab-container {
@@ -5384,7 +5698,7 @@
       }
 
       body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .ab-buttons {
-        transform: none;
+        transform: rotate(0deg);
         touch-action: none;
       }
 
@@ -5393,7 +5707,7 @@
       }
 
       body.touch-device-mode.snes-mode:not(.mobile-landscape-mode) .snes-top-row {
-        transform: translateY(-18px);
+        transform: translateY(-26px);
       }
 
       body.touch-device-mode.arcade-mode:not(.mobile-landscape-mode) #arcade-controller-area .dpad {
@@ -5500,16 +5814,32 @@
   <!-- ROM 選擇器 (初始顯示) -->
   <div class="rom-selector" id="rom-selector">
     <div class="rom-selector-content">
-      <div class="rom-selector-header">
-        <div class="cover-topline">
-          <span>復古電玩收藏誌</span>
-          <span>1995 / WINTER</span>
+      <div class="rom-selector-header lobby-cover-header">
+        <div class="lobby-cover-copy">
+          <div class="cover-topline">
+            <span>復古電玩收藏誌</span>
+            <span>1995 / WINTER</span>
+          </div>
+          <div class="brand-name"><span class="brand-logo-red">H5</span><span class="brand-logo-white">-EMU</span></div>
+          <div class="cover-deck">RETRO GAMES MAGAZINE</div>
+          <h2>你手機上的電動玩具店</h2>
+          <div class="selector-subtitle">選一台主機，再挑選你要懷舊的遊戲。</div>
+          <div class="cover-issue">VOL.01</div>
         </div>
-        <div class="brand-name"><span class="brand-logo-red">H5</span><span class="brand-logo-white">-EMU</span></div>
-        <div class="cover-deck">RETRO GAMES MAGAZINE</div>
-        <h2>你手機上的電動玩具店</h2>
-        <div class="selector-subtitle">選一台主機，再挑選你要懷舊的遊戲。</div>
-        <div class="cover-issue">VOL.01</div>
+        <button class="lobby-crt" id="lobby-crt" type="button" aria-label="啟動超級瑪利歐兄弟" title="超級瑪利歐兄弟">
+          <span class="crt-cabinet">
+            <span class="crt-bezel">
+              <span class="crt-glass">
+                <canvas id="lobby-crt-screen" width="256" height="240" aria-hidden="true"></canvas>
+                <span class="crt-power-sweep" aria-hidden="true"></span>
+              </span>
+            </span>
+            <span class="crt-controls" aria-hidden="true">
+              <span class="crt-speaker"></span>
+              <span class="crt-power-led"></span>
+            </span>
+          </span>
+        </button>
       </div>
 
       <div class="machine-grid" id="machine-grid" aria-label="選擇主機">

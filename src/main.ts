@@ -172,6 +172,8 @@ const MACHINES: MachineInfo[] = [
   { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，不過手機還跑不動，建議先在電腦上玩。', artClass: 'n64', artFile: 'n64.svg', section: 'NEW', issue: 'VOL.64', year: '1995', page: '084' },
 ];
 
+const LOBBY_MARIO_ROM_FILE = '超级玛丽.nes';
+
 function getPublicAssetUrl(path: string): string {
   return `${import.meta.env.BASE_URL}${path}`;
 }
@@ -651,6 +653,10 @@ let romSelector: HTMLElement | null = null;
 let gameboyShell: HTMLElement | null = null;
 let powerLed: HTMLElement | null = null;
 let romCatalog: RomInfo[] = [];
+let lobbyCrtPreviewCore: EmuWasm | null = null;
+let lobbyCrtPreviewAnimationId: number | null = null;
+let lobbyCrtPreviewStarting = false;
+let lobbyMarioRomData: Uint8Array | null = null;
 
 // ===== 音頻設定 =====
 let audioMuted: boolean = false;    // 靜音旗標（同時停用 APU IRQ）
@@ -1145,6 +1151,7 @@ async function readResponseWithProgress(response: Response, sequence: number): P
  */
 function setupRomSelector(): void {
   loadRomList();
+  setupLobbyCrt();
 
   document.getElementById('rom-back-btn')?.addEventListener('click', renderMachineSelector);
   const selectorEl = document.getElementById('rom-selector');
@@ -1167,6 +1174,142 @@ function setupRomSelector(): void {
       await loadRomFromFile(file);
     }
   });
+}
+
+function setupLobbyCrt(): void {
+  const crtButton = document.getElementById('lobby-crt') as HTMLButtonElement | null;
+  const crtCanvas = document.getElementById('lobby-crt-screen') as HTMLCanvasElement | null;
+  const crtContext = crtCanvas?.getContext('2d');
+  if (!crtButton || !crtCanvas || !crtContext) return;
+
+  crtContext.fillStyle = '#000';
+  crtContext.fillRect(0, 0, crtCanvas.width, crtCanvas.height);
+
+  crtButton.addEventListener('click', async () => {
+    if (crtButton.getAttribute('aria-busy') === 'true') return;
+
+    const marioRom = romCatalog.find(rom => rom.file === LOBBY_MARIO_ROM_FILE)
+      ?? romCatalog.find(rom => rom.system === 'nes' && rom.name === '超級瑪利歐兄弟');
+    if (!marioRom) {
+      await showAppAlert(romCatalog.length === 0 ? '遊戲列表尚未載入完成。' : '找不到超級瑪利歐兄弟 ROM。');
+      return;
+    }
+
+    crtButton.setAttribute('aria-busy', 'true');
+    crtButton.classList.remove('is-powering');
+    void crtButton.offsetWidth;
+    crtButton.classList.add('is-powering');
+
+    await new Promise<void>(resolve => {
+      const sweep = crtButton.querySelector('.crt-power-sweep');
+      const timeoutId = window.setTimeout(resolve, 850);
+      sweep?.addEventListener('animationend', () => {
+        window.clearTimeout(timeoutId);
+        resolve();
+      }, { once: true });
+    });
+
+    try {
+      stopLobbyCrtPreview();
+      await loadRomFromServer(marioRom.file);
+    } finally {
+      crtButton.classList.remove('is-powering');
+      crtButton.removeAttribute('aria-busy');
+      if (romSelector && getComputedStyle(romSelector).display !== 'none') {
+        void startLobbyCrtPreview();
+      }
+    }
+  });
+}
+
+async function startLobbyCrtPreview(): Promise<void> {
+  if (lobbyCrtPreviewStarting || lobbyCrtPreviewCore || romSelector?.style.display === 'none') return;
+
+  const marioRom = romCatalog.find(rom => rom.file === LOBBY_MARIO_ROM_FILE);
+  const crtButton = document.getElementById('lobby-crt');
+  const crtCanvas = document.getElementById('lobby-crt-screen') as HTMLCanvasElement | null;
+  const crtContext = crtCanvas?.getContext('2d');
+  if (!marioRom || !crtCanvas || !crtContext) return;
+
+  lobbyCrtPreviewStarting = true;
+  try {
+    if (wasmInitPromise) await wasmInitPromise;
+    if (!lobbyMarioRomData) {
+      const response = await fetch(getRomAssetUrl(import.meta.env.BASE_URL, marioRom.file));
+      if (!response.ok) throw new Error(`無法載入大廳預覽: ${marioRom.file}`);
+      lobbyMarioRomData = new Uint8Array(await response.arrayBuffer());
+    }
+    if (romSelector?.style.display === 'none') return;
+
+    const previewCore = new EmuWasm();
+    previewCore.setAudioEnabled(false);
+    if (!previewCore.loadRom(lobbyMarioRomData)) {
+      previewCore.free();
+      throw new Error('大廳 CRT 無法啟動超級瑪利歐兄弟');
+    }
+
+    lobbyCrtPreviewCore = previewCore;
+    const screenWidth = previewCore.getScreenWidth();
+    const screenHeight = previewCore.getScreenHeight() - NES_OVERSCAN_TOP - NES_OVERSCAN_BOTTOM;
+    crtCanvas.width = screenWidth;
+    crtCanvas.height = screenHeight;
+    const previewImage = crtContext.createImageData(screenWidth, screenHeight);
+    let emulatedFrames = 0;
+    let lastRenderedAt = 0;
+
+    const renderPreview = (timestamp: number) => {
+      if (lobbyCrtPreviewCore !== previewCore || romSelector?.style.display === 'none') {
+        stopLobbyCrtPreview();
+        return;
+      }
+
+      for (let step = 0; step < 2; step++) {
+        emulatedFrames++;
+        const startingGame = emulatedFrames >= 105 && emulatedFrames < 111;
+        const running = emulatedFrames >= 165;
+        const jumping = running && emulatedFrames % 105 < 24;
+        previewCore.setButton(0, ControllerButton.Start, startingGame);
+        previewCore.setButton(0, ControllerButton.Right, running);
+        previewCore.setButton(0, ControllerButton.B, running);
+        previewCore.setButton(0, ControllerButton.A, jumping);
+        previewCore.frame();
+      }
+      previewCore.consumeAudioSamples();
+
+      if (timestamp - lastRenderedAt >= 1000 / 30) {
+        const memory = previewCore.getWasmMemory() as WebAssembly.Memory;
+        const frameBuffer = new Uint8Array(
+          memory.buffer,
+          previewCore.getFrameBufferPtr(),
+          previewCore.getFrameBufferLen(),
+        );
+        const rowStride = screenWidth * 4;
+        const visibleStart = NES_OVERSCAN_TOP * rowStride;
+        previewImage.data.set(frameBuffer.subarray(visibleStart, visibleStart + previewImage.data.length));
+        crtContext.putImageData(previewImage, 0, 0);
+        lastRenderedAt = timestamp;
+      }
+
+      lobbyCrtPreviewAnimationId = requestAnimationFrame(renderPreview);
+    };
+
+    crtButton?.classList.add('is-on');
+    lobbyCrtPreviewAnimationId = requestAnimationFrame(renderPreview);
+  } catch (error) {
+    console.warn('[Lobby CRT] 預覽啟動失敗，保留黑屏:', error);
+  } finally {
+    lobbyCrtPreviewStarting = false;
+  }
+}
+
+function stopLobbyCrtPreview(): void {
+  if (lobbyCrtPreviewAnimationId !== null) {
+    cancelAnimationFrame(lobbyCrtPreviewAnimationId);
+    lobbyCrtPreviewAnimationId = null;
+  }
+  lobbyCrtPreviewCore?.free();
+  lobbyCrtPreviewCore = null;
+  document.getElementById('lobby-crt')?.classList.remove('is-on');
 }
 
 /**
@@ -1199,7 +1342,12 @@ async function loadRomList(): Promise<void> {
     
     const data: RomListResponse = await response.json();
     romCatalog = data.roms;
+    document.getElementById('lobby-crt')?.classList.toggle(
+      'is-ready',
+      romCatalog.some(rom => rom.file === LOBBY_MARIO_ROM_FILE),
+    );
     renderMachineSelector();
+    void startLobbyCrtPreview();
   } catch (error) {
     console.error('載入 ROM 列表失敗:', error);
     if (machineGridEl) machineGridEl.style.display = 'none';
@@ -2025,6 +2173,7 @@ async function stopN64Backend(): Promise<void> {
  * 隱藏 ROM 選擇器
  */
 function hideRomSelector(): void {
+  stopLobbyCrtPreview();
   if (romSelector) romSelector.style.display = 'none';
   if (gameboyShell) gameboyShell.style.display = 'flex';
 }
@@ -2046,6 +2195,7 @@ async function showRomSelector(): Promise<void> {
   if (romCatalog.length > 0) renderMachineSelector();
   if (romSelector) romSelector.style.display = 'flex';
   if (gameboyShell) gameboyShell.style.display = 'none';
+  void startLobbyCrtPreview();
 }
 
 async function confirmReturnToMachineMenu(): Promise<void> {
