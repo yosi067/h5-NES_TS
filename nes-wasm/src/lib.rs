@@ -529,6 +529,32 @@ impl EmuWasm {
         }
     }
 
+    /// Enable or disable the bounded SNES hardware verification trace.
+    #[wasm_bindgen(js_name = "debugSetVerificationTrace")]
+    pub fn debug_set_verification_trace(&mut self, enabled: bool) {
+        if let CoreType::Snes(emu) = &mut self.core {
+            emu.debug_set_verification_trace(enabled);
+        }
+    }
+
+    /// Return and clear the bounded SNES hardware verification trace.
+    #[wasm_bindgen(js_name = "debugTakeVerificationTrace")]
+    pub fn debug_take_verification_trace(&mut self) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_take_verification_trace(),
+            _ => String::new(),
+        }
+    }
+
+    /// Stable machine-readable SNES hardware checkpoint for regression tests.
+    #[wasm_bindgen(js_name = "debugCheckpoint")]
+    pub fn debug_checkpoint(&self) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_checkpoint(),
+            _ => "{\"schema\":1,\"core\":\"unavailable\"}".to_string(),
+        }
+    }
+
     /// SNES 精靈診斷
     #[wasm_bindgen(js_name = "debugSpriteInfo")]
     pub fn debug_sprite_info(&self) -> String {
@@ -543,6 +569,14 @@ impl EmuWasm {
     pub fn debug_ppu_color_state(&self) -> String {
         match &self.core {
             CoreType::Snes(emu) => emu.debug_ppu_color_state(),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugPpuVram")]
+    pub fn debug_ppu_vram(&self) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_ppu_vram(),
             _ => "Not SNES".to_string(),
         }
     }

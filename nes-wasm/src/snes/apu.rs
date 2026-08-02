@@ -720,7 +720,7 @@ pub struct Apu {
     pub timer_counter: [u8; 3],
     pub timer_divider: [u16; 3],
     pub timer_enabled: [bool; 3],
-    timer_enabled_prev: [bool; 3], // 用於 0→1 邊緣偵測
+    pub(crate) timer_enabled_prev: [bool; 3], // 用於 0→1 邊緣偵測
 
     // === DSP ===
     pub(crate) dsp: Dsp,
@@ -736,23 +736,23 @@ pub struct Apu {
     // === 音頻輸出 ===
     pub audio_buffer: Vec<f32>,
     sample_rate: f64,
-    sample_counter: f64,
-    dsp_sample_counter: f64,
+    pub(crate) sample_counter: f64,
+    pub(crate) dsp_sample_counter: f64,
 
     // === DSP 重取樣線性插值 ===
-    prev_dsp_l: f32,
-    prev_dsp_r: f32,
+    pub(crate) prev_dsp_l: f32,
+    pub(crate) prev_dsp_r: f32,
 
     // === IPL 傳輸協議狀態機 ===
-    ipl_state: IplState,
-    ipl_addr: u16,          // 當前傳輸目的地址
-    ipl_counter: u8,        // 位元組計數器
-    ipl_entry: u16,         // 跳轉入口地址
+    pub(crate) ipl_state: IplState,
+    pub(crate) ipl_addr: u16,          // 當前傳輸目的地址
+    pub(crate) ipl_counter: u8,        // 位元組計數器
+    pub(crate) ipl_entry: u16,         // 跳轉入口地址
     pub ipl_log: String,        // Debug log for IPL protocol
 }
 
 #[derive(Clone, Copy, PartialEq)]
-enum IplState {
+pub(crate) enum IplState {
     Ready,          // 輸出 $AA/$BB，等待 $CC
     WaitData,       // 等待數據傳輸
     Transferring,   // 正在接收數據
@@ -1785,5 +1785,52 @@ mod tests {
         apu.emit_resampled_stereo(1.0, -1.0);
 
         assert_eq!(apu.audio_buffer, vec![0.5, -0.5, 1.0, -1.0]);
+    }
+
+    #[test]
+    fn configured_brr_voice_produces_audio() {
+        let mut dsp = Dsp::new();
+        let mut ram = vec![0u8; 65536];
+
+        ram[0x100] = 0x00;
+        ram[0x101] = 0x02;
+        ram[0x200] = 0x01;
+        ram[0x201] = 0x7F;
+        ram[0x202] = 0xF0;
+        ram[0x203] = 0x00;
+        ram[0x204] = 0x00;
+        ram[0x205] = 0x00;
+        ram[0x206] = 0x00;
+        ram[0x207] = 0x00;
+        ram[0x208] = 0x00;
+
+        dsp.write(0x00, 0x7F, &ram);
+        dsp.write(0x01, 0x7F, &ram);
+        dsp.write(0x02, 0x00, &ram);
+        dsp.write(0x03, 0x10, &ram);
+        dsp.write(0x04, 0x00, &ram);
+        dsp.write(0x07, 0x7F, &ram);
+        dsp.write(0x0C, 0x7F, &ram);
+        dsp.write(0x1C, 0x7F, &ram);
+        dsp.write(0x5D, 0x01, &ram);
+        dsp.write(0x4C, 0x01, &ram);
+        dsp.flg = 0;
+
+        let samples: Vec<_> = (0..8).map(|_| dsp.generate_sample(&mut ram)).collect();
+
+        assert!(samples.iter().any(|&(left, right)| left != 0 || right != 0));
+    }
+
+    #[test]
+    fn timer_and_audio_progress_after_multiple_sample_windows() {
+        let mut apu = Apu::new();
+        apu.timer_target[2] = 3;
+        apu.spc_write(0x00F1, 0x04);
+        apu.run_cycles(1024);
+
+        assert!(apu.total_cycles >= 1024);
+        assert!(apu.total_cycles <= 1030);
+        assert!(apu.timer_counter[2] > 0);
+        assert!(apu.get_audio_buffer_len() > 0);
     }
 }

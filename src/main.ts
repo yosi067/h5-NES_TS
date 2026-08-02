@@ -35,10 +35,10 @@ import { getTouchContactTargetIds } from './ui/touch-contact';
 import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
 import {
   shouldUseDigitalArcadeDpad,
-  shouldUseSnes9x,
   startSnes9xBackend,
   type Snes9xBackend,
 } from './snes/snes9x-backend';
+import { shouldUseTemporarySnes9xFallback } from './snes/snes-routing';
 
 type N64EmulatorControls = EmulatorControls & {
   resumeAudio?: () => Promise<void>;
@@ -1748,16 +1748,19 @@ async function startGame(
   }
 
   const isSnesRom = lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig');
-  if (isSnesRom && shouldUseSnes9x(romBytes, currentRomFilename)) {
-    await startSnes9xGame(romData, 'snes', signal);
-    return;
-  }
 
   const sourceBaseName = sourceName.replace(/\.zip$/i, '');
   const requiresFceumm = sourceBaseName === '機器貓小叮噹冒險'
     || sourceBaseName === '机器猫小叮当冒险';
   if (lower.endsWith('.nes') && requiresFceumm) {
     await startSnes9xGame(romData, 'nes', signal);
+    return;
+  }
+
+  if (isSnesRom && shouldUseTemporarySnes9xFallback(currentRomFilename, sourceName)) {
+    throwIfSignalAborted(signal);
+    console.warn(`[SNES] ${currentRomFilename} 暫時改用 Snes9x，等待特殊晶片 native emulation 完成`);
+    await startSnes9xGame(romData, 'snes', signal);
     return;
   }
 

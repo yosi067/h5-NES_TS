@@ -16,4 +16,6 @@ pub mod controller;
 pub mod dma;
 pub mod dsp1;
 pub mod cx4;
+pub mod sdd1;
+pub mod sa1;
 pub mod emulator;

@@ -339,7 +339,120 @@ npm run test:ppu
 
 # 互動式 UI 測試
 npm run test:ui
+
+# 解析 catalog 中的 SNES header、映射與 enhancement chip
+npm run snes:audit
+
+# 逐款執行 600 frames 的 native Rust/WASM smoke
+npm run snes:smoke
 ```
+
+`npm run snes:audit` 會讀取 `public/roms.json` 與 `roms/`，處理裸 ROM、512-byte SMC copier header 和 ZIP 內的 SFC/SMC/FIG member，並產生 `artifacts/snes-rom-manifest.json`。manifest 會固定保存 SHA-256、header offset、map mode、ROM type、ROM/SRAM size、checksum 與目前 Rust 核心的 native capability。尚未實作的 enhancement chip 會由 Rust loader 明確拒絕，避免被誤當成普通 LoROM；目前 native loader 支援標準核心、DSP-1、CX4、SA-1 與 S-DD1，仍拒絕 SuperFX 與 SPC7110。
+
+`npm run snes:smoke` 會讀取 manifest，逐款載入 ROM 並執行 600 frames，記錄 framebuffer/audio hash、非零畫素、實際變動畫面數、音訊樣本數、SRAM round-trip 與 save-state 的下一幀 deterministic replay。報告也會列出 BRK、CPU stopped、persistent force blank、零畫面、零音訊與靜止 framebuffer warnings；`status=ok` 不再掩蓋這些驗收訊號。目前 `src/snes/snes-routing.ts` 將 `TEMPORARY_SNES9X_FALLBACK_ENABLED` 設為 `false`，Mario RPG、Star Ocean 與 Super Mario Kart 會先走 Rust/WASM 供 diagnostic 測試；native load failure 時仍可走 generic Snes9x fallback，將 flag 改回 `true` 即恢復受保護遊戲的 iframe fallback。
+
+### SNES Phase 0：硬體驗證基線
+
+Phase 0 的目的，是先證明 native core 的硬體狀態可觀測、可重播、可比較，再進入 SA-1/S-DD1 的完整實作。執行順序如下：
+
+```powershell
+cargo test --manifest-path nes-wasm/Cargo.toml snes::
+npm run wasm:build
+
+$env:SNES_SMOKE_FILE = 'Super Mario World (USA).sfc'
+$env:SNES_SMOKE_FRAMES = '600'
+$env:SNES_SMOKE_CHECKPOINTS = '0,1,2,60,600'
+npm run snes:smoke
+Remove-Item Env:SNES_SMOKE_FILE,Env:SNES_SMOKE_FRAMES,Env:SNES_SMOKE_CHECKPOINTS
+```
+
+native smoke 的 checkpoint schema 是 v2。每個 checkpoint 包含 CPU、PPU、APU、interrupt、DMA/HDMA、S-DD1、SA-1、master clock、framebuffer/audio buffer，以及下列 memory digest：WRAM、VRAM、OAM、CGRAM、APU RAM、SA-1 IRAM、SA-1 BWRAM 和 SRAM。digest 是 deterministic FNV-1a `u64`，以十六進位字串輸出；framebuffer、audio 與 save-state 仍另以 SHA-256 比較。
+
+要建立並驗證重複執行的 golden baseline：
+
+```powershell
+Copy-Item artifacts/snes-smoke-report.json artifacts/snes-smoke-baseline.json -Force
+$env:SNES_SMOKE_FILE = 'Super Mario World (USA).sfc'
+$env:SNES_SMOKE_FRAMES = '600'
+$env:SNES_SMOKE_CHECKPOINTS = '0,1,2,60,600'
+$env:SNES_SMOKE_BASELINE = 'artifacts/snes-smoke-baseline.json'
+npm run snes:smoke
+Remove-Item Env:SNES_SMOKE_FILE,Env:SNES_SMOKE_FRAMES,Env:SNES_SMOKE_CHECKPOINTS,Env:SNES_SMOKE_BASELINE
+```
+
+`SNES_SMOKE_BASELINE` 會嚴格比較每款 ROM 的 status、checkpoint state、memory digest、framebuffer/audio hash、save-state replay 與 SRAM round-trip；任何差異都會設 `determinism.passed=false` 並以非零 exit code 結束。`SNES_SMOKE_CHECKPOINTS` 未指定時預設為 `0,1,2,60,600`。
+
+### SNES Phase 1：S-DD1 native emulation
+
+S-DD1 的 native gate 只有在硬體契約測試、WASM build 與 real-ROM smoke 全部通過後才開啟。header detection 僅接受 combined identifier `0x4332` 或 `0x4532`；manifest audit 目前確認 catalog 中唯一的 S-DD1 ROM 是 `Star Ocean (Japan).zip`。
+
+實作與驗證的硬體契約如下：
+
+- `$4800` 是 hard-enable 狀態；DMA 解壓縮不以 `$4800` 作為額外 gate。
+- `$4801` 的每 channel soft-enable bit 在 DMA setup 時清除；只有 A-to-B、fixed A-address 且對應 bit 已設置時才啟用 S-DD1 解壓縮。
+- `$43x2-$43x6` 的 DMA source/count 使用 live channel registers；diagnostic capture 欄位只供觀測、checkpoint 與 save-state，不會覆蓋 live DMA 行為。count `0` 代表 `0x10000` bytes。
+- `$4804-$4807` 的 selector 只保留 `value & 0x07`，reset 值為 `[0, 1, 2, 3]`。S-DD1 source window 會在 gather 每一個 byte 時重新依目前 selector mapping 解析，涵蓋 `$60-$7D` 的 full ROM window 與 `$C0-$FF` 的四個可選 1 MiB dynamic windows；`$7E/$7F` WRAM 與 LoROM SRAM overlay 維持優先級。
+- DMA 會先產生 requested output length 的 decompressed buffer，再以 pending transfer 狀態逐 byte 寫入 B-bus，因此跨 64 KiB source bank、跨 dynamic 1 MiB mapping boundary 與 mid-transfer save-state 都可重播。
+
+save-state export version 現為 **14**，import 接受 version `1` 到 `14`；version 14 會保存 pending DMA 的 decompressed buffer、offset、進度與 S-DD1 register state。native smoke checkpoint schema 仍是獨立的 **v2**，不可將兩者混用。
+
+Phase 1 的驗收指令：
+
+```powershell
+cargo test --manifest-path nes-wasm/Cargo.toml sdd1 --lib
+cargo test --manifest-path nes-wasm/Cargo.toml --lib
+npm run wasm:build
+npm run snes:audit
+
+$env:SNES_SMOKE_FILE = 'Star Ocean (Japan).zip'
+$env:SNES_SMOKE_FRAMES = '600'
+$env:SNES_SMOKE_CHECKPOINTS = '0,1,2,60,600'
+npm run snes:smoke
+Remove-Item Env:SNES_SMOKE_FILE,Env:SNES_SMOKE_FRAMES,Env:SNES_SMOKE_CHECKPOINTS
+```
+
+必要的證據包括 decoder 的 deterministic vectors、所有 bitplane/context 組合、strict truncation、最大 output length、exact mapping boundary、live DMA register、zero-count、DMA direction/enable negative cases、save-state mid-transfer replay，以及 real Star Ocean 的 framebuffer/audio activity、SRAM round-trip、exact save-state replay 和 debug S-DD1 DMA records。Star Ocean 的 600-frame smoke 必須是 `status=ok`、`acceptance.passed=true`、`determinism.passed=true` 且沒有 warning；目前報告符合此條件。SA-1 已開放 native loader 供 Phase 2 diagnostic acceptance，但受保護遊戲的 routing 以 `src/snes/snes-routing.ts` 的明確規則為準，不能因 manifest capability 改寫；SuperFX、SPC7110 與尚未完成 native acceptance 的遊戲仍維持 Snes9x fallback。
+
+### SNES Phase 2：SA-1 native diagnostic acceptance
+
+Phase 2 先驗證既有 SA-1 foundation 是否能執行真實 ROM，不宣稱已完成完整 SA-1 hardware acceptance。native loader 與 manifest 現在都接受 SA-1，涵蓋 shared 65816 execution、reset-vector release、每掃描線 scheduler、interrupt/timer crossing、BMAP C/D/E/F ROM windows、character-conversion DMA、normal-DMA bus reservation 與 save-state state。為方便 diagnostic，`src/snes/snes-routing.ts` 目前暫時關閉三款受保護遊戲的 Snes9x routing，`Super Mario RPG (Japan).zip` 會先嘗試 Rust/WASM；將 `TEMPORARY_SNES9X_FALLBACK_ENABLED` 改回 `true` 即恢復原本的 iframe fallback。
+
+Phase 2 第一個驗收切片使用以下命令：
+
+```powershell
+cargo test --manifest-path nes-wasm/Cargo.toml native_loader --lib
+npm run wasm:build
+npm run snes:audit
+
+$env:SNES_SMOKE_FILE = 'Super Mario RPG (Japan).zip'
+$env:SNES_SMOKE_FRAMES = '3600'
+$env:SNES_SMOKE_CHECKPOINTS = '0,1,60,600,1800,3600'
+$env:SNES_SMOKE_DEBUG = '1'
+npm run snes:smoke
+Copy-Item artifacts/snes-smoke-report.json artifacts/snes-smoke-baseline.json -Force
+$env:SNES_SMOKE_BASELINE = 'artifacts/snes-smoke-baseline.json'
+npm run snes:smoke
+Remove-Item Env:SNES_SMOKE_FILE,Env:SNES_SMOKE_FRAMES,Env:SNES_SMOKE_CHECKPOINTS,Env:SNES_SMOKE_DEBUG,Env:SNES_SMOKE_BASELINE
+```
+
+目前 SA-1 native diagnostic 已達到：3600 frames 的 `status=ok`、`acceptance.passed=true`、無 warning、frame 1 起 SA-1 已解除 reset 並執行非零 PC，framebuffer/audio 均有活動，SRAM round-trip、save-state exact replay、debug trace 與同長度 deterministic baseline comparison 通過。另新增 `npm run snes:sa1-oracle`，產生 `artifacts/snes-sa1-oracle-report.json`，以 bounded typed trace 驗證 SA-1 CPU/bus event、timestamp monotonicity、DMA reservation/release 與 timer IRQ → IRQ ordering；目前真實 Super Mario RPG run 收到 6506 個 SA-1 CPU events、23275 個 typed events，且 `sa1Progress` 顯示所有執行集中在 frame 1 的 `C0:816F`/`C0:8171` 兩指令 IRAM handshake poll。`dmaEvents`、`timerIrqEvents`、`interruptEvents` 都是 0，oracle 以 `real-rom-sa1-hardware-event-missing` 與 `real-rom-sa1-startup-poll-only` fail-closed，因此這部分仍不能視為 real-ROM interrupt/DMA acceptance 證據。
+
+#### SA-1 real-ROM handshake checkpoint
+
+本輪 bounded 目標是讓 Super Mario RPG 的 real-ROM oracle 離開 `C0:816F`/`C0:8171`，或把缺口縮小到可驗證的跨 CPU contract。oracle 現在同時解析 SA-1 trace 與 S-CPU bus trace，並在 `oracle.handshake` 保存有限樣本，避免只依賴最後兩個 PC 推測原因。
+
+目前證據（`SNES_ORACLE_FRAMES=1`，報告寫入 `artifacts/snes-sa1-oracle-report.json`）：
+
+- `C0:816B` 起始序列將 `#$01` 寫入 SA-1 IRAM `$0001`；`C0:816F` 的 `LDA $00` 對應 SA-1 IRAM `$0000`，`C0:8171` 的 `BEQ $816F` 在值為零時繼續輪詢。
+- SA-1 對 `$00:0000` 的輪詢讀取 3,055 次，所有值都是 `00`。
+- S-CPU 對共享地址 `$00:3000`（對應 SA-1 IRAM `$0000`）只寫入一次，值也是 `00`；loop 前沒有觀察到非零 release write。
+- loop 前雖有 `$2200-$23FF` register writes，但這份 trace 沒有證明任何 register side effect 會把 IRAM `$0000` 變成非零。
+
+因此本輪沒有對 production bus mapping 或 register semantics 做猜測性修改；目前最精確的 blocker 是「誰應該產生 `$00:3000 = non-zero`，以及該寫入是否由未完成的 S-CPU 啟動流程、SA-1 初始化程式或另一個跨 CPU register contract 觸發」仍未確定。要解除 fail-closed，下一個修正必須讓 oracle 的 `executionFrames` 超過 `[1]`、`terminalTwoPcLoop=false`，並觀察到至少一個真實 ROM 的 DMA、timer IRQ、IRQ 或 NMI event；否則應繼續維持這個 blocker，而不能把 native smoke 的畫面/音訊活動當成 SA-1 完整相容性的證據。
+
+測試硬體控制流程使用 synthetic ROM，不以「成功啟動」作為正確性證據。目前新增的 SA-1 regression 包含獨立 reference model 的 timer crossing、S-CPU/SA-1 interrupt flag readback domain、normal DMA 的 ROM/BWRAM/IRAM source-destination matrix、normal DMA completion 僅設 `$2301.20`、character conversion 僅設 S-CPU `$2300.20`、shared 65816 engine 對 SA-1 private BWRAM window 的 arbitration routing、DMA reservation 的精確 clock consumption、timer/DMA IRQ handler write 與 source clear、timer/DMA source clear 後 re-arm、WAI 收到 masked IRQ 時醒來但不 vector、WAI 收到 NMI 時醒來並 vector、STP 不因 interrupt 醒來、STP 只在 reset cycle 後 release、同時 pending 的 NMI 優先於 IRQ，以及 `$C0:8000`、`$C0:FFFF/$C1:0000`、`$CF:FFFF/$D0:0000` 和各 1MB window endpoint 的 BMAP boundary。完整 library suite 現為 104 tests passed。`debugSetVerificationTrace(true)` / `debugTakeVerificationTrace()` 可取得 bounded bus owner、region、arbiter、DMA/HDMA 與 CPU interrupt event trace。
+
+驗收時必須區分：`exception`、native supported ROM load failure、unexpected native support、BRK、CPU stopped、checkpoint malformed 與 deterministic mismatch 是 hard failure；極早期 frame 的 zero-audio 或 static-framebuffer 只能是 warning。至少完成 600-frame smoke，且應看到持續的 framebuffer 變化、非零 audio、save-state replay 與 baseline 一致，才可將該 ROM 的 Phase 0 smoke 視為通過。SA-1 Phase 2 另要求 synthetic DMA/timer/interrupt/arbitration regression 與 real-ROM event oracle。研究期間 `TEMPORARY_SNES9X_FALLBACK_ENABLED=false`，三款受保護遊戲先走 Rust/WASM 以取得診斷證據；要恢復原本的 user-facing Snes9x iframe fallback，將該 flag 改回 `true`。在 real-ROM event oracle、bus arbitration timing 與更完整的 BMAP/interrupt handler corpus 完成前，不得宣稱三款遊戲已達完整 native acceptance。
 
 ### 測試覆蓋範圍
 

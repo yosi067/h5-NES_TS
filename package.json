@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "wasm:build": "cd nes-wasm && wasm-pack build --target web --out-dir ../src/wasm",
+    "snes:audit": "node tools/audit-snes-manifest.mjs",
+    "snes:smoke": "node tools/snes-smoke.mjs",
+    "snes:sa1-oracle": "node tools/snes-sa1-oracle.mjs",
     "n64:source": "powershell -ExecutionPolicy Bypass -File tools/n64/bootstrap-mupen.ps1",
     "n64:build": "powershell -ExecutionPolicy Bypass -File tools/n64/build-mupen.ps1",
     "dev": "vite",

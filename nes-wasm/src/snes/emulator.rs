@@ -8,14 +8,18 @@
 // APU: 1.024 MHz (獨立時鐘)
 // ============================================================
 
+use std::collections::VecDeque;
+use std::fmt::Write as _;
+
 use super::cpu::{Cpu65816, flags};
-use super::ppu::Ppu;
+use super::ppu::{Ppu, DOTS_PER_SCANLINE};
 use super::apu::Apu;
 use super::cartridge::Cartridge;
 use super::controller::Controller;
 use super::dma::{DmaController, DmaDirection};
 use super::dsp1::Dsp1;
 use super::cx4::Cx4;
+use super::sa1::{Sa1, SA1_DMA_SOURCE, SA1_NMI_SOURCE};
 
 /// Master Clock 頻率 (NTSC)
 const MASTER_CLOCK: f64 = 21_477_272.0;
@@ -35,6 +39,41 @@ const APU_CLOCK: u64 = 1_024_000;
 const MASTER_CLOCK_HZ: u64 = 21_477_272;
 /// DRAM 刷新消耗 (每掃描線 40 master clocks)
 const DRAM_REFRESH_CYCLES: u32 = 40;
+const SA1_DMA_RESERVATION_PER_BYTE: u32 = 8;
+
+fn verification_digest(bytes: &[u8]) -> u64 {
+    let mut digest = 0xcbf29ce484222325u64;
+    for byte in bytes {
+        digest ^= *byte as u64;
+        digest = digest.wrapping_mul(0x100000001b3);
+    }
+    digest
+}
+
+fn verification_digest_words(words: &[u16]) -> u64 {
+    let mut digest = 0xcbf29ce484222325u64;
+    for word in words {
+        for byte in word.to_le_bytes() {
+            digest ^= byte as u64;
+            digest = digest.wrapping_mul(0x100000001b3);
+        }
+    }
+    digest
+}
+
+struct PendingDma {
+    channel: usize,
+    direction: DmaDirection,
+    offsets: [u8; 4],
+    offset_count: usize,
+    offset_index: usize,
+    a_addr: u16,
+    a_bank: u8,
+    b_base: u16,
+    remaining: u32,
+    transferred: usize,
+    sdd1_buffer: Option<Vec<u8>>,
+}
 
 pub struct SnesEmulator {
     pub cpu: Cpu65816,
@@ -46,6 +85,7 @@ pub struct SnesEmulator {
     pub dma: DmaController,
     pub dsp1: Dsp1,
     pub cx4: Cx4,
+    pub sa1: Sa1,
 
     /// 128KB Work RAM
     pub wram: Vec<u8>,
@@ -84,7 +124,12 @@ pub struct SnesEmulator {
     cpu_cycles_this_line: u32,
     /// Current instruction's bus penalty above the 6-master-clock baseline.
     cpu_bus_penalty: u32,
+    /// Master clocks still owed by a full DMA started during CPU execution.
+    dma_stall_clocks: u32,
+    dma_byte_clock_progress: u32,
+    pending_dmas: VecDeque<PendingDma>,
     track_cpu_bus_timing: bool,
+    sa1_bus_active: bool,
     /// 當前掃描線已執行的 APU 週期
     apu_cycles_this_scanline: u32,
     /// APU 相對 master clock 的分數相位累加器
@@ -106,6 +151,10 @@ pub struct SnesEmulator {
     debug_trap_fired: bool,
     debug_trap_log: String,
     debug_prev_pb_pc: (u8, u16),
+    debug_prev_prev_pb_pc: (u8, u16),
+    debug_recent_pcs: Vec<(u8, u16)>,
+    verification_trace_enabled: bool,
+    verification_trace: Vec<String>,
 }
 
 impl SnesEmulator {
@@ -120,10 +169,10 @@ impl SnesEmulator {
             dma: DmaController::new(),
             dsp1: Dsp1::new(),
             cx4: Cx4::new(),
+            sa1: Sa1::new(),
 
             wram: vec![0; 0x20000], // 128KB
             wram_addr: 0,
-
             nmitimen: 0,
             wrio: 0xFF,
             wrmpya: 0xFF,
@@ -143,7 +192,11 @@ impl SnesEmulator {
             master_clock: 0,
             cpu_cycles_this_line: 0,
             cpu_bus_penalty: 0,
+            dma_stall_clocks: 0,
+            dma_byte_clock_progress: 0,
+            pending_dmas: VecDeque::new(),
             track_cpu_bus_timing: false,
+            sa1_bus_active: false,
             apu_cycles_this_scanline: 0,
             apu_master_remainder: 0,
             open_bus: 0,
@@ -155,11 +208,19 @@ impl SnesEmulator {
             debug_trap_fired: false,
             debug_trap_log: String::new(),
             debug_prev_pb_pc: (0, 0),
+            debug_prev_prev_pb_pc: (0, 0),
+            debug_recent_pcs: Vec::new(),
+            verification_trace_enabled: false,
+            verification_trace: Vec::new(),
         }
     }
 
     pub fn load_rom(&mut self, data: &[u8]) -> bool {
         if self.cart.load(data) {
+            if !self.cart.profile.enhancement.supported_by_native_core() {
+                self.cart.loaded = false;
+                return false;
+            }
             self.dsp1.present = self.cart.has_dsp1;
             self.cx4.present = self.cart.has_cx4;
             self.reset();
@@ -176,12 +237,15 @@ impl SnesEmulator {
         self.dma.reset();
         self.dsp1.reset();
         self.cx4.reset();
+        self.sa1.reset();
         self.wram = vec![0; 0x20000];
         self.wram_addr = 0;
-        self.master_clock = 0;
-        self.cpu_cycles_this_line = 0;
         self.cpu_bus_penalty = 0;
+        self.dma_stall_clocks = 0;
+        self.dma_byte_clock_progress = 0;
+        self.pending_dmas.clear();
         self.track_cpu_bus_timing = false;
+        self.sa1_bus_active = false;
         self.apu_cycles_this_scanline = 0;
         self.apu_master_remainder = 0;
         self.nmitimen = 0;
@@ -195,6 +259,9 @@ impl SnesEmulator {
         self.debug_trap_fired = false;
         self.debug_trap_log = String::new();
         self.debug_prev_pb_pc = (0, 0);
+        self.debug_prev_prev_pb_pc = (0, 0);
+        self.debug_recent_pcs.clear();
+        self.verification_trace.clear();
 
         // CPU 重置
         self.cpu = Cpu65816::new();
@@ -232,6 +299,7 @@ impl SnesEmulator {
 
     fn run_scanline(&mut self, scanline: u32) {
         self.cpu_cycles_this_line = 0;
+        self.ppu.dot = 0;
         self.apu_cycles_this_scanline = 0;
         self.irq_pending = false; // Reset per-scanline so H-IRQ can fire each line
 
@@ -349,6 +417,12 @@ impl SnesEmulator {
             self.hvbjoy &= !0x01;
             self.auto_joypad_read = false;
         }
+
+        if self.cart.profile.enhancement == crate::snes::cartridge::EnhancementChip::Sa1 {
+            self.run_sa1_for(CLOCKS_PER_SCANLINE);
+        }
+
+        self.master_clock = self.master_clock.wrapping_add(CLOCKS_PER_SCANLINE as u64);
     }
 
     fn check_hv_irq(&mut self, scanline: u32) {
@@ -376,8 +450,9 @@ impl SnesEmulator {
             if mode == 2 || mode == 3 {
                 let val_008c = self.read(0x7E008C);
                 self.debug_trap_log.push_str(&format!(
-                    "VIRQ @sl={} ch0(b={:02X} ctrl={:02X}) $8C={:02X}\n",
+                    "VIRQ @sl={} ch0(b={:02X} ctrl={:02X}) $8C={:02X} PC={:02X}:{:04X} P={:02X}\n",
                     scanline, self.dma.channels[0].b_addr, self.dma.channels[0].control, val_008c,
+                    self.cpu.pb, self.cpu.pc, self.cpu.p,
                 ));
             }
         }
@@ -390,6 +465,34 @@ impl SnesEmulator {
         let check_hirq = irq_mode == 1 || irq_mode == 3;
 
         while remaining > 0 {
+            self.sync_ppu_dot();
+
+            if self.dma_stall_clocks > 0 {
+                let consumed = remaining.min(self.dma_stall_clocks);
+                self.dma_stall_clocks -= consumed;
+                remaining -= consumed;
+                self.cpu_cycles_this_line += consumed;
+                self.dma_byte_clock_progress += consumed;
+                while self.dma_byte_clock_progress >= 8 {
+                    self.dma_byte_clock_progress -= 8;
+                    self.service_dma_byte();
+                }
+
+                if check_hirq && !self.irq_pending {
+                    let dot = (self.cpu_cycles_this_line / 4) as u16;
+                    if dot >= self.htime {
+                        let scanline = self.ppu.scanline as u32;
+                        if irq_mode == 1 || (irq_mode == 3 && scanline as u16 == self.vtime) {
+                            self.irq_pending = true;
+                            self.timeup |= 0x80;
+                            self.cpu.irq_pending = true;
+                        }
+                    }
+                }
+
+                continue;
+            }
+
             if self.cpu.stopped || self.cpu.waiting {
                 if self.cpu.waiting && (self.cpu.nmi_pending || self.cpu.irq_pending) {
                     self.cpu.waiting = false;
@@ -457,7 +560,13 @@ impl SnesEmulator {
             // Debug trap: catch first BRK execution anywhere
             if !self.debug_trap_fired && opcode == 0x00 {
                 self.debug_trap_fired = true;
+                let prior_trap_log = std::mem::take(&mut self.debug_trap_log);
                 let sp = self.cpu.sp;
+                let c0_bytes = (0..8u32)
+                    .map(|offset| self.read(0xC00005 + offset))
+                    .map(|value| format!("{:02X}", value))
+                    .collect::<Vec<_>>()
+                    .join(" ");
                 let mut stack_bytes = String::new();
                 for i in 0..=20u16 {
                     let addr = sp.wrapping_add(i);
@@ -465,17 +574,37 @@ impl SnesEmulator {
                     stack_bytes.push_str(&format!("{:02X} ", self.bus_read(0, addr)));
                 }
                 self.debug_trap_log = format!(
-                    "FIRST_BRK at {:02X}:{:04X}\n\
+                    "{}FIRST_BRK at {:02X}:{:04X} opcode={:02X} C0:0005..={}\n\
+                     Previous instruction ended at {:02X}:{:04X}\n\
+                     Instruction before that at {:02X}:{:04X}\n\
+                     Recent PCs={}\n\
                      SP={:04X} A={:04X} X={:04X} Y={:04X} P={:02X} DB={:02X} DP={:04X}\n\
                      Frame={} Scanline={} NMITIMEN={:02X} vblank={}",
-                    prev_pb, prev_pc,
+                    prior_trap_log,
+                    prev_pb, prev_pc, opcode, c0_bytes,
+                    self.debug_prev_pb_pc.0, self.debug_prev_pb_pc.1,
+                    self.debug_prev_prev_pb_pc.0, self.debug_prev_prev_pb_pc.1,
+                    self.debug_recent_pcs.iter()
+                        .map(|(bank, address)| format!("{:02X}:{:04X}", bank, address))
+                        .collect::<Vec<_>>().join(","),
                     sp, self.cpu.a, self.cpu.x, self.cpu.y, self.cpu.p, self.cpu.db, self.cpu.dp,
                     self.frame_count, self.ppu.scanline, self.nmitimen, self.ppu.vblank_flag
                 );
             }
 
             self.execute_instruction(opcode);
+            if prev_pb == 0xC0 && (0x1F20..=0x1F40).contains(&prev_pc) {
+                self.debug_trap_log.push_str(&format!(
+                    "DISPATCH {:02X}:{:04X} op={:02X} A={:04X} X={:04X} P={:02X} -> PC={:04X}\n",
+                    prev_pb, prev_pc, opcode, self.cpu.a, self.cpu.x, self.cpu.p, self.cpu.pc,
+                ));
+            }
             self.track_cpu_bus_timing = false;
+            self.debug_recent_pcs.push((prev_pb, prev_pc));
+            if self.debug_recent_pcs.len() > 16 {
+                self.debug_recent_pcs.remove(0);
+            }
+            self.debug_prev_prev_pb_pc = self.debug_prev_pb_pc;
             self.debug_prev_pb_pc = (prev_pb, prev_pc);
 
             // Cycle tables use a 6-master-clock baseline. Slow bus accesses add
@@ -507,6 +636,243 @@ impl SnesEmulator {
                     }
                 }
             }
+        }
+    }
+
+    /// Execute one SA-1 instruction using the shared 65816 engine.
+    ///
+    /// Execute one shared-engine instruction in the SA-1 CPU context. The
+    /// caller owns timer progression, interrupt delivery, and scanline budget.
+    pub fn step_sa1_cpu(&mut self) -> u32 {
+        if !self.sa1.is_running() || self.sa1.dma_stall_clocks != 0 {
+            return 0;
+        }
+        if self.sa1.cpu.stopped || self.sa1.cpu.waiting {
+            return 0;
+        }
+        if self.sa1.cpu.cycles > 0 {
+            return 0;
+        }
+
+        let start_pc = self.sa1.cpu.pc;
+        let saved_penalty = self.cpu_bus_penalty;
+        let saved_tracking = self.track_cpu_bus_timing;
+        std::mem::swap(&mut self.cpu, &mut self.sa1.cpu);
+        self.cpu_bus_penalty = 0;
+        self.track_cpu_bus_timing = false;
+        self.sa1_bus_active = true;
+
+        let opcode = self.fetch_pc();
+        self.execute_instruction(opcode);
+        let elapsed = self.cpu.cycles.saturating_mul(2);
+        self.cpu.cycles = elapsed;
+
+        std::mem::swap(&mut self.cpu, &mut self.sa1.cpu);
+        self.cpu_bus_penalty = saved_penalty;
+        self.track_cpu_bus_timing = saved_tracking;
+        self.sa1_bus_active = false;
+        self.record_sa1_event(format!(
+            "cpu owner=sa1 pc={:04X} next={:04X} clocks={}",
+            start_pc, self.sa1.cpu.pc, elapsed,
+        ));
+        elapsed
+    }
+
+    fn advance_sa1_timer(&mut self, master_clocks: u32) {
+        let prior_status = self.sa1.sa1_interrupt_status;
+        self.sa1.advance_timer(master_clocks);
+        if prior_status & super::sa1::SA1_TIMER_SOURCE == 0
+            && self.sa1.sa1_interrupt_status & super::sa1::SA1_TIMER_SOURCE != 0
+        {
+            let event = format!(
+                "SA1TIMERIRQ h={:04X} v={:04X} frame={}\n",
+                self.sa1.h_counter, self.sa1.v_counter, self.frame_count,
+            );
+            if self.debug_trap_log.len() < 180_000 {
+                self.debug_trap_log.push_str(&event);
+            }
+            self.record_sa1_event(format!(
+                "timer_irq h={:04X} v={:04X} source=40",
+                self.sa1.h_counter, self.sa1.v_counter,
+            ));
+        }
+    }
+
+    /// Run SA-1 instructions up to a master-clock budget.
+    ///
+    /// The SA-1 divider is currently represented by the two master clocks per
+    /// 65816 cycle used by `step_sa1_cpu`; scanline ownership and IRQ policy
+    /// remain outside this primitive.
+    pub fn run_sa1_for(&mut self, master_clocks: u32) -> u32 {
+        if !self.sa1.is_running() && self.sa1.dma_stall_clocks == 0 {
+            return 0;
+        }
+        let mut remaining = master_clocks;
+        let mut elapsed = 0;
+        while remaining > 0 {
+            if self.sa1.dma_stall_clocks > 0 {
+                let consumed = self.sa1.dma_stall_clocks.min(remaining);
+                self.record_sa1_event(format!(
+                    "arbiter grant=dma clocks={} remaining_before={}",
+                    consumed, self.sa1.dma_stall_clocks,
+                ));
+                self.sa1.dma_stall_clocks -= consumed;
+                self.advance_sa1_timer(consumed);
+                if self.sa1.dma_stall_clocks == 0 {
+                    self.record_sa1_event("dma_release owner=sa1".to_string());
+                }
+                remaining -= consumed;
+                elapsed += consumed;
+                continue;
+            }
+            if self.sa1.cpu.stopped {
+                self.advance_sa1_timer(remaining);
+                elapsed += remaining;
+                break;
+            }
+            if self.sa1.cpu.waiting && self.sa1.interrupt_wakes_cpu() {
+                self.sa1.cpu.waiting = false;
+            }
+            if self.sa1.has_pending_nmi() {
+                self.sa1.acknowledge_interrupt(SA1_NMI_SOURCE);
+                self.record_sa1_event(format!(
+                    "nmi vector={:04X} pc={:04X}",
+                    self.sa1.nmi_vector, self.sa1.cpu.pc,
+                ));
+                if self.debug_trap_log.len() < 180_000 {
+                    self.debug_trap_log.push_str(&format!(
+                        "SA1NMI vector={:04X} PC={:02X}:{:04X} frame={}\n",
+                        self.sa1.nmi_vector, self.sa1.cpu.pb, self.sa1.cpu.pc, self.frame_count,
+                    ));
+                }
+                self.service_sa1_interrupt(self.sa1.nmi_vector);
+                continue;
+            }
+
+            let irq_source = self.sa1.next_irq_source();
+            if irq_source != 0 && !self.sa1.cpu.flag_i() {
+                self.sa1.acknowledge_interrupt(irq_source);
+                self.sa1.cpu.irq_pending = false;
+                self.sa1.cpu.waiting = false;
+                self.record_sa1_event(format!(
+                    "irq source={:02X} vector={:04X} pc={:04X}",
+                    irq_source, self.sa1.irq_vector, self.sa1.cpu.pc,
+                ));
+                if self.debug_trap_log.len() < 180_000 {
+                    self.debug_trap_log.push_str(&format!(
+                        "SA1IRQ source={:02X} vector={:04X} PC={:02X}:{:04X} frame={}\n",
+                        irq_source, self.sa1.irq_vector, self.sa1.cpu.pb, self.sa1.cpu.pc, self.frame_count,
+                    ));
+                }
+                self.service_sa1_interrupt(self.sa1.irq_vector);
+                continue;
+            }
+
+            if self.sa1.cpu.waiting {
+                self.advance_sa1_timer(remaining);
+                elapsed += remaining;
+                break;
+            }
+
+            if self.sa1.cpu.cycles > 0 {
+                let consumed = self.sa1.cpu.cycles.min(remaining);
+                self.sa1.cpu.cycles -= consumed;
+                self.advance_sa1_timer(consumed);
+                remaining -= consumed;
+                elapsed += consumed;
+                continue;
+            }
+
+            let instruction_clocks = self.step_sa1_cpu();
+            if instruction_clocks == 0 {
+                break;
+            }
+            let consumed = instruction_clocks.min(remaining);
+            if instruction_clocks > consumed {
+                self.sa1.cpu.cycles = instruction_clocks - consumed;
+            } else {
+                self.sa1.cpu.cycles = 0;
+            }
+            self.advance_sa1_timer(consumed);
+            remaining -= consumed;
+            elapsed += consumed;
+        }
+        elapsed
+    }
+
+    fn service_sa1_interrupt(&mut self, vector: u16) {
+        let saved_penalty = self.cpu_bus_penalty;
+        let saved_tracking = self.track_cpu_bus_timing;
+        std::mem::swap(&mut self.cpu, &mut self.sa1.cpu);
+        self.cpu_bus_penalty = 0;
+        self.track_cpu_bus_timing = false;
+        self.sa1_bus_active = true;
+
+        if !self.cpu.emulation {
+            self.push8(self.cpu.pb);
+        }
+        self.push16(self.cpu.pc);
+        self.push8(self.cpu.p);
+        self.cpu.set_flag(flags::IRQ_DIS, true);
+        self.cpu.set_flag(flags::DECIMAL, false);
+        self.cpu.pb = 0;
+        self.cpu.pc = vector;
+        self.cpu.cycles = 16;
+
+        std::mem::swap(&mut self.cpu, &mut self.sa1.cpu);
+        self.cpu_bus_penalty = saved_penalty;
+        self.track_cpu_bus_timing = saved_tracking;
+        self.sa1_bus_active = false;
+    }
+
+    fn run_sa1_dma(&mut self) {
+        if self.sa1.dma_active || self.sa1.dma_control & 0x80 == 0 {
+            return;
+        }
+        if self.sa1.dma_control & 0x20 != 0 {
+            return;
+        }
+
+        self.sa1.dma_active = true;
+        let source_kind = self.sa1.dma_control & 0x03;
+        let destination_is_bwram = self.sa1.dma_control & 0x04 != 0;
+        let source = self.sa1.dma_source;
+        let destination = self.sa1.dma_destination;
+        let length = self.sa1.dma_length as usize;
+
+        for offset in 0..length {
+            let source_address = source.wrapping_add(offset as u32) & 0x00FF_FFFF;
+            let value = match source_kind {
+                0 => {
+                    let bank = (source_address >> 16) as u8;
+                    let addr = source_address as u16;
+                    self.cart.read_sa1_rom(bank, addr, &self.sa1.bmaps)
+                }
+                1 => self.sa1.bwram[source_address as usize & (super::sa1::BWRAM_SIZE - 1)],
+                2 => self.sa1.read_iram(source_address as u16),
+                _ => 0,
+            };
+            let destination_address = destination.wrapping_add(offset as u32);
+            if destination_is_bwram {
+                self.sa1.bwram[destination_address as usize & (super::sa1::BWRAM_SIZE - 1)] = value;
+            } else {
+                self.sa1.write_iram(destination_address as u16, value);
+            }
+        }
+
+        self.sa1.dma_active = false;
+        self.sa1.dma_stall_clocks =
+            (length as u32).saturating_mul(SA1_DMA_RESERVATION_PER_BYTE);
+        self.sa1.request_interrupt(SA1_DMA_SOURCE);
+        self.record_sa1_event(format!(
+            "dma_start source={:06X} destination={:06X} length={:04X} stall={}",
+            source, destination, length, self.sa1.dma_stall_clocks,
+        ));
+        if self.debug_trap_log.len() < 180_000 {
+            self.debug_trap_log.push_str(&format!(
+                "SA1DMASTART source={:06X} destination={:06X} length={:04X} stall={} frame={}\n",
+                source, destination, length, self.sa1.dma_stall_clocks, self.frame_count,
+            ));
         }
     }
 
@@ -543,6 +909,10 @@ impl SnesEmulator {
         }
     }
 
+    fn sync_ppu_dot(&mut self) {
+        self.ppu.dot = ((self.cpu_cycles_this_line / 4) % DOTS_PER_SCANLINE as u32) as u16;
+    }
+
     // ================================================================
     // 記憶體匯流排 (24-bit 位址空間)
     // ================================================================
@@ -550,13 +920,82 @@ impl SnesEmulator {
     pub fn read(&mut self, full_addr: u32) -> u8 {
         let bank = ((full_addr >> 16) & 0xFF) as u8;
         let addr = (full_addr & 0xFFFF) as u16;
-        self.bus_read(bank, addr)
+        let value = self.bus_read(bank, addr);
+        self.record_verification_event(format!(
+            "bus:read addr={:02X}:{:04X} value={:02X} owner={} region={}",
+            bank,
+            addr,
+            value,
+            if self.sa1_bus_active { "sa1" } else { "s_cpu" },
+            Self::sa1_bus_region(bank, addr),
+        ));
+        if self.sa1_bus_active {
+            self.record_sa1_event(format!(
+                "bus owner=sa1 kind=read region={} addr={:02X}:{:04X} value={:02X}",
+                Self::sa1_bus_region(bank, addr), bank, addr, value,
+            ));
+        }
+        value
     }
 
     pub fn write(&mut self, full_addr: u32, val: u8) {
         let bank = ((full_addr >> 16) & 0xFF) as u8;
         let addr = (full_addr & 0xFFFF) as u16;
         self.bus_write(bank, addr, val);
+        self.record_verification_event(format!(
+            "bus:write addr={:02X}:{:04X} value={:02X} owner={} region={}",
+            bank,
+            addr,
+            val,
+            if self.sa1_bus_active { "sa1" } else { "s_cpu" },
+            Self::sa1_bus_region(bank, addr),
+        ));
+        if self.sa1_bus_active {
+            self.record_sa1_event(format!(
+                "bus owner=sa1 kind=write region={} addr={:02X}:{:04X} value={:02X}",
+                Self::sa1_bus_region(bank, addr), bank, addr, val,
+            ));
+        }
+    }
+
+    fn record_verification_event(&mut self, event: String) {
+        if !self.verification_trace_enabled || self.verification_trace.len() >= 60000 {
+            return;
+        }
+        self.verification_trace.push(format!(
+            "frame={} masterClock={} {}",
+            self.frame_count, self.master_clock, event,
+        ));
+    }
+
+    fn record_sa1_event(&mut self, event: String) {
+        if !self.verification_trace_enabled || self.verification_trace.len() >= 65536 {
+            return;
+        }
+        self.verification_trace.push(format!(
+            "frame={} masterClock={} sa1:{}",
+            self.frame_count, self.master_clock, event,
+        ));
+    }
+
+    fn sa1_bus_region(bank: u8, addr: u16) -> &'static str {
+        let effective = bank & 0x7F;
+        if bank >= 0xC0 {
+            "rom-window"
+        } else if effective < 0x40
+            && (addr < 0x1000 || (0x3000..=0x37FF).contains(&addr))
+        {
+            "iram"
+        } else if (0x40..=0x4F).contains(&effective)
+            || ((0x60..=0x6F).contains(&effective) && (0x6000..=0x7FFF).contains(&addr))
+            || (effective < 0x40 && (0x6000..=0x7FFF).contains(&addr))
+        {
+            "bwram"
+        } else if (0x2200..=0x23FF).contains(&addr) {
+            "register"
+        } else {
+            "shared"
+        }
     }
 
     fn bus_read(&mut self, bank: u8, addr: u16) -> u8 {
@@ -573,12 +1012,74 @@ impl SnesEmulator {
         }
 
         if self.cart.map_mode == crate::snes::cartridge::MapMode::SA1 && bank >= 0xC0 {
+            let val = self.cart.read_sa1_rom(bank, addr, &self.sa1.bmaps);
+            self.open_bus = val;
+            return val;
+        }
+
+        if bank >= 0xC0
+            && matches!(
+                self.cart.map_mode,
+                crate::snes::cartridge::MapMode::LoROM
+                    | crate::snes::cartridge::MapMode::HiROM
+                    | crate::snes::cartridge::MapMode::ExHiROM
+            )
+        {
             let val = self.cart.read_rom(bank, addr);
             self.open_bus = val;
             return val;
         }
 
         let effective = bank & 0x7F; // $80-$FF mirrors $00-$7F
+
+        if self.cart.profile.enhancement == crate::snes::cartridge::EnhancementChip::Sa1
+            && (0x40..=0x4F).contains(&effective)
+        {
+            let offset = ((effective as usize - 0x40) << 16) | addr as usize;
+            let val = self.cart.read_sram(offset & 0x3FFFF);
+            self.open_bus = val;
+            return val;
+        }
+
+        if self.sa1_bus_active && effective < 0x40 && addr < 0x1000 {
+            let val = self.sa1.read_iram(addr);
+            self.open_bus = val;
+            return val;
+        }
+
+        if self.sa1_bus_active && (0x40..=0x4F).contains(&effective) {
+            let offset = ((effective as usize - 0x40) << 16) | addr as usize;
+            let val = self.cart.read_sram(offset & 0x3FFFF);
+            self.open_bus = val;
+            return val;
+        }
+
+        if self.sa1_bus_active
+            && (0x60..=0x6F).contains(&effective)
+            && (0x6000..=0x7FFF).contains(&addr)
+        {
+            let val = self.sa1.read_bwram(addr);
+            self.open_bus = val;
+            return val;
+        }
+
+        if self.cart.profile.enhancement == crate::snes::cartridge::EnhancementChip::Sa1
+            && effective < 0x40
+        {
+            let val = match addr {
+                0x2200..=0x23FF => self.sa1.read_register(addr),
+                0x3000..=0x37FF => self.sa1.read_iram(addr),
+                0x6000..=0x7FFF => self.sa1.read_bwram(addr),
+                _ => self.open_bus,
+            };
+            if addr >= 0x2200 && addr <= 0x23FF
+                || addr >= 0x3000 && addr <= 0x37FF
+                || addr >= 0x6000 && addr <= 0x7FFF
+            {
+                self.open_bus = val;
+                return val;
+            }
+        }
 
         let val = match effective {
             // === System area: banks $00-$3F ($80-$BF) ===
@@ -597,6 +1098,9 @@ impl SnesEmulator {
                 0x4000..=0x40FF => self.read_cpu_register(addr),
                 0x4200..=0x42FF => self.read_cpu_register(addr),
                 0x4300..=0x43FF => self.dma.read_register(addr - 0x4300),
+                0x4800 => self.cart.sdd1_hard_enable,
+                0x4801 => self.cart.sdd1_soft_enable,
+                0x4804..=0x4807 => self.cart.sdd1_map[(addr - 0x4804) as usize],
                 0x6000..=0x7FFF => {
                     match self.cart.map_mode {
                         crate::snes::cartridge::MapMode::HiROM | crate::snes::cartridge::MapMode::ExHiROM => {
@@ -632,14 +1136,14 @@ impl SnesEmulator {
                 _ => self.open_bus,
             },
 
-            // === Banks $40-$6F: ROM area (with LoROM lower half = HW mirrors) ===
+            // === Banks $40-$6F: full 64KB cartridge ROM in standard LoROM ===
             0x40..=0x6F => {
                 match self.cart.map_mode {
-                    crate::snes::cartridge::MapMode::LoROM | crate::snes::cartridge::MapMode::SA1 => {
+                    crate::snes::cartridge::MapMode::LoROM => self.cart.read_rom(bank, addr),
+                    crate::snes::cartridge::MapMode::SA1 => {
                         if addr >= 0x8000 {
                             self.cart.read_rom(bank, addr)
                         } else {
-                            // LoROM $40-$6F:$0000-$7FFF = mirrors of $00-$3F system area
                             self.bus_read_system_low(effective, addr)
                         }
                     }
@@ -693,6 +1197,9 @@ impl SnesEmulator {
             0x4000..=0x40FF => self.read_cpu_register(addr),
             0x4200..=0x42FF => self.read_cpu_register(addr),
             0x4300..=0x43FF => self.dma.read_register(addr - 0x4300),
+            0x4800 => self.cart.sdd1_hard_enable,
+            0x4801 => self.cart.sdd1_soft_enable,
+            0x4804..=0x4807 => self.cart.sdd1_map[(addr - 0x4804) as usize],
             0x6000..=0x7FFF => {
                 // CX4: 也攔截 $40-$6F:$6000-$7FFF
                 if self.cx4.present {
@@ -725,11 +1232,93 @@ impl SnesEmulator {
             return;
         }
 
+        if bank >= 0xC0
+            && matches!(
+                self.cart.map_mode,
+                crate::snes::cartridge::MapMode::LoROM
+                    | crate::snes::cartridge::MapMode::HiROM
+                    | crate::snes::cartridge::MapMode::ExHiROM
+            )
+        {
+            return;
+        }
+
         let effective = bank & 0x7F;
+
+        if self.cart.profile.enhancement == crate::snes::cartridge::EnhancementChip::Sa1
+            && (0x40..=0x4F).contains(&effective)
+        {
+            let offset = ((effective as usize - 0x40) << 16) | addr as usize;
+            self.cart.write_sram(offset & 0x3FFFF, val);
+            return;
+        }
+
+        if self.sa1_bus_active && effective < 0x40 && addr < 0x1000 {
+            self.sa1.write_iram(addr, val);
+            return;
+        }
+
+        if self.sa1_bus_active && (0x40..=0x4F).contains(&effective) {
+            let offset = ((effective as usize - 0x40) << 16) | addr as usize;
+            self.cart.write_sram(offset & 0x3FFFF, val);
+            return;
+        }
+
+        if self.sa1_bus_active
+            && (0x60..=0x6F).contains(&effective)
+            && (0x6000..=0x7FFF).contains(&addr)
+        {
+            self.sa1.write_bwram(addr, val);
+            return;
+        }
+
+        if self.cart.profile.enhancement == crate::snes::cartridge::EnhancementChip::Sa1
+            && effective < 0x40
+        {
+            let sa1_dma_trigger = (addr == 0x2236 && self.sa1.dma_control & 0x04 == 0)
+                || (addr == 0x2237 && self.sa1.dma_control & 0x04 != 0);
+            let sa1_char_dma_trigger = addr == 0x2236
+                && self.sa1.dma_control & 0xB0 == 0xB0;
+            match addr {
+                0x2240..=0x224F => self.sa1.write_char_dma_byte(addr, val),
+                0x2200..=0x23FF => self.sa1.write_register(addr, val),
+                0x3000..=0x37FF => self.sa1.write_iram(addr, val),
+                0x6000..=0x7FFF => self.sa1.write_bwram(addr, val),
+                _ => {}
+            }
+            if addr == 0x2202 && !self.sa1.s_cpu_interrupt_pending() && !self.irq_pending {
+                self.cpu.irq_pending = false;
+            }
+            if sa1_char_dma_trigger {
+                self.sa1.start_char_dma();
+                self.sa1.request_s_cpu_interrupt(0x20);
+                if self.sa1.s_cpu_interrupt_pending() {
+                    self.cpu.irq_pending = true;
+                }
+            }
+            if sa1_dma_trigger {
+                self.run_sa1_dma();
+            }
+            if addr >= 0x2200 && addr <= 0x23FF
+                || addr >= 0x3000 && addr <= 0x37FF
+                || addr >= 0x6000 && addr <= 0x7FFF
+            {
+                return;
+            }
+        }
+
         match effective {
             // === System area: banks $00-$3F ($80-$BF) ===
             0x00..=0x3F => match addr {
-                0x0000..=0x1FFF => { self.wram[addr as usize] = val; }
+                0x0000..=0x1FFF => {
+                    self.wram[addr as usize] = val;
+                    if addr == 0x004C && self.debug_trap_log.len() < 180_000 {
+                        self.debug_trap_log.push_str(&format!(
+                            "WRAM[004C]={:02X} PC={:02X}:{:04X} frame={}\\n",
+                            val, self.cpu.pb, self.cpu.pc, self.frame_count,
+                        ));
+                    }
+                }
                 0x2100..=0x2133 => { self.ppu.write_register(addr, val); }
                 0x2140..=0x217F => {
                     self.catchup_apu();
@@ -737,6 +1326,12 @@ impl SnesEmulator {
                 }
                 0x2180 => {
                     let wa = self.wram_addr as usize & 0x1FFFF;
+                    if wa == 0x004C && self.debug_trap_log.len() < 180_000 {
+                        self.debug_trap_log.push_str(&format!(
+                            "WRAM[004C]={:02X} via $2180 PC={:02X}:{:04X} frame={}\\n",
+                            val, self.cpu.pb, self.cpu.pc, self.frame_count,
+                        ));
+                    }
                     self.wram[wa] = val;
                     self.wram_addr = (self.wram_addr + 1) & 0x1FFFF;
                 }
@@ -745,19 +1340,30 @@ impl SnesEmulator {
                 0x2183 => { self.wram_addr = (self.wram_addr & 0x0FFFF) | ((val as u32 & 0x01) << 16); }
                 0x4200..=0x42FF => { self.write_cpu_register(addr, val); }
                 0x4300..=0x43FF => {
-                    // Debug: log ch0 control/b_addr writes
-                    if addr == 0x4300 || addr == 0x4301 {
+                    self.dma.write_register(addr - 0x4300, val);
+                    let dma_offset = addr - 0x4300;
+                    if dma_offset < 0x07 && self.debug_trap_log.len() < 180_000 {
                         self.debug_trap_log.push_str(&format!(
-                            "W${:04X}={:02X} @sl={}\n", addr, val, self.ppu.scanline,
+                            "DMAREG ch{} r{}={:02X} PC={:02X}:{:04X} frame={}\\n",
+                            dma_offset >> 4, dma_offset & 0x0F, val,
+                            self.cpu.pb, self.cpu.pc, self.frame_count,
                         ));
                     }
-                    self.dma.write_register(addr - 0x4300, val);
+                }
+                0x4800..=0x4801 => {
+                    if self.cart.profile.enhancement == crate::snes::cartridge::EnhancementChip::Sdd1 {
+                        self.cart.write_sdd1_enable(addr == 0x4800, val);
+                    }
+                }
+                0x4804..=0x4807 => {
+                    if self.cart.profile.enhancement == crate::snes::cartridge::EnhancementChip::Sdd1 {
+                        self.cart.write_sdd1_map((addr - 0x4804) as usize, val);
+                    }
                 }
                 0x6000..=0x7FFF => {
                     match self.cart.map_mode {
                         crate::snes::cartridge::MapMode::HiROM | crate::snes::cartridge::MapMode::ExHiROM => {
                             if self.dsp1.present && effective < 0x20 {
-                                // DSP-1: 寫入 DR ($6000-$6FFF), SR ($7000+) 為唯讀
                                 if addr < 0x7000 {
                                     self.dsp1.write_dr(val);
                                 }
@@ -767,11 +1373,9 @@ impl SnesEmulator {
                             }
                         }
                         crate::snes::cartridge::MapMode::LoROM | crate::snes::cartridge::MapMode::SA1 => {
-                            // CX4: $00-$3F/$80-$BF:$6000-$7FFF → CX4 RAM/IO
                             if self.cx4.present {
                                 self.cx4_write(addr, val);
                             } else if self.cart.sram_size > 0 {
-                                // LoROM: $00-$3F:$6000-$7FFF mirrors SRAM
                                 let sram_addr = ((effective as usize & 0x1F) * 0x2000) + (addr as usize - 0x6000);
                                 self.cart.write_sram(sram_addr, val);
                             }
@@ -784,7 +1388,10 @@ impl SnesEmulator {
             // === Banks $40-$6F: LoROM has HW writes in $0000-$7FFF ===
             0x40..=0x6F => {
                 match self.cart.map_mode {
-                    crate::snes::cartridge::MapMode::LoROM | crate::snes::cartridge::MapMode::SA1 => {
+                    crate::snes::cartridge::MapMode::LoROM => {
+                        // LoROM banks $40-$6F are full 64KB cartridge ROM.
+                    }
+                    crate::snes::cartridge::MapMode::SA1 => {
                         if addr < 0x8000 {
                             self.bus_write_system_low(effective, addr, val);
                         }
@@ -820,7 +1427,15 @@ impl SnesEmulator {
     /// Helper for LoROM system area writes ($0000-$7FFF in banks $40-$6F)
     fn bus_write_system_low(&mut self, effective: u8, addr: u16, val: u8) {
         match addr {
-            0x0000..=0x1FFF => { self.wram[addr as usize] = val; }
+            0x0000..=0x1FFF => {
+                self.wram[addr as usize] = val;
+                if addr == 0x004C && self.debug_trap_log.len() < 180_000 {
+                    self.debug_trap_log.push_str(&format!(
+                        "WRAM[004C]={:02X} PC={:02X}:{:04X} frame={}\\n",
+                        val, self.cpu.pb, self.cpu.pc, self.frame_count,
+                    ));
+                }
+            }
             0x2100..=0x2133 => { self.ppu.write_register(addr, val); }
             0x2140..=0x217F => {
                 self.catchup_apu();
@@ -828,6 +1443,12 @@ impl SnesEmulator {
             }
             0x2180 => {
                 let wa = self.wram_addr as usize & 0x1FFFF;
+                if wa == 0x004C && self.debug_trap_log.len() < 180_000 {
+                    self.debug_trap_log.push_str(&format!(
+                        "WRAM[004C]={:02X} via $2180 PC={:02X}:{:04X} frame={}\\n",
+                        val, self.cpu.pb, self.cpu.pc, self.frame_count,
+                    ));
+                }
                 self.wram[wa] = val;
                 self.wram_addr = (self.wram_addr + 1) & 0x1FFFF;
             }
@@ -835,15 +1456,17 @@ impl SnesEmulator {
             0x2182 => { self.wram_addr = (self.wram_addr & 0x100FF) | ((val as u32) << 8); }
             0x2183 => { self.wram_addr = (self.wram_addr & 0x0FFFF) | ((val as u32 & 0x01) << 16); }
             0x4200..=0x42FF => { self.write_cpu_register(addr, val); }
-            0x4300..=0x43FF => {
-                    // Debug: log ch0 control/b_addr writes (bus_write path 2)
-                    if addr == 0x4300 || addr == 0x4301 {
-                        self.debug_trap_log.push_str(&format!(
-                            "W${:04X}={:02X} @sl={}\n", addr, val, self.ppu.scanline,
-                        ));
-                    }
-                    self.dma.write_register(addr - 0x4300, val);
+            0x4300..=0x43FF => { self.dma.write_register(addr - 0x4300, val); }
+            0x4800..=0x4801 => {
+                if self.cart.profile.enhancement == crate::snes::cartridge::EnhancementChip::Sdd1 {
+                    self.cart.write_sdd1_enable(addr == 0x4800, val);
                 }
+            }
+            0x4804..=0x4807 => {
+                if self.cart.profile.enhancement == crate::snes::cartridge::EnhancementChip::Sdd1 {
+                    self.cart.write_sdd1_map((addr - 0x4804) as usize, val);
+                }
+            }
             0x6000..=0x7FFF => {
                 // CX4: 也攔截 $40-$6F:$6000-$7FFF
                 if self.cx4.present {
@@ -881,6 +1504,14 @@ impl SnesEmulator {
             0x4211 => {
                 let v = self.timeup;
                 self.timeup &= !0x80;
+                if v & 0x80 != 0 {
+                    self.irq_pending = false;
+                    self.cpu.irq_pending = false;
+                }
+                self.debug_trap_log.push_str(&format!(
+                    "TIMEUP read={:02X} PC={:02X}:{:04X} P={:02X}\n",
+                    v, self.cpu.pb, self.cpu.pc, self.cpu.p,
+                ));
                 v
             }
             0x4212 => {
@@ -940,6 +1571,16 @@ impl SnesEmulator {
             0x420A => { self.vtime = (self.vtime & 0x0FF) | ((val as u16 & 0x01) << 8); }
             0x420B => {
                 self.dma.dma_enable = val;
+                if val != 0 && self.debug_trap_log.len() < 180_000 {
+                    let channel = val.trailing_zeros() as usize;
+                    let ch = &self.dma.channels[channel];
+                    self.debug_trap_log.push_str(&format!(
+                        "DMASTART mask={:02X} ch{} ctl={:02X} b={:02X} a={:02X}:{:04X} count={:04X} PC={:02X}:{:04X} frame={} sl={} clocks={}\n",
+                        val, channel, ch.control, ch.b_addr, ch.a_bank, ch.a_addr, ch.count,
+                        self.cpu.pb, self.cpu.pc, self.frame_count, self.ppu.scanline,
+                        self.cpu_cycles_this_line,
+                    ));
+                }
                 if val != 0 {
                     self.run_dma();
                 }
@@ -948,17 +1589,6 @@ impl SnesEmulator {
                 // HDMA enable: channels newly enabled mid-frame should NOT run until
                 // next frame's HDMA init. Mark them as completed so they're skipped this frame.
                 let newly_enabled = val & !self.dma.hdma_enable;
-                // Debug: log channel state when transitioning to $FF
-                if val == 0xFF && self.dma.hdma_enable != 0xFF {
-                    let ch0 = &self.dma.channels[0];
-                    let ch1 = &self.dma.channels[1];
-                    self.debug_trap_log.push_str(&format!(
-                        "420C->FF @sl={} ch0(ctrl={:02X} b={:02X} a={:02X}:{:04X}) ch1(ctrl={:02X} b={:02X} a={:02X}:{:04X})\n",
-                        self.ppu.scanline,
-                        ch0.control, ch0.b_addr, ch0.a_bank, ch0.a_addr,
-                        ch1.control, ch1.b_addr, ch1.a_bank, ch1.a_addr,
-                    ));
-                }
                 for i in 0..8u8 {
                     if newly_enabled & (1 << i) != 0 {
                         self.dma.channels[i as usize].hdma_completed = true;
@@ -978,6 +1608,25 @@ impl SnesEmulator {
     // DMA 傳輸
     // ================================================================
 
+    fn sdd1_dma_buffer(&self, bank: u8, addr: u16, count: usize) -> Option<Vec<u8>> {
+        if self.cart.profile.enhancement != crate::snes::cartridge::EnhancementChip::Sdd1
+            || count == 0
+            || (bank == 0x7E || bank == 0x7F)
+            || (addr < 0x8000 && bank < 0x40)
+        {
+            return None;
+        }
+
+        let source = ((bank as u32) << 16) | addr as u32;
+        let input: Vec<u8> = (0..0x10000u32)
+            .map(|offset| {
+                let address = source.wrapping_add(offset);
+                self.cart.read_rom((address >> 16) as u8, address as u16)
+            })
+            .collect();
+        crate::snes::sdd1::decompress(&input, count)
+    }
+
     fn run_dma(&mut self) {
         for i in 0..8u8 {
             if self.dma.dma_enable & (1 << i) == 0 { continue; }
@@ -985,61 +1634,135 @@ impl SnesEmulator {
             let ch = self.dma.channels[i as usize].clone();
             let direction = ch.direction();
             let offsets = DmaController::get_b_offsets(ch.transfer_mode());
-            let adjust = ch.a_adjust();
-            let mut a_addr = ch.a_addr;
-            let a_bank = ch.a_bank;
+            let mut dma_offsets = [0u8; 4];
+            dma_offsets[..offsets.len()].copy_from_slice(offsets);
+            let count = if ch.count == 0 { 0x10000u32 } else { ch.count as u32 };
+            let sdd1_enabled = self.cart.profile.enhancement
+                == crate::snes::cartridge::EnhancementChip::Sdd1
+                && self.cart.sdd1_soft_enable & (1 << i) != 0
+                && ch.a_adjust() == 0;
+            let sdd1_buffer = if direction == DmaDirection::AtoB && sdd1_enabled {
+                self.sdd1_dma_buffer(
+                    ch.a_bank,
+                    ch.a_addr,
+                    count as usize,
+                )
+            } else {
+                None
+            };
+            if self.cart.profile.enhancement == crate::snes::cartridge::EnhancementChip::Sdd1 {
+                self.cart.sdd1_soft_enable &= !(1 << i);
+            }
             let b_base = 0x2100u16 + ch.b_addr as u16;
-            let mut count = if ch.count == 0 { 0x10000u32 } else { ch.count as u32 };
-
-            // DMA log for OAM ($2104) and VRAM ($2118/$2119) transfers
-            if ch.b_addr == 0x04 || ch.b_addr == 0x18 || ch.b_addr == 0x22 {
+            self.record_verification_event(format!(
+                "dma:start channel={} direction={:?} source={:02X}:{:04X} count={} bBase={:04X} sdd1={}",
+                i, direction, ch.a_bank, ch.a_addr, count, b_base, sdd1_enabled,
+            ));
+            if let Some(buffer) = sdd1_buffer.as_ref() {
+                let source = ((ch.a_bank as u32) << 16) | ch.a_addr as u32;
+                let raw_header = (0..2u32)
+                    .map(|offset| {
+                        let address = source.wrapping_add(offset);
+                        self.cart.read_rom((address >> 16) as u8, address as u16)
+                    })
+                    .collect::<Vec<_>>();
+                let output_preview = buffer
+                    .iter()
+                    .take(8)
+                    .map(|value| format!("{:02X}", value))
+                    .collect::<Vec<_>>()
+                    .join("");
                 self.debug_trap_log.push_str(&format!(
-                    "DMA ch{}: ${:02X}{:04X}→${:04X} cnt={} mode={} adj={} dir={:?} | ",
-                    i, a_bank, a_addr, b_base, count, ch.transfer_mode(), adjust, direction
+                    "S-DD1 DMA ch{} src={:02X}:{:04X} cnt={} map={:02X},{:02X},{:02X},{:02X} raw={:02X}{:02X} out={} b=${:04X}\n",
+                    i,
+                    ch.a_bank,
+                    ch.a_addr,
+                    count,
+                    self.cart.sdd1_map[0],
+                    self.cart.sdd1_map[1],
+                    self.cart.sdd1_map[2],
+                    self.cart.sdd1_map[3],
+                    raw_header[0],
+                    raw_header[1],
+                    output_preview,
+                    b_base,
                 ));
             }
 
-            // Debug: detect DMA on HDMA-enabled channels
-            if self.dma.hdma_enable & (1 << i) != 0 {
-                self.debug_trap_log.push_str(&format!(
-                    "DMA-on-HDMA ch{}: a_addr {:04X}→", i, a_addr
-                ));
-            }
-
-            while count > 0 {
-                for &offset in offsets {
-                    if count == 0 { break; }
-                    let b_addr = b_base.wrapping_add(offset as u16);
-                    let full_a = ((a_bank as u32) << 16) | a_addr as u32;
-
-                    match direction {
-                        DmaDirection::AtoB => {
-                            let val = self.read(full_a);
-                            self.bus_write(0, b_addr, val);
-                        }
-                        DmaDirection::BtoA => {
-                            let val = self.bus_read(0, b_addr);
-                            self.write(full_a, val);
-                        }
-                    }
-
-                    a_addr = (a_addr as i32 + adjust as i32) as u16;
-                    count -= 1;
-                    self.cpu_cycles_this_line += 8; // 每 byte 8 master clocks
-                }
-            }
-
-            self.dma.channels[i as usize].a_addr = a_addr;
-            self.dma.channels[i as usize].count = 0;
-
-            // Debug: log final a_addr after DMA on HDMA channel
-            if self.dma.hdma_enable & (1 << i) != 0 {
-                self.debug_trap_log.push_str(&format!(
-                    "{:04X} sl={} | ", a_addr, self.ppu.scanline
-                ));
-            }
+            self.pending_dmas.push_back(PendingDma {
+                channel: i as usize,
+                direction,
+                offsets: dma_offsets,
+                offset_count: offsets.len(),
+                offset_index: 0,
+                a_addr: ch.a_addr,
+                a_bank: ch.a_bank,
+                b_base,
+                remaining: count,
+                transferred: 0,
+                sdd1_buffer,
+            });
+            self.dma_stall_clocks = self.dma_stall_clocks.saturating_add(count.saturating_mul(8));
         }
         self.dma.dma_enable = 0;
+    }
+
+    fn service_dma_byte(&mut self) {
+        let Some(mut transfer) = self.pending_dmas.pop_front() else { return; };
+        let b_addr = transfer.b_base.wrapping_add(transfer.offsets[transfer.offset_index] as u16);
+        let full_a = ((transfer.a_bank as u32) << 16) | transfer.a_addr as u32;
+        let control = self.dma.channels[transfer.channel].control;
+        match transfer.direction {
+            DmaDirection::AtoB => {
+                let value = if let Some(buffer) = transfer.sdd1_buffer.as_ref() {
+                    buffer[transfer.transferred]
+                } else {
+                    self.read(full_a)
+                };
+                if b_addr == 0x2180
+                    && (self.wram_addr as usize & 0x1FFFF) == 0x004C
+                    && self.debug_trap_log.len() < 180_000
+                {
+                    let direct_value = self.read(full_a);
+                    let cart_value = self.cart.read_rom(transfer.a_bank, transfer.a_addr);
+                    self.debug_trap_log.push_str(&format!(
+                        "DMA WRAM[004C]={:02X} direct={:02X} cart={:02X} ch{} src={:02X}:{:04X} mode={:02X} map={:02X},{:02X},{:02X},{:02X} PC={:02X}:{:04X} frame={}\\n",
+                        value, direct_value, cart_value,
+                        transfer.channel, transfer.a_bank, transfer.a_addr, control,
+                        self.cart.sdd1_map[0], self.cart.sdd1_map[1],
+                        self.cart.sdd1_map[2], self.cart.sdd1_map[3],
+                        self.cpu.pb, self.cpu.pc, self.frame_count,
+                    ));
+                }
+                self.bus_write(0, b_addr, value);
+            }
+            DmaDirection::BtoA => {
+                let value = self.bus_read(0, b_addr);
+                self.write(full_a, value);
+            }
+        }
+
+        transfer.a_addr = (transfer.a_addr as i32 + self.dma.channels[transfer.channel].a_adjust() as i32) as u16;
+        transfer.remaining -= 1;
+        transfer.transferred += 1;
+        transfer.offset_index += 1;
+        if transfer.offset_index == transfer.offset_count {
+            transfer.offset_index = 0;
+        }
+
+        if transfer.remaining == 0 {
+            self.record_verification_event(format!(
+                "dma:complete channel={} transferred={} finalAddress={:02X}:{:04X}",
+                transfer.channel, transfer.transferred, transfer.a_bank, transfer.a_addr,
+            ));
+            self.dma.channels[transfer.channel].a_addr = transfer.a_addr;
+            self.dma.channels[transfer.channel].count = 0;
+            self.dma.sdd1_addr[transfer.channel] =
+                ((transfer.a_bank as u32) << 16) | transfer.a_addr as u32;
+            self.dma.sdd1_size[transfer.channel] = 0;
+        } else {
+            self.pending_dmas.push_front(transfer);
+        }
     }
 
     // ================================================================
@@ -1058,6 +1781,10 @@ impl SnesEmulator {
             let table_addr = self.dma.channels[idx].hdma_addr;
             let full = ((table_bank as u32) << 16) | table_addr as u32;
             let line_counter = self.read(full);
+            self.record_verification_event(format!(
+                "hdma:init channel={} table={:02X}:{:04X} lineCounter={:02X}",
+                i, table_bank, table_addr, line_counter,
+            ));
             self.dma.channels[idx].hdma_line_counter = line_counter;
             self.dma.channels[idx].hdma_addr = self.dma.channels[idx].hdma_addr.wrapping_add(1);
 
@@ -1089,6 +1816,10 @@ impl SnesEmulator {
             if self.dma.hdma_enable & (1 << i) == 0 { continue; }
             let idx = i as usize;
             if self.dma.channels[idx].hdma_completed { continue; }
+            self.record_verification_event(format!(
+                "hdma:line channel={} counter={:02X}",
+                i, self.dma.channels[idx].hdma_line_counter,
+            ));
 
             // ── Step 1: Transfer (if do_transfer is set from previous scanline's setup) ──
             if self.dma.channels[idx].hdma_do_transfer {
@@ -1162,6 +1893,9 @@ impl SnesEmulator {
     // ================================================================
 
     fn do_nmi(&mut self) {
+        self.record_verification_event(format!(
+            "interrupt:nmi pc={:02X}:{:04X}", self.cpu.pb, self.cpu.pc,
+        ));
         if !self.cpu.emulation {
             self.push8(self.cpu.pb);
         }
@@ -1179,6 +1913,12 @@ impl SnesEmulator {
     }
 
     fn do_irq(&mut self) {
+        self.record_verification_event(format!(
+            "interrupt:irq pc={:02X}:{:04X}", self.cpu.pb, self.cpu.pc,
+        ));
+        let return_pb = self.cpu.pb;
+        let return_pc = self.cpu.pc;
+        let return_sp = self.cpu.sp;
         if !self.cpu.emulation {
             self.push8(self.cpu.pb);
         }
@@ -1193,6 +1933,10 @@ impl SnesEmulator {
         let hi = self.read(vector + 1) as u16;
         self.cpu.pc = lo | (hi << 8);
         self.cpu.cycles = 8;
+        self.debug_trap_log.push_str(&format!(
+            "IRQ {:02X}:{:04X} SP={:04X} P={:02X} -> {:02X}:{:04X}\n",
+            return_pb, return_pc, return_sp, self.cpu.p, self.cpu.pb, self.cpu.pc,
+        ));
     }
 
     // ================================================================
@@ -1679,7 +2423,24 @@ impl SnesEmulator {
             0xA1 => { let a = self.addr_dp_ind_x(); let v = self.read_m(a); self.cpu.set_a(v); self.cpu.set_nz_m(v); self.cpu.cycles = 6; }
             0xA3 => { let a = self.addr_sr(); let v = self.read_m(a); self.cpu.set_a(v); self.cpu.set_nz_m(v); self.cpu.cycles = 4; }
             0xA5 => { let a = self.addr_dp(); let v = self.read_m(a); self.cpu.set_a(v); self.cpu.set_nz_m(v); self.cpu.cycles = 3; }
-            0xA7 => { let a = self.addr_dp_ind_long(); let v = self.read_m(a); self.cpu.set_a(v); self.cpu.set_nz_m(v); self.cpu.cycles = 6; }
+            0xA7 => {
+                let operand_pc = self.cpu.pc;
+                let a = self.addr_dp_ind_long();
+                let v = self.read_m(a);
+                if self.cpu.pb == 0xC0 && operand_pc == 0x1F2E {
+                    let dp = self.cpu.dp.wrapping_add(0x99);
+                    let p0 = self.read(dp as u32);
+                    let p1 = self.read(dp.wrapping_add(1) as u32);
+                    let p2 = self.read(dp.wrapping_add(2) as u32);
+                    self.debug_trap_log.push_str(&format!(
+                        "LDA [99] ptr={:02X}{:02X}{:02X} addr={:06X} value={:04X} P={:02X}\n",
+                        p2, p1, p0, a, v, self.cpu.p,
+                    ));
+                }
+                self.cpu.set_a(v);
+                self.cpu.set_nz_m(v);
+                self.cpu.cycles = 6;
+            }
             0xA9 => { let v = if self.cpu.flag_m() { self.fetch_pc() as u16 } else { self.fetch_pc16() }; self.cpu.set_a(v); self.cpu.set_nz_m(v); self.cpu.cycles = 2; }
             0xAD => { let a = self.addr_abs(); let v = self.read_m(a); self.cpu.set_a(v); self.cpu.set_nz_m(v); self.cpu.cycles = 4; }
             0xAF => { let a = self.addr_long(); let v = self.read_m(a); self.cpu.set_a(v); self.cpu.set_nz_m(v); self.cpu.cycles = 5; }
@@ -1848,7 +2609,23 @@ impl SnesEmulator {
             // === JSR / JSL ===
             0x20 => { let addr = self.fetch_pc16(); self.push16(self.cpu.pc.wrapping_sub(1)); self.cpu.pc = addr; self.cpu.cycles = 6; }
             0x22 => { let addr = self.fetch_pc24(); self.push8(self.cpu.pb); self.push16(self.cpu.pc.wrapping_sub(1)); self.cpu.pb = (addr >> 16) as u8; self.cpu.pc = addr as u16; self.cpu.cycles = 8; } // JSL
-            0xFC => { let addr = self.fetch_pc16().wrapping_add(self.cpu.x_val()); self.push16(self.cpu.pc.wrapping_sub(1)); let base = ((self.cpu.pb as u32) << 16) | addr as u32; let lo = self.read(base) as u16; let hi = self.read(base.wrapping_add(1) & 0xFFFFFF) as u16; self.cpu.pc = lo | (hi << 8); self.cpu.cycles = 8; }
+            0xFC => {
+                let addr = self.fetch_pc16().wrapping_add(self.cpu.x_val());
+                self.push16(self.cpu.pc.wrapping_sub(1));
+                let base = ((self.cpu.pb as u32) << 16) | addr as u32;
+                let lo = self.read(base) as u16;
+                let hi = self.read(base.wrapping_add(1) & 0xFFFFFF) as u16;
+                if self.cpu.pb == 0xC0 && self.cpu.pc == 0x1F3F {
+                    self.debug_trap_log.push_str(&format!(
+                        "JSR (abs,X) A={:04X} X={:04X} P={:02X} ptr={:02X}:{:04X} target={:04X} map={:02X},{:02X},{:02X},{:02X}\n",
+                        self.cpu.a, self.cpu.x, self.cpu.p, self.cpu.pb, addr, lo | (hi << 8),
+                        self.cart.sdd1_map[0], self.cart.sdd1_map[1],
+                        self.cart.sdd1_map[2], self.cart.sdd1_map[3],
+                    ));
+                }
+                self.cpu.pc = lo | (hi << 8);
+                self.cpu.cycles = 8;
+            }
 
             // === RTS / RTL / RTI ===
             0x60 => { self.cpu.pc = self.pull16().wrapping_add(1); self.cpu.cycles = 6; }
@@ -1858,6 +2635,10 @@ impl SnesEmulator {
                 self.cpu.pc = self.pull16();
                 if !self.cpu.emulation { self.cpu.pb = self.pull8(); }
                 self.cpu.update_mode();
+                self.debug_trap_log.push_str(&format!(
+                    "RTI -> {:02X}:{:04X} SP={:04X} P={:02X}\n",
+                    self.cpu.pb, self.cpu.pc, self.cpu.sp, self.cpu.p,
+                ));
                 self.cpu.cycles = 6;
             }
 
@@ -2099,7 +2880,7 @@ impl SnesEmulator {
 
         // Magic + version
         buf.extend_from_slice(b"SNES");
-        buf.push(1);
+        buf.push(14);
 
         // CPU state (20 bytes)
         buf.extend_from_slice(&self.cpu.a.to_le_bytes());
@@ -2116,6 +2897,7 @@ impl SnesEmulator {
         buf.push(self.cpu.irq_pending as u8);
         buf.push(self.cpu.waiting as u8);
         buf.push(self.cpu.stopped as u8);
+        buf.extend_from_slice(&self.cpu.cycles.to_le_bytes());
 
         // Emulator registers
         buf.push(self.nmitimen);
@@ -2136,6 +2918,7 @@ impl SnesEmulator {
         buf.push(self.open_bus);
         buf.push(self.irq_pending as u8);
         buf.extend_from_slice(&self.frame_count.to_le_bytes());
+        buf.extend_from_slice(&self.apu_master_remainder.to_le_bytes());
 
         // WRAM (128KB)
         buf.extend_from_slice(&self.wram);
@@ -2213,6 +2996,114 @@ impl SnesEmulator {
         buf.push(self.ppu.nmi_flag as u8);
         buf.push(self.ppu.nmi_enabled as u8);
         buf.push(self.ppu.vblank_flag as u8);
+        buf.push(self.ppu.counter_latch as u8);
+        buf.extend_from_slice(&self.ppu.h_counter.to_le_bytes());
+        buf.extend_from_slice(&self.ppu.v_counter.to_le_bytes());
+        buf.extend_from_slice(&self.ppu.ophct.to_le_bytes());
+        buf.extend_from_slice(&self.ppu.opvct.to_le_bytes());
+        buf.push(self.ppu.ophct_latch as u8);
+        buf.push(self.ppu.opvct_latch as u8);
+        buf.push(self.ppu.stat77);
+        buf.push(self.ppu.stat78);
+        buf.extend_from_slice(&self.ppu.dot.to_le_bytes());
+        buf.push(self.ppu.nmi_triggered as u8);
+        buf.push(self.ppu.frame_complete as u8);
+        buf.extend_from_slice(&self.ppu.framebuffer);
+
+        // Controller latch state
+        buf.extend_from_slice(&self.ctrl1.state.to_le_bytes());
+        buf.extend_from_slice(&self.ctrl1.auto_read_result.to_le_bytes());
+        buf.extend_from_slice(&self.ctrl2.state.to_le_bytes());
+        buf.extend_from_slice(&self.ctrl2.auto_read_result.to_le_bytes());
+
+        // Timing flags needed when a state is restored mid-frame
+        buf.extend_from_slice(&self.master_clock.to_le_bytes());
+        buf.extend_from_slice(&self.cpu_cycles_this_line.to_le_bytes());
+        buf.extend_from_slice(&self.cpu_bus_penalty.to_le_bytes());
+        buf.extend_from_slice(&self.dma_stall_clocks.to_le_bytes());
+        buf.extend_from_slice(&self.dma_byte_clock_progress.to_le_bytes());
+        buf.push(self.pending_dmas.len() as u8);
+        for transfer in &self.pending_dmas {
+            buf.push(transfer.channel as u8);
+            buf.push(match transfer.direction {
+                DmaDirection::AtoB => 0,
+                DmaDirection::BtoA => 1,
+            });
+            buf.extend_from_slice(&transfer.offsets);
+            buf.push(transfer.offset_count as u8);
+            buf.push(transfer.offset_index as u8);
+            buf.extend_from_slice(&transfer.a_addr.to_le_bytes());
+            buf.push(transfer.a_bank);
+            buf.extend_from_slice(&transfer.b_base.to_le_bytes());
+            buf.extend_from_slice(&transfer.remaining.to_le_bytes());
+            buf.extend_from_slice(&(transfer.transferred as u32).to_le_bytes());
+            match transfer.sdd1_buffer.as_ref() {
+                Some(buffer) => {
+                    buf.push(1);
+                    buf.extend_from_slice(&(buffer.len() as u32).to_le_bytes());
+                    buf.extend_from_slice(buffer);
+                }
+                None => buf.push(0),
+            }
+        }
+        buf.push(self.track_cpu_bus_timing as u8);
+        buf.extend_from_slice(&self.apu_cycles_this_scanline.to_le_bytes());
+        buf.push(self.nmi_fired_this_vblank as u8);
+        buf.extend_from_slice(&self.cart.sdd1_map);
+        buf.push(self.cart.sdd1_hard_enable);
+        buf.push(self.cart.sdd1_soft_enable);
+        for &addr in &self.dma.sdd1_addr {
+            buf.extend_from_slice(&addr.to_le_bytes());
+        }
+        for &size in &self.dma.sdd1_size {
+            buf.extend_from_slice(&size.to_le_bytes());
+        }
+        buf.extend_from_slice(&self.sa1.iram);
+        buf.extend_from_slice(&self.sa1.bwram);
+        buf.push(self.sa1.scnt);
+        buf.push(self.sa1.cie);
+        buf.push(self.sa1.sic);
+        buf.push(self.sa1.cfr);
+        buf.push(self.sa1.reset_vector_high);
+        buf.extend_from_slice(&self.sa1.nmi_vector.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.irq_vector.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.bmaps);
+        buf.push(self.sa1.bwram_bank);
+        buf.push(self.sa1.bwram_control);
+        buf.push(self.sa1.sa1_interrupt_enable);
+        buf.push(self.sa1.sa1_interrupt_status);
+        buf.push(self.sa1.sa1_interrupt_latch);
+        buf.push(self.sa1.timer_control);
+        buf.extend_from_slice(&self.sa1.h_timer.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.v_timer.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.h_counter.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.v_counter.to_le_bytes());
+        buf.push(self.sa1.timer_irq_last_state as u8);
+        buf.push(self.sa1.dma_control);
+        buf.extend_from_slice(&self.sa1.dma_source.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.dma_destination.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.dma_length.to_le_bytes());
+        buf.push(self.sa1.dma_active as u8);
+        buf.extend_from_slice(&self.sa1.dma_stall_clocks.to_le_bytes());
+        buf.push(self.sa1.char_dma_control);
+        buf.extend_from_slice(&self.sa1.char_dma_buffer);
+        buf.push(self.sa1.char_dma_index);
+        buf.push(self.sa1.char_dma_active as u8);
+        buf.extend_from_slice(&self.sa1.cpu.a.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.cpu.x.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.cpu.y.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.cpu.sp.to_le_bytes());
+        buf.extend_from_slice(&self.sa1.cpu.dp.to_le_bytes());
+        buf.push(self.sa1.cpu.db);
+        buf.push(self.sa1.cpu.pb);
+        buf.push(self.sa1.cpu.p);
+        buf.extend_from_slice(&self.sa1.cpu.pc.to_le_bytes());
+        buf.push(self.sa1.cpu.emulation as u8);
+        buf.push(self.sa1.cpu.nmi_pending as u8);
+        buf.push(self.sa1.cpu.irq_pending as u8);
+        buf.push(self.sa1.cpu.waiting as u8);
+        buf.push(self.sa1.cpu.stopped as u8);
+        buf.extend_from_slice(&self.sa1.cpu.cycles.to_le_bytes());
 
         // APU state
         buf.push(self.apu.a);
@@ -2232,6 +3123,20 @@ impl SnesEmulator {
         buf.push(self.apu.control);
         buf.extend_from_slice(&self.apu.cycles.to_le_bytes());
         buf.extend_from_slice(&self.apu.total_cycles.to_le_bytes());
+        for enabled in self.apu.timer_enabled_prev { buf.push(enabled as u8); }
+        buf.extend_from_slice(&self.apu.sample_counter.to_bits().to_le_bytes());
+        buf.extend_from_slice(&self.apu.dsp_sample_counter.to_bits().to_le_bytes());
+        buf.extend_from_slice(&self.apu.prev_dsp_l.to_bits().to_le_bytes());
+        buf.extend_from_slice(&self.apu.prev_dsp_r.to_bits().to_le_bytes());
+        buf.push(match self.apu.ipl_state {
+            super::apu::IplState::Ready => 0,
+            super::apu::IplState::WaitData => 1,
+            super::apu::IplState::Transferring => 2,
+            super::apu::IplState::Done => 3,
+        });
+        buf.extend_from_slice(&self.apu.ipl_addr.to_le_bytes());
+        buf.push(self.apu.ipl_counter);
+        buf.extend_from_slice(&self.apu.ipl_entry.to_le_bytes());
 
         // DMA state
         buf.push(self.dma.dma_enable);
@@ -2265,11 +3170,14 @@ impl SnesEmulator {
         macro_rules! read_u16 { () => { { if pos + 1 >= buf.len() { return false; } let v = u16::from_le_bytes([buf[pos], buf[pos+1]]); pos += 2; v } } }
         macro_rules! read_u32 { () => { { if pos + 3 >= buf.len() { return false; } let v = u32::from_le_bytes([buf[pos], buf[pos+1], buf[pos+2], buf[pos+3]]); pos += 4; v } } }
         macro_rules! read_u64 { () => { { if pos + 7 >= buf.len() { return false; } let v = u64::from_le_bytes([buf[pos], buf[pos+1], buf[pos+2], buf[pos+3], buf[pos+4], buf[pos+5], buf[pos+6], buf[pos+7]]); pos += 8; v } } }
+        macro_rules! read_f32 { () => { f32::from_bits(read_u32!()) } }
+        macro_rules! read_f64 { () => { f64::from_bits(read_u64!()) } }
         macro_rules! read_bytes { ($n:expr) => { { if pos + $n > buf.len() { return false; } let s = &buf[pos..pos+$n]; pos += $n; s } } }
 
         // Magic + version
         if read_bytes!(4) != b"SNES" { return false; }
-        if read_u8!() != 1 { return false; }
+        let version = read_u8!();
+        if version != 1 && version != 2 && version != 3 && version != 4 && version != 5 && version != 6 && version != 7 && version != 8 && version != 9 && version != 10 && version != 11 && version != 12 && version != 13 && version != 14 { return false; }
 
         // CPU
         self.cpu.a = read_u16!();
@@ -2286,6 +3194,7 @@ impl SnesEmulator {
         self.cpu.irq_pending = read_u8!() != 0;
         self.cpu.waiting = read_u8!() != 0;
         self.cpu.stopped = read_u8!() != 0;
+        self.cpu.cycles = if version >= 2 { read_u32!() } else { 0 };
 
         // Emulator registers
         self.nmitimen = read_u8!();
@@ -2306,6 +3215,7 @@ impl SnesEmulator {
         self.open_bus = read_u8!();
         self.irq_pending = read_u8!() != 0;
         self.frame_count = read_u32!();
+        self.apu_master_remainder = if version >= 2 { read_u64!() } else { 0 };
 
         // WRAM
         let wram_slice = read_bytes!(0x20000);
@@ -2390,6 +3300,197 @@ impl SnesEmulator {
         self.ppu.nmi_flag = read_u8!() != 0;
         self.ppu.nmi_enabled = read_u8!() != 0;
         self.ppu.vblank_flag = read_u8!() != 0;
+        if version >= 5 {
+            self.ppu.counter_latch = read_u8!() != 0;
+            self.ppu.h_counter = read_u16!();
+            self.ppu.v_counter = read_u16!();
+            self.ppu.ophct = read_u16!();
+            self.ppu.opvct = read_u16!();
+            self.ppu.ophct_latch = read_u8!() != 0;
+            self.ppu.opvct_latch = read_u8!() != 0;
+            self.ppu.stat77 = read_u8!();
+            self.ppu.stat78 = read_u8!();
+            self.ppu.dot = read_u16!();
+            self.ppu.nmi_triggered = read_u8!() != 0;
+            self.ppu.frame_complete = read_u8!() != 0;
+        }
+        if version >= 3 {
+            let framebuffer = read_bytes!(self.ppu.framebuffer.len());
+            self.ppu.framebuffer.copy_from_slice(framebuffer);
+        }
+        if version >= 5 {
+            self.ctrl1.state = read_u16!();
+            self.ctrl1.auto_read_result = read_u16!();
+            self.ctrl2.state = read_u16!();
+            self.ctrl2.auto_read_result = read_u16!();
+            self.master_clock = read_u64!();
+            self.cpu_cycles_this_line = read_u32!();
+            self.cpu_bus_penalty = read_u32!();
+            self.dma_stall_clocks = if version >= 13 { read_u32!() } else { 0 };
+            self.dma_byte_clock_progress = 0;
+            self.pending_dmas.clear();
+            if version >= 14 {
+                self.dma_byte_clock_progress = read_u32!();
+                let pending_count = read_u8!() as usize;
+                for _ in 0..pending_count {
+                    let channel = read_u8!() as usize;
+                    let direction = match read_u8!() {
+                        0 => DmaDirection::AtoB,
+                        1 => DmaDirection::BtoA,
+                        _ => return false,
+                    };
+                    let mut offsets = [0u8; 4];
+                    offsets.copy_from_slice(read_bytes!(4));
+                    let offset_count = read_u8!() as usize;
+                    let offset_index = read_u8!() as usize;
+                    let a_addr = read_u16!();
+                    let a_bank = read_u8!();
+                    let b_base = read_u16!();
+                    let remaining = read_u32!();
+                    let transferred = read_u32!() as usize;
+                    let sdd1_buffer = if read_u8!() != 0 {
+                        let length = read_u32!() as usize;
+                        Some(read_bytes!(length).to_vec())
+                    } else {
+                        None
+                    };
+                    if channel >= self.dma.channels.len()
+                        || offset_count > offsets.len()
+                        || offset_index >= offset_count
+                    {
+                        return false;
+                    }
+                    self.pending_dmas.push_back(PendingDma {
+                        channel,
+                        direction,
+                        offsets,
+                        offset_count,
+                        offset_index,
+                        a_addr,
+                        a_bank,
+                        b_base,
+                        remaining,
+                        transferred,
+                        sdd1_buffer,
+                    });
+                }
+            } else {
+                self.dma_stall_clocks = 0;
+            }
+            self.track_cpu_bus_timing = read_u8!() != 0;
+            self.apu_cycles_this_scanline = read_u32!();
+            self.nmi_fired_this_vblank = read_u8!() != 0;
+            if version >= 6 {
+                for value in &mut self.cart.sdd1_map {
+                    *value = read_u8!() & 0x07;
+                }
+            }
+            if version >= 12 {
+                self.cart.sdd1_hard_enable = read_u8!();
+                self.cart.sdd1_soft_enable = read_u8!();
+                for addr in &mut self.dma.sdd1_addr {
+                    *addr = read_u32!();
+                }
+                for size in &mut self.dma.sdd1_size {
+                    *size = read_u16!();
+                }
+            }
+            if version >= 7 {
+                let iram = read_bytes!(super::sa1::IRAM_SIZE);
+                self.sa1.iram.copy_from_slice(iram);
+                let bwram = read_bytes!(super::sa1::BWRAM_SIZE);
+                self.sa1.bwram.copy_from_slice(bwram);
+                self.sa1.scnt = read_u8!();
+                self.sa1.cie = read_u8!();
+                self.sa1.sic = read_u8!();
+                self.sa1.cfr = read_u8!();
+                if version >= 9 {
+                    self.sa1.reset_vector_high = read_u8!();
+                    self.sa1.nmi_vector = read_u16!();
+                    self.sa1.irq_vector = read_u16!();
+                } else {
+                    self.sa1.reset_vector_high = 0;
+                    self.sa1.nmi_vector = 0;
+                    self.sa1.irq_vector = 0;
+                }
+                for value in &mut self.sa1.bmaps {
+                    *value = read_u8!() & 0x3F;
+                }
+                self.sa1.bwram_bank = read_u8!() & 0x1F;
+                self.sa1.bwram_control = read_u8!();
+                if version >= 10 {
+                    self.sa1.sa1_interrupt_enable = read_u8!();
+                    self.sa1.sa1_interrupt_status = read_u8!();
+                    self.sa1.sa1_interrupt_latch = read_u8!();
+                    self.sa1.timer_control = read_u8!();
+                    self.sa1.h_timer = read_u16!();
+                    self.sa1.v_timer = read_u16!();
+                    self.sa1.h_counter = read_u32!();
+                    self.sa1.v_counter = read_u16!();
+                    self.sa1.timer_irq_last_state = read_u8!() != 0;
+                    self.sa1.dma_control = read_u8!();
+                    self.sa1.dma_source = read_u32!() & 0x00FF_FFFF;
+                    self.sa1.dma_destination = read_u32!() & 0x00FF_FFFF;
+                    self.sa1.dma_length = read_u16!();
+                    self.sa1.dma_active = read_u8!() != 0;
+                    if version >= 11 {
+                        self.sa1.dma_stall_clocks = read_u32!();
+                        self.sa1.char_dma_control = read_u8!();
+                        let char_dma_buffer = read_bytes!(self.sa1.char_dma_buffer.len());
+                        self.sa1.char_dma_buffer.copy_from_slice(char_dma_buffer);
+                        self.sa1.char_dma_index = read_u8!() & 7;
+                        self.sa1.char_dma_active = read_u8!() != 0;
+                    } else {
+                        self.sa1.dma_stall_clocks = 0;
+                        self.sa1.char_dma_control = 0;
+                        self.sa1.char_dma_buffer.fill(0);
+                        self.sa1.char_dma_index = 0;
+                        self.sa1.char_dma_active = false;
+                    }
+                } else {
+                    self.sa1.sa1_interrupt_enable = 0;
+                    self.sa1.sa1_interrupt_status = 0;
+                    self.sa1.sa1_interrupt_latch = 0;
+                    self.sa1.timer_control = 0;
+                    self.sa1.h_timer = 0;
+                    self.sa1.v_timer = 0;
+                    self.sa1.h_counter = 0;
+                    self.sa1.v_counter = 0;
+                    self.sa1.timer_irq_last_state = false;
+                    self.sa1.dma_control = 0;
+                    self.sa1.dma_source = 0;
+                    self.sa1.dma_destination = 0;
+                    self.sa1.dma_length = 0;
+                    self.sa1.dma_active = false;
+                    self.sa1.dma_stall_clocks = 0;
+                    self.sa1.char_dma_control = 0;
+                    self.sa1.char_dma_buffer.fill(0);
+                    self.sa1.char_dma_index = 0;
+                    self.sa1.char_dma_active = false;
+                }
+                if version >= 8 {
+                    self.sa1.cpu.a = read_u16!();
+                    self.sa1.cpu.x = read_u16!();
+                    self.sa1.cpu.y = read_u16!();
+                    self.sa1.cpu.sp = read_u16!();
+                    self.sa1.cpu.dp = read_u16!();
+                    self.sa1.cpu.db = read_u8!();
+                    self.sa1.cpu.pb = read_u8!();
+                    self.sa1.cpu.p = read_u8!();
+                    self.sa1.cpu.pc = read_u16!();
+                    self.sa1.cpu.emulation = read_u8!() != 0;
+                    self.sa1.cpu.nmi_pending = read_u8!() != 0;
+                    self.sa1.cpu.irq_pending = read_u8!() != 0;
+                    self.sa1.cpu.waiting = read_u8!() != 0;
+                    self.sa1.cpu.stopped = read_u8!() != 0;
+                    self.sa1.cpu.cycles = read_u32!();
+                } else {
+                    self.sa1.cpu = Cpu65816::new();
+                }
+            } else {
+                self.sa1.reset();
+            }
+        }
 
         // APU
         self.apu.a = read_u8!();
@@ -2410,6 +3511,23 @@ impl SnesEmulator {
         self.apu.control = read_u8!();
         self.apu.cycles = read_u32!();
         self.apu.total_cycles = read_u64!();
+        if version >= 4 {
+            for enabled in &mut self.apu.timer_enabled_prev { *enabled = read_u8!() != 0; }
+            self.apu.sample_counter = read_f64!();
+            self.apu.dsp_sample_counter = read_f64!();
+            self.apu.prev_dsp_l = read_f32!();
+            self.apu.prev_dsp_r = read_f32!();
+            self.apu.ipl_state = match read_u8!() {
+                0 => super::apu::IplState::Ready,
+                1 => super::apu::IplState::WaitData,
+                2 => super::apu::IplState::Transferring,
+                3 => super::apu::IplState::Done,
+                _ => return false,
+            };
+            self.apu.ipl_addr = read_u16!();
+            self.apu.ipl_counter = read_u8!();
+            self.apu.ipl_entry = read_u16!();
+        }
 
         // DMA
         self.dma.dma_enable = read_u8!();
@@ -2527,6 +3645,13 @@ impl SnesEmulator {
             pc_bytes.push_str(&format!("{:02X} ", b));
         }
 
+        let mut sa1_pc_bytes = String::new();
+        for i in 0..8u16 {
+            let addr = self.sa1.cpu.pc.wrapping_add(i);
+            let byte = self.cart.read_sa1_rom(self.sa1.cpu.pb, addr, &self.sa1.bmaps);
+            sa1_pc_bytes.push_str(&format!("{:02X} ", byte));
+        }
+
         // Stack dump: 8 bytes above SP (the most recent pushes)
         let mut stack_bytes = String::new();
         for i in 1..=8u16 {
@@ -2563,6 +3688,7 @@ impl SnesEmulator {
              APU: PC={:04X} A={:02X} X={:02X} Y={:02X} SP={:02X} PSW={:02X} ctrl={:02X}\n\
              APU Ports: from_cpu=[{:02X},{:02X},{:02X},{:02X}] from_spc=[{:02X},{:02X},{:02X},{:02X}]\n\
              APU cycles={} total_cycles={}\n\
+             SA1: scnt={:02X} pc={:04X} pb={:02X} p={:02X} cyc={} stopped={} waiting={} irq_en={:02X} irq_status={:02X} s_cpu={:02X} timer_ctl={:02X} h={:04X} v={:04X} stall={} bytes={} iram=[{:02X},{:02X},{:02X},{:02X}] dma={:02X}:{:06X}->{:06X} len={:04X} active={}\n\
              Frame={}\n\
              {}",
             self.cpu.pb, self.cpu.pc, self.cpu.a, self.cpu.x, self.cpu.y,
@@ -2600,11 +3726,209 @@ impl SnesEmulator {
             self.apu.ports_from_spc[0], self.apu.ports_from_spc[1],
             self.apu.ports_from_spc[2], self.apu.ports_from_spc[3],
             self.apu.cycles, self.apu.total_cycles,
+            self.sa1.scnt, self.sa1.cpu.pc, self.sa1.cpu.pb, self.sa1.cpu.p,
+            self.sa1.cpu.cycles, self.sa1.cpu.stopped, self.sa1.cpu.waiting,
+            self.sa1.sa1_interrupt_enable, self.sa1.sa1_interrupt_status,
+            self.sa1.sic, self.sa1.timer_control, self.sa1.h_counter, self.sa1.v_counter,
+            self.sa1.dma_stall_clocks,
+            sa1_pc_bytes.trim(), self.sa1.iram[0], self.sa1.iram[1],
+            self.sa1.iram[2], self.sa1.iram[3], self.sa1.dma_control,
+            self.sa1.dma_source, self.sa1.dma_destination, self.sa1.dma_length,
+            self.sa1.dma_active,
             self.frame_count,
             trap_info,
         );
 
         result
+    }
+
+    /// Return a stable machine-readable checkpoint for deterministic hardware tests.
+    pub fn debug_checkpoint(&self) -> String {
+        let map_mode = match self.cart.map_mode {
+            super::cartridge::MapMode::LoROM => 0,
+            super::cartridge::MapMode::HiROM => 1,
+            super::cartridge::MapMode::ExHiROM => 2,
+            super::cartridge::MapMode::SA1 => 3,
+        };
+        let enhancement = match self.cart.profile.enhancement {
+            super::cartridge::EnhancementChip::None => 0,
+            super::cartridge::EnhancementChip::Dsp1 => 1,
+            super::cartridge::EnhancementChip::Cx4 => 2,
+            super::cartridge::EnhancementChip::Sa1 => 3,
+            super::cartridge::EnhancementChip::Sdd1 => 4,
+            super::cartridge::EnhancementChip::SuperFx => 5,
+            super::cartridge::EnhancementChip::Spc7110 => 6,
+            super::cartridge::EnhancementChip::Unknown(_) => 255,
+        };
+        let brk_origin = self.brk_origin.unwrap_or((0, 0));
+        let bmaps = self.sa1.bmaps.iter().map(|value| value.to_string()).collect::<Vec<_>>().join(",");
+        let sdd1_map = self.cart.sdd1_map.iter().map(|value| value.to_string()).collect::<Vec<_>>().join(",");
+        let sdd1_addr = self.dma.sdd1_addr.iter().map(|value| value.to_string()).collect::<Vec<_>>().join(",");
+        let sdd1_size = self.dma.sdd1_size.iter().map(|value| value.to_string()).collect::<Vec<_>>().join(",");
+        let wram_digest = verification_digest(&self.wram);
+        let vram_digest = verification_digest(&self.ppu.vram);
+        let oam_digest = verification_digest(&self.ppu.oam);
+        let cgram_digest = verification_digest_words(&self.ppu.cgram);
+        let apu_ram_digest = verification_digest(&self.apu.ram);
+        let sa1_iram_digest = verification_digest(&self.sa1.iram);
+        let sa1_bwram_digest = verification_digest(&self.sa1.bwram);
+        let sram_digest = verification_digest(&self.cart.sram);
+        let mut dma_channels = String::from("[");
+        for (index, channel) in self.dma.channels.iter().enumerate() {
+            if index != 0 {
+                dma_channels.push(',');
+            }
+            write!(
+                &mut dma_channels,
+                "{{\"control\":{},\"bAddr\":{},\"aAddr\":{},\"aBank\":{},\"count\":{},\"hdmaBank\":{},\"hdmaAddr\":{},\"hdmaLineCounter\":{},\"indirectAddr\":{},\"hdmaDoTransfer\":{},\"hdmaCompleted\":{}}}",
+                channel.control,
+                channel.b_addr,
+                channel.a_addr,
+                channel.a_bank,
+                channel.count,
+                channel.hdma_bank,
+                channel.hdma_addr,
+                channel.hdma_line_counter,
+                channel.indirect_addr,
+                channel.hdma_do_transfer,
+                channel.hdma_completed,
+            ).unwrap();
+        }
+        dma_channels.push(']');
+
+        let mut checkpoint = String::from("{");
+        write!(
+            &mut checkpoint,
+            "\"schema\":2,\"core\":\"snes\",\"frame\":{},\"masterClock\":{},\
+             \"mapMode\":{},\"enhancement\":{},\"nativeCoreSupported\":{},\
+             \"cpu\":{{\"a\":{},\"x\":{},\"y\":{},\"sp\":{},\"dp\":{},\"db\":{},\"pb\":{},\"p\":{},\"pc\":{},\"emulation\":{},\"nmiPending\":{},\"irqPending\":{},\"waiting\":{},\"stopped\":{},\"cycles\":{}}},\
+             \"ppu\":{{\"scanline\":{},\"dot\":{},\"bgMode\":{},\"tm\":{},\"ts\":{},\"brightness\":{},\"forceBlank\":{},\"vblank\":{},\"nmiFlag\":{},\"nmiTriggered\":{},\"frameComplete\":{},\"framebufferBytes\":{}}},\
+             \"apu\":{{\"a\":{},\"x\":{},\"y\":{},\"sp\":{},\"pc\":{},\"psw\":{},\"control\":{},\"cycles\":{},\"totalCycles\":{},\"audioSamples\":{}}},\
+             \"interrupts\":{{\"nmitimen\":{},\"rdnmi\":{},\"timeup\":{},\"hvbjoy\":{},\"htime\":{},\"vtime\":{},\"irqPending\":{},\"nmiFiredThisVblank\":{}}},\
+             \"dma\":{{\"enable\":{},\"hdmaEnable\":{},\"stallClocks\":{},\"byteClockProgress\":{},\"pendingCount\":{},\"channels\":{}}},\
+             \"sdd1\":{{\"map\":[{}],\"hardEnable\":{},\"softEnable\":{},\"capturedAddress\":[{}],\"capturedSize\":[{}]}},\
+             \"sa1\":{{\"running\":{},\"scnt\":{},\"cie\":{},\"sic\":{},\"pc\":{},\"pb\":{},\"p\":{},\"cycles\":{},\"interruptEnable\":{},\"interruptStatus\":{},\"interruptLatch\":{},\"timerControl\":{},\"hTimer\":{},\"vTimer\":{},\"hCounter\":{},\"vCounter\":{},\"dmaControl\":{},\"dmaSource\":{},\"dmaDestination\":{},\"dmaLength\":{},\"dmaActive\":{},\"dmaStallClocks\":{},\"bmaps\":[{}],\"iramBytes\":{},\"bwramBytes\":{}}},\
+             \"buffers\":{{\"framebufferBytes\":{},\"audioSamples\":{}}},\
+             \"faults\":{{\"brk\":{},\"brkBank\":{},\"brkPc\":{},\"debugTrapFired\":{}}}",
+            self.frame_count,
+            self.master_clock,
+            map_mode,
+            enhancement,
+            self.cart.profile.enhancement.supported_by_native_core(),
+            self.cpu.a,
+            self.cpu.x,
+            self.cpu.y,
+            self.cpu.sp,
+            self.cpu.dp,
+            self.cpu.db,
+            self.cpu.pb,
+            self.cpu.p,
+            self.cpu.pc,
+            self.cpu.emulation,
+            self.cpu.nmi_pending,
+            self.cpu.irq_pending,
+            self.cpu.waiting,
+            self.cpu.stopped,
+            self.cpu.cycles,
+            self.ppu.scanline,
+            self.ppu.dot,
+            self.ppu.bg_mode,
+            self.ppu.tm,
+            self.ppu.ts,
+            self.ppu.brightness,
+            self.ppu.force_blank,
+            self.ppu.vblank_flag,
+            self.ppu.nmi_flag,
+            self.ppu.nmi_triggered,
+            self.ppu.frame_complete,
+            self.ppu.framebuffer.len(),
+            self.apu.a,
+            self.apu.x,
+            self.apu.y,
+            self.apu.sp,
+            self.apu.pc,
+            self.apu.psw,
+            self.apu.control,
+            self.apu.cycles,
+            self.apu.total_cycles,
+            self.apu.get_audio_buffer_len(),
+            self.nmitimen,
+            self.rdnmi,
+            self.timeup,
+            self.hvbjoy,
+            self.htime,
+            self.vtime,
+            self.irq_pending,
+            self.nmi_fired_this_vblank,
+            self.dma.dma_enable,
+            self.dma.hdma_enable,
+            self.dma_stall_clocks,
+            self.dma_byte_clock_progress,
+            self.pending_dmas.len(),
+            dma_channels,
+            sdd1_map,
+            self.cart.sdd1_hard_enable,
+            self.cart.sdd1_soft_enable,
+            sdd1_addr,
+            sdd1_size,
+            self.sa1.is_running(),
+            self.sa1.scnt,
+            self.sa1.cie,
+            self.sa1.sic,
+            self.sa1.cpu.pc,
+            self.sa1.cpu.pb,
+            self.sa1.cpu.p,
+            self.sa1.cpu.cycles,
+            self.sa1.sa1_interrupt_enable,
+            self.sa1.sa1_interrupt_status,
+            self.sa1.sa1_interrupt_latch,
+            self.sa1.timer_control,
+            self.sa1.h_timer,
+            self.sa1.v_timer,
+            self.sa1.h_counter,
+            self.sa1.v_counter,
+            self.sa1.dma_control,
+            self.sa1.dma_source,
+            self.sa1.dma_destination,
+            self.sa1.dma_length,
+            self.sa1.dma_active,
+            self.sa1.dma_stall_clocks,
+            bmaps,
+            self.sa1.iram.len(),
+            self.sa1.bwram.len(),
+            self.ppu.framebuffer.len(),
+            self.apu.get_audio_buffer_len(),
+            self.brk_origin.is_some(),
+            brk_origin.0,
+            brk_origin.1,
+            self.debug_trap_fired,
+        ).unwrap();
+        write!(
+            &mut checkpoint,
+            ",\"memoryDigests\":{{\"wram\":\"{:016X}\",\"vram\":\"{:016X}\",\"oam\":\"{:016X}\",\"cgram\":\"{:016X}\",\"apuRam\":\"{:016X}\",\"sa1Iram\":\"{:016X}\",\"sa1Bwram\":\"{:016X}\",\"sram\":\"{:016X}\"}}",
+            wram_digest,
+            vram_digest,
+            oam_digest,
+            cgram_digest,
+            apu_ram_digest,
+            sa1_iram_digest,
+            sa1_bwram_digest,
+            sram_digest,
+        ).unwrap();
+        write!(
+            &mut checkpoint,
+            ",\"sa1Trace\":{{\"sCpuFlags\":{},\"timerIrqLastState\":{},\"charDmaControl\":{},\"charDmaIndex\":{},\"charDmaActive\":{},\"dmaStallClocks\":{},\"cpuWaiting\":{},\"cpuStopped\":{}}}",
+            self.sa1.sic,
+            self.sa1.timer_irq_last_state,
+            self.sa1.char_dma_control,
+            self.sa1.char_dma_index,
+            self.sa1.char_dma_active,
+            self.sa1.dma_stall_clocks,
+            self.sa1.cpu.waiting,
+            self.sa1.cpu.stopped,
+        ).unwrap();
+        checkpoint.push('}');
+        checkpoint
     }
 
     /// Debug: 渲染後 dump 指定掃描線的 main/sub 層和優先級
@@ -2640,6 +3964,55 @@ impl SnesEmulator {
             self.ppu.cgram[0],
             self.frame_count,
         )
+    }
+
+    /// Debug: dump the active BG VRAM layout and representative bytes.
+    pub fn debug_ppu_vram(&self) -> String {
+        let mut out = format!(
+            "VRAM addr={:04X} inc={} mapping={} incmode={} mode={} SA1DMA={:02X} CHDTC={:02X} active={} index={}\n",
+            self.ppu.vram_addr,
+            self.ppu.vram_increment,
+            self.ppu.vram_mapping,
+            self.ppu.vram_incmode,
+            self.ppu.bg_mode,
+            self.sa1.dma_control,
+            self.sa1.char_dma_control,
+            self.sa1.char_dma_active,
+            self.sa1.char_dma_index,
+        );
+        for bg in 0..4 {
+            let tilemap = self.ppu.bg_tilemap_addr[bg] as usize;
+            let character = self.ppu.bg_chr_addr[bg] as usize;
+            let tilemap_end = (tilemap + 0x800).min(self.ppu.vram.len());
+            let character_end = (character + 0x800).min(self.ppu.vram.len());
+            let tilemap_nonzero = self.ppu.vram[tilemap..tilemap_end]
+                .iter()
+                .filter(|&&value| value != 0)
+                .count();
+            let character_nonzero = self.ppu.vram[character..character_end]
+                .iter()
+                .filter(|&&value| value != 0)
+                .count();
+            let entry = self.ppu.vram[tilemap] as u16
+                | ((self.ppu.vram[(tilemap + 1) & 0xFFFF] as u16) << 8);
+            let sample = (0..8)
+                .map(|offset| format!("{:02X}", self.ppu.vram[(character + offset) & 0xFFFF]))
+                .collect::<Vec<_>>()
+                .join("");
+            out.push_str(&format!(
+                "BG{} map={:04X}/{} chr={:04X}/{} entry={:04X} map_nz={} chr_nz={} chr0={}\n",
+                bg + 1,
+                tilemap,
+                self.ppu.bg_tilemap_size[bg],
+                character,
+                if self.ppu.bg_tile_size[bg] { 16 } else { 8 },
+                entry,
+                tilemap_nonzero,
+                character_nonzero,
+                sample,
+            ));
+        }
+        out
     }
 
     /// Debug: dump DSP voices state
@@ -2710,6 +4083,19 @@ impl SnesEmulator {
         let log = self.debug_trap_log.clone();
         self.debug_trap_log.clear();
         log
+    }
+
+    /// Enable or disable the bounded hardware verification event trace.
+    pub fn debug_set_verification_trace(&mut self, enabled: bool) {
+        self.verification_trace_enabled = enabled;
+        self.verification_trace.clear();
+    }
+
+    /// Return and clear the bounded hardware verification event trace.
+    pub fn debug_take_verification_trace(&mut self) -> String {
+        let trace = self.verification_trace.join("\n");
+        self.verification_trace.clear();
+        trace
     }
 
     /// Debug: dump per-scanline CGWSEL/CGADSUB values from last frame
@@ -2790,11 +4176,14 @@ impl SnesEmulator {
             // Only log interesting scanlines
             if scanline <= 3 || scanline == 224 || scanline == 225 || scanline == 261 {
                 lines.push(format!(
-                    "SL{:3}: HVBJOY={:02X} PC={:02X}:{:04X}->{:02X}:{:04X} NMI={} A={:04X}",
+                    "SL{:3}: HVBJOY={:02X} PC={:02X}:{:04X}->{:02X}:{:04X} NMI={} IRQ={} CPU_IRQ={} P={:02X} A={:04X}",
                     scanline, self.hvbjoy,
                     pb_before, pc_before,
                     self.cpu.pb, pc_after,
                     self.cpu.nmi_pending,
+                    self.irq_pending,
+                    self.cpu.irq_pending,
+                    self.cpu.p,
                     self.cpu.a,
                 ));
             }
@@ -3097,6 +4486,72 @@ impl SnesEmulator {
 mod tests {
     use super::*;
 
+    fn make_headered_rom(map_mode: u8, rom_type: u8) -> Vec<u8> {
+        let mut rom = vec![0; 0x10000];
+        let header = 0x7FC0;
+        rom[header..header + 15].copy_from_slice(b"LOADER TEST ROM");
+        rom[header + 0x15] = map_mode;
+        rom[header + 0x16] = rom_type;
+        rom[header + 0x17] = 0x0A;
+        rom[header + 0x18] = 0x05;
+        rom
+    }
+
+    fn make_sdd1_dma_rom() -> Vec<u8> {
+        let mut rom = make_headered_rom(0x32, 0x45);
+        rom.resize(0x400000, 0);
+        for window in 0..4 {
+            rom[window * 0x100000 + 0x8000] = 0xA0 + window as u8;
+        }
+        rom[0x309000..0x309008]
+            .copy_from_slice(&[0xD0, 0x2A, 0xAA, 0x55, 0x33, 0xCC, 0xF0, 0x0F]);
+        rom
+    }
+
+    fn make_loaded_sdd1_emulator() -> SnesEmulator {
+        let mut emulator = SnesEmulator::new();
+        assert!(emulator.cart.load(&make_sdd1_dma_rom()));
+        emulator.reset();
+        emulator
+    }
+
+    fn select_sdd1_dma_stream(emulator: &mut SnesEmulator) {
+        emulator.write(0x004804, 0x03);
+    }
+
+    fn program_dma(emulator: &mut SnesEmulator, control: u8, bank: u8, addr: u16, count: u16) {
+        emulator.write(0x004300, control);
+        emulator.write(0x004301, 0x80);
+        emulator.write(0x004302, addr as u8);
+        emulator.write(0x004303, (addr >> 8) as u8);
+        emulator.write(0x004304, bank);
+        emulator.write(0x004305, count as u8);
+        emulator.write(0x004306, (count >> 8) as u8);
+    }
+
+    fn make_synthetic_execution_rom() -> Vec<u8> {
+        let mut rom = make_headered_rom(0x20, 0x00);
+        // $8000: enable NMI, store a marker in WRAM, then wait in a loop.
+        rom[0x0000..0x000B].copy_from_slice(&[
+            0xA9, 0x80,             // LDA #$80
+            0x8D, 0x00, 0x42,       // STA $4200 (NMITIMEN)
+            0xA9, 0x42,             // LDA #$42
+            0x85, 0x00,             // STA $00
+            0x80, 0xF5,             // BRA $8000
+        ]);
+        // $8010: VBlank NMI handler writes a second marker and returns.
+        rom[0x0010..0x0015].copy_from_slice(&[
+            0xA9, 0xA5,             // LDA #$A5
+            0x85, 0x01,             // STA $01
+            0x40,                   // RTI
+        ]);
+        // LoROM vectors: reset=$8000, emulation-mode NMI=$8010.
+        rom[0x7FFA..0x7FFC].copy_from_slice(&0x8010u16.to_le_bytes());
+        rom[0x7FFC..0x7FFE].copy_from_slice(&0x8000u16.to_le_bytes());
+        rom[0x7FFE..0x8000].copy_from_slice(&0x8000u16.to_le_bytes());
+        rom
+    }
+
     #[test]
     fn decimal_adc_16_bit_sets_carry_after_9999() {
         let mut emulator = SnesEmulator::new();
@@ -3114,6 +4569,329 @@ mod tests {
     }
 
     #[test]
+    fn synthetic_rom_executes_reset_code_and_vblank_nmi() {
+        let mut emulator = SnesEmulator::new();
+        assert!(emulator.load_rom(&make_synthetic_execution_rom()));
+        assert_eq!(emulator.cpu.pc, 0x8000);
+        emulator.debug_set_verification_trace(true);
+
+        emulator.frame();
+
+        assert_eq!(emulator.wram[0], 0x42);
+        assert_eq!(emulator.wram[1], 0xA5);
+        assert_eq!(emulator.frame_count, 1);
+        assert!(emulator.master_clock > 0);
+        assert!(emulator.nmi_fired_this_vblank);
+
+        let trace = emulator.debug_take_verification_trace();
+        assert!(trace.contains("bus:write addr=00:4200 value=80"));
+        assert!(trace.contains("owner=s_cpu region=shared"));
+        assert!(trace.contains("interrupt:nmi"));
+        assert!(trace.contains("bus:write addr=00:0001 value=A5"));
+    }
+
+    #[test]
+    fn one_frame_advances_exactly_one_snes_frame_clock() {
+        let mut emulator = SnesEmulator::new();
+        assert!(emulator.load_rom(&make_synthetic_execution_rom()));
+
+        emulator.frame();
+
+        assert_eq!(emulator.frame_count, 1);
+        assert_eq!(emulator.master_clock, CLOCKS_PER_FRAME as u64);
+        assert_eq!(emulator.ppu.scanline, (SCANLINES - 1) as u16);
+        assert_eq!(emulator.ppu.dot, (DOTS_PER_SCANLINE - 1) as u16);
+    }
+
+    #[test]
+    fn dma_mode_one_copies_a_bus_bytes_to_vram_in_pairs() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::LoROM;
+        emulator.cart.rom = vec![0; 0x10000];
+        emulator.cart.rom[0..4].copy_from_slice(&[0x11, 0x22, 0x33, 0x44]);
+        emulator.write(0x002115, 0x80);
+        emulator.write(0x002116, 0x00);
+        emulator.write(0x002117, 0x00);
+
+        let channel = &mut emulator.dma.channels[0];
+        channel.control = 0x01;
+        channel.b_addr = 0x18;
+        channel.a_addr = 0x8000;
+        channel.a_bank = 0xC0;
+        channel.count = 4;
+        emulator.dma.dma_enable = 1;
+
+        emulator.run_dma();
+        emulator.run_cpu_for(32);
+
+        assert_eq!(&emulator.ppu.vram[0..4], &[0x11, 0x22, 0x33, 0x44]);
+        assert_eq!(emulator.dma.channels[0].a_addr, 0x8004);
+        assert_eq!(emulator.dma.channels[0].count, 0);
+        assert_eq!(emulator.dma_stall_clocks, 0);
+    }
+
+    #[test]
+    fn sdd1_bus_mapping_and_dma_contract() {
+        let mut emulator = make_loaded_sdd1_emulator();
+        assert_eq!(emulator.cart.profile.enhancement, super::super::cartridge::EnhancementChip::Sdd1);
+
+        assert_eq!(emulator.read(0xC08000), 0xA0);
+        assert_eq!(emulator.read(0xD08000), 0xA1);
+        assert_eq!(emulator.read(0xE08000), 0xA2);
+        assert_eq!(emulator.read(0xF08000), 0xA3);
+        emulator.cart.sram[0] = 0x5A;
+        emulator.cart.rom[0x108001] = 0xB0;
+        emulator.cart.rom[0x1DFFFF] = 0xBD;
+        assert_eq!(emulator.read(0x700000), 0x5A);
+        assert_eq!(emulator.read(0x708001), 0xB0);
+        assert_eq!(emulator.read(0x7DFFFF), 0xBD);
+
+        emulator.write(0x004804, 0x83);
+        emulator.write(0x004805, 0x82);
+        emulator.write(0x004806, 0x81);
+        emulator.write(0x004807, 0x80);
+        assert_eq!(emulator.read(0x004804), 0x03);
+        assert_eq!(emulator.read(0x004805), 0x02);
+        assert_eq!(emulator.read(0x004806), 0x01);
+        assert_eq!(emulator.read(0x004807), 0x00);
+        assert_eq!(emulator.read(0xC08000), 0xA3);
+        assert_eq!(emulator.read(0xD08000), 0xA2);
+        assert_eq!(emulator.read(0xE08000), 0xA1);
+        assert_eq!(emulator.read(0xF08000), 0xA0);
+
+        emulator.write(0x002181, 0x00);
+        emulator.write(0x002182, 0x00);
+        emulator.write(0x002183, 0x00);
+        program_dma(&mut emulator, 0x08, 0xC0, 0x9000, 0x0060);
+        emulator.write(0x004800, 0x00);
+        emulator.write(0x004801, 0x01);
+        emulator.write(0x00420B, 0x01);
+        emulator.run_cpu_for(96 * 8);
+
+        assert_eq!(
+            &emulator.wram[..96],
+            &[
+                0, 138, 8, 178, 24, 164, 201, 34, 160, 0, 32, 0, 0, 2, 0, 0,
+                8, 2, 136, 2, 168, 0, 168, 2, 160, 0, 32, 0, 0, 2, 0, 0,
+                8, 2, 136, 2, 168, 0, 168, 2, 160, 0, 32, 0, 0, 2, 0, 0,
+                8, 2, 136, 2, 168, 0, 168, 2, 160, 0, 32, 0, 0, 2, 0, 0,
+                8, 2, 136, 2, 168, 0, 168, 2, 160, 0, 32, 0, 0, 2, 0, 0,
+                8, 2, 136, 2, 168, 0, 168, 2, 160, 0, 32, 0, 0, 2, 0, 0,
+            ]
+        );
+        assert_eq!(emulator.dma.channels[0].a_addr, 0x9000);
+        assert_eq!(emulator.dma.channels[0].count, 0);
+        assert_eq!(emulator.cart.sdd1_soft_enable, 0);
+        assert_eq!(emulator.dma_stall_clocks, 0);
+    }
+
+    #[test]
+    fn sdd1_dma_requires_fixed_a_to_b_and_soft_enable() {
+        let mut disabled = make_loaded_sdd1_emulator();
+        select_sdd1_dma_stream(&mut disabled);
+        disabled.write(0x002181, 0x00);
+        disabled.write(0x002182, 0x00);
+        disabled.write(0x002183, 0x00);
+        program_dma(&mut disabled, 0x08, 0xC0, 0x9000, 4);
+        disabled.write(0x004801, 0x00);
+        disabled.write(0x00420B, 0x01);
+        disabled.run_cpu_for(32);
+        assert_eq!(&disabled.wram[..4], &[0xD0, 0xD0, 0xD0, 0xD0]);
+        assert_eq!(disabled.cart.sdd1_soft_enable, 0);
+
+        let mut non_fixed = make_loaded_sdd1_emulator();
+        select_sdd1_dma_stream(&mut non_fixed);
+        non_fixed.write(0x002181, 0x00);
+        non_fixed.write(0x002182, 0x00);
+        non_fixed.write(0x002183, 0x00);
+        program_dma(&mut non_fixed, 0x00, 0xC0, 0x9000, 8);
+        non_fixed.write(0x004801, 0x01);
+        non_fixed.write(0x00420B, 0x01);
+        non_fixed.run_cpu_for(64);
+        assert_eq!(&non_fixed.wram[..8], &[0xD0, 0x2A, 0xAA, 0x55, 0x33, 0xCC, 0xF0, 0x0F]);
+        assert_eq!(non_fixed.dma.channels[0].a_addr, 0x9008);
+        assert_eq!(non_fixed.cart.sdd1_soft_enable, 0x00);
+
+        let mut reverse = make_loaded_sdd1_emulator();
+        select_sdd1_dma_stream(&mut reverse);
+        reverse.wram[0] = 0x5A;
+        reverse.write(0x002181, 0x00);
+        reverse.write(0x002182, 0x00);
+        reverse.write(0x002183, 0x00);
+        program_dma(&mut reverse, 0x80, 0x7E, 0x2000, 1);
+        reverse.write(0x004801, 0x01);
+        reverse.write(0x00420B, 0x01);
+        reverse.run_cpu_for(8);
+        assert_eq!(reverse.wram[0x2000], 0x5A);
+        assert_eq!(reverse.cart.sdd1_soft_enable, 0x00);
+    }
+
+    #[test]
+    fn sdd1_dma_uses_live_registers_not_diagnostic_capture() {
+        let mut emulator = make_loaded_sdd1_emulator();
+        select_sdd1_dma_stream(&mut emulator);
+        program_dma(&mut emulator, 0x08, 0xC0, 0x9000, 8);
+        emulator.dma.sdd1_addr[0] = 0;
+        emulator.dma.sdd1_size[0] = 0;
+        emulator.write(0x004801, 0x01);
+        emulator.write(0x00420B, 0x01);
+
+        assert_eq!(emulator.pending_dmas.front().unwrap().sdd1_buffer.as_ref().unwrap().len(), 8);
+        assert_eq!(emulator.cart.sdd1_soft_enable, 0);
+        emulator.run_cpu_for(64);
+        assert_eq!(&emulator.wram[..8], &[0, 138, 8, 178, 24, 164, 201, 34]);
+    }
+
+    #[test]
+    fn sdd1_dma_source_window_crosses_a_64k_bank_boundary() {
+        let mut emulator = make_loaded_sdd1_emulator();
+        emulator.cart.rom[0xFFFC..0x10000]
+            .copy_from_slice(&[0xD0, 0x2A, 0xAA, 0x55]);
+        emulator.cart.rom[0x10000..0x10004]
+            .copy_from_slice(&[0x33, 0xCC, 0xF0, 0x0F]);
+        assert_eq!(emulator.cart.read_rom(0xC0, 0xFFFC), 0xD0);
+        assert_eq!(emulator.cart.read_rom(0xC1, 0x0000), 0x33);
+        emulator.write(0x002181, 0x00);
+        emulator.write(0x002182, 0x00);
+        emulator.write(0x002183, 0x00);
+        program_dma(&mut emulator, 0x08, 0xC0, 0xFFFC, 8);
+        emulator.write(0x004801, 0x01);
+        emulator.write(0x00420B, 0x01);
+        emulator.run_cpu_for(64);
+
+        assert_eq!(&emulator.wram[..8], &[0, 138, 8, 178, 24, 164, 201, 34]);
+        assert_eq!(emulator.dma.channels[0].a_addr, 0xFFFC);
+        assert_eq!(emulator.cart.sdd1_soft_enable, 0);
+    }
+
+    #[test]
+    fn sdd1_dma_source_window_follows_dynamic_mapping_at_megabyte_boundary() {
+        let mut emulator = make_loaded_sdd1_emulator();
+        emulator.write(0x004804, 0x03);
+        emulator.write(0x004805, 0x02);
+        emulator.cart.rom[0x3FFFFC..0x400000]
+            .copy_from_slice(&[0xD0, 0x2A, 0xAA, 0x55]);
+        emulator.cart.rom[0x200000..0x200004]
+            .copy_from_slice(&[0x33, 0xCC, 0xF0, 0x0F]);
+        assert_eq!(emulator.cart.read_rom(0xCF, 0xFFFC), 0xD0);
+        assert_eq!(emulator.cart.read_rom(0xD0, 0x0000), 0x33);
+        emulator.write(0x002181, 0x00);
+        emulator.write(0x002182, 0x00);
+        emulator.write(0x002183, 0x00);
+        program_dma(&mut emulator, 0x08, 0xCF, 0xFFFC, 8);
+        emulator.write(0x004801, 0x01);
+        emulator.write(0x00420B, 0x01);
+        emulator.run_cpu_for(64);
+
+        assert_eq!(&emulator.wram[..8], &[0, 138, 8, 178, 24, 164, 201, 34]);
+        assert_eq!(emulator.cart.sdd1_soft_enable, 0);
+    }
+
+    #[test]
+    fn sdd1_dma_expands_zero_count_to_full_transfer_length() {
+        let mut emulator = make_loaded_sdd1_emulator();
+        select_sdd1_dma_stream(&mut emulator);
+        program_dma(&mut emulator, 0x08, 0xC0, 0x9000, 0);
+        emulator.write(0x004801, 0x01);
+        emulator.write(0x00420B, 0x01);
+
+        assert_eq!(emulator.pending_dmas.len(), 1);
+        assert_eq!(emulator.pending_dmas.front().unwrap().remaining, 0x10000);
+        assert_eq!(emulator.dma_stall_clocks, 0x10000 * 8);
+    }
+
+    #[test]
+    fn hdma_direct_table_writes_ppu_register_on_next_scanline() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::LoROM;
+        emulator.cart.rom = vec![0; 0x10000];
+        emulator.cart.rom[0..3].copy_from_slice(&[0x01, 0x05, 0x00]);
+
+        let channel = &mut emulator.dma.channels[0];
+        channel.control = 0x00;
+        channel.b_addr = 0x00;
+        channel.a_addr = 0x8000;
+        channel.a_bank = 0xC0;
+        emulator.dma.hdma_enable = 1;
+        emulator.dma.hdma_init();
+        emulator.hdma_init_read();
+
+        assert_eq!(emulator.dma.channels[0].hdma_line_counter, 0x01);
+        assert!(emulator.dma.channels[0].hdma_do_transfer);
+        emulator.run_hdma();
+
+        assert_eq!(emulator.ppu.brightness, 0x05);
+        assert_eq!(emulator.dma.channels[0].hdma_line_counter, 0);
+        assert!(emulator.dma.channels[0].hdma_completed);
+    }
+
+    #[test]
+    fn irq_respects_mask_then_vectors_and_rti_restores_cpu_state() {
+        let mut emulator = SnesEmulator::new();
+        assert!(emulator.load_rom(&make_synthetic_execution_rom()));
+        emulator.cpu.pc = 0x8123;
+        emulator.cpu.set_flag(flags::IRQ_DIS, true);
+        emulator.cpu.irq_pending = true;
+        emulator.cpu.cycles = 1;
+        emulator.run_cpu_for(1);
+        assert_eq!(emulator.cpu.pc, 0x8123);
+        assert!(emulator.cpu.irq_pending);
+
+        emulator.cpu.set_flag(flags::IRQ_DIS, false);
+        emulator.run_cpu_for(8);
+        assert_eq!(emulator.cpu.pc, 0x8000);
+        assert!(emulator.cpu.flag_i());
+        assert!(!emulator.cpu.irq_pending);
+
+        emulator.execute_instruction(0x40);
+        assert_eq!(emulator.cpu.pc, 0x8123);
+        assert!(!emulator.cpu.flag_i());
+    }
+
+    #[test]
+    fn checkpoint_is_deterministic_and_covers_hardware_domains() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sdd1;
+        emulator.ppu.bg_mode = 7;
+        emulator.ppu.force_blank = false;
+        emulator.apu.total_cycles = 1234;
+        emulator.nmitimen = 0x90;
+        emulator.irq_pending = true;
+        emulator.dma.dma_enable = 0x05;
+        emulator.dma.hdma_enable = 0xA0;
+        emulator.dma.channels[0].control = 0x18;
+        emulator.cart.sdd1_map = [0x00, 0x01, 0x02, 0x03];
+        emulator.cart.sdd1_hard_enable = 0x05;
+        emulator.cart.sdd1_soft_enable = 0x04;
+        emulator.sa1.scnt = 0x20;
+        emulator.sa1.bmaps = [3, 2, 1, 0];
+
+        let first = emulator.debug_checkpoint();
+        let second = emulator.debug_checkpoint();
+        assert_eq!(first, second);
+        for field in [
+            "\"cpu\":",
+            "\"ppu\":",
+            "\"apu\":",
+            "\"interrupts\":",
+            "\"dma\":",
+            "\"sdd1\":",
+            "\"sa1\":",
+            "\"memoryDigests\":",
+            "\"buffers\":",
+            "\"faults\":",
+        ] {
+            assert!(first.contains(field), "checkpoint missing {field}");
+        }
+        assert!(first.contains("\"bgMode\":7"));
+        assert!(first.contains("\"totalCycles\":1234"));
+        assert!(first.contains("\"enable\":5"));
+        assert!(first.contains("\"hardEnable\":5"));
+        assert!(first.contains("\"bmaps\":[3,2,1,0]"));
+    }
+
+    #[test]
     fn memory_speed_distinguishes_slow_fast_rom_and_joypad() {
         let mut emulator = SnesEmulator::new();
         emulator.cart.fast_rom = true;
@@ -3121,6 +4899,804 @@ mod tests {
         assert_eq!(emulator.get_memory_speed(0x00, 0x8000), CPU_SLOW_DIV);
         assert_eq!(emulator.get_memory_speed(0x80, 0x8000), CPU_FAST_DIV);
         assert_eq!(emulator.get_memory_speed(0x00, 0x4016), 12);
+    }
+
+    #[test]
+    fn native_loader_rejects_unimplemented_enhancement_chips() {
+        for (map_mode, rom_type) in [(0x20, 0x13), (0x20, 0xF5)] {
+            let mut emulator = SnesEmulator::new();
+            assert!(!emulator.load_rom(&make_headered_rom(map_mode, rom_type)));
+            assert!(!emulator.cart.loaded);
+        }
+    }
+
+    #[test]
+    fn native_loader_accepts_sa1_cartridges_for_phase_two_validation() {
+        let mut emulator = SnesEmulator::new();
+        assert!(emulator.load_rom(&make_headered_rom(0x23, 0x34)));
+        assert!(emulator.cart.loaded);
+        assert_eq!(emulator.cart.profile.map_mode, super::super::cartridge::MapMode::SA1);
+        assert_eq!(emulator.cart.profile.enhancement, super::super::cartridge::EnhancementChip::Sa1);
+    }
+
+    #[test]
+    fn native_loader_accepts_sdd1_cartridges_after_native_core_completion() {
+        let mut emulator = SnesEmulator::new();
+        assert!(emulator.load_rom(&make_headered_rom(0x32, 0x45)));
+        assert!(emulator.cart.loaded);
+        assert_eq!(emulator.cart.profile.enhancement, super::super::cartridge::EnhancementChip::Sdd1);
+    }
+
+    #[test]
+    fn normal_dma_stalls_cpu_after_writing_wram_port() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::LoROM;
+        emulator.cart.rom = vec![0; 0x10000];
+        emulator.cart.rom[0] = 0xA5;
+        emulator.wram_addr = 0;
+
+        let channel = &mut emulator.dma.channels[0];
+        channel.control = 0x00;
+        channel.b_addr = 0x80;
+        channel.a_addr = 0x8000;
+        channel.a_bank = 0xC0;
+        channel.count = 1;
+        emulator.dma.dma_enable = 1;
+
+        emulator.run_dma();
+
+        assert_eq!(emulator.dma_stall_clocks, 8);
+
+        emulator.run_cpu_for(8);
+
+        assert_eq!(emulator.wram[0], 0xA5);
+        assert_eq!(emulator.dma_stall_clocks, 0);
+        assert_eq!(emulator.cpu_cycles_this_line, 8);
+    }
+
+    #[test]
+    fn ppu_counter_latch_tracks_cpu_master_clock_position() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cpu_cycles_this_line = 40;
+        emulator.sync_ppu_dot();
+
+        emulator.read(0x002137);
+
+        assert_eq!(emulator.ppu.ophct, 10);
+        assert_eq!(emulator.ppu.opvct, 0);
+    }
+
+    #[test]
+    fn sa1_bus_exposes_register_iram_and_bwram_windows() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.cart.rom = vec![0; 0x10000];
+        emulator.cart.rom[0] = 0x5A;
+        emulator.debug_set_verification_trace(true);
+
+        emulator.write(0x002200, 0x81);
+        emulator.write(0x003000, 0x12);
+        emulator.write(0x006000, 0x34);
+
+        assert_eq!(emulator.read(0x002200), 0x81);
+        assert_eq!(emulator.read(0x003000), 0x12);
+        assert_eq!(emulator.read(0x006000), 0x34);
+        assert_eq!(emulator.read(0x008000), 0x5A);
+
+        let trace = emulator.debug_take_verification_trace();
+        assert!(trace.contains("bus:write addr=00:3000 value=12 owner=s_cpu region=iram"));
+    }
+
+    #[test]
+    fn sa1_bmap_selects_linear_rom_for_bus_and_dma() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.cart.rom = vec![0; 0x400000];
+        emulator.cart.rom[0x308000] = 0xA5;
+        emulator.cart.rom[0x308001] = 0x5A;
+
+        emulator.write(0x002220, 0x03);
+        assert_eq!(emulator.read(0xC08000), 0xA5);
+
+        emulator.sa1.write_register(0x2230, 0x80);
+        emulator.sa1.write_register(0x2232, 0x00);
+        emulator.sa1.write_register(0x2233, 0x80);
+        emulator.sa1.write_register(0x2234, 0xC0);
+        emulator.sa1.write_register(0x2235, 0x00);
+        emulator.sa1.write_register(0x2238, 0x02);
+        emulator.sa1.write_register(0x2239, 0x00);
+        emulator.write(0x002236, 0x00);
+
+        assert_eq!(&emulator.sa1.iram[0..2], &[0xA5, 0x5A]);
+    }
+
+    #[test]
+    fn sa1_dma_source_destination_matrix_matches_reference_bytes() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.cart.rom = vec![0; 0x400000];
+        let reference = [0xA5, 0x5A, 0x3C, 0xC3];
+        emulator.cart.rom[0x308000..0x308004].copy_from_slice(&reference);
+        emulator.sa1.bmaps[0] = 3;
+        emulator.sa1.bwram[0x1300..0x1304].copy_from_slice(&reference);
+
+        emulator.sa1.write_register(0x2230, 0x80);
+        emulator.sa1.write_register(0x2232, 0x00);
+        emulator.sa1.write_register(0x2233, 0x80);
+        emulator.sa1.write_register(0x2234, 0xC0);
+        emulator.sa1.write_register(0x2235, 0x20);
+        emulator.sa1.write_register(0x2238, 0x04);
+        emulator.write(0x002236, 0x00);
+        assert_eq!(&emulator.sa1.iram[0x20..0x24], &reference);
+
+        emulator.sa1.write_register(0x2230, 0x86);
+        emulator.sa1.write_register(0x2232, 0x20);
+        emulator.sa1.write_register(0x2233, 0x00);
+        emulator.sa1.write_register(0x2234, 0x00);
+        emulator.sa1.write_register(0x2235, 0x00);
+        emulator.write(0x002236, 0x12);
+        emulator.write(0x002237, 0x00);
+        assert_eq!(&emulator.sa1.bwram[0x1200..0x1204], &reference);
+
+        emulator.sa1.write_register(0x2230, 0x81);
+        emulator.sa1.write_register(0x2232, 0x00);
+        emulator.sa1.write_register(0x2233, 0x13);
+        emulator.sa1.write_register(0x2234, 0x00);
+        emulator.sa1.write_register(0x2235, 0x40);
+        emulator.sa1.write_register(0x2238, 0x04);
+        emulator.write(0x002236, 0x00);
+        assert_eq!(&emulator.sa1.iram[0x40..0x44], &reference);
+    }
+
+    #[test]
+    fn sa1_character_conversion_dma_runs_through_bus_registers() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+
+        emulator.write(0x002230, 0xB0);
+        emulator.write(0x002201, 0x20);
+        emulator.write(0x002236, 0x00);
+        emulator.write(0x002230, 0xA0);
+        emulator.write(0x002231, 0x16);
+        for _ in 0..4 {
+            for offset in 0..16 {
+                emulator.write(0x002240 + offset, 0x01);
+            }
+        }
+
+        assert_eq!(emulator.sa1.iram[0], 0xFF);
+        assert_eq!(emulator.sa1.iram[1], 0x00);
+        assert_eq!(emulator.sa1.char_dma_index, 4);
+        assert_eq!(emulator.read(0x002300) & 0x20, 0x20);
+        assert!(emulator.cpu.irq_pending);
+        emulator.write(0x002202, 0x20);
+        assert_eq!(emulator.read(0x002300) & 0x20, 0);
+        assert!(!emulator.cpu.irq_pending);
+        emulator.write(0x002231, 0x96);
+        assert!(!emulator.sa1.char_dma_active);
+        assert_eq!(emulator.read(0x002231), 0x96);
+    }
+
+    #[test]
+    fn sa1_state_round_trips_through_save_state_v14() {
+        let mut source = SnesEmulator::new();
+        source.sa1.write_register(0x2200, 0x81);
+        source.sa1.write_register(0x2220, 0x1F);
+        source.sa1.write_register(0x2224, 0x1E);
+        source.sa1.write_register(0x2203, 0x56);
+        source.sa1.write_register(0x2204, 0x34);
+        source.sa1.write_register(0x2205, 0x78);
+        source.sa1.write_register(0x2206, 0x12);
+        source.sa1.write_register(0x2207, 0xBC);
+        source.sa1.write_register(0x2208, 0x9A);
+        source.sa1.sa1_interrupt_enable = 0x60;
+        source.sa1.sa1_interrupt_status = 0x70;
+        source.sa1.sa1_interrupt_latch = 0x10;
+        source.sa1.timer_control = 0x83;
+        source.sa1.h_timer = 0x0123;
+        source.sa1.v_timer = 0x0045;
+        source.sa1.h_counter = 678;
+        source.sa1.v_counter = 89;
+        source.sa1.timer_irq_last_state = true;
+        source.sa1.dma_control = 0x84;
+        source.sa1.dma_source = 0x123456;
+        source.sa1.dma_destination = 0x234567;
+        source.sa1.dma_length = 0x3456;
+        source.sa1.dma_active = true;
+        source.sa1.dma_stall_clocks = 0x789A;
+        source.sa1.char_dma_control = 0x82;
+        source.sa1.char_dma_buffer[0] = 0x5A;
+        source.sa1.char_dma_buffer[127] = 0xA5;
+        source.sa1.char_dma_index = 5;
+        source.sa1.char_dma_active = true;
+        source.sa1.write_iram(0x3000, 0x12);
+        source.sa1.write_bwram(0x6000, 0x34);
+        source.sa1.cpu.a = 0x1234;
+        source.sa1.cpu.pc = 0x3456;
+        source.sa1.cpu.cycles = 18;
+
+        let state = source.export_save_state();
+        assert_eq!(SnesEmulator::decode_base64(&state).unwrap()[4], 14);
+        let mut restored = SnesEmulator::new();
+        assert!(restored.import_save_state(&state));
+        assert_eq!(restored.sa1.read_register(0x2200), 0x81);
+        assert_eq!(restored.sa1.read_register(0x2220), 0x1F);
+        assert_eq!(restored.sa1.read_register(0x2224), 0x1E);
+        assert_eq!(restored.sa1.reset_vector(), 0x3456);
+        assert_eq!(restored.sa1.nmi_vector, 0x1278);
+        assert_eq!(restored.sa1.irq_vector, 0x9ABC);
+        assert_eq!(restored.sa1.sa1_interrupt_enable, 0x60);
+        assert_eq!(restored.sa1.sa1_interrupt_status, 0x70);
+        assert_eq!(restored.sa1.sa1_interrupt_latch, 0x10);
+        assert_eq!(restored.sa1.timer_control, 0x83);
+        assert_eq!(restored.sa1.h_timer, 0x0123);
+        assert_eq!(restored.sa1.v_timer, 0x0045);
+        assert_eq!(restored.sa1.h_counter, 678);
+        assert_eq!(restored.sa1.v_counter, 89);
+        assert!(restored.sa1.timer_irq_last_state);
+        assert_eq!(restored.sa1.dma_control, 0x84);
+        assert_eq!(restored.sa1.dma_source, 0x123456);
+        assert_eq!(restored.sa1.dma_destination, 0x234567);
+        assert_eq!(restored.sa1.dma_length, 0x3456);
+        assert!(restored.sa1.dma_active);
+        assert_eq!(restored.sa1.dma_stall_clocks, 0x789A);
+        assert_eq!(restored.sa1.char_dma_control, 0x82);
+        assert_eq!(restored.sa1.char_dma_buffer[0], 0x5A);
+        assert_eq!(restored.sa1.char_dma_buffer[127], 0xA5);
+        assert_eq!(restored.sa1.char_dma_index, 5);
+        assert!(restored.sa1.char_dma_active);
+        assert_eq!(restored.sa1.read_iram(0x3000), 0x12);
+        assert_eq!(restored.sa1.read_bwram(0x6000), 0x34);
+        assert_eq!(restored.sa1.cpu.a, 0x1234);
+        assert_eq!(restored.sa1.cpu.pc, 0x3456);
+        assert_eq!(restored.sa1.cpu.cycles, 18);
+    }
+
+    #[test]
+    fn sdd1_state_round_trips_enable_and_dma_capture() {
+        let mut source = SnesEmulator::new();
+        source.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sdd1;
+        source.cart.sdd1_map = [0x00, 0x01, 0x04, 0x02];
+        source.cart.sdd1_hard_enable = 0x05;
+        source.cart.sdd1_soft_enable = 0x04;
+        source.dma.sdd1_addr[2] = 0xDEADBE;
+        source.dma.sdd1_size[2] = 0x1234;
+
+        let state = source.export_save_state();
+        let mut restored = SnesEmulator::new();
+        assert!(restored.import_save_state(&state));
+        assert_eq!(restored.cart.sdd1_map, [0x00, 0x01, 0x04, 0x02]);
+        assert_eq!(restored.cart.sdd1_hard_enable, 0x05);
+        assert_eq!(restored.cart.sdd1_soft_enable, 0x04);
+        assert_eq!(restored.dma.sdd1_addr[2], 0xDEADBE);
+        assert_eq!(restored.dma.sdd1_size[2], 0x1234);
+    }
+
+    #[test]
+    fn sdd1_loaded_state_restores_mapping_and_mid_transfer_buffer() {
+        let mut source = make_loaded_sdd1_emulator();
+        select_sdd1_dma_stream(&mut source);
+        program_dma(&mut source, 0x08, 0xC0, 0x9000, 8);
+        source.write(0x004801, 0x01);
+        source.write(0x00420B, 0x01);
+        source.run_cpu_for(24);
+
+        let state = source.export_save_state();
+        let mut restored = make_loaded_sdd1_emulator();
+        assert!(restored.import_save_state(&state));
+        assert_eq!(restored.cart.sdd1_map, [3, 1, 2, 3]);
+        assert_eq!(restored.read(0xC08000), 0xA3);
+        assert_eq!(restored.pending_dmas.len(), 1);
+        assert_eq!(restored.pending_dmas.front().unwrap().remaining, 5);
+        assert_eq!(restored.pending_dmas.front().unwrap().transferred, 3);
+        assert_eq!(restored.pending_dmas.front().unwrap().sdd1_buffer.as_ref().unwrap().len(), 8);
+
+        source.run_cpu_for(40);
+        restored.run_cpu_for(40);
+        assert_eq!(&source.wram[..8], &[0, 138, 8, 178, 24, 164, 201, 34]);
+        assert_eq!(restored.wram, source.wram);
+        assert_eq!(restored.debug_checkpoint(), source.debug_checkpoint());
+        assert_eq!(restored.cart.sdd1_soft_enable, 0);
+        assert_eq!(restored.pending_dmas.len(), 0);
+    }
+
+    #[test]
+    fn sa1_cpu_reuses_65816_instruction_engine() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.cpu.pb = 0;
+        emulator.sa1.iram[0] = 0xA9; // LDA #$42
+        emulator.sa1.iram[1] = 0x42;
+        emulator.sa1.iram[2] = 0x85; // STA $10
+        emulator.sa1.iram[3] = 0x10;
+
+        let main_pc = emulator.cpu.pc;
+        assert!(emulator.step_sa1_cpu() > 0);
+        assert_eq!(emulator.sa1.cpu.a, 0x42);
+        assert_eq!(emulator.sa1.cpu.pc, 0x3002);
+        assert_eq!(emulator.cpu.pc, main_pc);
+
+        assert_eq!(emulator.run_sa1_for(4), 4);
+        assert!(emulator.step_sa1_cpu() > 0);
+        assert_eq!(emulator.sa1.iram[0x10], 0x42);
+        assert_eq!(emulator.sa1.cpu.pc, 0x3004);
+    }
+
+    #[test]
+    fn sa1_cpu_arbitration_routes_private_bwram_window() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.cpu.pb = 0;
+        emulator.sa1.cpu.cycles = 0;
+        emulator.sa1.iram[0..6].copy_from_slice(&[
+            0xA9, 0x5A,
+            0x8F, 0x00, 0x60, 0x00,
+        ]);
+        emulator.debug_set_verification_trace(true);
+
+        assert!(emulator.step_sa1_cpu() > 0);
+        assert_eq!(emulator.run_sa1_for(4), 4);
+        assert!(emulator.step_sa1_cpu() > 0);
+        assert_eq!(emulator.sa1.read_bwram(0x6000), 0x5A);
+        assert_eq!(emulator.read(0x006000), 0x5A);
+
+        let trace = emulator.debug_take_verification_trace();
+        assert!(trace.contains("sa1:bus owner=sa1 kind=write region=bwram addr=00:6000 value=5A"));
+    }
+
+    #[test]
+    fn sa1_dma_arbitration_blocks_cpu_until_reserved_clocks_are_consumed() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.iram[0] = 0xEA;
+        emulator.sa1.iram[1] = 0xEA;
+        emulator.sa1.iram[2] = 0xEA;
+        emulator.sa1.write_register(0x2230, 0x86);
+        emulator.sa1.write_register(0x2232, 0x00);
+        emulator.sa1.write_register(0x2233, 0x00);
+        emulator.sa1.write_register(0x2234, 0x00);
+        emulator.sa1.write_register(0x2235, 0x00);
+        emulator.sa1.write_register(0x2238, 0x02);
+        emulator.sa1.write_register(0x2239, 0x00);
+        emulator.debug_set_verification_trace(true);
+        emulator.write(0x002236, 0x60);
+        emulator.write(0x002237, 0x00);
+
+        assert_eq!(emulator.sa1.dma_stall_clocks, 16);
+        assert_eq!(emulator.run_sa1_for(8), 8);
+        assert_eq!(emulator.sa1.cpu.pc, 0x3000);
+        assert_eq!(emulator.sa1.dma_stall_clocks, 8);
+        assert_eq!(emulator.run_sa1_for(8), 8);
+        assert_eq!(emulator.sa1.cpu.pc, 0x3000);
+        assert_eq!(emulator.sa1.dma_stall_clocks, 0);
+        assert_eq!(emulator.run_sa1_for(4), 4);
+        assert_eq!(emulator.sa1.cpu.pc, 0x3001);
+
+        let trace = emulator.debug_take_verification_trace();
+        let first_grant = trace.find("sa1:arbiter grant=dma clocks=8 remaining_before=16").unwrap();
+        let second_grant = trace.find("sa1:arbiter grant=dma clocks=8 remaining_before=8").unwrap();
+        let release = trace.find("sa1:dma_release owner=sa1").unwrap();
+        let cpu = trace.find("sa1:cpu owner=sa1 pc=3000").unwrap();
+        assert!(first_grant < second_grant);
+        assert!(second_grant < release);
+        assert!(release < cpu);
+    }
+
+    #[test]
+    fn sa1_cpu_runner_preserves_partial_instruction_budget() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.iram[0] = 0xEA; // NOP
+
+        assert_eq!(emulator.run_sa1_for(3), 3);
+        assert_eq!(emulator.sa1.cpu.pc, 0x3001);
+        assert_eq!(emulator.sa1.cpu.cycles, 1);
+        assert_eq!(emulator.run_sa1_for(1), 1);
+        assert_eq!(emulator.sa1.cpu.cycles, 0);
+    }
+
+    #[test]
+    fn sa1_scheduler_runs_one_scanline_when_enabled() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.iram.fill(0xEA);
+        emulator.sa1.scnt = 0;
+
+        emulator.run_scanline(0);
+
+        assert!(emulator.sa1.cpu.pc > 0x3000);
+    }
+
+    #[test]
+    fn sa1_nmi_has_priority_over_pending_irq() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.p &= !flags::IRQ_DIS;
+        emulator.sa1.cpu.pc = 0x3100;
+        emulator.sa1.nmi_vector = 0x3000;
+        emulator.sa1.irq_vector = 0x3002;
+        emulator.sa1.iram[0] = 0xEA;
+        emulator.sa1.iram[2] = 0xEA;
+
+        emulator.sa1.write_register(0x2200, 0x90);
+        assert_eq!(emulator.run_sa1_for(16), 16);
+
+        assert_eq!(emulator.sa1.cpu.pc, 0x3000);
+        assert_ne!(emulator.sa1.sa1_interrupt_latch & 0x10, 0);
+        assert_eq!(emulator.sa1.sa1_interrupt_latch & 0x80, 0);
+    }
+
+    #[test]
+    fn sa1_irq_uses_vector_and_sets_interrupt_mask() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.p &= !flags::IRQ_DIS;
+        emulator.sa1.cpu.pc = 0x3100;
+        emulator.sa1.irq_vector = 0x3000;
+        emulator.sa1.iram[0] = 0xEA;
+
+        emulator.sa1.write_register(0x2200, 0x80);
+        assert_eq!(emulator.run_sa1_for(16), 16);
+
+        assert_eq!(emulator.sa1.cpu.pc, 0x3000);
+        assert!(emulator.sa1.cpu.flag_i());
+        assert_ne!(emulator.sa1.sa1_interrupt_latch & 0x80, 0);
+    }
+
+    #[test]
+    fn sa1_wai_wakes_on_masked_irq_without_vectoring() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.cpu.p |= flags::IRQ_DIS;
+        emulator.sa1.iram[0..2].copy_from_slice(&[0xCB, 0xEA]);
+        emulator.sa1.write_register(0x220A, 0x40);
+
+        assert_eq!(emulator.run_sa1_for(6), 6);
+        assert!(emulator.sa1.cpu.waiting);
+        emulator.sa1.request_interrupt(super::super::sa1::SA1_TIMER_SOURCE);
+
+        assert_eq!(emulator.run_sa1_for(4), 4);
+        assert!(!emulator.sa1.cpu.waiting);
+        assert_eq!(emulator.sa1.cpu.pc, 0x3002);
+        assert_eq!(emulator.sa1.sa1_interrupt_status & 0x40, 0x40);
+    }
+
+    #[test]
+    fn sa1_stp_does_not_wake_on_interrupt() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.cpu.p &= !flags::IRQ_DIS;
+        emulator.sa1.irq_vector = 0x3100;
+        emulator.sa1.iram[0] = 0xDB;
+        emulator.sa1.iram[1] = 0xEA;
+        emulator.sa1.write_register(0x220A, 0x40);
+
+        assert_eq!(emulator.run_sa1_for(6), 6);
+        assert!(emulator.sa1.cpu.stopped);
+        emulator.sa1.request_interrupt(super::super::sa1::SA1_TIMER_SOURCE);
+
+        assert_eq!(emulator.run_sa1_for(4), 4);
+        assert!(emulator.sa1.cpu.stopped);
+        assert_eq!(emulator.sa1.cpu.pc, 0x3001);
+        assert_eq!(emulator.sa1.sa1_interrupt_status & 0x40, 0x40);
+    }
+
+    #[test]
+    fn sa1_wai_wakes_on_nmi_and_vectors() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.cpu.p |= flags::IRQ_DIS;
+        emulator.sa1.nmi_vector = 0x3100;
+        emulator.sa1.iram[0..2].copy_from_slice(&[0xCB, 0xEA]);
+        emulator.sa1.iram[0x100] = 0xEA;
+
+        assert_eq!(emulator.run_sa1_for(6), 6);
+        assert!(emulator.sa1.cpu.waiting);
+        emulator.sa1.write_register(0x2200, 0x10);
+
+        assert_eq!(emulator.run_sa1_for(4), 4);
+        assert!(!emulator.sa1.cpu.waiting);
+        assert_eq!(emulator.sa1.cpu.pc, 0x3100);
+        assert_ne!(emulator.sa1.sa1_interrupt_latch & 0x10, 0);
+    }
+
+    #[test]
+    fn sa1_stp_releases_only_after_reset_cycle() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cfr = 0x40;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.iram[0] = 0xDB;
+        emulator.sa1.iram[0x40] = 0xEA;
+
+        assert_eq!(emulator.run_sa1_for(6), 6);
+        assert!(emulator.sa1.cpu.stopped);
+        emulator.sa1.write_register(0x2200, 0x20);
+        emulator.sa1.write_register(0x2200, 0x00);
+
+        assert!(!emulator.sa1.cpu.stopped);
+        assert_eq!(emulator.sa1.cpu.pc, 0x0040);
+        assert_eq!(emulator.run_sa1_for(2), 2);
+        assert_eq!(emulator.sa1.cpu.pc, 0x0041);
+    }
+
+    #[test]
+    fn sa1_timer_irq_reaches_handler_and_writes_private_bwram() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.cpu.p &= !flags::IRQ_DIS;
+        emulator.sa1.irq_vector = 0x3100;
+        emulator.sa1.iram[0..2].copy_from_slice(&[0xEA, 0xEA]);
+        emulator.sa1.iram[0x100..0x106].copy_from_slice(&[
+            0xA9, 0x7E,
+            0x8F, 0x00, 0x60, 0x00,
+        ]);
+        emulator.sa1.write_register(0x220A, 0x40);
+        emulator.sa1.write_register(0x2210, 0x01);
+        emulator.sa1.write_register(0x2212, 0x02);
+        emulator.debug_set_verification_trace(true);
+
+        assert_eq!(emulator.run_sa1_for(42), 42);
+        assert_eq!(emulator.sa1.read_bwram(0x6000), 0x7E);
+        assert_eq!(emulator.sa1.sa1_interrupt_status & 0x40, 0x40);
+        assert!(emulator.debug_trap_log.contains("SA1TIMERIRQ"));
+        assert!(emulator.debug_trap_log.contains("SA1IRQ source=40"));
+
+        emulator.sa1.write_register(0x220B, 0x40);
+        assert_eq!(emulator.sa1.read_register(0x2301) & 0x40, 0);
+        assert_eq!(emulator.sa1.next_irq_source(), 0);
+
+        let trace = emulator.debug_take_verification_trace();
+        let timer_index = trace.find("sa1:timer_irq").unwrap();
+        let irq_index = trace.find("sa1:irq source=40").unwrap();
+        let write_index = trace.find("sa1:bus owner=sa1 kind=write region=bwram").unwrap();
+        assert!(timer_index < irq_index);
+        assert!(irq_index < write_index);
+        assert!(trace.contains("sa1:cpu owner=sa1"));
+    }
+
+    #[test]
+    fn sa1_timer_irq_rearms_after_source_clear_and_counter_reset() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.iram.fill(0xEA);
+        emulator.sa1.write_register(0x220A, 0x40);
+        emulator.sa1.write_register(0x2210, 0x01);
+        emulator.sa1.write_register(0x2212, 0x01);
+        emulator.debug_set_verification_trace(true);
+
+        assert_eq!(emulator.run_sa1_for(4), 4);
+        assert_eq!(emulator.sa1.read_register(0x2301) & 0x40, 0x40);
+        emulator.sa1.write_register(0x220B, 0x40);
+        emulator.sa1.write_register(0x2211, 0);
+
+        assert_eq!(emulator.run_sa1_for(4), 4);
+        assert_eq!(emulator.sa1.read_register(0x2301) & 0x40, 0x40);
+        let trace = emulator.debug_take_verification_trace();
+        assert_eq!(trace.matches("sa1:timer_irq").count(), 2);
+    }
+
+    #[test]
+    fn sa1_dma_completion_rearms_after_source_clear() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.iram[0..2].copy_from_slice(&[0x11, 0x22]);
+        emulator.sa1.write_register(0x220A, 0x20);
+        emulator.sa1.write_register(0x2230, 0x86);
+        emulator.sa1.write_register(0x2232, 0x00);
+        emulator.sa1.write_register(0x2233, 0x00);
+        emulator.sa1.write_register(0x2234, 0x00);
+        emulator.sa1.write_register(0x2235, 0x00);
+        emulator.sa1.write_register(0x2236, 0x60);
+        emulator.sa1.write_register(0x2238, 0x01);
+        emulator.sa1.write_register(0x2239, 0x00);
+        emulator.debug_set_verification_trace(true);
+
+        emulator.write(0x002237, 0x00);
+        assert_eq!(emulator.sa1.bwram[0x6000], 0x11);
+        assert_eq!(emulator.sa1.read_register(0x2301) & 0x20, 0x20);
+        assert_eq!(emulator.run_sa1_for(8), 8);
+        emulator.sa1.write_register(0x220B, 0x20);
+
+        emulator.sa1.write_register(0x2232, 0x01);
+        emulator.sa1.write_register(0x2235, 0x01);
+        emulator.write(0x002237, 0x00);
+        assert_eq!(emulator.sa1.bwram[0x6001], 0x22);
+        assert_eq!(emulator.sa1.read_register(0x2301) & 0x20, 0x20);
+        let trace = emulator.debug_take_verification_trace();
+        assert_eq!(trace.matches("sa1:dma_start").count(), 2);
+    }
+
+    #[test]
+    fn sa1_dma_irq_reaches_handler_and_clears_completion_source() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.pc = 0x3000;
+        emulator.sa1.cpu.p &= !flags::IRQ_DIS;
+        emulator.sa1.irq_vector = 0x3100;
+        emulator.sa1.iram[0] = 0xEA;
+        emulator.sa1.iram[0x100..0x106].copy_from_slice(&[
+            0xA9, 0xD2,
+            0x8F, 0x00, 0x60, 0x00,
+        ]);
+        emulator.sa1.iram[0x200] = 0x4C;
+        emulator.sa1.iram[0x201] = 0x00;
+        emulator.sa1.iram[0x202] = 0x32;
+        emulator.sa1.write_register(0x220A, 0x20);
+        emulator.sa1.iram[0x20] = 0x4D;
+        emulator.sa1.write_register(0x2230, 0x86);
+        emulator.sa1.write_register(0x2232, 0x20);
+        emulator.sa1.write_register(0x2233, 0x00);
+        emulator.sa1.write_register(0x2234, 0x00);
+        emulator.sa1.write_register(0x2235, 0x00);
+        emulator.sa1.write_register(0x2238, 0x01);
+        emulator.sa1.write_register(0x2239, 0x00);
+        emulator.debug_set_verification_trace(true);
+        emulator.write(0x002236, 0x60);
+        emulator.write(0x002237, 0x00);
+
+        assert_eq!(emulator.run_sa1_for(42), 42);
+        assert_eq!(emulator.sa1.read_bwram(0x6000), 0xD2);
+        assert_eq!(emulator.read(0x002300) & 0x20, 0);
+        assert_eq!(emulator.sa1.read_register(0x2301) & 0x20, 0x20);
+        assert!(!emulator.cpu.irq_pending);
+
+        let trace = emulator.debug_take_verification_trace();
+        let dma_index = trace.find("sa1:dma_start").unwrap();
+        let irq_index = trace.find("sa1:irq source=20").unwrap();
+        let write_index = trace.find("sa1:bus owner=sa1 kind=write region=bwram").unwrap();
+        assert!(dma_index < irq_index);
+        assert!(irq_index < write_index);
+
+        emulator.sa1.write_register(0x220B, 0x20);
+        assert_eq!(emulator.sa1.next_irq_source(), 0);
+    }
+
+    #[test]
+    fn sa1_nmi_handler_precedes_irq_handler_and_both_sources_clear() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.scnt = 0;
+        emulator.sa1.cpu.pc = 0x3200;
+        emulator.sa1.cpu.p &= !flags::IRQ_DIS;
+        emulator.sa1.nmi_vector = 0x3000;
+        emulator.sa1.irq_vector = 0x3100;
+        emulator.sa1.iram[0x000..0x007].copy_from_slice(&[
+            0xA9, 0xA1,
+            0x8F, 0x00, 0x60, 0x00,
+            0x40,
+        ]);
+        emulator.sa1.iram[0x100..0x107].copy_from_slice(&[
+            0xA9, 0xB2,
+            0x8F, 0x01, 0x60, 0x00,
+            0x40,
+        ]);
+        emulator.sa1.iram[0x200] = 0xEA;
+        emulator.sa1.write_register(0x220A, 0x80);
+        emulator.debug_set_verification_trace(true);
+        emulator.sa1.write_register(0x2200, 0x90);
+
+        assert_eq!(emulator.run_sa1_for(96), 96);
+        assert_eq!(emulator.sa1.read_bwram(0x6000), 0xA1);
+        assert_eq!(emulator.sa1.read_bwram(0x6001), 0xB2);
+        assert_ne!(emulator.sa1.sa1_interrupt_latch & 0x10, 0);
+        assert_ne!(emulator.sa1.sa1_interrupt_latch & 0x80, 0);
+
+        let trace = emulator.debug_take_verification_trace();
+        let nmi_index = trace.find("sa1:nmi vector=3000").unwrap();
+        let irq_index = trace.find("sa1:irq source=80 vector=3100").unwrap();
+        let nmi_write = trace.find("sa1:bus owner=sa1 kind=write region=bwram addr=00:6000 value=A1").unwrap();
+        let irq_write = trace.find("sa1:bus owner=sa1 kind=write region=bwram addr=00:6001 value=B2").unwrap();
+        assert!(nmi_index < nmi_write);
+        assert!(nmi_write < irq_index);
+        assert!(irq_index < irq_write);
+
+        emulator.sa1.write_register(0x220B, 0x90);
+        assert_eq!(emulator.sa1.next_irq_source(), 0);
+        assert_eq!(emulator.sa1.read_register(0x2301) & 0x90, 0);
+    }
+
+    #[test]
+    fn sa1_normal_dma_copies_iram_and_bwram_and_raises_completion_source() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.iram[0..4].copy_from_slice(&[0x11, 0x22, 0x33, 0x44]);
+        emulator.sa1.write_register(0x2201, 0x20);
+        emulator.sa1.write_register(0x220A, 0x20);
+
+        emulator.sa1.write_register(0x2230, 0x86);
+        emulator.sa1.write_register(0x2232, 0x00);
+        emulator.sa1.write_register(0x2233, 0x00);
+        emulator.sa1.write_register(0x2234, 0x00);
+        emulator.sa1.write_register(0x2235, 0x00);
+        emulator.sa1.write_register(0x2236, 0x60);
+        emulator.sa1.write_register(0x2238, 0x04);
+        emulator.sa1.write_register(0x2239, 0x00);
+        emulator.write(0x002237, 0x00);
+
+        assert_eq!(&emulator.sa1.bwram[0x6000..0x6004], &[0x11, 0x22, 0x33, 0x44]);
+        assert_eq!(emulator.read(0x002300) & 0x20, 0);
+        assert!(!emulator.cpu.irq_pending);
+        assert_eq!(emulator.sa1.read_register(0x2301) & 0x20, 0x20);
+        assert_eq!(emulator.sa1.next_irq_source(), 0x20);
+        assert_eq!(emulator.sa1.dma_stall_clocks, 32);
+
+        assert_eq!(emulator.run_sa1_for(16), 16);
+        assert_eq!(emulator.sa1.dma_stall_clocks, 16);
+
+        emulator.sa1.write_register(0x220B, 0x20);
+        emulator.sa1.write_register(0x2230, 0x81);
+        emulator.sa1.write_register(0x2232, 0x00);
+        emulator.sa1.write_register(0x2233, 0x60);
+        emulator.sa1.write_register(0x2234, 0x00);
+        emulator.sa1.write_register(0x2235, 0x00);
+        emulator.write(0x002236, 0x30);
+        emulator.sa1.write_register(0x2238, 0x04);
+        emulator.sa1.write_register(0x2239, 0x00);
+        emulator.sa1.write_register(0x2236, 0x30);
+
+        assert_eq!(&emulator.sa1.iram[0..4], &[0x11, 0x22, 0x33, 0x44]);
+    }
+
+    #[test]
+    fn sa1_normal_dma_zero_length_completes_without_transfer() {
+        let mut emulator = SnesEmulator::new();
+        emulator.cart.map_mode = super::super::cartridge::MapMode::SA1;
+        emulator.cart.profile.enhancement = super::super::cartridge::EnhancementChip::Sa1;
+        emulator.sa1.iram[0] = 0x12;
+        emulator.sa1.iram[0x7FF] = 0x34;
+
+        emulator.sa1.write_register(0x2230, 0x86);
+        emulator.sa1.write_register(0x2238, 0x00);
+        emulator.sa1.write_register(0x2239, 0x00);
+        emulator.write(0x002237, 0x00);
+
+        assert_eq!(emulator.sa1.bwram[0], 0);
+        assert_eq!(emulator.sa1.bwram[0x7FF], 0);
+        assert_eq!(emulator.sa1.bwram[0xFFFF], 0);
+        assert_eq!(emulator.sa1.read_register(0x2301) & 0x20, 0x20);
     }
 
     #[test]

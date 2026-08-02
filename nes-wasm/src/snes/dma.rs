@@ -69,12 +69,12 @@ impl DmaChannel {
 
     /// A-Bus 位址調整模式
     pub fn a_adjust(&self) -> i16 {
-        match (self.control >> 3) & 0x03 {
-            0 => 1,   // 遞增
-            1 => 0,   // 固定
-            2 => -1,  // 遞減
-            3 => 0,   // 固定
-            _ => 0,
+        if self.control & 0x08 != 0 {
+            0 // 固定
+        } else if self.control & 0x10 != 0 {
+            -1 // 遞減
+        } else {
+            1 // 遞增
         }
     }
 
@@ -87,6 +87,9 @@ impl DmaChannel {
 /// DMA 控制器（8 通道）
 pub struct DmaController {
     pub channels: [DmaChannel; 8],
+    /// S-DD1 captures the DMA source and transfer size while $43x2-$43x6 are written.
+    pub sdd1_addr: [u32; 8],
+    pub sdd1_size: [u16; 8],
     /// $420B - DMA 啟用
     pub dma_enable: u8,
     /// $420C - HDMA 啟用
@@ -102,6 +105,8 @@ impl DmaController {
                 DmaChannel::new(), DmaChannel::new(), DmaChannel::new(), DmaChannel::new(),
                 DmaChannel::new(), DmaChannel::new(), DmaChannel::new(), DmaChannel::new(),
             ],
+            sdd1_addr: [0; 8],
+            sdd1_size: [0; 8],
             dma_enable: 0,
             hdma_enable: 0,
             ch0_write_log: String::new(),
@@ -112,6 +117,8 @@ impl DmaController {
         for ch in &mut self.channels {
             *ch = DmaChannel::new();
         }
+        self.sdd1_addr = [0; 8];
+        self.sdd1_size = [0; 8];
         self.dma_enable = 0;
         self.hdma_enable = 0;
         self.ch0_write_log.clear();
@@ -135,6 +142,12 @@ impl DmaController {
             0x09 => self.channels[ch].hdma_addr = (self.channels[ch].hdma_addr & 0x00FF) | ((val as u16) << 8),
             0x0A => self.channels[ch].hdma_line_counter = val,
             _ => {}
+        }
+
+        if (0x02..=0x06).contains(&reg) {
+            self.sdd1_addr[ch] = (self.channels[ch].a_bank as u32) << 16
+                | self.channels[ch].a_addr as u32;
+            self.sdd1_size[ch] = self.channels[ch].count;
         }
     }
 
@@ -189,5 +202,36 @@ impl DmaController {
             7 => &[0, 0, 1, 1], // 4 bytes: p, p, p+1, p+1 (same as 3)
             _ => &[0],
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DmaChannel, DmaController};
+
+    #[test]
+    fn dma_a_bus_adjustment_matches_control_bits() {
+        let mut channel = DmaChannel::new();
+
+        channel.control = 0x00;
+        assert_eq!(channel.a_adjust(), 1);
+        channel.control = 0x08;
+        assert_eq!(channel.a_adjust(), 0);
+        channel.control = 0x10;
+        assert_eq!(channel.a_adjust(), -1);
+        channel.control = 0x18;
+        assert_eq!(channel.a_adjust(), 0);
+    }
+
+    #[test]
+    fn captures_sdd1_source_and_size_from_dma_registers() {
+        let mut dma = DmaController::new();
+        dma.write_register(0x02, 0xAB);
+        dma.write_register(0x03, 0xCD);
+        dma.write_register(0x04, 0xEF);
+        dma.write_register(0x05, 0x34);
+        dma.write_register(0x06, 0x12);
+        assert_eq!(dma.sdd1_addr[0], 0xEFCDAB);
+        assert_eq!(dma.sdd1_size[0], 0x1234);
     }
 }
