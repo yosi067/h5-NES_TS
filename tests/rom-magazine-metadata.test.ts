@@ -18,7 +18,7 @@ describe('ROM magazine metadata', () => {
     });
 
     expect(unresolved.map((rom) => rom.name)).toEqual([]);
-    expect(catalog.roms).toHaveLength(188);
+    expect(catalog.roms).toHaveLength(189);
   });
 
   it.each(['Rockman 4', 'Mega Man 4', '洛克人4'])(
@@ -41,5 +41,17 @@ describe('ROM magazine metadata', () => {
     expect(compilations.map((rom) => getRomMagazineMeta(rom).year)).toEqual(
       Array(4).fill('1990年代'),
     );
+  });
+
+  it('lists Tengai Makyo ZERO with its release metadata', () => {
+    expect(getRomMagazineMeta({
+      name: '天外魔境 ZERO',
+      file: '天外魔境_零.smc',
+      system: 'snes',
+    })).toEqual({
+      year: '1995',
+      genre: 'RPG',
+      players: '1',
+    });
   });
 });

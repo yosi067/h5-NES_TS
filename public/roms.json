@@ -146,6 +146,7 @@
     {"name": "太空戰士 5 (繁體中文 V2.0)", "file": "0039 - 最終幻想5 (繁)(V2.0)(Boco等).zip", "system": "snes"},
     {"name": "太空戰士 6 (繁體中文版)", "file": "0041 - 最終幻想6 (繁)(V1.1)(日選單)(勇者漢化組).smc", "system": "snes"},
     {"name": "超時空之鑰 (繁體中文版)", "file": "0045 - 超時空之鑰 (繁)(Beta)(Goldegg+Emukim).smc", "system": "snes"},
+    {"name": "天外魔境 ZERO", "file": "天外魔境_零.smc", "system": "snes"},
 
     {"name": "聖劍傳說 2", "file": "Secret of Mana (Reborn v2.5).sfc", "system": "snes"},
     {"name": "聖劍傳說 3 (日版)", "file": "Seiken Densetsu 3 (Japan).zip", "system": "snes"},

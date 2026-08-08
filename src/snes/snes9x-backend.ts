@@ -2,15 +2,29 @@ export interface Snes9xBackend {
   setButton(button: number, pressed: boolean): void;
   saveState(): Uint8Array;
   loadState(state: Uint8Array): void;
+  hasSaveMarker(marker: string): boolean;
+  installSaveBootstrap(saveData: Uint8Array, rtcData: Uint8Array): Promise<boolean>;
+  syncSaveData(): Promise<void>;
   pause(): void;
   resume(): void;
   reset(): void;
   stop(): void;
 }
 
+interface EmulatorJsFileSystem {
+  analyzePath(path: string): { exists: boolean };
+  readFile(path: string): Uint8Array;
+  writeFile(path: string, data: Uint8Array): void;
+  syncfs(populate: boolean, callback: (error?: unknown) => void): void;
+}
+
 interface EmulatorJsGameManager {
   simulateInput(player: number, button: number, value: number): void;
   restart(): void;
+  saveSaveFiles(): void;
+  loadSaveFiles(): void;
+  getSaveFilePath(): string;
+  FS: EmulatorJsFileSystem;
   toggleMainLoop(running: number): void;
   getState(): Uint8Array;
   loadState(state: Uint8Array): void;
@@ -27,6 +41,108 @@ interface EmulatorJsWindow extends Window {
 }
 
 const START_TIMEOUT_MS = 30_000;
+const TENGAI_MAKYO_ZERO_SRAM_MARKER = 'SPC7110 CHECK OK';
+const TENGAI_MAKYO_ZERO_RTC_BYTES = [0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 15, 6, 221, 53, 119, 106] as const;
+
+export function isTengaiMakyoZero(romName: string): boolean {
+  return /天外魔境(?:[_\s-]*零|[_\s-]*zero)|tengai\s+makyou?\s+zero/i.test(romName);
+}
+
+export function hasSnes9xSaveMarker(saveData: Uint8Array, marker: string): boolean {
+  const markerBytes = new TextEncoder().encode(marker);
+  for (let start = 0; start <= saveData.length - markerBytes.length; start++) {
+    if (markerBytes.every((value, index) => saveData[start + index] === value)) return true;
+  }
+  return false;
+}
+
+export function isUninitializedSnes9xSave(saveData: Uint8Array): boolean {
+  return saveData.length === 0 || saveData.every(value => value === 0xAA);
+}
+
+function createTengaiMakyoZeroBootstrapSram(): Uint8Array {
+  const saveData = new Uint8Array(0x2000).fill(0xFF);
+  const markerBytes = new TextEncoder().encode(TENGAI_MAKYO_ZERO_SRAM_MARKER);
+  saveData.set(markerBytes, saveData.length - markerBytes.length);
+  return saveData;
+}
+
+function createTengaiMakyoZeroBootstrapRtc(): Uint8Array {
+  return new Uint8Array(TENGAI_MAKYO_ZERO_RTC_BYTES);
+}
+
+function syncFileSystem(fileSystem: EmulatorJsFileSystem): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    fileSystem.syncfs(false, error => {
+      if (error) {
+        reject(error instanceof Error ? error : new Error('Snes9x 儲存資料同步失敗'));
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
+function waitFor(milliseconds: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.reject(new DOMException('遊戲載入已取消', 'AbortError'));
+  return new Promise((resolve, reject) => {
+    let timeout = 0;
+    const onAbort = () => {
+      window.clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
+      reject(new DOMException('遊戲載入已取消', 'AbortError'));
+    };
+    timeout = window.setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort);
+      resolve();
+    }, milliseconds);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+async function tapButton(
+  backend: Snes9xBackend,
+  button: number,
+  signal?: AbortSignal,
+): Promise<void> {
+  backend.setButton(button, true);
+  try {
+    await waitFor(300, signal);
+  } finally {
+    backend.setButton(button, false);
+  }
+}
+
+async function autoStartTengaiMakyoZero(
+  backend: Snes9xBackend,
+  signal?: AbortSignal,
+): Promise<void> {
+  const hasSaveMarker = backend.hasSaveMarker(TENGAI_MAKYO_ZERO_SRAM_MARKER);
+  if (hasSaveMarker) return;
+
+  const bootstrapInstalled = await backend.installSaveBootstrap(
+    createTengaiMakyoZeroBootstrapSram(),
+    createTengaiMakyoZeroBootstrapRtc(),
+  );
+  if (bootstrapInstalled) {
+    backend.reset();
+    await waitFor(3_000, signal);
+    return;
+  }
+
+  await waitFor(5_000, signal);
+  await tapButton(backend, 8, signal);
+  await waitFor(6_000, signal);
+  await backend.syncSaveData();
+  backend.reset();
+
+  await waitFor(5_000, signal);
+  await tapButton(backend, 0, signal);
+  await waitFor(2_000, signal);
+  await backend.syncSaveData();
+  backend.reset();
+  await waitFor(5_000, signal);
+}
 
 function escapeInlineScript(value: string): string {
   return JSON.stringify(value).replace(/</g, '\\u003c');
@@ -181,7 +297,7 @@ window.EJS_language='en-US';
   const getEmulator = (): EmulatorJsInstance | undefined =>
     (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator;
 
-  return {
+  const backend: Snes9xBackend = {
     setButton(button, pressed) {
       getEmulator()?.gameManager?.simulateInput(0, button, pressed ? 1 : 0);
     },
@@ -194,6 +310,46 @@ window.EJS_language='en-US';
       const gameManager = getEmulator()?.gameManager;
       if (!gameManager) throw new Error('Snes9x 尚未準備好即時讀檔');
       gameManager.loadState(state);
+    },
+    hasSaveMarker(marker) {
+      const gameManager = getEmulator()?.gameManager;
+      if (!gameManager) return false;
+      try {
+        const path = gameManager.getSaveFilePath();
+        if (!gameManager.FS.analyzePath(path).exists) return false;
+        return hasSnes9xSaveMarker(gameManager.FS.readFile(path), marker);
+      } catch {
+        return false;
+      }
+    },
+    async installSaveBootstrap(saveData, rtcData) {
+      const gameManager = getEmulator()?.gameManager;
+      if (!gameManager) throw new Error('Snes9x 尚未準備好載入初始化存檔');
+      const savePath = gameManager.getSaveFilePath();
+      const rtcPath = savePath.replace(/\.srm$/i, '.rtc');
+      try {
+        const saveExists = gameManager.FS.analyzePath(savePath).exists;
+        const rtcExists = gameManager.FS.analyzePath(rtcPath).exists;
+        if (saveExists) {
+          const currentSave = gameManager.FS.readFile(savePath);
+          if (!isUninitializedSnes9xSave(currentSave)) return false;
+        } else if (rtcExists) {
+          return false;
+        }
+        gameManager.FS.writeFile(savePath, new Uint8Array(saveData));
+        gameManager.FS.writeFile(rtcPath, new Uint8Array(rtcData));
+        gameManager.loadSaveFiles();
+        await syncFileSystem(gameManager.FS);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    async syncSaveData() {
+      const gameManager = getEmulator()?.gameManager;
+      if (!gameManager) throw new Error('Snes9x 尚未準備好儲存資料');
+      gameManager.saveSaveFiles();
+      await syncFileSystem(gameManager.FS);
     },
     pause() {
       getEmulator()?.gameManager?.toggleMainLoop(0);
@@ -208,4 +364,15 @@ window.EJS_language='en-US';
       dispose();
     },
   };
+
+  try {
+    if (core === 'snes' && isTengaiMakyoZero(romName)) {
+      await autoStartTengaiMakyoZero(backend, signal);
+    }
+  } catch (error) {
+    backend.stop();
+    throw error;
+  }
+
+  return backend;
 }

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   getSnes9xUnsupportedReason,
+  hasSnes9xSaveMarker,
+  isTengaiMakyoZero,
+  isUninitializedSnes9xSave,
   shouldForceLegacySnesCore,
   shouldUseDigitalArcadeDpad,
   shouldUseSnes9x,
@@ -90,5 +93,40 @@ describe('Snes9x browser compatibility', () => {
 
   it('rejects browsers without WebAssembly', () => {
     expect(getSnes9xUnsupportedReason('Mozilla/5.0', 4, false)).toContain('WebAssembly');
+  });
+});
+
+describe('Tengai Makyo Zero startup detection', () => {
+  it('recognizes the catalog ROM name', () => {
+    expect(isTengaiMakyoZero('天外魔境_零.smc')).toBe(true);
+    expect(isTengaiMakyoZero('Tengai Makyou Zero.smc')).toBe(true);
+  });
+
+  it('does not match unrelated SFC games', () => {
+    expect(isTengaiMakyoZero('Super Mario World (USA).sfc')).toBe(false);
+  });
+
+  it('recognizes the completed SPC7110 SRAM marker', () => {
+    const saveData = new Uint8Array(32);
+    const marker = new TextEncoder().encode('SPC7110 CHECK OK');
+    saveData.set(marker, saveData.length - marker.length);
+    expect(hasSnes9xSaveMarker(saveData, 'SPC7110 CHECK OK')).toBe(true);
+    saveData[saveData.length - 1] = 0;
+    expect(hasSnes9xSaveMarker(saveData, 'SPC7110 CHECK OK')).toBe(false);
+  });
+
+  it('recognizes the marker when SRAM has trailing bytes', () => {
+    const saveData = new Uint8Array(32);
+    saveData.set(new TextEncoder().encode('SPC7110 CHECK OK'), 4);
+    expect(hasSnes9xSaveMarker(saveData, 'SPC7110 CHECK OK')).toBe(true);
+  });
+
+  it('only treats an empty or untouched SRAM image as uninitialized', () => {
+    expect(isUninitializedSnes9xSave(new Uint8Array())).toBe(true);
+    expect(isUninitializedSnes9xSave(new Uint8Array(8192).fill(0xAA))).toBe(true);
+
+    const existingSave = new Uint8Array(8192).fill(0xAA);
+    existingSave[128] = 0;
+    expect(isUninitializedSnes9xSave(existingSave)).toBe(false);
   });
 });

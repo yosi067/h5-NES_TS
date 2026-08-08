@@ -39,7 +39,7 @@ const expectedSystemCounts = {
   gb: 5,
   gg: 4,
   sms: 1,
-  snes: 37,
+  snes: 38,
   arcade: 30,
   n64: 6,
 };
