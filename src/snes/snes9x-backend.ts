@@ -4,11 +4,12 @@ export interface Snes9xBackend {
   loadState(state: Uint8Array): void;
   hasSaveMarker(marker: string): boolean;
   installSaveBootstrap(saveData: Uint8Array, rtcData: Uint8Array): Promise<boolean>;
+  restoreSaveData(): void;
   syncSaveData(): Promise<void>;
   pause(): void;
   resume(): void;
   reset(): void;
-  stop(): void;
+  stop(): Promise<void>;
 }
 
 interface EmulatorJsFileSystem {
@@ -43,6 +44,12 @@ interface EmulatorJsWindow extends Window {
 const START_TIMEOUT_MS = 30_000;
 const TENGAI_MAKYO_ZERO_SRAM_MARKER = 'SPC7110 CHECK OK';
 const TENGAI_MAKYO_ZERO_RTC_BYTES = [0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 15, 6, 221, 53, 119, 106] as const;
+const SNES9X_SAVE_CACHE_PREFIX = 'snes9x-save-cache:';
+
+interface Snes9xSaveCache {
+  save: number[];
+  rtc: number[] | null;
+}
 
 export function isTengaiMakyoZero(romName: string): boolean {
   return /天外魔境(?:[_\s-]*零|[_\s-]*zero)|tengai\s+makyou?\s+zero/i.test(romName);
@@ -69,6 +76,64 @@ function createTengaiMakyoZeroBootstrapSram(): Uint8Array {
 
 function createTengaiMakyoZeroBootstrapRtc(): Uint8Array {
   return new Uint8Array(TENGAI_MAKYO_ZERO_RTC_BYTES);
+}
+
+function getSnes9xRtcPath(savePath: string): string {
+  return savePath.replace(/\.srm$/i, '.rtc');
+}
+
+function getSnes9xSaveCacheKey(savePath: string): string {
+  return `${SNES9X_SAVE_CACHE_PREFIX}${savePath}`;
+}
+
+function toCachedBytes(value: unknown): Uint8Array | null {
+  if (!Array.isArray(value)) return null;
+  const bytes = new Uint8Array(value.length);
+  for (const [index, item] of value.entries()) {
+    if (!Number.isInteger(item) || item < 0 || item > 0xFF) return null;
+    bytes[index] = item;
+  }
+  return bytes;
+}
+
+function cacheSnes9xSaveData(gameManager: EmulatorJsGameManager): void {
+  if (typeof localStorage === 'undefined') return;
+
+  try {
+    const savePath = gameManager.getSaveFilePath();
+    if (!gameManager.FS.analyzePath(savePath).exists) return;
+    const rtcPath = getSnes9xRtcPath(savePath);
+    const rtcExists = gameManager.FS.analyzePath(rtcPath).exists;
+    const cache: Snes9xSaveCache = {
+      save: Array.from(gameManager.FS.readFile(savePath)),
+      rtc: rtcExists ? Array.from(gameManager.FS.readFile(rtcPath)) : null,
+    };
+    localStorage.setItem(getSnes9xSaveCacheKey(savePath), JSON.stringify(cache));
+  } catch (error) {
+    console.warn('[Snes9x] SRAM fallback 快取失敗:', error);
+  }
+}
+
+function restoreSnes9xSaveData(gameManager: EmulatorJsGameManager): boolean {
+  if (typeof localStorage === 'undefined') return false;
+
+  try {
+    const savePath = gameManager.getSaveFilePath();
+    const cached = localStorage.getItem(getSnes9xSaveCacheKey(savePath));
+    if (!cached) return false;
+    const parsed = JSON.parse(cached) as Partial<Snes9xSaveCache>;
+    const saveData = toCachedBytes(parsed.save);
+    if (!saveData) return false;
+
+    gameManager.FS.writeFile(savePath, saveData);
+    const rtcData = toCachedBytes(parsed.rtc);
+    if (rtcData) gameManager.FS.writeFile(getSnes9xRtcPath(savePath), rtcData);
+    gameManager.loadSaveFiles();
+    return true;
+  } catch (error) {
+    console.warn('[Snes9x] SRAM fallback 還原失敗:', error);
+    return false;
+  }
 }
 
 function syncFileSystem(fileSystem: EmulatorJsFileSystem): Promise<void> {
@@ -339,6 +404,7 @@ window.EJS_language='en-US';
         gameManager.FS.writeFile(savePath, new Uint8Array(saveData));
         gameManager.FS.writeFile(rtcPath, new Uint8Array(rtcData));
         gameManager.loadSaveFiles();
+        cacheSnes9xSaveData(gameManager);
         await syncFileSystem(gameManager.FS);
         return true;
       } catch {
@@ -349,7 +415,12 @@ window.EJS_language='en-US';
       const gameManager = getEmulator()?.gameManager;
       if (!gameManager) throw new Error('Snes9x 尚未準備好儲存資料');
       gameManager.saveSaveFiles();
+      cacheSnes9xSaveData(gameManager);
       await syncFileSystem(gameManager.FS);
+    },
+    restoreSaveData() {
+      const gameManager = getEmulator()?.gameManager;
+      if (gameManager) restoreSnes9xSaveData(gameManager);
     },
     pause() {
       getEmulator()?.gameManager?.toggleMainLoop(0);
@@ -360,17 +431,24 @@ window.EJS_language='en-US';
     reset() {
       getEmulator()?.gameManager?.restart();
     },
-    stop() {
-      dispose();
+    async stop() {
+      try {
+        await backend.syncSaveData();
+      } catch (error) {
+        console.warn('[Snes9x] 停止核心時儲存 SRAM 發生問題:', error);
+      } finally {
+        dispose();
+      }
     },
   };
 
   try {
+    backend.restoreSaveData();
     if (core === 'snes' && isTengaiMakyoZero(romName)) {
       await autoStartTengaiMakyoZero(backend, signal);
     }
   } catch (error) {
-    backend.stop();
+    await backend.stop();
     throw error;
   }
 

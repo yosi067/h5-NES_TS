@@ -415,9 +415,10 @@ function setSnesButton(button: number, pressed: boolean): void {
   else nes?.setButton(0, button, pressed);
 }
 
-function stopSnes9xBackend(): void {
-  snes9xBackend?.stop();
-  snes9xBackend = null;
+async function stopSnes9xBackend(): Promise<void> {
+  const backend = snes9xBackend;
+  if (backend) await backend.stop();
+  if (snes9xBackend === backend) snes9xBackend = null;
   emulatorJsCore = null;
   document.getElementById('screen')?.style.removeProperty('display');
 }
@@ -1657,7 +1658,7 @@ async function startFbNeoGame(
 
   stopEmulation();
   await stopN64Backend();
-  stopSnes9xBackend();
+  await stopSnes9xBackend();
   stopFbNeoBackend();
   resetWasmCore();
   activeBackend = 'fbneo';
@@ -1767,7 +1768,7 @@ async function startGame(
   }
 
   await stopN64Backend();
-  stopSnes9xBackend();
+  await stopSnes9xBackend();
   stopFbNeoBackend();
   activeBackend = 'wasm';
   let loaded = false;
@@ -1865,7 +1866,7 @@ async function startSnes9xGame(
 
   stopEmulation();
   await stopN64Backend();
-  stopSnes9xBackend();
+  await stopSnes9xBackend();
   stopFbNeoBackend();
   resetWasmCore();
   activeBackend = 'snes9x';
@@ -1881,7 +1882,7 @@ async function startSnes9xGame(
     showToast(core === 'nes' ? 'FC 核心已啟動' : 'SFC 核心已啟動');
   } catch (error) {
     activeBackend = 'wasm';
-    stopSnes9xBackend();
+    await stopSnes9xBackend();
     throw error;
   }
 }
@@ -1895,7 +1896,7 @@ async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Prom
 
   stopEmulation();
   await stopN64Backend();
-  stopSnes9xBackend();
+  await stopSnes9xBackend();
   stopFbNeoBackend();
   resetWasmCore();
   let startupDiagnosticLabel: string | null = null;
@@ -2183,10 +2184,10 @@ function hideRomSelector(): void {
  */
 async function showRomSelector(): Promise<void> {
   cancelPendingGameLoad();
-  saveSram();
+  if (!isSnes9xActive()) saveSram();
   stopEmulation();
   await stopN64Backend();
-  stopSnes9xBackend();
+  await stopSnes9xBackend();
   stopFbNeoBackend();
   resetWasmCore();
   clearAudioQueue();
@@ -3522,6 +3523,13 @@ function getSramKey(): string {
 
 /** 將 SRAM 儲存到 localStorage */
 function saveSram(): void {
+  if (isSnes9xActive()) {
+    void snes9xBackend?.syncSaveData().catch(error => {
+      console.warn('[Snes9x] 自動儲存 SRAM 發生問題:', error);
+    });
+    return;
+  }
+
   if (activeBackend !== 'wasm' || !nes || !currentRomFilename) return;
   
   try {
