@@ -394,7 +394,7 @@ S-DD1 的 native gate 只有在硬體契約測試、WASM build 與 real-ROM smok
 - `$4804-$4807` 的 selector 只保留 `value & 0x07`，reset 值為 `[0, 1, 2, 3]`。S-DD1 source window 會在 gather 每一個 byte 時重新依目前 selector mapping 解析，涵蓋 `$60-$7D` 的 full ROM window 與 `$C0-$FF` 的四個可選 1 MiB dynamic windows；`$7E/$7F` WRAM 與 LoROM SRAM overlay 維持優先級。
 - DMA 會先產生 requested output length 的 decompressed buffer，再以 pending transfer 狀態逐 byte 寫入 B-bus，因此跨 64 KiB source bank、跨 dynamic 1 MiB mapping boundary 與 mid-transfer save-state 都可重播。
 
-save-state export version 現為 **14**，import 接受 version `1` 到 `14`；version 14 會保存 pending DMA 的 decompressed buffer、offset、進度與 S-DD1 register state。native smoke checkpoint schema 仍是獨立的 **v2**，不可將兩者混用。
+save-state export version 現為 **17**，import 接受 version `1` 到 `17`；version 17 會保存 pending DMA 的 decompressed buffer、offset、來源位址調整量、進度與 S-DD1 register state。native smoke checkpoint schema 仍是獨立的 **v2**，不可將兩者混用。
 
 Phase 1 的驗收指令：
 

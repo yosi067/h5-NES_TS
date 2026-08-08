@@ -33,6 +33,25 @@ pub const SCANLINES_PER_FRAME: u16 = 262;
 /// 每條掃描線的 Dot 數
 pub const DOTS_PER_SCANLINE: u16 = 340;
 
+#[derive(Clone, Copy)]
+pub(crate) enum DebugVramWriteSource {
+    Cpu,
+    Dma,
+    Hdma,
+    Sdd1,
+}
+
+impl DebugVramWriteSource {
+    fn name(self) -> &'static str {
+        match self {
+            Self::Cpu => "CPU",
+            Self::Dma => "DMA",
+            Self::Hdma => "HDMA",
+            Self::Sdd1 => "S-DD1",
+        }
+    }
+}
+
 pub struct Ppu {
     // === VRAM: 64KB (32K words of 16-bit) ===
     pub vram: [u8; 0x10000],
@@ -68,6 +87,8 @@ pub struct Ppu {
     pub bg_mode: u8,
     /// BG3 優先位元
     pub bg3_priority: bool,
+    /// Mosaic size and BG enable bits ($2106)
+    pub mosaic: u8,
     /// 背景 Tilemap 位址 ($2107-$210A) [BG1-BG4]
     pub bg_tilemap_addr: [u16; 4],
     /// 背景 Tilemap 大小 [BG1-BG4] (0=32x32, 1=64x32, 2=32x64, 3=64x64)
@@ -182,6 +203,12 @@ pub struct Ppu {
     pub debug_2130_idx: usize,
     pub debug_2130_frame: u32,
     pub debug_2130_pc: u32, // Set by emulator before bus writes
+    debug_vram_write_ranges: [(usize, usize); 2],
+    debug_vram_write_log: String,
+    debug_vram_write_entries: usize,
+    debug_vram_write_dropped: usize,
+    debug_vram_write_source: DebugVramWriteSource,
+    debug_vram_write_channel: u8,
 
     // === 畫面緩衝區: 256×224 RGBA ===
     pub framebuffer: Vec<u8>,
@@ -199,6 +226,14 @@ pub struct Ppu {
     // Debug: per-scanline register snapshots (filled during composite)
     pub debug_sl_cgwsel: [u8; 240],
     pub debug_sl_cgadsub: [u8; 240],
+
+    pub debug_render_scanline: u16,
+    pub debug_render_x: u16,
+    pub debug_render_capture: String,
+    debug_render_main_detail: String,
+    debug_render_sub_detail: String,
+    debug_render_main_layer: u8,
+    debug_render_sub_layer: u8,
 }
 
 impl Ppu {
@@ -226,6 +261,7 @@ impl Ppu {
 
             bg_mode: 0,
             bg3_priority: false,
+            mosaic: 0,
             bg_tilemap_addr: [0; 4],
             bg_tilemap_size: [0; 4],
             bg_chr_addr: [0; 4],
@@ -279,6 +315,12 @@ impl Ppu {
             debug_2130_idx: 0,
             debug_2130_frame: 0,
             debug_2130_pc: 0,
+            debug_vram_write_ranges: [(0, 0); 2],
+            debug_vram_write_log: String::new(),
+            debug_vram_write_entries: 0,
+            debug_vram_write_dropped: 0,
+            debug_vram_write_source: DebugVramWriteSource::Cpu,
+            debug_vram_write_channel: 0,
 
             framebuffer: vec![0; FRAMEBUFFER_SIZE],
 
@@ -292,6 +334,13 @@ impl Ppu {
             window_mask: [[false; 256]; 6],
             debug_sl_cgwsel: [0; 240],
             debug_sl_cgadsub: [0; 240],
+            debug_render_scanline: 0,
+            debug_render_x: 0,
+            debug_render_capture: String::new(),
+            debug_render_main_detail: String::new(),
+            debug_render_sub_detail: String::new(),
+            debug_render_main_layer: 5,
+            debug_render_sub_layer: 5,
 
         }
     }
@@ -311,6 +360,12 @@ impl Ppu {
         self.cgram_addr = 0;
         self.cgram_flipflop = false;
         self.bg_mode = 0;
+        self.mosaic = 0;
+        self.debug_vram_write_log.clear();
+        self.debug_vram_write_entries = 0;
+        self.debug_vram_write_dropped = 0;
+        self.debug_vram_write_source = DebugVramWriteSource::Cpu;
+        self.debug_vram_write_channel = 0;
     }
 
     // === PPU 暫存器寫入 ($2100-$2133) ===
@@ -325,8 +380,8 @@ impl Ppu {
             // $2101 - OBSEL: OBJ 大小與基底位址
             0x2101 => {
                 self.obj_size = (val >> 5) & 0x07;
-                // Name select gap = (nn+1) * 4K words = (nn+1) * 8K bytes
-                self.obj_name_select = (((val as u16 >> 3) & 0x03) + 1) << 13;
+                // Name select offset = nn * 4K words = nn * 8K bytes
+                self.obj_name_select = ((val as u16 >> 3) & 0x03) << 13;
                 // Name base = bbb * 8K words = bbb * 16K bytes
                 self.obj_base = (val as u16 & 0x07) << 14;
             }
@@ -371,21 +426,21 @@ impl Ppu {
                 self.bg_tile_size[3] = val & 0x80 != 0;
             }
             // $2106 - MOSAIC
-            0x2106 => { /* 馬賽克效果 - 稍後實作 */ }
+            0x2106 => { self.mosaic = val; }
             // $2107-$210A - BGnSC: Tilemap 位址與大小
             0x2107..=0x210A => {
                 let bg = (addr - 0x2107) as usize;
-                self.bg_tilemap_addr[bg] = ((val as u16) & 0xFC) << 9; // byte addr in 64KB VRAM
+                self.bg_tilemap_addr[bg] = ((val as u16) & 0x7C) << 8; // byte addr in 64KB VRAM
                 self.bg_tilemap_size[bg] = val & 0x03;
             }
             // $210B-$210C - BGnNBA: Character 基底位址
             0x210B => {
-                self.bg_chr_addr[0] = (val as u16 & 0x0F) << 13; // byte addr in 64KB VRAM
-                self.bg_chr_addr[1] = (val as u16 >> 4) << 13;
+                self.bg_chr_addr[0] = (val as u16 & 0x07) << 12; // byte addr in 64KB VRAM
+                self.bg_chr_addr[1] = ((val as u16 >> 4) & 0x07) << 12;
             }
             0x210C => {
-                self.bg_chr_addr[2] = (val as u16 & 0x0F) << 13;
-                self.bg_chr_addr[3] = (val as u16 >> 4) << 13;
+                 self.bg_chr_addr[2] = (val as u16 & 0x07) << 12; // byte addr in 64KB VRAM
+                 self.bg_chr_addr[3] = ((val as u16 >> 4) & 0x07) << 12;
             }
             // $210D-$2114 - BG 捲軸
             // H-scroll uses two shared latches:
@@ -433,7 +488,9 @@ impl Ppu {
             0x2118 => {
                 let mapped = self.map_vram_addr(self.vram_addr);
                 let byte_addr = (mapped as usize * 2) & 0xFFFF;
+                let old = self.vram[byte_addr];
                 self.vram[byte_addr] = val;
+                self.debug_record_vram_write(0x2118, self.vram_addr, mapped, byte_addr, old, val);
                 if !self.vram_incmode {
                     self.vram_addr = self.vram_addr.wrapping_add(self.vram_increment);
                 }
@@ -441,7 +498,9 @@ impl Ppu {
             0x2119 => {
                 let mapped = self.map_vram_addr(self.vram_addr);
                 let byte_addr = ((mapped as usize * 2) + 1) & 0xFFFF;
+                let old = self.vram[byte_addr];
                 self.vram[byte_addr] = val;
+                self.debug_record_vram_write(0x2119, self.vram_addr, mapped, byte_addr, old, val);
                 if self.vram_incmode {
                     self.vram_addr = self.vram_addr.wrapping_add(self.vram_increment);
                 }
@@ -639,6 +698,11 @@ impl Ppu {
 
     // === VRAM 位址映射 ===
 
+    #[inline]
+    fn vram_byte_addr(word_addr: usize) -> usize {
+        word_addr.wrapping_mul(2) & 0xFFFF
+    }
+
     fn map_vram_addr(&self, addr: u16) -> u16 {
         match self.vram_mapping {
             0 => addr,
@@ -658,12 +722,139 @@ impl Ppu {
         }
     }
 
+    pub(crate) fn debug_vram_byte_addr(&self, word_addr: u16, high_byte: bool) -> usize {
+        let mapped = self.map_vram_addr(word_addr);
+        ((mapped as usize * 2) + high_byte as usize) & 0xFFFF
+    }
+
     fn prefetch_vram(&mut self) {
         let mapped = self.map_vram_addr(self.vram_addr);
         let byte_addr = (mapped as usize * 2) & 0xFFFE;
         if byte_addr + 1 < self.vram.len() {
             self.vram_prefetch = self.vram[byte_addr] as u16 | ((self.vram[byte_addr + 1] as u16) << 8);
         }
+    }
+
+    pub fn set_debug_render_pixel(&mut self, scanline: u16, screen_x: u16) {
+        if !(1..=224).contains(&scanline) || screen_x >= SCREEN_WIDTH as u16 {
+            self.debug_render_scanline = 0;
+            self.debug_render_x = 0;
+            self.debug_render_capture = format!(
+                "invalid render pixel target scanline={} x={}",
+                scanline, screen_x,
+            );
+            return;
+        }
+
+        self.debug_render_scanline = scanline;
+        self.debug_render_x = screen_x;
+        self.debug_render_capture.clear();
+    }
+
+    pub fn debug_render_pixel(&self) -> String {
+        if !self.debug_render_capture.is_empty() {
+            return self.debug_render_capture.clone();
+        }
+        if self.debug_render_scanline == 0 {
+            "No render pixel target configured".to_string()
+        } else {
+            format!(
+                "No render pixel captured target scanline={} x={}",
+                self.debug_render_scanline, self.debug_render_x,
+            )
+        }
+    }
+
+    pub fn set_debug_vram_write_watch(
+        &mut self,
+        first_start: u16,
+        first_len: u16,
+        second_start: u16,
+        second_len: u16,
+    ) {
+        self.debug_vram_write_ranges = [
+            Self::debug_vram_write_range(first_start, first_len),
+            Self::debug_vram_write_range(second_start, second_len),
+        ];
+        self.debug_vram_write_log.clear();
+        self.debug_vram_write_entries = 0;
+        self.debug_vram_write_dropped = 0;
+    }
+
+    pub fn debug_vram_write_history(&mut self) -> String {
+        let mut log = std::mem::take(&mut self.debug_vram_write_log);
+        if self.debug_vram_write_dropped != 0 {
+            use core::fmt::Write;
+            let _ = writeln!(
+                log,
+                "VRAMWRITE dropped={} cap={}",
+                self.debug_vram_write_dropped,
+                Self::DEBUG_VRAM_WRITE_CAP,
+            );
+        }
+        if log.is_empty() {
+            log.push_str("No matching VRAM writes\n");
+        }
+        self.debug_vram_write_entries = 0;
+        self.debug_vram_write_dropped = 0;
+        log
+    }
+
+    pub(crate) fn set_debug_vram_write_context(
+        &mut self,
+        source: DebugVramWriteSource,
+        channel: u8,
+    ) {
+        self.debug_vram_write_source = source;
+        self.debug_vram_write_channel = channel;
+    }
+
+    const DEBUG_VRAM_WRITE_CAP: usize = 2048;
+
+    fn debug_vram_write_range(start: u16, len: u16) -> (usize, usize) {
+        let start = start as usize;
+        let end = start.saturating_add(len as usize).min(0x10000);
+        if len == 0 { (0, 0) } else { (start, end) }
+    }
+
+    fn debug_record_vram_write(
+        &mut self,
+        register: u16,
+        logical_word: u16,
+        mapped_word: u16,
+        byte_addr: usize,
+        old: u8,
+        value: u8,
+    ) {
+        let watched = self.debug_vram_write_ranges.iter().any(|(start, end)| {
+            *start < *end && *start <= byte_addr && byte_addr < *end
+        });
+        if !watched {
+            return;
+        }
+        if self.debug_vram_write_entries >= Self::DEBUG_VRAM_WRITE_CAP {
+            self.debug_vram_write_dropped += 1;
+            return;
+        }
+
+        use core::fmt::Write;
+        let _ = writeln!(
+            self.debug_vram_write_log,
+            "VRAMWRITE source={} ch={} frame={} sl={} dot={} pc={:06X} reg={:04X} word={:04X} mapped={:04X} physical={:04X} old={:02X} new={:02X}",
+            self.debug_vram_write_source.name(),
+            self.debug_vram_write_channel,
+            self.debug_2130_frame,
+            self.scanline,
+            self.dot,
+            self.debug_2130_pc,
+            register,
+            logical_word,
+            mapped_word,
+            byte_addr,
+            old,
+            value,
+        );
+        self.debug_vram_write_entries += 1;
     }
 
     // === 掃描線推進（由 emulator 呼叫） ===
@@ -722,6 +913,16 @@ impl Ppu {
     }
 
     fn render_scanline(&mut self, scanline: u16) {
+        let debug_pixel_selected = self.debug_render_scanline == scanline
+            && self.debug_render_x < SCREEN_WIDTH as u16;
+        if debug_pixel_selected {
+            self.debug_render_capture.clear();
+            self.debug_render_main_detail.clear();
+            self.debug_render_sub_detail.clear();
+            self.debug_render_main_layer = 5;
+            self.debug_render_sub_layer = 5;
+        }
+
         if self.force_blank {
             // 強制空白：填充黑色
             let y = (scanline - 1) as usize;
@@ -734,6 +935,12 @@ impl Ppu {
                     self.framebuffer[i + 2] = 0;
                     self.framebuffer[i + 3] = 255;
                 }
+            }
+            if debug_pixel_selected {
+                self.debug_render_capture = format!(
+                    "render scanline={} x={} forceBlank=true output=rgba(0,0,0,255)",
+                    scanline, self.debug_render_x,
+                );
             }
             return;
         }
@@ -834,6 +1041,15 @@ impl Ppu {
         self.composite_scanline(scanline);
     }
 
+    #[inline]
+    fn mosaic_size_for_bg(&self, bg_idx: usize) -> usize {
+        if self.mosaic & (1 << (bg_idx + 4)) != 0 {
+            (self.mosaic as usize & 0x0F) + 1
+        } else {
+            1
+        }
+    }
+
     // === 背景渲染 ===
 
     fn tilemap_entry_at(&self, bg_idx: usize, x: usize, y: usize, hires: bool) -> u16 {
@@ -845,13 +1061,14 @@ impl Ppu {
         let mut map_addr = self.bg_tilemap_addr[bg_idx] as usize;
 
         if map_size & 0x01 != 0 && tile_col & 0x20 != 0 {
-            map_addr += 0x800;
+            map_addr += 0x400;
         }
         if map_size & 0x02 != 0 && tile_row & 0x20 != 0 {
-            map_addr += if map_size & 0x01 != 0 { 0x1000 } else { 0x800 };
+            map_addr += if map_size & 0x01 != 0 { 0x800 } else { 0x400 };
         }
 
-        let entry_addr = (map_addr + (((tile_row & 0x1f) * 32 + (tile_col & 0x1f)) * 2)) & 0xffff;
+        let entry_word_addr = (map_addr + ((tile_row & 0x1f) * 32 + (tile_col & 0x1f))) & 0xffff;
+        let entry_addr = Self::vram_byte_addr(entry_word_addr);
         self.vram[entry_addr] as u16 | ((self.vram[(entry_addr + 1) & 0xffff] as u16) << 8)
     }
 
@@ -900,7 +1117,7 @@ impl Ppu {
     /// render a BG layer. pri_lo/pri_hi = effective priority values for tile priority 0/1.
     fn render_bg(&mut self, bg_idx: usize, scanline: u16, bpp: u8, pri_lo: u8, pri_hi: u8) {
         let tilemap_addr = self.bg_tilemap_addr[bg_idx] as usize;
-        let chr_addr = self.bg_chr_addr[bg_idx] as usize;
+        let chr_addr = Self::vram_byte_addr(self.bg_chr_addr[bg_idx] as usize);
         let map_size = self.bg_tilemap_size[bg_idx];
         let tile16 = self.bg_tile_size[bg_idx];
 
@@ -916,8 +1133,16 @@ impl Ppu {
         let v_mask = v_total - 1;
 
         // 遍歷可見像素（改為逐像素以正確處理 16x16）
+        let mosaic_size = self.mosaic_size_for_bg(bg_idx);
+        let visible_y = scanline.saturating_sub(1) as usize;
+        let sample_scanline = if scanline == 0 {
+            0
+        } else {
+            visible_y - visible_y % mosaic_size + 1
+        };
         for screen_x in 0..256usize {
-            let (source_x, source_y) = self.offset_per_tile_coords(bg_idx, screen_x, scanline as usize);
+            let sample_x = screen_x - screen_x % mosaic_size;
+            let (source_x, source_y) = self.offset_per_tile_coords(bg_idx, sample_x, sample_scanline);
             let x_scroll = source_x & h_mask;
             let y_scroll = source_y & v_mask;
 
@@ -940,13 +1165,14 @@ impl Ppu {
             // Tilemap 位址（考慮 multi-screen）
             let mut map_addr = tilemap_addr;
             if (map_size & 0x01 != 0) && (tile_col_full & 0x20) != 0 {
-                map_addr += 0x800;
+                map_addr += 0x400;
             }
             if (map_size & 0x02 != 0) && (tile_row_full & 0x20) != 0 {
-                map_addr += if map_size & 0x01 != 0 { 0x1000 } else { 0x800 };
+                map_addr += if map_size & 0x01 != 0 { 0x800 } else { 0x400 };
             }
 
-            let entry_addr = (map_addr + (map_row * 32 + map_col) * 2) & 0xFFFF;
+            let entry_word_addr = (map_addr + map_row * 32 + map_col) & 0xFFFF;
+            let entry_addr = Self::vram_byte_addr(entry_word_addr);
             let tile_lo = self.vram[entry_addr] as u16;
             let tile_hi = self.vram[(entry_addr + 1) & 0xFFFF] as u16;
             let tile_entry = tile_lo | (tile_hi << 8);
@@ -981,6 +1207,30 @@ impl Ppu {
                 bgr15_to_rgba(color)
             };
 
+            let cgram_index = (palette * (1 << bpp) + color_idx) & 0xFF;
+            let cgram_color = self.cgram[cgram_index];
+            let debug_detail = if self.debug_pixel_is_selected(scanline, screen_x) {
+                Some(format!(
+                    "source=BG{} pri={} tilemap={:04X}/{:04X} entry={:04X} tile={:03X} palette={} color={:02X} cgram={:02X} cgramColor={:04X} rgba={:02X},{:02X},{:02X},{:02X}",
+                    bg_idx + 1,
+                    if priority != 0 { pri_hi } else { pri_lo },
+                    entry_word_addr,
+                    entry_addr,
+                    tile_entry,
+                    tile_num,
+                    palette,
+                    color_idx,
+                    cgram_index,
+                    cgram_color,
+                    rgba & 0xFF,
+                    (rgba >> 8) & 0xFF,
+                    (rgba >> 16) & 0xFF,
+                    (rgba >> 24) & 0xFF,
+                ))
+            } else {
+                None
+            };
+
             // Priority: use the per-layer priority mapping
             let pri = if priority != 0 { pri_hi } else { pri_lo };
             let layer = bg_idx as u8;
@@ -991,6 +1241,10 @@ impl Ppu {
                     self.main_buf[screen_x] = rgba;
                     self.main_pri[screen_x] = pri;
                     self.main_src[screen_x] = layer;
+                    if let Some(detail) = debug_detail.as_ref() {
+                        self.debug_render_main_layer = layer;
+                        self.debug_render_main_detail = detail.clone();
+                    }
                 }
             }
 
@@ -1000,20 +1254,141 @@ impl Ppu {
                     self.sub_buf[screen_x] = rgba;
                     self.sub_pri[screen_x] = pri;
                     self.sub_src[screen_x] = layer;
+                    if let Some(detail) = debug_detail.as_ref() {
+                        self.debug_render_sub_layer = layer;
+                        self.debug_render_sub_detail = detail.clone();
+                    }
                 }
             }
         }
+    }
+
+    fn debug_pixel_is_selected(&self, scanline: u16, screen_x: usize) -> bool {
+        self.debug_render_scanline == scanline && self.debug_render_x == screen_x as u16
+    }
+
+    fn debug_source_name(source: u8) -> &'static str {
+        match source {
+            0 => "BG1",
+            1 => "BG2",
+            2 => "BG3",
+            3 => "BG4",
+            4 => "OBJ",
+            _ => "BKD",
+        }
+    }
+
+    pub fn debug_bg_sample(&self, bg_idx: u8, screen_x: u16, scanline: u16, bpp: u8) -> String {
+        let bg_idx = bg_idx as usize;
+        if bg_idx >= self.bg_tilemap_addr.len() || screen_x >= SCREEN_WIDTH as u16 || bpp == 0 {
+            return "invalid sample".to_string();
+        }
+
+        let mosaic_size = self.mosaic_size_for_bg(bg_idx);
+        let sample_x = screen_x as usize - (screen_x as usize % mosaic_size);
+        let visible_y = scanline.saturating_sub(1) as usize;
+        let sample_scanline = if scanline == 0 {
+            0
+        } else {
+            visible_y - visible_y % mosaic_size + 1
+        };
+        let (source_x, source_y) = self.offset_per_tile_coords(bg_idx, sample_x, sample_scanline);
+
+        let tilemap_word = self.bg_tilemap_addr[bg_idx] as usize;
+        let map_size = self.bg_tilemap_size[bg_idx];
+        let tile16 = self.bg_tile_size[bg_idx];
+        let tile_px = if tile16 { 16usize } else { 8usize };
+        let base = if tile16 { 512 } else { 256 };
+        let h_total = base * if map_size & 0x01 != 0 { 2 } else { 1 };
+        let v_total = base * if map_size & 0x02 != 0 { 2 } else { 1 };
+        let x_scroll = source_x & (h_total - 1);
+        let y_scroll = source_y & (v_total - 1);
+        let tile_col_full = x_scroll / tile_px;
+        let tile_row_full = y_scroll / tile_px;
+        let fine_x = x_scroll & (tile_px - 1);
+        let fine_y = y_scroll & (tile_px - 1);
+        let map_col = tile_col_full & 0x1F;
+        let map_row = tile_row_full & 0x1F;
+
+        let mut map_word = tilemap_word;
+        if map_size & 0x01 != 0 && tile_col_full & 0x20 != 0 {
+            map_word += 0x400;
+        }
+        if map_size & 0x02 != 0 && tile_row_full & 0x20 != 0 {
+            map_word += if map_size & 0x01 != 0 { 0x800 } else { 0x400 };
+        }
+        let entry_word = (map_word + map_row * 32 + map_col) & 0xFFFF;
+        let entry_byte = Self::vram_byte_addr(entry_word);
+        let entry = self.vram[entry_byte] as u16
+            | ((self.vram[(entry_byte + 1) & 0xFFFF] as u16) << 8);
+
+        let raw_tile = (entry & 0x03FF) as usize;
+        let flip_x = entry & 0x4000 != 0;
+        let flip_y = entry & 0x8000 != 0;
+        let sub_x = if tile16 {
+            if flip_x { if fine_x >= 8 { 0 } else { 1 } } else { if fine_x >= 8 { 1 } else { 0 } }
+        } else {
+            0
+        };
+        let sub_y = if tile16 {
+            if flip_y { if fine_y >= 8 { 0 } else { 1 } } else { if fine_y >= 8 { 1 } else { 0 } }
+        } else {
+            0
+        };
+        let tile = raw_tile + sub_x + sub_y * 16;
+        let pixel_x = if flip_x { 7 - (fine_x & 7) } else { fine_x & 7 };
+        let pixel_y = if flip_y { 7 - (fine_y & 7) } else { fine_y & 7 };
+        let chr_byte = Self::vram_byte_addr(self.bg_chr_addr[bg_idx] as usize);
+        let tile_byte = (chr_byte + tile * 8 * bpp as usize) & 0xFFFF;
+        let row_byte = (tile_byte + pixel_y * 2) & 0xFFFF;
+        let plane_bytes = [
+            self.vram[row_byte],
+            self.vram[(row_byte + 1) & 0xFFFF],
+            self.vram[(row_byte + 16) & 0xFFFF],
+            self.vram[(row_byte + 17) & 0xFFFF],
+        ];
+        let color_idx = self.read_tile_pixel(chr_byte, tile, pixel_x, pixel_y, bpp);
+
+        format!(
+            "BG{} x={} y={} scroll={}/{} source={}/{} tile={}x{} map={:04X}/{:04X} entry={:04X} rawTile={:03X} finalTile={:03X} chr={:04X}/{:04X} fine={}/{} pixel={}/{} planes={:02X}{:02X}{:02X}{:02X} color={:02X}",
+            bg_idx + 1,
+            screen_x,
+            scanline,
+            self.bg_hscroll[bg_idx],
+            self.bg_vscroll[bg_idx],
+            source_x,
+            source_y,
+            tile_col_full,
+            tile_row_full,
+            entry_word,
+            entry_byte,
+            entry,
+            raw_tile,
+            tile,
+            self.bg_chr_addr[bg_idx],
+            chr_byte,
+            fine_x,
+            fine_y,
+            pixel_x,
+            pixel_y,
+            plane_bytes[0],
+            plane_bytes[1],
+            plane_bytes[2],
+            plane_bytes[3],
+            color_idx,
+        )
     }
 
     /// Hi-res (Mode 5/6) BG rendering. Tiles are 16 hi-res pixels wide (two 8x8 characters).
     /// Output is downsampled to 256 lo-res pixels (every other hi-res pixel).
     fn render_bg_hires(&mut self, bg_idx: usize, scanline: u16, bpp: u8, pri_lo: u8, pri_hi: u8) {
         let tilemap_addr = self.bg_tilemap_addr[bg_idx] as usize;
-        let chr_addr = self.bg_chr_addr[bg_idx] as usize;
+        let chr_addr = Self::vram_byte_addr(self.bg_chr_addr[bg_idx] as usize);
         let hscroll = self.bg_hscroll[bg_idx] & 0x03FF;
         let vscroll = self.bg_vscroll[bg_idx] & 0x03FF;
         let map_size = self.bg_tilemap_size[bg_idx];
         let tall = self.bg_tile_size[bg_idx]; // vertical 16-px tall if set
+        let mosaic_size = self.mosaic_size_for_bg(bg_idx);
 
         // In hi-res, tiles are always 16 hi-res pixels wide (two 8x8 chars)
         let tile_h = if tall { 16usize } else { 8usize };
@@ -1026,7 +1401,13 @@ impl Ppu {
         let h_mask = h_total - 1;
         let v_mask = v_total - 1;
 
-        let y_scroll = (scanline as usize + vscroll as usize) & v_mask;
+        let visible_y = scanline.saturating_sub(1) as usize;
+        let sample_scanline = if scanline == 0 {
+            0
+        } else {
+            visible_y - visible_y % mosaic_size + 1
+        };
+        let y_scroll = (sample_scanline + vscroll as usize) & v_mask;
         let tile_row_full = y_scroll / tile_h;
         let fine_y = y_scroll & (tile_h - 1);
 
@@ -1038,9 +1419,10 @@ impl Ppu {
         let hires_hscroll = (hscroll as usize) << 1;
 
         for screen_x in 0..256usize {
+            let sample_x = screen_x - screen_x % mosaic_size;
             // Mode 5/6 hires: sub screen gets even hires pixel, main screen gets odd hires pixel
-            let hires_even = (screen_x * 2 + hires_hscroll) & h_mask;
-            let hires_odd = (screen_x * 2 + 1 + hires_hscroll) & h_mask;
+            let hires_even = (sample_x * 2 + hires_hscroll) & h_mask;
+            let hires_odd = (sample_x * 2 + 1 + hires_hscroll) & h_mask;
 
             // --- Sub screen pixel (even hires column) ---
             if sub_enabled {
@@ -1090,13 +1472,14 @@ impl Ppu {
 
         let mut map_addr = tilemap_addr;
         if (map_size & 0x01 != 0) && (tile_col_full & 0x20) != 0 {
-            map_addr += 0x800;
+            map_addr += 0x400;
         }
         if (map_size & 0x02 != 0) && (tile_row_full & 0x20) != 0 {
-            map_addr += if map_size & 0x01 != 0 { 0x1000 } else { 0x800 };
+            map_addr += if map_size & 0x01 != 0 { 0x800 } else { 0x400 };
         }
 
-        let entry_addr = (map_addr + (map_row * 32 + map_col) * 2) & 0xFFFF;
+        let entry_word_addr = (map_addr + map_row * 32 + map_col) & 0xFFFF;
+        let entry_addr = Self::vram_byte_addr(entry_word_addr);
         let tile_lo = self.vram[entry_addr] as u16;
         let tile_hi = self.vram[(entry_addr + 1) & 0xFFFF] as u16;
         let tile_entry = tile_lo | (tile_hi << 8);
@@ -1188,7 +1571,8 @@ impl Ppu {
     // === Mode 7 渲染 ===
 
     fn render_mode7(&mut self, scanline: u16) {
-        let y = scanline as i32;
+        let mosaic_size = self.mosaic_size_for_bg(0);
+        let y = (scanline as usize - (scanline as usize % mosaic_size)) as i32;
 
         // 13-bit sign extension for center and offset values
         let cx = ((self.m7x as i32) << 19) >> 19;
@@ -1211,7 +1595,8 @@ impl Ppu {
         let base_y = (d * sy) + (cy << 8);
 
         for screen_x in 0..256usize {
-            let eff_x = if h_flip { 255 - screen_x as i32 } else { screen_x as i32 };
+            let sample_x = screen_x - screen_x % mosaic_size;
+            let eff_x = if h_flip { 255 - sample_x as i32 } else { sample_x as i32 };
             let sx = eff_x + hofs - cx;
 
             // 矩陣運算: 使用完整 i32 中間值，最後截斷到 18-bit 有符號
@@ -1237,25 +1622,28 @@ impl Ppu {
                 let wty = (ty & 0x7F) as usize;
                 let tile_addr = (wty * 128 + wtx) * 2;
                 let tile = self.vram[tile_addr & 0xFFFF];
-                let pixel_addr = (tile as usize * 128) + (py * 16) + (px * 2) + 1;
+                let pixel_addr = 0x8000 + (tile as usize * 128) + (py * 16) + (px * 2);
                 color_idx = self.vram[pixel_addr & 0xFFFF];
             } else if tx >= 0 && tx < 128 && ty >= 0 && ty < 128 {
                 // 在 128×128 tile 範圍內 — 所有 repeat mode 都正常取值
                 let tile_addr = ((ty as usize) * 128 + (tx as usize)) * 2;
                 let tile = self.vram[tile_addr & 0xFFFF];
-                let pixel_addr = (tile as usize * 128) + (py * 16) + (px * 2) + 1;
+                let pixel_addr = 0x8000 + (tile as usize * 128) + (py * 16) + (px * 2);
                 color_idx = self.vram[pixel_addr & 0xFFFF];
             } else if repeat == 0xC0 {
                 // 區域外使用 Tile 0
-                let pixel_addr = (py * 16) + (px * 2) + 1;
+                let pixel_addr = 0x8000 + (py * 16) + (px * 2);
                 color_idx = self.vram[pixel_addr & 0xFFFF];
             }
             // 0x40 和 0x80 = 區域外透明
 
             if color_idx == 0 { continue; }
 
-            let color = self.cgram[color_idx as usize];
-            let rgba = bgr15_to_rgba(color);
+            let rgba = if self.uses_direct_color(0, 8) {
+                direct_color_to_rgba(0, color_idx as usize)
+            } else {
+                bgr15_to_rgba(self.cgram[color_idx as usize])
+            };
 
             // 寫入 Main/Sub
             if self.tm & 0x01 != 0 {
@@ -1385,6 +1773,22 @@ impl Ppu {
                         self.main_pri[sx] = pri;
                         self.main_src[sx] = 4; // OBJ
                         self.main_obj_pal[sx] = palette;
+                        if self.debug_pixel_is_selected(scanline, sx) {
+                            self.debug_render_main_layer = 4;
+                            self.debug_render_main_detail = format!(
+                                "source=OBJ pri={} tile={:04X} palette={} color={:02X} cgram={:02X} cgramColor={:04X} rgba={:02X},{:02X},{:02X},{:02X}",
+                                pri,
+                                sub_tile,
+                                palette,
+                                color_idx,
+                                pal_offset & 0xFF,
+                                color,
+                                rgba & 0xFF,
+                                (rgba >> 8) & 0xFF,
+                                (rgba >> 16) & 0xFF,
+                                (rgba >> 24) & 0xFF,
+                            );
+                        }
                     }
                 }
                 // OBJ 到 Sub Screen
@@ -1393,6 +1797,22 @@ impl Ppu {
                         self.sub_buf[sx] = rgba;
                         self.sub_pri[sx] = pri;
                         self.sub_src[sx] = 4;
+                        if self.debug_pixel_is_selected(scanline, sx) {
+                            self.debug_render_sub_layer = 4;
+                            self.debug_render_sub_detail = format!(
+                                "source=OBJ pri={} tile={:04X} palette={} color={:02X} cgram={:02X} cgramColor={:04X} rgba={:02X},{:02X},{:02X},{:02X}",
+                                pri,
+                                sub_tile,
+                                palette,
+                                color_idx,
+                                pal_offset & 0xFF,
+                                color,
+                                rgba & 0xFF,
+                                (rgba >> 8) & 0xFF,
+                                (rgba >> 16) & 0xFF,
+                                (rgba >> 24) & 0xFF,
+                            );
+                        }
                     }
                 }
             }
@@ -1613,6 +2033,51 @@ impl Ppu {
                 self.framebuffer[i + 2] = b;
                 self.framebuffer[i + 3] = 255;
             }
+
+            if self.debug_pixel_is_selected(scanline, x) {
+                let main_detail = if self.debug_render_main_layer == self.main_src[x]
+                    && !self.debug_render_main_detail.is_empty()
+                {
+                    self.debug_render_main_detail.clone()
+                } else {
+                    format!(
+                        "source={} pri={} rgba={:02X},{:02X},{:02X},{:02X}",
+                        Self::debug_source_name(self.main_src[x]),
+                        self.main_pri[x],
+                        main_rgba & 0xFF,
+                        (main_rgba >> 8) & 0xFF,
+                        (main_rgba >> 16) & 0xFF,
+                        (main_rgba >> 24) & 0xFF,
+                    )
+                };
+                let sub_detail = if self.debug_render_sub_layer == self.sub_src[x]
+                    && !self.debug_render_sub_detail.is_empty()
+                {
+                    self.debug_render_sub_detail.clone()
+                } else {
+                    format!(
+                        "source={} pri={} rgba={:02X},{:02X},{:02X},{:02X}",
+                        Self::debug_source_name(self.sub_src[x]),
+                        self.sub_pri[x],
+                        sub_rgba & 0xFF,
+                        (sub_rgba >> 8) & 0xFF,
+                        (sub_rgba >> 16) & 0xFF,
+                        (sub_rgba >> 24) & 0xFF,
+                    )
+                };
+                self.debug_render_capture = format!(
+                    "render scanline={} x={} main=[{}] sub=[{}] output=rgba({},{},{},255) brightness={} colorMath={}",
+                    scanline,
+                    x,
+                    main_detail,
+                    sub_detail,
+                    r,
+                    g,
+                    b,
+                    brightness,
+                    color_math_enabled,
+                );
+            }
         }
     }
 
@@ -1672,6 +2137,145 @@ mod tests {
     }
 
     #[test]
+    fn bg_base_registers_use_snes_vram_word_addresses() {
+        let mut ppu = Ppu::new();
+
+        ppu.write_register(0x2107, 0xD5);
+        ppu.write_register(0x2108, 0xE6);
+        ppu.write_register(0x210B, 0xA5);
+        ppu.write_register(0x210C, 0xB6);
+
+        assert_eq!(ppu.bg_tilemap_addr[0], 0x5400);
+        assert_eq!(ppu.bg_tilemap_addr[1], 0x6400);
+        assert_eq!(ppu.bg_chr_addr[0], 0x5000);
+        assert_eq!(ppu.bg_chr_addr[1], 0x2000);
+        assert_eq!(ppu.bg_chr_addr[2], 0x6000);
+        assert_eq!(ppu.bg_chr_addr[3], 0x3000);
+    }
+
+    #[test]
+    fn bg_renderer_reads_vram_written_through_vram_data_ports() {
+        let mut ppu = Ppu::new();
+        ppu.write_register(0x2100, 0x0F);
+        ppu.write_register(0x2105, 0x01);
+        ppu.write_register(0x2107, 0x00);
+        ppu.write_register(0x210B, 0x01);
+        ppu.write_register(0x212C, 0x01);
+        ppu.cgram[1] = 0x001F;
+
+        ppu.write_register(0x2115, 0x80);
+        ppu.write_register(0x2116, 0x00);
+        ppu.write_register(0x2117, 0x00);
+        ppu.write_register(0x2118, 0x00);
+        ppu.write_register(0x2119, 0x00);
+
+        ppu.write_register(0x2116, 0x01);
+        ppu.write_register(0x2117, 0x10);
+        ppu.write_register(0x2118, 0x80);
+        ppu.write_register(0x2119, 0x00);
+
+        ppu.render_visible_scanline(1);
+
+        assert_eq!(ppu.vram[0x2002], 0x80);
+        assert_eq!(ppu.read_tile_pixel(0x2000, 0, 0, 1, 4), 1);
+        let sample = ppu.debug_bg_sample(0, 0, 1, 4);
+        assert!(sample.contains("planes=80000000"), "{sample}");
+        assert!(sample.contains("pixel=0/1"), "{sample}");
+        assert!(sample.contains("color=01"), "{sample}");
+        assert_eq!(&ppu.framebuffer[0..3], &rgba_bytes(bgr15_to_rgba(ppu.cgram[1])));
+    }
+
+    #[test]
+    fn render_pixel_trace_includes_tile_palette_and_cgram_index() {
+        let mut ppu = Ppu::new();
+        ppu.write_register(0x2100, 0x0F);
+        ppu.write_register(0x2105, 0x01);
+        ppu.write_register(0x2109, 0x00);
+        ppu.write_register(0x210C, 0x01);
+        ppu.write_register(0x212C, 0x04);
+        ppu.cgram[5] = 0x001F;
+        ppu.set_debug_render_pixel(1, 0);
+
+        ppu.write_register(0x2115, 0x80);
+        ppu.write_register(0x2116, 0x00);
+        ppu.write_register(0x2117, 0x00);
+        ppu.write_register(0x2118, 0x00);
+        ppu.write_register(0x2119, 0x04);
+
+        ppu.write_register(0x2116, 0x01);
+        ppu.write_register(0x2117, 0x10);
+        ppu.write_register(0x2118, 0x80);
+        ppu.write_register(0x2119, 0x00);
+
+        ppu.render_visible_scanline(1);
+
+        let trace = ppu.debug_render_pixel();
+        assert!(trace.contains("source=BG3"), "{trace}");
+        assert!(trace.contains("entry=0400"), "{trace}");
+        assert!(trace.contains("palette=1"), "{trace}");
+        assert!(trace.contains("color=01"), "{trace}");
+        assert!(trace.contains("cgram=05"), "{trace}");
+        assert!(trace.contains("output=rgba(248,0,0,255)"), "{trace}");
+        assert_eq!(&ppu.framebuffer[0..3], &rgba_bytes(bgr15_to_rgba(ppu.cgram[5])));
+    }
+
+    #[test]
+    fn vram_write_trace_records_physical_overwrites_and_sources() {
+        let mut ppu = Ppu::new();
+        ppu.set_debug_vram_write_watch(0x0010, 1, 0, 0);
+        ppu.write_register(0x2116, 0x08);
+        ppu.write_register(0x2117, 0x00);
+
+        ppu.set_debug_vram_write_context(DebugVramWriteSource::Sdd1, 2);
+        ppu.write_register(0x2118, 0xA5);
+        ppu.set_debug_vram_write_context(DebugVramWriteSource::Dma, 3);
+        ppu.write_register(0x2116, 0x08);
+        ppu.write_register(0x2117, 0x00);
+        ppu.write_register(0x2118, 0x5A);
+
+        let trace = ppu.debug_vram_write_history();
+        assert!(trace.contains("source=S-DD1 ch=2"));
+        assert!(trace.contains("source=DMA ch=3"));
+        assert!(trace.contains("physical=0010 old=00 new=A5"));
+        assert!(trace.contains("physical=0010 old=A5 new=5A"));
+        assert_eq!(ppu.vram[0x0010], 0x5A);
+    }
+
+    #[test]
+    fn bg_tile_uses_vram_word_base_and_tile_number_high_bit() {
+        let mut ppu = Ppu::new();
+        ppu.bg_mode = 1;
+        ppu.brightness = 15;
+        ppu.force_blank = false;
+        ppu.tm = 0x01;
+        ppu.bg_tilemap_addr[0] = 0;
+        ppu.bg_chr_addr[0] = 0x1000;
+        ppu.cgram[1] = 0x001F;
+        ppu.cgram[2] = 0x03E0;
+
+        write_tilemap_entry(&mut ppu, 0, 0x0100);
+        ppu.vram[0x4000 + 2] = 0x80;
+
+        ppu.render_visible_scanline(1);
+
+        assert_eq!(&ppu.framebuffer[0..3], &rgba_bytes(bgr15_to_rgba(ppu.cgram[1])));
+    }
+
+    #[test]
+    fn obj_name_select_uses_snes_table_offset() {
+        let mut ppu = Ppu::new();
+
+        ppu.write_register(0x2101, 0x00);
+        assert_eq!(ppu.obj_name_select, 0x0000);
+        ppu.write_register(0x2101, 0x08);
+        assert_eq!(ppu.obj_name_select, 0x2000);
+        ppu.write_register(0x2101, 0x10);
+        assert_eq!(ppu.obj_name_select, 0x4000);
+        ppu.write_register(0x2101, 0x18);
+        assert_eq!(ppu.obj_name_select, 0x6000);
+    }
+
+    #[test]
     fn mode2_uses_bg3_horizontal_and_vertical_offsets_after_first_tile() {
         let mut ppu = Ppu::new();
         ppu.bg_mode = 2;
@@ -1705,8 +2309,8 @@ mod tests {
         ppu.cgram[1] = 0x001f;
         ppu.cgram[2] = 0x03e0;
 
-        write_tilemap_entry(&mut ppu, 0x1000, 0);
-        write_tilemap_entry(&mut ppu, 0x1002, 2);
+        write_tilemap_entry(&mut ppu, 0x2000, 0);
+        write_tilemap_entry(&mut ppu, 0x2002, 2);
         ppu.vram[32] = 0xff;
         ppu.vram[64 + 1] = 0xff;
 
@@ -1727,8 +2331,8 @@ mod tests {
         ppu.cgram[1] = 0x001f;
         ppu.cgram[2] = 0x03e0;
 
-        write_tilemap_entry(&mut ppu, 0x1000, 0);
-        write_tilemap_entry(&mut ppu, 0x1040, 2);
+        write_tilemap_entry(&mut ppu, 0x2000, 0);
+        write_tilemap_entry(&mut ppu, 0x2040, 2);
         ppu.vram[14] = 0xff;
         ppu.vram[64 + 1] = 0xff;
 
@@ -1768,5 +2372,66 @@ mod tests {
         ppu.composite_scanline(1);
 
         assert_eq!(&ppu.framebuffer[0..3], &[124, 124, 0]);
+    }
+
+    #[test]
+    fn mosaic_reuses_the_top_left_pixel_of_each_bg_block() {
+        let mut ppu = Ppu::new();
+        ppu.bg_mode = 0;
+        ppu.brightness = 15;
+        ppu.force_blank = false;
+        ppu.tm = 0x01;
+        ppu.bg_chr_addr[0] = 0x2000;
+        ppu.cgram[1] = 0x001f;
+        ppu.cgram[2] = 0x03e0;
+
+        write_tilemap_entry(&mut ppu, 0, 0);
+        ppu.vram[0x4002] = 0x80;
+        ppu.vram[0x4003] = 0x20;
+        ppu.write_register(0x2106, 0x11);
+
+        ppu.render_visible_scanline(1);
+
+        let color_one = rgba_bytes(bgr15_to_rgba(ppu.cgram[1]));
+        let color_two = rgba_bytes(bgr15_to_rgba(ppu.cgram[2]));
+        assert_eq!(&ppu.framebuffer[0..3], &color_one);
+        assert_eq!(&ppu.framebuffer[4..7], &color_one);
+        assert_eq!(&ppu.framebuffer[8..11], &color_two);
+        assert_eq!(&ppu.framebuffer[12..15], &color_two);
+    }
+
+    #[test]
+    fn mode7_reads_tile_graphics_from_hardware_data_region() {
+        let mut ppu = Ppu::new();
+        ppu.bg_mode = 7;
+        ppu.brightness = 15;
+        ppu.force_blank = false;
+        ppu.tm = 0x01;
+        ppu.cgram[1] = 0x001f;
+
+        write_tilemap_entry(&mut ppu, 0, 1);
+        ppu.vram[0x8080] = 1;
+
+        ppu.render_visible_scanline(1);
+
+        assert_eq!(&ppu.framebuffer[0..3], &rgba_bytes(bgr15_to_rgba(ppu.cgram[1])));
+    }
+
+    #[test]
+    fn mode7_bg1_uses_direct_color_when_selected() {
+        let mut ppu = Ppu::new();
+        ppu.bg_mode = 7;
+        ppu.brightness = 15;
+        ppu.force_blank = false;
+        ppu.tm = 0x01;
+        ppu.cgwsel = 0x01;
+        ppu.cgram[0xE5] = 0x001F;
+
+        write_tilemap_entry(&mut ppu, 0, 1);
+        ppu.vram[0x8080] = 0xE5;
+
+        ppu.render_visible_scanline(1);
+
+        assert_eq!(&ppu.framebuffer[0..3], &[160, 128, 192]);
     }
 }

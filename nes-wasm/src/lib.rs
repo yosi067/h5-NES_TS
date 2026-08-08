@@ -581,6 +581,55 @@ impl EmuWasm {
         }
     }
 
+    #[wasm_bindgen(js_name = "debugPpuBgSample")]
+    pub fn debug_ppu_bg_sample(&self, bg: u8, screen_x: u16, scanline: u16, bpp: u8) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_ppu_bg_sample(bg, screen_x, scanline, bpp),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugSetPpuRenderPixel")]
+    pub fn debug_set_ppu_render_pixel(&mut self, scanline: u16, screen_x: u16) {
+        if let CoreType::Snes(emu) = &mut self.core {
+            emu.debug_set_ppu_render_pixel(scanline, screen_x);
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugPpuRenderPixel")]
+    pub fn debug_ppu_render_pixel(&self) -> String {
+        match &self.core {
+            CoreType::Snes(emu) => emu.debug_ppu_render_pixel(),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugSetPpuVramWriteWatch")]
+    pub fn debug_set_ppu_vram_write_watch(
+        &mut self,
+        first_start: u16,
+        first_len: u16,
+        second_start: u16,
+        second_len: u16,
+    ) {
+        if let CoreType::Snes(emu) = &mut self.core {
+            emu.debug_set_ppu_vram_write_watch(
+                first_start,
+                first_len,
+                second_start,
+                second_len,
+            );
+        }
+    }
+
+    #[wasm_bindgen(js_name = "debugPpuVramWriteHistory")]
+    pub fn debug_ppu_vram_write_history(&mut self) -> String {
+        match &mut self.core {
+            CoreType::Snes(emu) => emu.debug_ppu_vram_write_history(),
+            _ => "Not SNES".to_string(),
+        }
+    }
+
     /// SNES per-scanline trace (captures one frame of mode/scroll data)
     #[wasm_bindgen(js_name = "debugTraceFrame")]
     pub fn debug_trace_frame(&mut self) -> String {

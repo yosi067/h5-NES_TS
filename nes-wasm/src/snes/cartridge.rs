@@ -368,6 +368,10 @@ impl Cartridge {
         self.read_rom_offset(offset)
     }
 
+    pub(crate) fn debug_rom_offset(&self, bank: u8, addr: u16) -> usize {
+        self.map_rom_offset(bank, addr)
+    }
+
     /// Read an SA-1 C/D/E/F linear ROM window selected by its BMAP registers.
     pub fn read_sa1_rom(&self, bank: u8, addr: u16, bmaps: &[u8; 4]) -> u8 {
         let offset = if bank >= 0xC0 {

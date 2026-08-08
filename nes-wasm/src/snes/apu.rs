@@ -732,6 +732,7 @@ pub struct Apu {
     // === 時序 ===
     pub cycles: u32,
     pub total_cycles: u64,
+    pub(crate) halted: bool,
 
     // === 音頻輸出 ===
     pub audio_buffer: Vec<f32>,
@@ -794,6 +795,7 @@ impl Apu {
 
             cycles: 0,
             total_cycles: 0,
+            halted: false,
 
             audio_buffer: Vec::with_capacity(4096),
             sample_rate: 44100.0,
@@ -842,6 +844,7 @@ impl Apu {
         self.control = 0x80;
         self.cycles = 0;
         self.total_cycles = 0;
+        self.halted = false;
         self.dsp = Dsp::new();
         self.sample_counter = 0.0;
         self.dsp_sample_counter = 0.0;
@@ -1054,6 +1057,19 @@ impl Apu {
         (hi << 8) | lo
     }
 
+    fn read16_dp(&mut self, addr: u16) -> u16 {
+        let lo = self.spc_read(addr) as u16;
+        let high_addr = (addr & 0xFF00) | (addr as u8).wrapping_add(1) as u16;
+        let hi = self.spc_read(high_addr) as u16;
+        (hi << 8) | lo
+    }
+
+    fn write16_dp(&mut self, addr: u16, value: u16) {
+        self.spc_write(addr, value as u8);
+        let high_addr = (addr & 0xFF00) | (addr as u8).wrapping_add(1) as u16;
+        self.spc_write(high_addr, (value >> 8) as u8);
+    }
+
     /// 執行 SPC700 直到消耗指定的 cycle 數
     pub fn run_cycles(&mut self, target_cycles: u32) {
         while self.cycles < target_cycles {
@@ -1108,6 +1124,12 @@ impl Apu {
 
     /// 執行一條 SPC700 指令
     fn step(&mut self) {
+        if self.halted {
+            self.cycles += 1;
+            self.update_timers(1);
+            return;
+        }
+
         let opcode = self.spc_read(self.pc);
         self.pc = self.pc.wrapping_add(1);
 
@@ -1144,9 +1166,9 @@ impl Apu {
             // === MOV A, (X) ===
             0xE6 => { let addr = self.dp_addr(self.x); self.a = self.spc_read(addr); self.set_nz(self.a); 3 }
             // === MOV A, [dp+X] ===
-            0xE7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16(ptr); self.a = self.spc_read(addr); self.set_nz(self.a); 6 }
+            0xE7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16_dp(ptr); self.a = self.spc_read(addr); self.set_nz(self.a); 6 }
             // === MOV A, [dp]+Y ===
-            0xF7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16(ptr).wrapping_add(self.y as u16); self.a = self.spc_read(addr); self.set_nz(self.a); 6 }
+            0xF7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16_dp(ptr).wrapping_add(self.y as u16); self.a = self.spc_read(addr); self.set_nz(self.a); 6 }
 
             // === MOV X, #imm ===
             0xCD => { self.x = self.fetch8(); self.set_nz(self.x); 2 }
@@ -1179,9 +1201,9 @@ impl Apu {
             // === MOV (X), A ===
             0xC6 => { let addr = self.dp_addr(self.x); self.spc_write(addr, self.a); 4 }
             // === MOV [dp+X], A ===
-            0xC7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16(ptr); self.spc_write(addr, self.a); 7 }
+            0xC7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16_dp(ptr); self.spc_write(addr, self.a); 7 }
             // === MOV [dp]+Y, A ===
-            0xD7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16(ptr).wrapping_add(self.y as u16); self.spc_write(addr, self.a); 7 }
+            0xD7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16_dp(ptr).wrapping_add(self.y as u16); self.spc_write(addr, self.a); 7 }
             // === MOV dp, X ===
             0xD8 => { let addr = self.fetch_dp(); self.spc_write(addr, self.x); 4 }
             // === MOV dp+Y, X ===
@@ -1242,9 +1264,9 @@ impl Apu {
             // === MOVW YA, dp ===
             0xBA => {
                 let addr = self.fetch_dp();
-                self.a = self.spc_read(addr);
-                self.y = self.spc_read(addr.wrapping_add(1));
-                let ya = (self.y as u16) << 8 | self.a as u16;
+                let ya = self.read16_dp(addr);
+                self.a = ya as u8;
+                self.y = (ya >> 8) as u8;
                 self.set_flag(0x02, ya == 0);
                 self.set_flag(0x80, ya & 0x8000 != 0);
                 5
@@ -1252,8 +1274,8 @@ impl Apu {
             // === MOVW dp, YA ===
             0xDA => {
                 let addr = self.fetch_dp();
-                self.spc_write(addr, self.a);
-                self.spc_write(addr.wrapping_add(1), self.y);
+                let ya = (self.y as u16) << 8 | self.a as u16;
+                self.write16_dp(addr, ya);
                 5
             }
 
@@ -1265,8 +1287,8 @@ impl Apu {
             0x85 => { let addr = self.fetch16(); let val = self.spc_read(addr); self.a = self.op_adc(self.a, val); 4 }
             0x95 => { let addr = self.fetch16().wrapping_add(self.x as u16); let val = self.spc_read(addr); self.a = self.op_adc(self.a, val); 5 }
             0x96 => { let addr = self.fetch16().wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a = self.op_adc(self.a, val); 5 }
-            0x87 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16(ptr); let val = self.spc_read(addr); self.a = self.op_adc(self.a, val); 6 }
-            0x97 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a = self.op_adc(self.a, val); 6 }
+            0x87 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16_dp(ptr); let val = self.spc_read(addr); self.a = self.op_adc(self.a, val); 6 }
+            0x97 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16_dp(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a = self.op_adc(self.a, val); 6 }
             0x99 => { let iy = self.dp_addr(self.y); let ix = self.dp_addr(self.x); let a = self.spc_read(ix); let b = self.spc_read(iy); let r = self.op_adc(a, b); self.spc_write(ix, r); 5 }
             0x89 => { let src = self.fetch_dp(); let sv = self.spc_read(src); let dst = self.fetch_dp(); let dv = self.spc_read(dst); let r = self.op_adc(dv, sv); self.spc_write(dst, r); 6 }
             0x98 => { let val = self.fetch8(); let addr = self.fetch_dp(); let dv = self.spc_read(addr); let r = self.op_adc(dv, val); self.spc_write(addr, r); 5 }
@@ -1278,8 +1300,8 @@ impl Apu {
             0xA5 => { let addr = self.fetch16(); let val = self.spc_read(addr); self.a = self.op_sbc(self.a, val); 4 }
             0xB5 => { let addr = self.fetch16().wrapping_add(self.x as u16); let val = self.spc_read(addr); self.a = self.op_sbc(self.a, val); 5 }
             0xB6 => { let addr = self.fetch16().wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a = self.op_sbc(self.a, val); 5 }
-            0xA7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16(ptr); let val = self.spc_read(addr); self.a = self.op_sbc(self.a, val); 6 }
-            0xB7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a = self.op_sbc(self.a, val); 6 }
+            0xA7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16_dp(ptr); let val = self.spc_read(addr); self.a = self.op_sbc(self.a, val); 6 }
+            0xB7 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16_dp(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a = self.op_sbc(self.a, val); 6 }
             0xB9 => { let iy = self.dp_addr(self.y); let ix = self.dp_addr(self.x); let a = self.spc_read(ix); let b = self.spc_read(iy); let r = self.op_sbc(a, b); self.spc_write(ix, r); 5 }
             0xA9 => { let src = self.fetch_dp(); let sv = self.spc_read(src); let dst = self.fetch_dp(); let dv = self.spc_read(dst); let r = self.op_sbc(dv, sv); self.spc_write(dst, r); 6 }
             0xB8 => { let val = self.fetch8(); let addr = self.fetch_dp(); let dv = self.spc_read(addr); let r = self.op_sbc(dv, val); self.spc_write(addr, r); 5 }
@@ -1292,8 +1314,8 @@ impl Apu {
             0x65 => { let addr = self.fetch16(); let val = self.spc_read(addr); self.op_cmp(self.a, val); 4 }
             0x75 => { let addr = self.fetch16().wrapping_add(self.x as u16); let val = self.spc_read(addr); self.op_cmp(self.a, val); 5 }
             0x76 => { let addr = self.fetch16().wrapping_add(self.y as u16); let val = self.spc_read(addr); self.op_cmp(self.a, val); 5 }
-            0x67 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16(ptr); let val = self.spc_read(addr); self.op_cmp(self.a, val); 6 }
-            0x77 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.op_cmp(self.a, val); 6 }
+            0x67 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16_dp(ptr); let val = self.spc_read(addr); self.op_cmp(self.a, val); 6 }
+            0x77 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16_dp(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.op_cmp(self.a, val); 6 }
             0x69 => { let src = self.fetch_dp(); let sv = self.spc_read(src); let dst = self.fetch_dp(); let dv = self.spc_read(dst); self.op_cmp(dv, sv); 6 }
             0x78 => { let val = self.fetch8(); let addr = self.fetch_dp(); let dv = self.spc_read(addr); self.op_cmp(dv, val); 5 }
             0x66 => { let addr = self.dp_addr(self.x); let val = self.spc_read(addr); self.op_cmp(self.a, val); 3 }
@@ -1317,8 +1339,8 @@ impl Apu {
             0x25 => { let addr = self.fetch16(); let val = self.spc_read(addr); self.a &= val; self.set_nz(self.a); 4 }
             0x35 => { let addr = self.fetch16().wrapping_add(self.x as u16); let val = self.spc_read(addr); self.a &= val; self.set_nz(self.a); 5 }
             0x36 => { let addr = self.fetch16().wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a &= val; self.set_nz(self.a); 5 }
-            0x27 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16(ptr); let val = self.spc_read(addr); self.a &= val; self.set_nz(self.a); 6 }
-            0x37 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a &= val; self.set_nz(self.a); 6 }
+            0x27 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16_dp(ptr); let val = self.spc_read(addr); self.a &= val; self.set_nz(self.a); 6 }
+            0x37 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16_dp(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a &= val; self.set_nz(self.a); 6 }
             0x29 => { let src = self.fetch_dp(); let sv = self.spc_read(src); let dst = self.fetch_dp(); let dv = self.spc_read(dst); let r = dv & sv; self.set_nz(r); self.spc_write(dst, r); 6 }
             0x38 => { let val = self.fetch8(); let addr = self.fetch_dp(); let dv = self.spc_read(addr); let r = dv & val; self.set_nz(r); self.spc_write(addr, r); 5 }
             0x39 => { let iy = self.dp_addr(self.y); let ix = self.dp_addr(self.x); let a = self.spc_read(ix); let b = self.spc_read(iy); let r = a & b; self.set_nz(r); self.spc_write(ix, r); 5 }
@@ -1330,8 +1352,8 @@ impl Apu {
             0x05 => { let addr = self.fetch16(); let val = self.spc_read(addr); self.a |= val; self.set_nz(self.a); 4 }
             0x15 => { let addr = self.fetch16().wrapping_add(self.x as u16); let val = self.spc_read(addr); self.a |= val; self.set_nz(self.a); 5 }
             0x16 => { let addr = self.fetch16().wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a |= val; self.set_nz(self.a); 5 }
-            0x07 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16(ptr); let val = self.spc_read(addr); self.a |= val; self.set_nz(self.a); 6 }
-            0x17 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a |= val; self.set_nz(self.a); 6 }
+            0x07 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16_dp(ptr); let val = self.spc_read(addr); self.a |= val; self.set_nz(self.a); 6 }
+            0x17 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16_dp(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a |= val; self.set_nz(self.a); 6 }
             0x09 => { let src = self.fetch_dp(); let sv = self.spc_read(src); let dst = self.fetch_dp(); let dv = self.spc_read(dst); let r = dv | sv; self.set_nz(r); self.spc_write(dst, r); 6 }
             0x18 => { let val = self.fetch8(); let addr = self.fetch_dp(); let dv = self.spc_read(addr); let r = dv | val; self.set_nz(r); self.spc_write(addr, r); 5 }
             0x06 => { let addr = self.dp_addr(self.x); let val = self.spc_read(addr); self.a |= val; self.set_nz(self.a); 3 }
@@ -1344,8 +1366,8 @@ impl Apu {
             0x45 => { let addr = self.fetch16(); let val = self.spc_read(addr); self.a ^= val; self.set_nz(self.a); 4 }
             0x55 => { let addr = self.fetch16().wrapping_add(self.x as u16); let val = self.spc_read(addr); self.a ^= val; self.set_nz(self.a); 5 }
             0x56 => { let addr = self.fetch16().wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a ^= val; self.set_nz(self.a); 5 }
-            0x47 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16(ptr); let val = self.spc_read(addr); self.a ^= val; self.set_nz(self.a); 6 }
-            0x57 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a ^= val; self.set_nz(self.a); 6 }
+            0x47 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp.wrapping_add(self.x)); let addr = self.read16_dp(ptr); let val = self.spc_read(addr); self.a ^= val; self.set_nz(self.a); 6 }
+            0x57 => { let dp = self.fetch8(); let ptr = self.dp_addr(dp); let addr = self.read16_dp(ptr).wrapping_add(self.y as u16); let val = self.spc_read(addr); self.a ^= val; self.set_nz(self.a); 6 }
             0x49 => { let src = self.fetch_dp(); let sv = self.spc_read(src); let dst = self.fetch_dp(); let dv = self.spc_read(dst); let r = dv ^ sv; self.set_nz(r); self.spc_write(dst, r); 6 }
             0x58 => { let val = self.fetch8(); let addr = self.fetch_dp(); let dv = self.spc_read(addr); let r = dv ^ val; self.set_nz(r); self.spc_write(addr, r); 5 }
             0x46 => { let addr = self.dp_addr(self.x); let val = self.spc_read(addr); self.a ^= val; self.set_nz(self.a); 3 }
@@ -1397,7 +1419,7 @@ impl Apu {
             // === ADDW YA, dp ===
             0x7A => {
                 let addr = self.fetch_dp();
-                let val = self.spc_read(addr) as u16 | ((self.spc_read(addr.wrapping_add(1)) as u16) << 8);
+                let val = self.read16_dp(addr);
                 let ya = (self.y as u16) << 8 | self.a as u16;
                 let result = ya as u32 + val as u32;
                 let r16 = result as u16;
@@ -1413,7 +1435,7 @@ impl Apu {
             // === SUBW YA, dp ===
             0x9A => {
                 let addr = self.fetch_dp();
-                let val = self.spc_read(addr) as u16 | ((self.spc_read(addr.wrapping_add(1)) as u16) << 8);
+                let val = self.read16_dp(addr);
                 let ya = (self.y as u16) << 8 | self.a as u16;
                 let result = ya.wrapping_sub(val);
                 self.a = result as u8;
@@ -1428,7 +1450,7 @@ impl Apu {
             // === CMPW YA, dp ===
             0x5A => {
                 let addr = self.fetch_dp();
-                let val = self.spc_read(addr) as u16 | ((self.spc_read(addr.wrapping_add(1)) as u16) << 8);
+                let val = self.read16_dp(addr);
                 let ya = (self.y as u16) << 8 | self.a as u16;
                 let result = ya.wrapping_sub(val);
                 self.set_flag(0x01, ya >= val);
@@ -1439,10 +1461,9 @@ impl Apu {
             // === INCW dp ===
             0x3A => {
                 let addr = self.fetch_dp();
-                let val = self.spc_read(addr) as u16 | ((self.spc_read(addr.wrapping_add(1)) as u16) << 8);
+                let val = self.read16_dp(addr);
                 let result = val.wrapping_add(1);
-                self.spc_write(addr, result as u8);
-                self.spc_write(addr.wrapping_add(1), (result >> 8) as u8);
+                self.write16_dp(addr, result);
                 self.set_flag(0x02, result == 0);
                 self.set_flag(0x80, result & 0x8000 != 0);
                 6
@@ -1450,10 +1471,9 @@ impl Apu {
             // === DECW dp ===
             0x1A => {
                 let addr = self.fetch_dp();
-                let val = self.spc_read(addr) as u16 | ((self.spc_read(addr.wrapping_add(1)) as u16) << 8);
+                let val = self.read16_dp(addr);
                 let result = val.wrapping_sub(1);
-                self.spc_write(addr, result as u8);
-                self.spc_write(addr.wrapping_add(1), (result >> 8) as u8);
+                self.write16_dp(addr, result);
                 self.set_flag(0x02, result == 0);
                 self.set_flag(0x80, result & 0x8000 != 0);
                 6
@@ -1469,18 +1489,33 @@ impl Apu {
             }
             // === DIV YA, X ===
             0x9E => {
-                let ya = (self.y as u16) << 8 | self.a as u16;
+                let initial_y = self.y;
+                let ya = (initial_y as u16) << 8 | self.a as u16;
                 if self.x == 0 {
                     self.a = 0xFF;
                     self.y = 0xFF;
                     self.set_flag(0x40, true);
                 } else {
-                    self.a = (ya / self.x as u16) as u8;
-                    self.y = (ya % self.x as u16) as u8;
-                    self.set_flag(0x40, (ya / self.x as u16) > 0xFF);
+                    let divisor = (self.x as u32) << 9;
+                    let mut temp = ya as u32;
+                    for _ in 0..9 {
+                        temp <<= 1;
+                        if temp & 0x20000 != 0 {
+                            temp ^= 0x20001;
+                        }
+                        if temp >= divisor {
+                            temp ^= 1;
+                        }
+                        if temp & 1 != 0 {
+                            temp = temp.wrapping_sub(divisor) & 0x1FFFF;
+                        }
+                    }
+                    self.a = (temp & 0xFF) as u8;
+                    self.y = (temp >> 9) as u8;
+                    self.set_flag(0x40, temp & 0x100 != 0);
+                    self.set_flag(0x08, (self.x & 0x0F) <= (initial_y & 0x0F));
                 }
                 self.set_nz(self.a);
-                self.set_flag(0x08, false);
                 12
             }
 
@@ -1646,9 +1681,9 @@ impl Apu {
             // === NOP ===
             0x00 => 2,
             // === SLEEP ===
-            0xEF => { self.pc = self.pc.wrapping_sub(1); 3 }
+            0xEF => { self.halted = true; 3 }
             // === STOP ===
-            0xFF => { self.pc = self.pc.wrapping_sub(1); 3 }
+            0xFF => { self.halted = true; 3 }
         }
     }
 
@@ -1707,12 +1742,12 @@ impl Apu {
     }
 
     fn op_sbc(&mut self, a: u8, b: u8) -> u8 {
-        let c = self.flag_c() as u16;
-        let diff = a as u16 - b as u16 - (1 - c);
+        let borrow = 1i16 - self.flag_c() as i16;
+        let diff = a as i16 - b as i16 - borrow;
         let result = diff as u8;
-        self.set_flag(0x01, diff <= 0xFF);
+        self.set_flag(0x01, diff >= 0);
         self.set_flag(0x40, ((a ^ b) & 0x80 != 0) && ((a ^ result) & 0x80 != 0));
-        self.set_flag(0x08, (a & 0x0F) as u16 >= (b & 0x0F) as u16 + (1 - c));
+        self.set_flag(0x08, (a & 0x0F) as i16 >= (b & 0x0F) as i16 + borrow);
         self.set_nz(result);
         result
     }
@@ -1832,5 +1867,382 @@ mod tests {
         assert!(apu.total_cycles <= 1030);
         assert!(apu.timer_counter[2] > 0);
         assert!(apu.get_audio_buffer_len() > 0);
+    }
+
+    #[test]
+    fn spc_sleep_and_stop_halt_execution_but_keep_clock_running() {
+        for opcode in [0xEF, 0xFF] {
+            let mut apu = Apu::new();
+            apu.ram[0] = opcode;
+            apu.ram[1] = 0xA8;
+            apu.ram[2] = 0x01;
+            apu.pc = 0;
+            apu.timer_target[2] = 1;
+            apu.spc_write(0x00F1, 0x04);
+
+            apu.step();
+
+            assert!(apu.halted);
+            assert_eq!(apu.pc, 1);
+            assert_eq!(apu.cycles, 3);
+
+            apu.run_cycles(16);
+
+            assert_eq!(apu.pc, 1);
+            assert_eq!(apu.a, 0);
+            assert_eq!(apu.cycles, 0);
+            assert_eq!(apu.total_cycles, 16);
+            assert!(apu.timer_counter[2] > 0);
+        }
+    }
+
+    #[test]
+    fn spc_sbc_immediate_handles_borrow_without_wrapping_panic() {
+        let mut apu = Apu::new();
+        apu.ram[0] = 0xA8;
+        apu.ram[1] = 0x01;
+        apu.pc = 0x0000;
+        apu.a = 0x00;
+        apu.psw &= !0x01;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0xFE);
+        assert_eq!(apu.psw & 0x01, 0);
+        assert_ne!(apu.psw & 0x80, 0);
+        assert_eq!(apu.cycles, 2);
+
+        apu.ram[0] = 0xA8;
+        apu.ram[1] = 0x01;
+        apu.pc = 0x0000;
+        apu.a = 0x02;
+        apu.psw |= 0x01;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x01);
+        assert_ne!(apu.psw & 0x01, 0);
+    }
+
+    #[test]
+    fn spc_adc_and_sbc_update_signed_and_decimal_flags() {
+        let mut apu = Apu::new();
+        apu.ram[0] = 0x88;
+        apu.ram[1] = 0x01;
+        apu.pc = 0;
+        apu.a = 0x7F;
+        apu.psw = 0;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x80);
+        assert_eq!(apu.psw & 0x01, 0);
+        assert_ne!(apu.psw & 0x08, 0);
+        assert_ne!(apu.psw & 0x40, 0);
+        assert_ne!(apu.psw & 0x80, 0);
+        assert_eq!(apu.psw & 0x02, 0);
+
+        apu.ram[0] = 0xA8;
+        apu.ram[1] = 0x01;
+        apu.pc = 0;
+        apu.a = 0x80;
+        apu.psw = 0x01;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x7F);
+        assert_ne!(apu.psw & 0x01, 0);
+        assert_eq!(apu.psw & 0x08, 0);
+        assert_ne!(apu.psw & 0x40, 0);
+        assert_eq!(apu.psw & 0x80, 0);
+    }
+
+    #[test]
+    fn spc_branches_report_taken_cycles_and_relative_target() {
+        let mut apu = Apu::new();
+        apu.ram[0] = 0xD0;
+        apu.ram[1] = 0x02;
+        apu.pc = 0;
+        apu.psw = 0;
+
+        apu.step();
+
+        assert_eq!(apu.pc, 4);
+        assert_eq!(apu.cycles, 4);
+
+        apu.ram[0] = 0xD0;
+        apu.ram[1] = 0x02;
+        apu.pc = 0;
+        apu.psw = 0x02;
+
+        apu.step();
+
+        assert_eq!(apu.pc, 2);
+        assert_eq!(apu.cycles, 6);
+    }
+
+    #[test]
+    fn spc_indirect_direct_page_pointer_wraps_at_page_boundary() {
+        let mut apu = Apu::new();
+        apu.ram[0] = 0xE7;
+        apu.ram[1] = 0xFF;
+        apu.ram[0x01FF] = 0x34;
+        apu.ram[0x0100] = 0x12;
+        apu.ram[0x1234] = 0x56;
+        apu.pc = 0;
+        apu.x = 0;
+        apu.psw = 0x20;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x56);
+        assert_eq!(apu.cycles, 6);
+    }
+
+    #[test]
+    fn spc_word_direct_page_access_wraps_at_page_boundary() {
+        let mut apu = Apu::new();
+        apu.ram[0] = 0xBA;
+        apu.ram[1] = 0xFF;
+        apu.ram[0x01FF] = 0x34;
+        apu.ram[0x0100] = 0x12;
+        apu.ram[0x0200] = 0xA5;
+        apu.pc = 0;
+        apu.psw = 0x20;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x34);
+        assert_eq!(apu.y, 0x12);
+        assert_eq!(apu.cycles, 5);
+    }
+
+    #[test]
+    fn spc_daa_and_das_adjust_bcd_and_preserve_unrelated_flags() {
+        let mut apu = Apu::new();
+        apu.ram[0] = 0xDF;
+        apu.pc = 0;
+        apu.a = 0x0A;
+        apu.psw = 0x7C;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x10);
+        assert_eq!(apu.psw & 0x01, 0);
+        assert_eq!(apu.psw & 0x02, 0);
+        assert_eq!(apu.psw & 0x80, 0);
+        assert_eq!(apu.psw & 0x7C, 0x7C);
+        assert_eq!(apu.cycles, 3);
+
+        let mut apu = Apu::new();
+        apu.ram[0] = 0xDF;
+        apu.pc = 0;
+        apu.a = 0x9A;
+        apu.psw = 0x7C;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x00);
+        assert_ne!(apu.psw & 0x01, 0);
+        assert_ne!(apu.psw & 0x02, 0);
+        assert_eq!(apu.psw & 0x80, 0);
+        assert_eq!(apu.psw & 0x7C, 0x7C);
+        assert_eq!(apu.cycles, 3);
+
+        let mut apu = Apu::new();
+        apu.ram[0] = 0xBE;
+        apu.pc = 0;
+        apu.a = 0x00;
+        apu.psw = 0x74;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x9A);
+        assert_eq!(apu.psw & 0x01, 0);
+        assert_eq!(apu.psw & 0x02, 0);
+        assert_ne!(apu.psw & 0x80, 0);
+        assert_eq!(apu.psw & 0x74, 0x74);
+        assert_eq!(apu.cycles, 3);
+
+        let mut apu = Apu::new();
+        apu.ram[0] = 0xBE;
+        apu.pc = 0;
+        apu.a = 0x99;
+        apu.psw = 0x7D;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x99);
+        assert_ne!(apu.psw & 0x01, 0);
+        assert_eq!(apu.psw & 0x02, 0);
+        assert_ne!(apu.psw & 0x80, 0);
+        assert_eq!(apu.psw & 0x7C, 0x7C);
+        assert_eq!(apu.cycles, 3);
+    }
+
+    #[test]
+    fn spc_call_family_preserves_return_addresses_and_vectors() {
+        let mut apu = Apu::new();
+        apu.control = 0;
+        apu.ram[0] = 0x3F;
+        apu.ram[1] = 0x78;
+        apu.ram[2] = 0x56;
+        apu.pc = 0;
+        apu.sp = 0xEF;
+
+        apu.step();
+
+        assert_eq!(apu.pc, 0x5678);
+        assert_eq!(apu.sp, 0xED);
+        assert_eq!(apu.ram[0x01EF], 0x00);
+        assert_eq!(apu.ram[0x01EE], 0x03);
+        assert_eq!(apu.cycles, 8);
+
+        let mut apu = Apu::new();
+        apu.control = 0;
+        apu.ram[0] = 0x4F;
+        apu.ram[1] = 0x42;
+        apu.pc = 0;
+        apu.sp = 0xEF;
+
+        apu.step();
+
+        assert_eq!(apu.pc, 0xFF42);
+        assert_eq!(apu.sp, 0xED);
+        assert_eq!(apu.ram[0x01EF], 0x00);
+        assert_eq!(apu.ram[0x01EE], 0x02);
+        assert_eq!(apu.cycles, 6);
+
+        for n in 0u8..=0x0F {
+            let mut apu = Apu::new();
+            apu.control = 0;
+            let vector = (0xFFDEu16 - u16::from(n) * 2) as usize;
+            let target = 0x4000 | u16::from(n);
+            apu.ram[0] = (n << 4) | 0x01;
+            apu.ram[vector] = target as u8;
+            apu.ram[vector + 1] = (target >> 8) as u8;
+            apu.pc = 0;
+            apu.sp = 0xEF;
+
+            apu.step();
+
+            assert_eq!(apu.pc, target, "TCALL {n:X} vector target");
+            assert_eq!(apu.sp, 0xED, "TCALL {n:X} stack pointer");
+            assert_eq!(apu.ram[0x01EF], 0x00, "TCALL {n:X} return high");
+            assert_eq!(apu.ram[0x01EE], 0x01, "TCALL {n:X} return low");
+            assert_eq!(apu.cycles, 8, "TCALL {n:X} cycles");
+        }
+
+        let mut apu = Apu::new();
+        apu.ram[0] = 0x6F;
+        apu.ram[0x01EE] = 0x34;
+        apu.ram[0x01EF] = 0x12;
+        apu.pc = 0;
+        apu.sp = 0xED;
+
+        apu.step();
+
+        assert_eq!(apu.pc, 0x1234);
+        assert_eq!(apu.sp, 0xEF);
+        assert_eq!(apu.cycles, 5);
+    }
+
+    #[test]
+    fn spc_brk_pushes_return_state_and_reti_restores_it() {
+        let mut apu = Apu::new();
+        apu.control = 0;
+        apu.ram[0] = 0x0F;
+        apu.ram[0xFFDE] = 0x34;
+        apu.ram[0xFFDF] = 0x12;
+        apu.pc = 0;
+        apu.sp = 0xEF;
+        apu.psw = 0xE5;
+
+        apu.step();
+
+        assert_eq!(apu.pc, 0x1234);
+        assert_eq!(apu.sp, 0xEC);
+        assert_eq!(apu.ram[0x01EF], 0x00);
+        assert_eq!(apu.ram[0x01EE], 0x01);
+        assert_eq!(apu.ram[0x01ED], 0xE5);
+        assert_eq!(apu.psw, 0xF1);
+        assert_eq!(apu.cycles, 8);
+
+        let mut apu = Apu::new();
+        apu.ram[0] = 0x7F;
+        apu.pc = 0;
+        apu.sp = 0xEC;
+        apu.ram[0x01ED] = 0xA5;
+        apu.ram[0x01EE] = 0x78;
+        apu.ram[0x01EF] = 0x56;
+
+        apu.step();
+
+        assert_eq!(apu.pc, 0x5678);
+        assert_eq!(apu.sp, 0xEF);
+        assert_eq!(apu.psw, 0xA5);
+        assert_eq!(apu.cycles, 6);
+    }
+
+    #[test]
+    fn spc_div_sets_h_from_initial_low_nibble_comparison() {
+        let mut apu = Apu::new();
+        apu.ram[0] = 0x9E;
+        apu.pc = 0;
+        apu.a = 0x10;
+        apu.x = 0x12;
+        apu.y = 0x00;
+        apu.psw = 0;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x00);
+        assert_eq!(apu.y, 0x10);
+        assert_eq!(apu.psw & 0x08, 0);
+        assert_eq!(apu.psw & 0x40, 0);
+        assert_eq!(apu.psw & 0x80, 0);
+        assert_eq!(apu.cycles, 12);
+    }
+
+    #[test]
+    fn spc_div_exposes_nine_bit_quotient_through_v_and_a() {
+        let mut apu = Apu::new();
+        apu.ram[0] = 0x9E;
+        apu.pc = 0;
+        apu.a = 0xFF;
+        apu.x = 0x01;
+        apu.y = 0xFF;
+        apu.psw = 0x01;
+
+        apu.step();
+
+        assert_eq!(apu.a, 0x01);
+        assert_eq!(apu.y, 0xFE);
+        assert_ne!(apu.psw & 0x01, 0);
+        assert_ne!(apu.psw & 0x08, 0);
+        assert_ne!(apu.psw & 0x40, 0);
+        assert_eq!(apu.psw & 0x80, 0);
+        assert_eq!(apu.psw & 0x02, 0);
+        assert_eq!(apu.cycles, 12);
+    }
+
+    #[test]
+    fn spc_all_opcodes_execute_once_without_panicking() {
+        for opcode in 0u16..=0xFF {
+            let mut apu = Apu::new();
+            apu.pc = 0x0200;
+            apu.a = 0x55;
+            apu.x = 0x03;
+            apu.y = 0x05;
+            apu.psw = 0;
+            apu.ram[0x0200] = opcode as u8;
+            apu.ram[0x0201] = 0;
+            apu.ram[0x0202] = 0;
+            apu.ram[0x0203] = 0;
+
+            apu.step();
+
+            assert!(apu.cycles > 0, "opcode {opcode:02X} returned no cycles");
+        }
     }
 }

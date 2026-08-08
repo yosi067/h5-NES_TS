@@ -240,10 +240,14 @@ impl<'a> Decoder<'a> {
     }
 }
 
-pub fn decompress(input: &[u8], output_len: usize) -> Option<Vec<u8>> {
+pub fn decompress_with_input_len(input: &[u8], output_len: usize) -> Option<(Vec<u8>, usize)> {
     let mut decoder = Decoder::new(input)?;
     let output = decoder.decode(input[0] >> 6, output_len);
-    (!decoder.truncated).then_some(output)
+    (!decoder.truncated).then_some((output, decoder.input_pos))
+}
+
+pub fn decompress(input: &[u8], output_len: usize) -> Option<Vec<u8>> {
+    decompress_with_input_len(input, output_len).map(|(output, _)| output)
 }
 
 #[cfg(test)]
