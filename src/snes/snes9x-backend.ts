@@ -304,6 +304,15 @@ window.EJS_threads=false;
 window.EJS_forceLegacyCores=${forceLegacyCore};
 window.EJS_disableAutoLang=true;
 window.EJS_language='en-US';
+window.addEventListener('keydown',event=>{
+const saveSlot=event.shiftKey&&/^F[1-4]$/.test(event.key)?Number(event.key.slice(1)):event.key==='F5'?0:null;
+const loadSlot=event.ctrlKey&&/^[1-4]$/.test(event.key)?Number(event.key):event.key==='F7'?0:null;
+const action=saveSlot!==null?'save':loadSlot!==null?'load':null;
+if(action===null)return;
+event.preventDefault();
+event.stopPropagation();
+window.parent.postMessage({source:'h5-emu-snes9x-shortcut',action,slot:action==='save'?saveSlot:loadSlot},window.parent.location.origin);
+},true);
 </script><script src=${escapeInlineScript(runtimeUrl)}></script></body></html>`;
   host.appendChild(iframe);
 
@@ -361,20 +370,38 @@ window.EJS_language='en-US';
 
   const getEmulator = (): EmulatorJsInstance | undefined =>
     (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator;
+  let mainLoopRunning = true;
 
   const backend: Snes9xBackend = {
     setButton(button, pressed) {
       getEmulator()?.gameManager?.simulateInput(0, button, pressed ? 1 : 0);
     },
     saveState() {
-      const state = getEmulator()?.gameManager?.getState();
-      if (!state) throw new Error('Snes9x 尚未準備好即時存檔');
-      return new Uint8Array(state);
+      const emulator = getEmulator();
+      const gameManager = emulator?.gameManager;
+      if (!gameManager) throw new Error('Snes9x 尚未準備好即時存檔');
+      const wasRunning = mainLoopRunning;
+      if (wasRunning) gameManager.toggleMainLoop(0);
+      try {
+        const state = gameManager.getState();
+        if (!state || state.length === 0) throw new Error('Snes9x 尚未準備好即時存檔');
+        return new Uint8Array(state);
+      } finally {
+        if (wasRunning) gameManager.toggleMainLoop(1);
+      }
     },
     loadState(state) {
-      const gameManager = getEmulator()?.gameManager;
+      const emulator = getEmulator();
+      const gameManager = emulator?.gameManager;
       if (!gameManager) throw new Error('Snes9x 尚未準備好即時讀檔');
-      gameManager.loadState(state);
+      if (state.length === 0) throw new Error('Snes9x 即時讀檔資料為空');
+      const wasRunning = mainLoopRunning;
+      if (wasRunning) gameManager.toggleMainLoop(0);
+      try {
+        gameManager.loadState(new Uint8Array(state));
+      } finally {
+        if (wasRunning) gameManager.toggleMainLoop(1);
+      }
     },
     hasSaveMarker(marker) {
       const gameManager = getEmulator()?.gameManager;
@@ -423,10 +450,16 @@ window.EJS_language='en-US';
       if (gameManager) restoreSnes9xSaveData(gameManager);
     },
     pause() {
-      getEmulator()?.gameManager?.toggleMainLoop(0);
+      const gameManager = getEmulator()?.gameManager;
+      if (!gameManager) return;
+      mainLoopRunning = false;
+      gameManager.toggleMainLoop(0);
     },
     resume() {
-      getEmulator()?.gameManager?.toggleMainLoop(1);
+      const gameManager = getEmulator()?.gameManager;
+      if (!gameManager) return;
+      mainLoopRunning = true;
+      gameManager.toggleMainLoop(1);
     },
     reset() {
       getEmulator()?.gameManager?.restart();

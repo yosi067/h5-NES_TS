@@ -4215,6 +4215,24 @@ function setupKeyboardShortcuts(): void {
       void confirmReturnToMachineMenu();
     }
   });
+
+  window.addEventListener('message', (event) => {
+    if (!isSnes9xActive() || (event.origin !== window.location.origin && event.origin !== 'null')) return;
+    const iframe = document.getElementById('snes9x-screen') as HTMLIFrameElement | null;
+    if (event.source !== iframe?.contentWindow) return;
+    if (!event.data || typeof event.data !== 'object' || event.data.source !== 'h5-emu-snes9x-shortcut') return;
+
+    const slot = typeof event.data.slot === 'number' && Number.isInteger(event.data.slot)
+      ? event.data.slot
+      : 0;
+    const success = event.data.action === 'save' ? saveState(slot)
+      : event.data.action === 'load' ? loadState(slot)
+        : false;
+    if (event.data.action === 'save' || event.data.action === 'load') {
+      showToast(success ? (event.data.action === 'save' ? '✅ 存檔成功' : '✅ 讀取成功')
+        : (event.data.action === 'save' ? '❌ 存檔失敗' : '❌ 沒有存檔'));
+    }
+  });
 }
 
 // ===== 全域匯出 =====
