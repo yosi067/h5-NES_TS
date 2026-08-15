@@ -723,6 +723,7 @@ function setupAppShell(): boolean {
   });
 
   // 設定觸控裝置 RWD 狀態（iPhone Safari 橫版可能仍落在桌機寬度斷點）
+  setupIOSInstallHint();
   setupResponsiveModeDetection();
   updateKeyboardGuide();
 
@@ -776,14 +777,37 @@ function isStandaloneDisplayMode(): boolean {
   );
 }
 
+function updateIOSInstallHint(): void {
+  const hint = document.getElementById('ios-install-hint');
+  if (!hint || hint.dataset.dismissed === 'true') return;
+
+  const isIOSBrowser = isIOSDevice() && !isStandaloneDisplayMode();
+  const isLobbyVisible = romSelector ? getComputedStyle(romSelector).display !== 'none' : false;
+  hint.hidden = !isIOSBrowser || !isLobbyVisible;
+}
+
+function setupIOSInstallHint(): void {
+  document.getElementById('ios-install-hint-close')?.addEventListener('click', () => {
+    const hint = document.getElementById('ios-install-hint');
+    if (!hint) return;
+    hint.dataset.dismissed = 'true';
+    hint.hidden = true;
+  });
+}
+
 function setupResponsiveModeDetection(): void {
   document.body.classList.toggle('android-device-mode', /Android/i.test(navigator.userAgent));
   const iosDevice = isIOSDevice();
   let wasIOSBrowserLandscape = false;
   let collapseAddressBarFrame: number | null = null;
 
+  const canScrollRoot = () => {
+    const scrollingElement = document.scrollingElement;
+    return Boolean(scrollingElement && scrollingElement.scrollHeight > scrollingElement.clientHeight + 1);
+  };
+
   const requestIOSAddressBarCollapse = () => {
-    if (!document.documentElement.classList.contains('ios-safari-landscape-mode') || window.scrollY > 0) {
+    if (!document.body.classList.contains('ios-safari-browser-mode') || window.scrollY > 0 || !canScrollRoot()) {
       return;
     }
 
@@ -793,7 +817,7 @@ function setupResponsiveModeDetection(): void {
 
     collapseAddressBarFrame = window.requestAnimationFrame(() => {
       collapseAddressBarFrame = null;
-      if (document.documentElement.classList.contains('ios-safari-landscape-mode')) {
+      if (document.body.classList.contains('ios-safari-browser-mode') && canScrollRoot()) {
         window.scrollTo(0, 1);
       }
     });
@@ -810,16 +834,23 @@ function setupResponsiveModeDetection(): void {
     const isCompressedLandscape = isLandscape && viewportHeight <= 560;
     const shouldUseMobileLandscape = isTouchDevice && isLandscape && (viewportWidth <= 1180 || isCompressedLandscape);
     const isIOSLandscape = iosDevice && isLandscape;
-    const isIOSBrowserLandscape = isIOSLandscape && !isStandaloneDisplayMode();
+    const isStandalone = isStandaloneDisplayMode();
+    const isIOSBrowser = iosDevice && !isStandalone;
+    const isIOSBrowserLandscape = isIOSLandscape && isIOSBrowser;
 
     document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
     document.documentElement.style.setProperty('--visual-viewport-center-x', `${viewportOffsetLeft + viewportWidth / 2}px`);
     document.documentElement.style.setProperty('--visual-viewport-center-y', `${viewportOffsetTop + viewportHeight / 2}px`);
+    document.documentElement.classList.toggle('ios-safari-browser-mode', isIOSBrowser);
+    document.body.classList.toggle('ios-safari-browser-mode', isIOSBrowser);
     document.documentElement.classList.toggle('ios-safari-landscape-mode', isIOSBrowserLandscape);
     document.body.classList.toggle('ios-safari-landscape-mode', isIOSBrowserLandscape);
+    document.documentElement.classList.toggle('standalone-mode', isStandalone);
+    document.body.classList.toggle('standalone-mode', isStandalone);
     document.body.classList.toggle('touch-device-mode', isTouchDevice);
     document.body.classList.toggle('mobile-landscape-mode', shouldUseMobileLandscape);
     document.body.classList.toggle('fullscreen-active', Boolean(document.fullscreenElement) || isIOSLandscape);
+    updateIOSInstallHint();
 
     if (isIOSBrowserLandscape && !wasIOSBrowserLandscape) {
       requestIOSAddressBarCollapse();
@@ -836,6 +867,7 @@ function setupResponsiveModeDetection(): void {
   window.visualViewport?.addEventListener('resize', updateResponsiveMode, { passive: true });
   window.visualViewport?.addEventListener('scroll', updateResponsiveMode, { passive: true });
   window.addEventListener('touchstart', requestIOSAddressBarCollapse, { passive: true });
+  window.addEventListener('touchend', requestIOSAddressBarCollapse, { passive: true });
 }
 
 // ===== 鍵盤輸入 =====
@@ -2224,6 +2256,7 @@ function hideRomSelector(): void {
   stopLobbyCrtPreview();
   if (romSelector) romSelector.style.display = 'none';
   if (gameboyShell) gameboyShell.style.display = 'flex';
+  updateIOSInstallHint();
 }
 
 /**
@@ -2243,6 +2276,7 @@ async function showRomSelector(): Promise<void> {
   if (romCatalog.length > 0) renderMachineSelector();
   if (romSelector) romSelector.style.display = 'flex';
   if (gameboyShell) gameboyShell.style.display = 'none';
+  updateIOSInstallHint();
   void startLobbyCrtPreview();
 }
 

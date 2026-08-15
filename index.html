@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="H5-EMU">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#C4C4A6">
+  <link rel="apple-touch-icon" href="/assets/h5-emu-icon.svg">
   <link rel="manifest" href="/manifest.webmanifest">
   <title>H5-EMU 模擬器</title>
   <style>
@@ -23,16 +24,37 @@
       overflow: hidden;
     }
 
-    html.ios-safari-landscape-mode {
+    html.ios-safari-browser-mode {
+      height: auto;
       min-height: 100%;
+      overflow-x: hidden;
       overflow-y: auto;
       overscroll-behavior-y: none;
       scroll-behavior: auto;
     }
 
-    body.ios-safari-landscape-mode {
-      height: calc(100% + 1px);
-      min-height: calc(100% + 1px);
+    body.ios-safari-browser-mode {
+      height: auto;
+      min-height: calc(100dvh + 24px);
+      overflow: visible;
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+
+    body.ios-safari-browser-mode.mobile-landscape-mode {
+      overflow: visible;
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+
+    html.ios-safari-landscape-mode {
+      min-height: 100%;
+    }
+
+    html.standalone-mode,
+    body.standalone-mode {
+      height: 100%;
+      min-height: 100%;
+      overflow: hidden;
+      padding-bottom: 0;
     }
 
     /* ===== GameBoy 經典配色 ===== */
@@ -115,6 +137,58 @@
 
     .game-loading-overlay[hidden] {
       display: none;
+    }
+
+    .ios-install-hint {
+      position: fixed;
+      right: max(12px, env(safe-area-inset-right));
+      bottom: max(12px, env(safe-area-inset-bottom));
+      left: max(12px, env(safe-area-inset-left));
+      z-index: 1900;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 12px 14px;
+      border: 1px solid rgba(243, 234, 216, 0.28);
+      border-radius: 8px;
+      background: rgba(23, 23, 28, 0.94);
+      color: var(--fc-cream);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+
+    .ios-install-hint[hidden] {
+      display: none;
+    }
+
+    .ios-install-hint-copy {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .ios-install-hint-copy strong {
+      color: #f4d36a;
+      font-size: 13px;
+    }
+
+    .ios-install-hint-close {
+      flex: 0 0 32px;
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(243, 234, 216, 0.3);
+      border-radius: 4px;
+      background: transparent;
+      color: var(--fc-cream);
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
     }
 
     .game-loading-card {
@@ -6055,6 +6129,14 @@
         <button class="app-dialog-button app-dialog-button-primary" id="app-dialog-confirm" type="button">是</button>
       </div>
     </div>
+  </div>
+
+  <div class="ios-install-hint" id="ios-install-hint" role="status" hidden>
+    <div class="ios-install-hint-copy">
+      <strong>想要隱藏 Safari 網址列？</strong>
+      <span>請點分享，再選「加入主畫面」開啟 H5-EMU。</span>
+    </div>
+    <button class="ios-install-hint-close" id="ios-install-hint-close" type="button" aria-label="關閉提示">×</button>
   </div>
 
   <!-- ROM 選擇器 (初始顯示) -->
