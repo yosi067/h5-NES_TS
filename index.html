@@ -4,8 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="H5-EMU">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#C4C4A6">
+  <link rel="manifest" href="/manifest.webmanifest">
   <title>H5-EMU 模擬器</title>
   <style>
     /* ===== 基礎重置 ===== */
@@ -18,6 +21,18 @@
     html, body {
       height: 100%;
       overflow: hidden;
+    }
+
+    html.ios-safari-landscape-mode {
+      min-height: 100%;
+      overflow-y: auto;
+      overscroll-behavior-y: none;
+      scroll-behavior: auto;
+    }
+
+    body.ios-safari-landscape-mode {
+      height: calc(100% + 1px);
+      min-height: calc(100% + 1px);
     }
 
     /* ===== GameBoy 經典配色 ===== */
@@ -4399,7 +4414,7 @@
     body.fullscreen-active .gameboy-shell {
       max-width: none;
       width: 100vw;
-      height: 100vh;
+      height: var(--app-height, 100dvh);
       border-radius: 0;
       box-shadow: none;
     }
@@ -5783,6 +5798,237 @@
     .dpad-btn, .func-btn, .action-btn {
       -webkit-tap-highlight-color: transparent;
       outline: none;
+    }
+
+    @media (min-width: 769px) {
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) {
+        align-items: center;
+        justify-content: center;
+        padding: 18px 24px;
+        background:
+          radial-gradient(circle at 50% 8%, rgba(246, 211, 105, 0.16), transparent 25%),
+          linear-gradient(180deg, #493b36 0%, #201d20 56%, #121316 100%);
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell {
+        width: min(1120px, calc(100vw - 48px));
+        max-width: min(1120px, calc(100vw - 48px));
+        height: min(900px, calc(var(--app-height, 100vh) - 36px));
+        max-height: calc(var(--app-height, 100vh) - 36px);
+        min-height: 0;
+        padding: 30px 32px 24px;
+        gap: 0;
+        background:
+          linear-gradient(90deg, rgba(255,255,255,0.16), transparent 14% 84%, rgba(0,0,0,0.18)),
+          linear-gradient(180deg, #a2a49a 0%, #7c817b 68%, #656b66 100%);
+        border: 10px solid #282d2b;
+        border-radius: 28px 28px 42px 42px;
+        box-shadow:
+          0 16px 0 #3c403d,
+          0 28px 48px rgba(0,0,0,0.46),
+          inset 0 0 0 3px #c8c7b8,
+          inset 0 -20px 0 rgba(27, 31, 29, 0.12);
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-color: #4e5650 #8a9087;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell::before {
+        content: 'H5-EMU TELEVISION';
+        top: 13px;
+        left: 30px;
+        color: #3c4540;
+        font-size: 12px;
+        letter-spacing: 3px;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .cabinet-toolbar {
+        position: absolute;
+        top: 14px;
+        right: 24px;
+        left: 24px;
+        z-index: 10;
+        width: auto;
+        margin: 0;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .cabinet-toggle,
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .fullscreen-btn {
+        min-width: 42px;
+        height: 32px;
+        border: 2px solid #3d4540;
+        border-radius: 4px;
+        background: linear-gradient(180deg, #343b37, #202522);
+        color: #f2e7bd;
+        box-shadow: 0 3px 0 #1b1e1c, inset 0 1px 0 rgba(255,255,255,0.18);
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .cabinet-toggle {
+        padding: 0 12px;
+        font-size: 11px;
+        letter-spacing: 1px;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .fullscreen-btn {
+        font-size: 18px;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .top-decoration {
+        display: none;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .screen-bezel {
+        width: min(780px, 100%);
+        max-width: 100%;
+        padding: 18px;
+        margin: 0 0 14px;
+        background: linear-gradient(145deg, #595f5a, #292e2b 70%);
+        border: 7px solid #363b38;
+        border-radius: 22px;
+        box-shadow: inset 0 0 0 2px #84897f, 0 6px 0 #3c403d, 0 12px 18px rgba(21,24,22,0.32);
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .screen-inner {
+        padding: 12px;
+        border-radius: 14px;
+        background: #080b09;
+        box-shadow: inset 0 0 0 2px #111713, inset 0 0 20px rgba(0,0,0,0.85);
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) #screen,
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) #canvas,
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) #snes9x-screen {
+        width: min(700px, 100%);
+        max-width: 100%;
+        max-height: calc(var(--app-height, 100vh) - 190px);
+        border-radius: 9px;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .power-led {
+        left: -15px;
+        width: 9px;
+        height: 9px;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .brand-area {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        min-height: 50px;
+        margin: 0 0 14px;
+        padding: 10px 18px;
+        border-top: 2px solid rgba(39, 45, 42, 0.64);
+        border-bottom: 1px solid rgba(39, 45, 42, 0.36);
+        border-radius: 5px;
+        background: linear-gradient(180deg, rgba(51, 58, 54, 0.32), rgba(27, 32, 29, 0.16));
+        text-align: left;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .brand-nintendo {
+        margin: 0;
+        color: #354038;
+        font-size: 9px;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .brand-name {
+        color: #f1e5b9;
+        font-size: 24px;
+        letter-spacing: 2px;
+        text-shadow: 2px 2px 0 #384039;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .desktop-controls {
+        display: none;
+        width: 100%;
+        margin: 0 0 12px;
+        padding: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 8px;
+        border: 1px solid rgba(246, 239, 204, 0.18);
+        border-radius: 6px;
+        background: rgba(24, 29, 26, 0.72);
+        box-shadow: inset 0 0 0 2px rgba(0,0,0,0.16);
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open .desktop-controls {
+        display: grid !important;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .desktop-controls button,
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .desktop-controls label {
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        padding: 8px 12px;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 4px;
+        font-size: 12px;
+        line-height: 1.1;
+        text-align: center;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode) .keyboard-guide {
+        display: none;
+        width: 100%;
+        max-width: none;
+        max-height: 190px;
+        margin: 0;
+        padding: 12px;
+        border: 1px solid rgba(246, 239, 204, 0.16);
+        border-radius: 6px;
+        background: rgba(24, 29, 26, 0.72);
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open .keyboard-guide {
+        display: block;
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open .screen-bezel {
+        width: min(620px, 100%);
+      }
+
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #screen,
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #canvas,
+      body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open #snes9x-screen {
+        width: min(520px, 100%, calc((var(--app-height, 100vh) - 390px) * 1.3333));
+        max-height: calc(var(--app-height, 100vh) - 390px);
+      }
+
+      @media (min-width: 1100px) {
+        body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open .gameboy-shell {
+          display: grid !important;
+          grid-template-columns: minmax(0, 620px) minmax(0, 1fr);
+          grid-template-rows: auto auto;
+          column-gap: 16px;
+          row-gap: 0;
+          align-content: start;
+        }
+
+        body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open .screen-bezel {
+          grid-column: 1;
+          grid-row: 1;
+        }
+
+        body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open .brand-area {
+          grid-column: 1;
+          grid-row: 2;
+        }
+
+        body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open .desktop-controls {
+          grid-column: 2;
+          grid-row: 1;
+        }
+
+        body:not(.touch-device-mode):not(.mobile-landscape-mode).controls-open .keyboard-guide {
+          grid-column: 2;
+          grid-row: 2;
+        }
+      }
     }
   </style>
   <link rel="stylesheet" href="/magazine-selector.css">

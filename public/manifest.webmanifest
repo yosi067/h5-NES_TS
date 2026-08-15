@@ -1,0 +1,10 @@
+{
+  "name": "H5-EMU Emulator",
+  "short_name": "H5-EMU",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#17171c",
+  "theme_color": "#C4C4A6"
+}

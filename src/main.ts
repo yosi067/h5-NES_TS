@@ -763,8 +763,41 @@ async function waitForWasmCore(): Promise<boolean> {
   return nes !== null;
 }
 
+function isIOSDevice(): boolean {
+  return /iPad|iPhone|iPod/i.test(navigator.userAgent)
+    || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isStandaloneDisplayMode(): boolean {
+  const standaloneNavigator = navigator as Navigator & { standalone?: boolean };
+  return Boolean(
+    window.matchMedia?.('(display-mode: standalone)').matches
+      || standaloneNavigator.standalone,
+  );
+}
+
 function setupResponsiveModeDetection(): void {
   document.body.classList.toggle('android-device-mode', /Android/i.test(navigator.userAgent));
+  const iosDevice = isIOSDevice();
+  let wasIOSBrowserLandscape = false;
+  let collapseAddressBarFrame: number | null = null;
+
+  const requestIOSAddressBarCollapse = () => {
+    if (!document.documentElement.classList.contains('ios-safari-landscape-mode') || window.scrollY > 0) {
+      return;
+    }
+
+    if (collapseAddressBarFrame !== null) {
+      window.cancelAnimationFrame(collapseAddressBarFrame);
+    }
+
+    collapseAddressBarFrame = window.requestAnimationFrame(() => {
+      collapseAddressBarFrame = null;
+      if (document.documentElement.classList.contains('ios-safari-landscape-mode')) {
+        window.scrollTo(0, 1);
+      }
+    });
+  };
 
   const updateResponsiveMode = () => {
     const visualViewport = window.visualViewport;
@@ -776,19 +809,33 @@ function setupResponsiveModeDetection(): void {
     const isTouchDevice = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
     const isCompressedLandscape = isLandscape && viewportHeight <= 560;
     const shouldUseMobileLandscape = isTouchDevice && isLandscape && (viewportWidth <= 1180 || isCompressedLandscape);
+    const isIOSLandscape = iosDevice && isLandscape;
+    const isIOSBrowserLandscape = isIOSLandscape && !isStandaloneDisplayMode();
 
     document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
     document.documentElement.style.setProperty('--visual-viewport-center-x', `${viewportOffsetLeft + viewportWidth / 2}px`);
     document.documentElement.style.setProperty('--visual-viewport-center-y', `${viewportOffsetTop + viewportHeight / 2}px`);
+    document.documentElement.classList.toggle('ios-safari-landscape-mode', isIOSBrowserLandscape);
+    document.body.classList.toggle('ios-safari-landscape-mode', isIOSBrowserLandscape);
     document.body.classList.toggle('touch-device-mode', isTouchDevice);
     document.body.classList.toggle('mobile-landscape-mode', shouldUseMobileLandscape);
+    document.body.classList.toggle('fullscreen-active', Boolean(document.fullscreenElement) || isIOSLandscape);
+
+    if (isIOSBrowserLandscape && !wasIOSBrowserLandscape) {
+      requestIOSAddressBarCollapse();
+    }
+    wasIOSBrowserLandscape = isIOSBrowserLandscape;
   };
 
   updateResponsiveMode();
   window.addEventListener('resize', updateResponsiveMode, { passive: true });
-  window.addEventListener('orientationchange', updateResponsiveMode, { passive: true });
+  window.addEventListener('orientationchange', () => {
+    updateResponsiveMode();
+    window.requestAnimationFrame(updateResponsiveMode);
+  }, { passive: true });
   window.visualViewport?.addEventListener('resize', updateResponsiveMode, { passive: true });
   window.visualViewport?.addEventListener('scroll', updateResponsiveMode, { passive: true });
+  window.addEventListener('touchstart', requestIOSAddressBarCollapse, { passive: true });
 }
 
 // ===== 鍵盤輸入 =====
@@ -2708,24 +2755,42 @@ function setupDesktopControls(): void {
     controlToggle.setAttribute('aria-expanded', String(isOpen));
   });
 
+  type WebkitFullscreenDocument = Document & {
+    webkitExitFullscreen?: () => void | Promise<void>;
+    webkitFullscreenElement?: Element | null;
+  };
+  type WebkitFullscreenTarget = HTMLElement & {
+    webkitRequestFullscreen?: () => void | Promise<void>;
+  };
+
+  const fullscreenDocument = document as WebkitFullscreenDocument;
+  const getFullscreenElement = () => document.fullscreenElement ?? fullscreenDocument.webkitFullscreenElement ?? null;
+
   const toggleFullscreen = () => {
-    if (document.fullscreenElement) {
-      void document.exitFullscreen().catch((error) => console.warn('離開全螢幕失敗:', error));
+    if (getFullscreenElement()) {
+      const exitFullscreen = document.exitFullscreen?.bind(document)
+        ?? fullscreenDocument.webkitExitFullscreen?.bind(document);
+      void Promise.resolve(exitFullscreen?.()).catch((error) => console.warn('離開全螢幕失敗:', error));
       return;
     }
 
-    const target = gameboyShell ?? document.documentElement;
-    const request = target.requestFullscreen?.();
-    void request?.catch((error) => console.warn('進入全螢幕失敗:', error));
+    const target = (gameboyShell ?? document.documentElement) as WebkitFullscreenTarget;
+    const requestFullscreen = target.requestFullscreen?.bind(target)
+      ?? target.webkitRequestFullscreen?.bind(target);
+    void Promise.resolve(requestFullscreen?.()).catch((error) => console.warn('進入全螢幕失敗:', error));
   };
 
   const syncFullscreenState = () => {
-    document.body.classList.toggle('fullscreen-active', Boolean(document.fullscreenElement));
+    const isIOSLandscape = document.body.classList.contains('ios-safari-landscape-mode')
+      || document.body.classList.contains('mobile-landscape-mode')
+        && /iPad|iPhone|iPod/i.test(navigator.userAgent);
+    document.body.classList.toggle('fullscreen-active', Boolean(getFullscreenElement()) || isIOSLandscape);
   };
 
   document.getElementById('btn-fullscreen')?.addEventListener('click', toggleFullscreen);
   document.getElementById('btn-fullscreen-overlay')?.addEventListener('click', toggleFullscreen);
   document.addEventListener('fullscreenchange', syncFullscreenState);
+  document.addEventListener('webkitfullscreenchange', syncFullscreenState);
 
   document.getElementById('btn-pause')?.addEventListener('click', stopEmulation);
   document.getElementById('btn-resume')?.addEventListener('click', startEmulation);
