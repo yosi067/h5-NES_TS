@@ -6393,6 +6393,26 @@
         font-size: clamp(18px, 3vw, 23px);
       }
     }
+
+    /* Portrait touch layout: keep NES utility buttons at the bottom of the viewport. */
+    body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .center-btns {
+      position: fixed;
+      top: auto;
+      right: 0;
+      bottom: max(18px, calc(env(safe-area-inset-bottom) + 18px));
+      left: 0;
+      z-index: 20;
+      display: flex !important;
+      width: 100%;
+      justify-content: center;
+      pointer-events: none;
+      transform: none;
+    }
+
+    body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .center-btns .func-btn {
+      position: static;
+      pointer-events: auto;
+    }
   </style>
   <link rel="stylesheet" href="/magazine-selector.css">
 </head>
