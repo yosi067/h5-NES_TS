@@ -6,6 +6,7 @@ export interface Snes9xBackend {
   installSaveBootstrap(saveData: Uint8Array, rtcData: Uint8Array): Promise<boolean>;
   restoreSaveData(): void;
   syncSaveData(): Promise<void>;
+  resumeAudio(): void;
   pause(): void;
   resume(): void;
   reset(): void;
@@ -31,8 +32,20 @@ interface EmulatorJsGameManager {
   loadState(state: Uint8Array): void;
 }
 
+interface EmulatorJsAudioContext {
+  state: string;
+  resume(): Promise<void>;
+}
+
 interface EmulatorJsInstance {
   gameManager?: EmulatorJsGameManager;
+  Module?: {
+    AL?: {
+      currentCtx?: {
+        audioCtx?: EmulatorJsAudioContext;
+      };
+    };
+  };
   started?: boolean;
   callEvent?(event: string): void;
 }
@@ -306,6 +319,31 @@ window.EJS_threads=false;
 window.EJS_forceLegacyCores=${forceLegacyCore};
 window.EJS_disableAutoLang=true;
 window.EJS_language='en-US';
+const removeAudioResumePopup=()=>{
+document.querySelectorAll('.ejs_popup_container').forEach(popup=>{
+const title=popup.querySelector('h4')?.textContent?.trim();
+const action=popup.querySelector('.ejs_menu_button')?.textContent?.trim();
+if(title==='undefined'&&action==='Click to resume Emulator')popup.remove();
+});
+};
+const popupObserver=new MutationObserver(removeAudioResumePopup);
+popupObserver.observe(document.documentElement,{childList:true,subtree:true});
+const suppressAudioResumeCheck=()=>{
+const emulator=window.EJS_emulator;
+if(!emulator||typeof emulator.checkStarted!=='function')return false;
+emulator.checkStarted=()=>{};
+return true;
+};
+const emulatorPatchTimer=window.setInterval(()=>{
+if(suppressAudioResumeCheck())window.clearInterval(emulatorPatchTimer);
+},25);
+const resumeAudio=()=>{
+const audioContext=window.EJS_emulator?.Module?.AL?.currentCtx?.audioCtx;
+if(audioContext?.state==='suspended')void audioContext.resume().catch(()=>{});
+};
+window.addEventListener('pointerdown',resumeAudio,true);
+window.addEventListener('touchstart',resumeAudio,true);
+window.addEventListener('keydown',resumeAudio,true);
 window.addEventListener('keydown',event=>{
 const saveSlot=event.shiftKey&&/^F[1-4]$/.test(event.key)?Number(event.key.slice(1)):event.key==='F5'?0:null;
 const loadSlot=event.ctrlKey&&/^[1-4]$/.test(event.key)?Number(event.key):event.key==='F7'?0:null;
@@ -460,6 +498,10 @@ window.parent.postMessage({source:'h5-emu-snes9x-shortcut',action,slot:action===
     restoreSaveData() {
       const gameManager = getEmulator()?.gameManager;
       if (gameManager) restoreSnes9xSaveData(gameManager);
+    },
+    resumeAudio() {
+      const audioContext = getEmulator()?.Module?.AL?.currentCtx?.audioCtx;
+      if (audioContext?.state === 'suspended') void audioContext.resume().catch(() => {});
     },
     pause() {
       const gameManager = getEmulator()?.gameManager;

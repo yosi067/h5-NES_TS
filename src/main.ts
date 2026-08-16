@@ -402,6 +402,7 @@ function isEmulatorJsNesActive(): boolean {
 
 function setNesButton(button: ControllerButton, pressed: boolean): void {
   if (isEmulatorJsNesActive()) {
+    if (pressed) snes9xBackend?.resumeAudio();
     const libretroButton = button === ControllerButton.A ? 8
       : button === ControllerButton.B ? 0
       : button;
@@ -412,7 +413,10 @@ function setNesButton(button: ControllerButton, pressed: boolean): void {
 }
 
 function setSnesButton(button: number, pressed: boolean): void {
-  if (isSnes9xActive()) snes9xBackend?.setButton(button, pressed);
+  if (isSnes9xActive()) {
+    if (pressed) snes9xBackend?.resumeAudio();
+    snes9xBackend?.setButton(button, pressed);
+  }
   else nes?.setButton(0, button, pressed);
 }
 
