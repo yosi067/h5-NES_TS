@@ -13,7 +13,11 @@ import init, { EmuWasm } from './wasm/nes_wasm.js';
 import JSZip from 'jszip';
 import { getRomMagazineMeta } from './data/rom-metadata';
 import type { EmulatorControls } from 'mupen64plus-web';
-import type { FbNeoArcadeCore, FbNeoRomSet } from './arcade/fbneo-core';
+import {
+  FbNeoArcadeCore,
+  extractFbNeoRomSet,
+  type FbNeoRomSet,
+} from './arcade/fbneo-core';
 import {
   applyN64PerformanceProfile,
   selectN64PerformanceProfile,
@@ -1748,7 +1752,6 @@ async function startFbNeoGame(
   clearAudioQueue();
 
   try {
-    const { FbNeoArcadeCore, extractFbNeoRomSet } = await import('./arcade/fbneo-core');
     throwIfSignalAborted(signal);
     coreInstance = new FbNeoArcadeCore();
     fbneoCore = coreInstance;
