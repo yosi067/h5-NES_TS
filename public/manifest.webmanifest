@@ -1,16 +1,16 @@
 {
   "name": "H5-EMU Emulator",
   "short_name": "H5-EMU",
-  "id": "/",
-  "start_url": "/",
-  "scope": "/",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "orientation": "any",
   "background_color": "#17171c",
   "theme_color": "#C4C4A6",
   "icons": [
     {
-      "src": "/assets/h5-emu-icon.svg",
+      "src": "./assets/h5-emu-icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
