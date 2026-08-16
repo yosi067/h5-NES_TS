@@ -4710,12 +4710,14 @@
     }
 
     body.mobile-landscape-mode.arcade-mode {
-      --arcade-landscape-side: clamp(126px, 20vw, 170px);
-      --landscape-screen-width: min(calc(100vw - var(--arcade-landscape-side) * 2 - var(--landscape-gap) * 2), calc((var(--app-height, 100dvh) - 4px) * 4 / 3));
+      --arcade-landscape-side: clamp(142px, 22vw, 190px);
+      --arcade-landscape-gap: clamp(9px, 1.2vw, 14px);
+      --landscape-screen-width: min(calc(100vw - var(--arcade-landscape-side) * 2 - var(--arcade-landscape-gap) * 2), calc((var(--app-height, 100dvh) - 4px) * 4 / 3));
     }
 
     body.mobile-landscape-mode.arcade-mode .gameboy-shell {
       display: grid;
+      column-gap: var(--arcade-landscape-gap);
       grid-template-columns: minmax(var(--arcade-landscape-side), 1fr) var(--landscape-screen-width) minmax(var(--arcade-landscape-side), 1fr);
       grid-template-rows: minmax(0, 1fr);
     }
