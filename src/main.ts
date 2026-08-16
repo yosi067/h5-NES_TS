@@ -2260,7 +2260,7 @@ async function stopN64Backend(): Promise<void> {
 function hideRomSelector(): void {
   stopLobbyCrtPreview();
   if (romSelector) romSelector.style.display = 'none';
-  if (gameboyShell) gameboyShell.style.display = 'flex';
+  if (gameboyShell) gameboyShell.style.removeProperty('display');
   updateIOSInstallHint();
 }
 

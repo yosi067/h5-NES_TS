@@ -328,15 +328,6 @@ if(title==='undefined'&&action==='Click to resume Emulator')popup.remove();
 };
 const popupObserver=new MutationObserver(removeAudioResumePopup);
 popupObserver.observe(document.documentElement,{childList:true,subtree:true});
-const suppressAudioResumeCheck=()=>{
-const emulator=window.EJS_emulator;
-if(!emulator||typeof emulator.checkStarted!=='function')return false;
-emulator.checkStarted=()=>{};
-return true;
-};
-const emulatorPatchTimer=window.setInterval(()=>{
-if(suppressAudioResumeCheck())window.clearInterval(emulatorPatchTimer);
-},25);
 const resumeAudio=()=>{
 const audioContext=window.EJS_emulator?.Module?.AL?.currentCtx?.audioCtx;
 if(audioContext?.state==='suspended')void audioContext.resume().catch(()=>{});
