@@ -306,6 +306,18 @@ window.EJS_threads=false;
 window.EJS_forceLegacyCores=${forceLegacyCore};
 window.EJS_disableAutoLang=true;
 window.EJS_language='en-US';
+const updateAudioResumePrompt=()=>{
+document.querySelectorAll('.ejs_popup_container').forEach(popup=>{
+const title=popup.querySelector('h4');
+const button=popup.querySelector('.ejs_menu_button');
+if(title?.textContent?.trim()!=='undefined'||button?.textContent?.trim()!=='Click to resume Emulator')return;
+title.style.display='none';
+title.textContent='';
+button.textContent='點擊畫面開始遊戲';
+});
+};
+const popupObserver=new MutationObserver(updateAudioResumePrompt);
+popupObserver.observe(document.documentElement,{childList:true,subtree:true});
 window.addEventListener('keydown',event=>{
 const saveSlot=event.shiftKey&&/^F[1-4]$/.test(event.key)?Number(event.key.slice(1)):event.key==='F5'?0:null;
 const loadSlot=event.ctrlKey&&/^[1-4]$/.test(event.key)?Number(event.key):event.key==='F7'?0:null;

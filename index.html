@@ -6415,6 +6415,66 @@
       position: static;
       pointer-events: auto;
     }
+
+    /* Keep arcade controls outside the game image on every mobile landscape viewport. */
+    @media (orientation: landscape) {
+      body.mobile-landscape-mode.arcade-mode {
+        --arcade-landscape-side: clamp(166px, 24vw, 248px);
+        --arcade-landscape-gap: clamp(22px, 3vw, 42px);
+        --landscape-screen-width: min(
+          calc(100vw - (var(--arcade-landscape-side) * 2) - (var(--arcade-landscape-gap) * 2)),
+          calc((var(--app-height, 100dvh) - 4px) * 4 / 3)
+        );
+      }
+
+      body.mobile-landscape-mode.arcade-mode .screen-bezel {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        z-index: 2;
+        width: var(--landscape-screen-width);
+        max-width: var(--landscape-screen-width);
+        transform: translate(-50%, -50%);
+      }
+
+      body.mobile-landscape-mode.arcade-mode #arcade-controller-area .dpad-container,
+      body.mobile-landscape-mode.arcade-mode #arcade-controller-area .arcade-panel {
+        position: fixed;
+        top: 50%;
+        z-index: 3;
+        flex: 0 0 var(--arcade-landscape-side);
+        width: var(--arcade-landscape-side);
+        min-width: var(--arcade-landscape-side);
+        max-width: var(--arcade-landscape-side);
+        margin: 0;
+        transform: translateY(-50%);
+      }
+
+      body.mobile-landscape-mode.arcade-mode #arcade-controller-area .dpad-container {
+        left: max(8px, env(safe-area-inset-left));
+      }
+
+      body.mobile-landscape-mode.arcade-mode #arcade-controller-area .arcade-panel {
+        right: max(8px, env(safe-area-inset-right));
+      }
+
+      body.mobile-landscape-mode.arcade-mode .arcade-system-row {
+        right: max(8px, env(safe-area-inset-right));
+        bottom: max(12px, calc(env(safe-area-inset-bottom) + 12px));
+        width: clamp(160px, 22vw, 188px) !important;
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        grid-template-rows: 26px;
+        gap: 4px !important;
+      }
+
+      body.mobile-landscape-mode.arcade-mode .arcade-system-btn {
+        width: 100% !important;
+        height: 26px;
+        min-width: 0;
+        padding: 0 2px;
+        font-size: 7px;
+      }
+    }
   </style>
   <link rel="stylesheet" href="/magazine-selector.css">
 </head>
