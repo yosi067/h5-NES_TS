@@ -45,7 +45,7 @@
 
 1. baseline、stream、full與audio判定均已完成，目前不再要求手機短測；triangle stream作為後續唯一比較基準。
 2. 下一次手機固定場景先收集 triangle phase：upload 最大時調整 ring/orphan/upload 策略；restore 最大時保留 VBO state 並延後 client-pointer restoration；submit 最大時評估 draw batching 與 state consolidation；other 最大時再細分外層 `RenderFlushTris` state setup。每次只啟用一種改動。
-3. iOS維持3072/1024與partial-underrun輸出。15分鐘手機穩定性留到最終驗收，不再測更大的SDL buffers。
+3. iOS維持3072/1024與partial-underrun輸出，並以`src-linear`取代mobile profile原本的trivial resampler；Worklet queue drain以64-frame crossfade恢復。15分鐘手機穩定性留到最終驗收，不再測更大的SDL buffers。
 4. 若低風險WebGL項目仍無法把Rice降到約10.55 ms/VI，建立單一固定場景的WebGPU prototype；只有整體提升至少20%且三款遊戲無阻斷性圖形錯誤，才考慮擴大。
 
 **手機簡易測試模式**：

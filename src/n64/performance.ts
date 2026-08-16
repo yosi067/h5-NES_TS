@@ -99,7 +99,12 @@ export function applyN64PerformanceProfile(
   if (profile.name !== 'desktop') {
     result = setIniValue(result, 'Audio-SDL', 'PRIMARY_BUFFER_TARGET', String(profile.primaryAudioTarget));
     result = setIniValue(result, 'Audio-SDL', 'SECONDARY_BUFFER_SIZE', String(profile.secondaryAudioBuffer));
-    result = setIniValue(result, 'Audio-SDL', 'RESAMPLE', '"trivial"');
+    result = setIniValue(
+      result,
+      'Audio-SDL',
+      'RESAMPLE',
+      profile.name === 'ios-high-end' ? '"src-linear"' : '"trivial"',
+    );
     result = setIniValue(result, 'Video-Rice', 'FastTextureLoading', 'True');
     result = setIniValue(result, 'Video-Rice', 'AccurateTextureMapping', 'False');
     result = setIniValue(result, 'Video-Rice', 'Mipmapping', '0');

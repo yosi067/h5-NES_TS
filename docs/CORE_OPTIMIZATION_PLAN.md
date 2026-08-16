@@ -40,7 +40,7 @@
    - 最終驗收補 Android Chrome 與 iPhone Safari 各 15 分鐘穩定性，記錄 VI/s、long VI、draw timing、audio underruns 與 context loss。
 
 2. **P1 現有後端低風險優化**
-   - 維持 iOS 3072/1024 audio buffers與 partial-underrun 輸出；剩餘爆音先從 renderer stall 處理，不再增加 buffer latency。
+   - 維持 iOS 3072/1024 audio buffers與 partial-underrun 輸出，並以 `src-linear` 取代原本的 trivial resampler、以 64-frame crossfade 平滑 Worklet queue drain；若仍有爆音，再從 renderer stall 與 source-side underrun 數據處理，不再增加 buffer latency。
    - 逐遊戲測試 Rice 選項；影響正確性的選項只建立 game override，不全域關閉。
    - 加入 context-loss UI，讓 GPU context 被系統回收時能回首頁並顯示原因，而非整頁無訊息退出。
 

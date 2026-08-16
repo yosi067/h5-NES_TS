@@ -100,4 +100,24 @@ describe('N64 mobile performance profiles', () => {
     expect(config).toContain('SkipFrame = True');
     expect(config).toContain('OnScreenDisplay = False');
   });
+
+  it('uses linear resampling on high-end iOS without changing low-end mobile', () => {
+    const iosProfile = selectN64PerformanceProfile(navigatorInfo({
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X)',
+      hardwareConcurrency: 8,
+      maxTouchPoints: 5,
+    }));
+    const iosConfig = applyN64PerformanceProfile(BASE_CONFIG, iosProfile);
+
+    expect(iosConfig).toContain('RESAMPLE = "src-linear"');
+    expect(applyN64PerformanceProfile(BASE_CONFIG, {
+      name: 'mobile-low-end',
+      width: 320,
+      height: 240,
+      skipFrame: true,
+      mainLoopTimingMode: 1,
+      primaryAudioTarget: 4096,
+      secondaryAudioBuffer: 2048,
+    })).toContain('RESAMPLE = "trivial"');
+  });
 });
