@@ -1052,3 +1052,287 @@ body.android-device-mode .rom-selector .upload-btn {
     display: inline;
   }
 }
+
+@media (orientation: landscape) and (max-height: 620px) {
+  body.mobile-landscape-mode .rom-selector .rom-selector-content {
+    flex-direction: column;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-selector-header.lobby-cover-header {
+    grid-template-columns: minmax(0, 1fr) 104px;
+    flex: 0 0 88px;
+    min-height: 88px;
+    height: 88px;
+    padding: 6px 8px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .lobby-cover-copy {
+    grid-column: 1;
+    align-items: center;
+  }
+
+  body.mobile-landscape-mode .rom-selector .lobby-cover-header .brand-name {
+    font-size: clamp(26px, 4.7vw, 38px);
+  }
+
+  body.mobile-landscape-mode .rom-selector .lobby-crt {
+    width: 104px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: 84px;
+    align-content: start;
+    gap: 8px;
+    padding: 2px 2px 6px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-card-shell {
+    min-height: 84px;
+    height: 84px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-card {
+    min-height: 84px;
+    height: 84px;
+    grid-template-columns: 54px minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0 8px;
+    padding: 6px 8px 6px 6px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-art {
+    width: 54px;
+    height: 54px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-copy {
+    min-width: 0;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-title {
+    display: -webkit-box;
+    min-width: 0;
+    max-height: 2.3em;
+    padding: 0;
+    overflow: hidden;
+    font-size: clamp(13px, 1.8vw, 17px);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-browser-header.is-visible {
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr) 86px;
+    grid-template-areas: "back copy art";
+    flex: 0 0 84px;
+    min-height: 84px;
+    height: 84px;
+    margin: 0 0 7px;
+    padding: 6px 8px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-back-btn {
+    grid-area: back;
+    align-self: center;
+    margin: 0 8px 0 0;
+    padding: 7px 9px;
+    font-size: 11px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-feature-copy {
+    grid-area: copy;
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 8px;
+    text-align: left;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-feature-folio {
+    display: none;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-browser-title {
+    min-width: 0;
+    margin: 0;
+    overflow: hidden;
+    font-size: clamp(18px, 3vw, 26px);
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-feature-label {
+    align-self: flex-start;
+    margin-top: 4px;
+    padding: 2px 8px;
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-feature-summary {
+    margin-top: 4px;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-feature-art {
+    grid-area: art;
+    width: 78px;
+    height: 68px;
+    align-self: center;
+    justify-self: end;
+    margin: 0;
+    border: 0;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-feature-art img {
+    width: 76px;
+    height: 64px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    gap: 6px 8px;
+    margin: 0 2px;
+    padding: 6px;
+    overflow-y: auto;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-item {
+    min-height: 92px;
+    height: 92px;
+    margin: 0;
+    padding: 7px 9px;
+    grid-template: "number play" auto "name name" minmax(0, 1fr) "meta meta" auto / minmax(0, 1fr) auto;
+    gap: 4px 8px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-item-number {
+    align-self: center;
+    padding-bottom: 0;
+    border-bottom: 0;
+    font-size: 10px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-name {
+    min-height: 0;
+    font-size: clamp(14px, 2.3vw, 20px);
+    line-height: 1.1;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-item-meta > span {
+    padding: 4px 5px;
+    font-size: 9px;
+    line-height: 1.1;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-item-meta small {
+    margin-bottom: 2px;
+    font-size: 7px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-arrow {
+    align-self: center;
+    padding: 4px 7px;
+    font-size: 10px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-selector-footer {
+    margin-top: 5px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) and (max-width: 720px) {
+  body.mobile-landscape-mode .rom-selector .rom-selector-header.lobby-cover-header {
+    grid-template-columns: minmax(0, 1fr) 96px;
+    flex-basis: 78px;
+    min-height: 78px;
+    height: 78px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .lobby-crt {
+    width: 96px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-grid {
+    grid-auto-rows: 74px;
+    gap: 6px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-card-shell,
+  body.mobile-landscape-mode .rom-selector .machine-card {
+    min-height: 74px;
+    height: 74px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-card {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 0 7px;
+    padding: 5px 6px 5px 5px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-art {
+    width: 48px;
+    height: 48px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .machine-title {
+    font-size: 12px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-browser-header.is-visible {
+    grid-template-columns: auto minmax(0, 1fr) 76px;
+    flex-basis: 76px;
+    min-height: 76px;
+    height: 76px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-feature-art {
+    width: 68px;
+    height: 60px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-feature-art img {
+    width: 66px;
+    height: 56px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-browser-title {
+    font-size: 18px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-feature-summary {
+    font-size: 10px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-item {
+    min-height: 84px;
+    height: 84px;
+    padding: 6px 7px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-name {
+    font-size: 14px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-item-meta > span {
+    padding-inline: 4px;
+    font-size: 8px;
+  }
+
+  body.mobile-landscape-mode .rom-selector .rom-item-meta small {
+    font-size: 6.5px;
+  }
+}
