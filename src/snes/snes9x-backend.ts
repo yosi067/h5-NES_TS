@@ -96,12 +96,12 @@ function toCachedBytes(value: unknown): Uint8Array | null {
   return bytes;
 }
 
-function cacheSnes9xSaveData(gameManager: EmulatorJsGameManager): void {
-  if (typeof localStorage === 'undefined') return;
+function cacheSnes9xSaveData(gameManager: EmulatorJsGameManager): boolean {
+  if (typeof localStorage === 'undefined') return false;
 
   try {
     const savePath = gameManager.getSaveFilePath();
-    if (!gameManager.FS.analyzePath(savePath).exists) return;
+    if (!gameManager.FS.analyzePath(savePath).exists) return false;
     const rtcPath = getSnes9xRtcPath(savePath);
     const rtcExists = gameManager.FS.analyzePath(rtcPath).exists;
     const cache: Snes9xSaveCache = {
@@ -109,8 +109,10 @@ function cacheSnes9xSaveData(gameManager: EmulatorJsGameManager): void {
       rtc: rtcExists ? Array.from(gameManager.FS.readFile(rtcPath)) : null,
     };
     localStorage.setItem(getSnes9xSaveCacheKey(savePath), JSON.stringify(cache));
+    return true;
   } catch (error) {
     console.warn('[Snes9x] SRAM fallback 快取失敗:', error);
+    return false;
   }
 }
 
@@ -431,8 +433,13 @@ window.parent.postMessage({source:'h5-emu-snes9x-shortcut',action,slot:action===
         gameManager.FS.writeFile(savePath, new Uint8Array(saveData));
         gameManager.FS.writeFile(rtcPath, new Uint8Array(rtcData));
         gameManager.loadSaveFiles();
-        cacheSnes9xSaveData(gameManager);
-        await syncFileSystem(gameManager.FS);
+        const cached = cacheSnes9xSaveData(gameManager);
+        try {
+          await syncFileSystem(gameManager.FS);
+        } catch (error) {
+          if (!cached) throw error;
+          console.warn('[Snes9x] IDBFS bootstrap 同步不可用，已改用 localStorage fallback');
+        }
         return true;
       } catch {
         return false;
@@ -442,8 +449,13 @@ window.parent.postMessage({source:'h5-emu-snes9x-shortcut',action,slot:action===
       const gameManager = getEmulator()?.gameManager;
       if (!gameManager) throw new Error('Snes9x 尚未準備好儲存資料');
       gameManager.saveSaveFiles();
-      cacheSnes9xSaveData(gameManager);
-      await syncFileSystem(gameManager.FS);
+      const cached = cacheSnes9xSaveData(gameManager);
+      try {
+        await syncFileSystem(gameManager.FS);
+      } catch (error) {
+        if (!cached) throw error;
+        console.warn('[Snes9x] IDBFS 同步不可用，已保留 localStorage fallback');
+      }
     },
     restoreSaveData() {
       const gameManager = getEmulator()?.gameManager;

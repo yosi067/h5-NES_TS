@@ -31,6 +31,7 @@ import {
 } from './n64/runtime-assets';
 import { getRomAssetUrl, hasN64RomMagic } from './rom-assets';
 import { createN64Telemetry } from './n64/telemetry';
+import { readBinaryState, writeBinaryState } from './storage/binary-state-store';
 import { getTouchContactTargetIds } from './ui/touch-contact';
 import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
 import {
@@ -2843,34 +2844,18 @@ function setupDesktopControls(): void {
   
   // 存檔/讀取按鈕 (電腦版)
   document.getElementById('btn-save-state')?.addEventListener('click', () => {
-    if (saveState(0)) {
-      showToast('✅ 存檔成功');
-    } else {
-      showToast('❌ 存檔失敗');
-    }
+    void saveStateForUser(0, true);
   });
   document.getElementById('btn-load-state')?.addEventListener('click', () => {
-    if (loadState(0)) {
-      showToast('✅ 讀取成功');
-    } else {
-      showToast('❌ 沒有存檔');
-    }
+    void loadStateForUser(0, true);
   });
   
   // 存檔/讀取按鈕 (手機版)
   document.getElementById('mobile-save-state')?.addEventListener('click', () => {
-    if (saveState(0)) {
-      showToast('✅ 存檔成功');
-    } else {
-      showToast('❌ 存檔失敗');
-    }
+    void saveStateForUser(0, true);
   });
   document.getElementById('mobile-load-state')?.addEventListener('click', () => {
-    if (loadState(0)) {
-      showToast('✅ 讀取成功');
-    } else {
-      showToast('❌ 沒有存檔');
-    }
+    void loadStateForUser(0, true);
   });
 }
 
@@ -3587,6 +3572,98 @@ function loadState(slot: number = 0): boolean {
   }
 }
 
+let snes9xStateOperation: Promise<void> = Promise.resolve();
+
+function queueSnes9xStateOperation(operation: () => Promise<boolean>): Promise<boolean> {
+  const result = snes9xStateOperation.then(operation, operation);
+  snes9xStateOperation = result.then(() => undefined, () => undefined);
+  return result;
+}
+
+async function saveSnes9xStateWithPersistence(slot: number): Promise<boolean> {
+  const backend = snes9xBackend;
+  if (!backend || !isSnes9xActive()) return false;
+  const key = getSaveKey(slot);
+
+  try {
+    const saveData = backend.saveState();
+    try {
+      await writeBinaryState(key, saveData);
+      try {
+        localStorage.removeItem(key);
+      } catch {
+      }
+    } catch (error) {
+      console.warn('[Snes9x] IndexedDB state 儲存失敗，改用 localStorage:', error);
+      localStorage.setItem(key, bytesToBase64(saveData));
+    }
+    console.log(`[Snes9x] 即時存檔成功 ROM="${currentRomFilename}" slot=${slot} size=${saveData.length}`);
+    return true;
+  } catch (error) {
+    console.error('[Snes9x] 即時存檔失敗:', error);
+    return false;
+  }
+}
+
+async function loadSnes9xStateWithPersistence(slot: number): Promise<boolean> {
+  const backend = snes9xBackend;
+  if (!backend || !isSnes9xActive()) return false;
+  const key = getSaveKey(slot);
+  let saveData: Uint8Array | null = null;
+
+  try {
+    saveData = await readBinaryState(key);
+  } catch (error) {
+    console.warn('[Snes9x] IndexedDB state 讀取失敗，改用 localStorage:', error);
+  }
+
+  if (!saveData) {
+    try {
+      const encoded = localStorage.getItem(key);
+      if (!encoded) return false;
+      saveData = base64ToBytes(encoded);
+      try {
+        await writeBinaryState(key, saveData);
+        localStorage.removeItem(key);
+      } catch {
+      }
+    } catch (error) {
+      console.error('[Snes9x] 即時讀檔資料解析失敗:', error);
+      return false;
+    }
+  }
+
+  if (saveData.length === 0) return false;
+  try {
+    backend.loadState(saveData);
+    console.log(`[Snes9x] 即時讀檔成功 ROM="${currentRomFilename}" slot=${slot}`);
+    return true;
+  } catch (error) {
+    console.error('[Snes9x] 即時讀檔失敗:', error);
+    return false;
+  }
+}
+
+function saveStateForUser(slot: number = 0, showResult = false): Promise<boolean> {
+  const operation = isSnes9xActive()
+    ? queueSnes9xStateOperation(() => saveSnes9xStateWithPersistence(slot))
+    : Promise.resolve(saveState(slot));
+  return operation.then(success => {
+    if (showResult) showToast(success ? '✅ 存檔成功' : '❌ 存檔失敗');
+    return success;
+  });
+}
+
+function loadStateForUser(slot: number = 0, showResult = false): Promise<boolean> {
+  const operation = isSnes9xActive()
+    ? queueSnes9xStateOperation(() => loadSnes9xStateWithPersistence(slot))
+    : Promise.resolve(loadState(slot));
+  return operation.then(success => {
+    if (showResult) showToast(success ? '✅ 讀取成功' : '❌ 沒有存檔');
+    return success;
+  });
+}
+
 function exportSaveToFile(): void {
   if (isFbNeoActive()) {
     showToast('FBNeo 即時存檔尚未支援');
@@ -4274,14 +4351,14 @@ function setupSnesButtons(): void {
   if (snesSaveButton && !snesSaveButton.dataset.stateWired) {
     snesSaveButton.dataset.stateWired = '1';
     snesSaveButton.addEventListener('click', () => {
-      if (saveState(0)) showToast('✅ 存檔成功'); else showToast('❌ 存檔失敗');
+      void saveStateForUser(0, true);
     });
   }
   const snesLoadButton = document.getElementById('snes-mobile-load');
   if (snesLoadButton && !snesLoadButton.dataset.stateWired) {
     snesLoadButton.dataset.stateWired = '1';
     snesLoadButton.addEventListener('click', () => {
-      if (loadState(0)) showToast('✅ 讀取成功'); else showToast('❌ 沒有存檔');
+      void loadStateForUser(0, true);
     });
   }
 }
@@ -4292,21 +4369,21 @@ function setupKeyboardShortcuts(): void {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'F5') {
       e.preventDefault();
-      saveState(0);
+      void saveStateForUser(0);
     }
     if (e.key === 'F7') {
       e.preventDefault();
-      loadState(0);
+      void loadStateForUser(0);
     }
     if (e.key >= 'F1' && e.key <= 'F4' && e.shiftKey) {
       e.preventDefault();
       const slot = parseInt(e.key[1]);
-      saveState(slot);
+      void saveStateForUser(slot);
     }
     if (e.key >= '1' && e.key <= '4' && e.ctrlKey) {
       e.preventDefault();
       const slot = parseInt(e.key);
-      loadState(slot);
+      void loadStateForUser(slot);
     }
     // 瀏覽器返回手勢與退出全螢幕也可能送出 Escape，避免直接銷毀遊戲核心。
     if (e.key === 'Escape' && !e.repeat && !document.fullscreenElement) {
@@ -4324,12 +4401,15 @@ function setupKeyboardShortcuts(): void {
     const slot = typeof event.data.slot === 'number' && Number.isInteger(event.data.slot)
       ? event.data.slot
       : 0;
-    const success = event.data.action === 'save' ? saveState(slot)
-      : event.data.action === 'load' ? loadState(slot)
-        : false;
     if (event.data.action === 'save' || event.data.action === 'load') {
-      showToast(success ? (event.data.action === 'save' ? '✅ 存檔成功' : '✅ 讀取成功')
-        : (event.data.action === 'save' ? '❌ 存檔失敗' : '❌ 沒有存檔'));
+      const operation = event.data.action === 'save'
+        ? saveStateForUser(slot)
+        : loadStateForUser(slot);
+      void operation.then(success => {
+        showToast(success
+          ? (event.data.action === 'save' ? '✅ 存檔成功' : '✅ 讀取成功')
+          : (event.data.action === 'save' ? '❌ 存檔失敗' : '❌ 沒有存檔'));
+      });
     }
   });
 }
