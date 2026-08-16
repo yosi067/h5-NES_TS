@@ -47,6 +47,7 @@ import {
 
 type N64EmulatorControls = EmulatorControls & {
   resumeAudio?: () => Promise<void>;
+  configureAudioWorklet?: (workletUrl: string) => Promise<boolean>;
 };
 
 // ===== 型別定義 =====
@@ -316,6 +317,9 @@ let n64Telemetry = createN64Telemetry({
       `${(report.triangleRestoreMs / report.viCount).toFixed(2)}/` +
       `${(report.triangleOtherMs / report.viCount).toFixed(2)} ms, ` +
       `audio underruns ${report.audioUnderruns}`,
+      `audio callbacks ${report.audioCallbackCount}, ` +
+      `partial/empty ${report.audioPartialUnderruns}/${report.audioEmptyUnderruns}, ` +
+      `max callback gap ${report.audioMaxCallbackGapMs.toFixed(1)} ms`,
     );
 
     const benchmarkEvent = n64BenchmarkSession?.record(report);
@@ -2091,6 +2095,10 @@ async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Prom
         triangleDrawCalls?: number,
         rectDrawCalls?: number,
         audioUnderruns?: number,
+        audioCallbackCount?: number,
+        audioPartialUnderruns?: number,
+        audioEmptyUnderruns?: number,
+        audioMaxCallbackGapMs?: number,
       ) => n64Telemetry.endStats(
         numberOfRecompiles,
         rspMs,
@@ -2107,6 +2115,10 @@ async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Prom
         triangleDrawCalls,
         rectDrawCalls,
         audioUnderruns,
+        audioCallbackCount,
+        audioPartialUnderruns,
+        audioEmptyUnderruns,
+        audioMaxCallbackGapMs,
       ),
       // null-video只供fork benchmark判斷renderer理論上限；正常遊玩固定使用Rice。
       arguments: [
@@ -2144,6 +2156,7 @@ async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Prom
       },
     });
 
+    configureN64AudioWorklet();
     console.log(`[N64] Mupen64Plus-web backend ready for ${currentRomFilename}`);
     resumeAudio();
     await settleN64CanvasLayout(n64Canvas);
@@ -3345,7 +3358,23 @@ function resumeAudio(): void {
   if (audioContext && audioContext.state !== 'running' && audioContext.state !== 'closed') {
     void audioContext.resume().catch(error => console.warn('[Audio] 恢復 AudioContext 失敗:', error));
   }
+  configureN64AudioWorklet();
   void n64Controls?.resumeAudio?.().catch(error => console.warn('[N64] 恢復 SDL 音訊失敗:', error));
+}
+
+function configureN64AudioWorklet(): void {
+  const configure = n64Controls?.configureAudioWorklet;
+  if (!configure) return;
+
+  const workletUrl = new URL(
+    `${import.meta.env.BASE_URL}n64-audio-worklet.js`,
+    document.baseURI,
+  ).href;
+  void configure(workletUrl)
+    .then(enabled => {
+      if (enabled) console.info('[N64] AudioWorklet transport enabled');
+    })
+    .catch(error => console.warn('[N64] AudioWorklet fallback to SDL ScriptProcessor:', error));
 }
 
 /**

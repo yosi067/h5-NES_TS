@@ -19,6 +19,7 @@ describe('N64 runtime telemetry', () => {
         4, 2, 1, 3, 1, 6, 2,
         1, 2, 1.5, 0.5,
         10, 4, (index + 1) * 2,
+        (index + 1) * 10, (index + 1) * 2, index + 1, 10 + index * 5,
       );
     }
 
@@ -44,6 +45,10 @@ describe('N64 runtime telemetry', () => {
       triangleDrawCalls: 50,
       rectDrawCalls: 20,
       audioUnderruns: 10,
+      audioCallbackCount: 50,
+      audioPartialUnderruns: 10,
+      audioEmptyUnderruns: 5,
+      audioMaxCallbackGapMs: 30,
       coreResidualMs: 70,
     });
   });
@@ -67,5 +72,36 @@ describe('N64 runtime telemetry', () => {
     }
 
     expect(onReport.mock.calls[0][0].audioUnderruns).toBe(6);
+  });
+
+  it('tracks callback and partial-underrun deltas across audio device resets', () => {
+    let time = 0;
+    const onReport = vi.fn();
+    const telemetry = createN64Telemetry({
+      now: () => time,
+      reportIntervalMs: 60,
+      onReport,
+    });
+
+    for (const stats of [
+      [8, 3, 1, 14],
+      [16, 5, 2, 22],
+      [2, 1, 0, 31],
+    ]) {
+      telemetry.beginStats();
+      time += 20;
+      telemetry.endStats(
+        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0,
+        stats[0], stats[1], stats[2], stats[3],
+      );
+    }
+
+    expect(onReport.mock.calls[0][0]).toMatchObject({
+      audioCallbackCount: 18,
+      audioPartialUnderruns: 6,
+      audioEmptyUnderruns: 2,
+      audioMaxCallbackGapMs: 31,
+    });
   });
 });

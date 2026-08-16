@@ -24,6 +24,14 @@
 - Rice persistent triangle draw 現在於 C 端累加 prepare、buffer upload、draw submit 與 client-pointer restore，沿用每 VI 一次的 telemetry crossing；`other` 由 triangle total 扣除四個 phase 得出。production fork 的 Super Mario 64 與 Mario Kart 64 均已收到非零 phase report，後者穩態 smoke 達 60.2 VI/s，且兩者都沒有 page/backend error。
 - Ocarina of Time 未進入第一個 VI 的根因不是核心：`encodeURIComponent()` 將檔名逗號編成`%2C`後，Vite preview 未命中 production ROM 檔並以`index.html`回退，導致 Mupen 收到157,967 bytes HTML並回報`open_rom(): not a valid ROM image`。ROM URL 現只將逗號保留為合法字元，且 N64 啟動前驗證三種 byte-order magic；fork 的`emuMode=1/2`均已進入標題畫面並持續產生 phase report。
 
+**N64 SDL 音訊穩定性更新（2026-08-16）**：
+
+- SDL patch 現同時提供 callback、partial/empty underrun、最大 callback gap telemetry，以及 S16 PCM 到 `n64-audio-processor` 的 transferable Float32 bridge；目前 v2/v5 source cache reverse-check 均通過。
+- N64 UI 在 `Module.SDL2.audioContext` 初始化後建立 AudioWorklet 輸出，保留 ScriptProcessor 作為 zero-gain callback/fallback source；Worklet queue 以 1024 frames priming、6144 frames high-water 避免短暫主執行緒抖動直接變成可聽爆音，並在 resume/stop 清空舊資料。
+- 桌面 fork smoke 已確認 Worklet attach、重啟後重新 attach，以及 callback telemetry 正常回報；這不是 iPhone 17 Pro 的音效 A/B，不能將桌面 callback/underrun 數直接外推為正式改善百分比。
+- 目前 telemetry 仍主要描述 SDL source-side underrun，尚未包含 Worklet queue underflow、queue depth、drop count 與輸出延遲；正式環境測試前應先補齊這些欄位，才能區分「PCM 沒產生」與「PCM 已產生但輸出端餓死」。
+- 過去 iPhone triangle-stream A/B 的 underrun 由706降至290（-58.9%）是 renderer 主執行緒負載與 partial-underrun 輸出共同改善的結果，不歸因於 AudioWorklet 單一改動。iOS 維持 3072/1024，不採用已驗證無客觀收益且增加延遲的 4096/2048。
+
 | Super Mario 64路徑 | VI/s | VI average | DList | 結論 |
 | --- | ---: | ---: | ---: | --- |
 | 正常instrumented Rice | 27.20 | 31.68 ms | 28.08 ms | renderer baseline |
@@ -48,7 +56,7 @@
 - 各組都使用10秒暖機與20秒採樣；目前三組renderer測試均已完成，沒有待執行的手機網址。
 - 官方renderer結果分別存於`localStorage`的`n64MobileTestResult:baseline`、`:stream`與`:full`，不會互相覆寫。
 
-**近期不做**：R4300 recompiler重構、RSP SIMD、Worker/AudioWorklet與一般toolchain調整。現有數據顯示這些不是Super Mario 64目前的最大瓶頸，先投入會降低可歸因性。
+**目前不做**：R4300 recompiler重構、RSP SIMD，以及將整個 emulator/audio producer 搬進 Worker 的完整 AudioWorklet ring-buffer 架構。現在已完成的是低風險的 AudioWorklet 輸出端 transport；完整 producer 隔離仍需先取得 Worklet queue telemetry 與 iPhone A/B，避免在沒有歸因數據時改動 Worker、SharedArrayBuffer 或部署 headers。
 
 **GitHub Pages部署**：rebuilt runtime納入版本化artifact。Vite production build會在bundle/Wasm/data/manifest缺少，或manifest不是64 MiB initial memory時直接失敗。Emscripten `.data` 是binary preload archive，必須由`.gitattributes`停用text normalization；fork的main bundle、data與Wasm另發布為帶相同asset version的實體檔名，確保三層原子更新。現有GitHub Actions依repository name設定base URL；正常手機不帶query時載入fork與triangle streaming，維持320x240 backing與完整4:3畫面。
 

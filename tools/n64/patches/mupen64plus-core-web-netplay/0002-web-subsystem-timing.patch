@@ -2,7 +2,7 @@ diff --git a/src/device/r4300/cached_interp.c b/src/device/r4300/cached_interp.c
 index 86a7d4bd..f59b2b15 100644
 --- a/src/device/r4300/cached_interp.c
 +++ b/src/device/r4300/cached_interp.c
-@@ -50,7 +50,20 @@ extern uint32_t numberOfRecompiles;
+@@ -50,7 +50,28 @@ extern uint32_t numberOfRecompiles;
  extern uint32_t netplayPaused;
  
  extern void beginStats();
@@ -13,7 +13,9 @@ index 86a7d4bd..f59b2b15 100644
 +                     double trianglePrepareMs, double triangleUploadMs,
 +                     double triangleSubmitMs, double triangleRestoreMs,
 +                     uint32_t triangleDrawCalls, uint32_t rectDrawCalls,
-+                     uint32_t audioUnderruns);
++                     uint32_t audioUnderruns, uint32_t audioCallbackCount,
++                     uint32_t audioPartialUnderruns, uint32_t audioEmptyUnderruns,
++                     double audioMaxCallbackGapMs);
 +extern void n64_web_timing_reset(void);
 +extern double n64_web_timing_rsp_ms(void);
 +extern double n64_web_timing_dlist_ms(void);
@@ -29,6 +31,10 @@ index 86a7d4bd..f59b2b15 100644
 +extern uint32_t n64_web_timing_triangle_draw_calls(void);
 +extern uint32_t n64_web_timing_rect_draw_calls(void);
 +extern uint32_t n64_web_audio_underruns(void);
++extern uint32_t n64_web_audio_callback_count(void);
++extern uint32_t n64_web_audio_partial_underruns(void);
++extern uint32_t n64_web_audio_empty_underruns(void);
++extern double n64_web_audio_max_callback_gap_ms(void);
  
  #endif
  
@@ -40,7 +46,7 @@ index 86a7d4bd..f59b2b15 100644
    beginStats();
    
    viArrived = 0;
-@@ -1056,7 +1070,11 @@ static void cached_interpreter_loop(struct r4300_core* r4300)
+@@ -1056,7 +1070,15 @@ static void cached_interpreter_loop(struct r4300_core* r4300)
      //    viArrived++;
    }
  
@@ -52,7 +58,9 @@ index 86a7d4bd..f59b2b15 100644
 +            n64_web_timing_triangle_prepare_ms(), n64_web_timing_triangle_upload_ms(),
 +            n64_web_timing_triangle_submit_ms(), n64_web_timing_triangle_restore_ms(),
 +            n64_web_timing_triangle_draw_calls(), n64_web_timing_rect_draw_calls(),
-+            n64_web_audio_underruns());
++            n64_web_audio_underruns(), n64_web_audio_callback_count(),
++            n64_web_audio_partial_underruns(), n64_web_audio_empty_underruns(),
++            n64_web_audio_max_callback_gap_ms());
  }
  
  static void set_main_loop_timing(int* dummy) {
@@ -125,10 +133,10 @@ index 4f6a769d..d3b95dbb 100644
    },
  
 -  endStats: function(numberOfRecompiles) {
-+  endStats: function(numberOfRecompiles, rspMs, dlistMs, rdpMs, presentMs, audioMs, triangleDrawMs, rectDrawMs, trianglePrepareMs, triangleUploadMs, triangleSubmitMs, triangleRestoreMs, triangleDrawCalls, rectDrawCalls, audioUnderruns) {
++  endStats: function(numberOfRecompiles, rspMs, dlistMs, rdpMs, presentMs, audioMs, triangleDrawMs, rectDrawMs, trianglePrepareMs, triangleUploadMs, triangleSubmitMs, triangleRestoreMs, triangleDrawCalls, rectDrawCalls, audioUnderruns, audioCallbackCount, audioPartialUnderruns, audioEmptyUnderruns, audioMaxCallbackGapMs) {
      if (Module.endStats) {
 -      Module.endStats(numberOfRecompiles);
-+      Module.endStats(numberOfRecompiles, rspMs, dlistMs, rdpMs, presentMs, audioMs, triangleDrawMs, rectDrawMs, trianglePrepareMs, triangleUploadMs, triangleSubmitMs, triangleRestoreMs, triangleDrawCalls, rectDrawCalls, audioUnderruns);
++      Module.endStats(numberOfRecompiles, rspMs, dlistMs, rdpMs, presentMs, audioMs, triangleDrawMs, rectDrawMs, trianglePrepareMs, triangleUploadMs, triangleSubmitMs, triangleRestoreMs, triangleDrawCalls, rectDrawCalls, audioUnderruns, audioCallbackCount, audioPartialUnderruns, audioEmptyUnderruns, audioMaxCallbackGapMs);
      }
    },
  
@@ -147,7 +155,7 @@ index 3d7ef0a8..6bdaa2fb 100644
  #include "api/callbacks.h"
  #include "api/m64p_common.h"
  #include "api/m64p_plugin.h"
-@@ -132,6 +136,86 @@ static int l_GfxAttached = 0;
+@@ -132,6 +136,106 @@ static int l_GfxAttached = 0;
  
  static unsigned int dummy;
  
@@ -169,6 +177,10 @@ index 3d7ef0a8..6bdaa2fb 100644
 +extern uint32_t rice_web_triangle_draw_calls(void);
 +extern uint32_t rice_web_rect_draw_calls(void);
 +extern unsigned int audio_web_underrun_count(void);
++extern unsigned int audio_web_callback_count(void);
++extern unsigned int audio_web_partial_underrun_count(void);
++extern unsigned int audio_web_empty_underrun_count(void);
++extern unsigned int audio_web_max_callback_gap_ms(void);
 +
 +void n64_web_timing_reset(void)
 +{
@@ -206,6 +218,22 @@ index 3d7ef0a8..6bdaa2fb 100644
 +uint32_t n64_web_audio_underruns(void)
 +{
 +    return audio_web_underrun_count();
++}
++uint32_t n64_web_audio_callback_count(void)
++{
++    return audio_web_callback_count();
++}
++uint32_t n64_web_audio_partial_underruns(void)
++{
++    return audio_web_partial_underrun_count();
++}
++uint32_t n64_web_audio_empty_underruns(void)
++{
++    return audio_web_empty_underrun_count();
++}
++double n64_web_audio_max_callback_gap_ms(void)
++{
++    return audio_web_max_callback_gap_ms();
 +}
 +
 +static void web_ProcessDList(void)

@@ -48,6 +48,10 @@ function report(overrides: Partial<N64TelemetryReport> = {}): N64TelemetryReport
     triangleDrawCalls: 500,
     rectDrawCalls: 200,
     audioUnderruns: 2,
+    audioCallbackCount: 100,
+    audioPartialUnderruns: 3,
+    audioEmptyUnderruns: 1,
+    audioMaxCallbackGapMs: 18,
     coreResidualMs: 830,
     ...overrides,
   };

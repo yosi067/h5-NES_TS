@@ -3,5 +3,5 @@
     "emsdkImage":  "emscripten/emsdk:3.1.25",
     "initialMemoryBytes":  67108864,
     "buildCommand":  "npm install --prefix /tmp/n64-build-tools --no-save --no-audit --no-fund yargs@17.2.0 \u0026\u0026 NODE_PATH=/tmp/n64-build-tools/node_modules make web config=release video=rice OPT_LEVEL=-O2 INITIAL_MEMORY=67108864",
-    "builtAt":  "2026-07-22T12:21:59.3894888Z"
+    "builtAt":  "2026-08-16T11:58:13.2997195Z"
 }

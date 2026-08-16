@@ -42,6 +42,10 @@ export interface N64BenchmarkSummary {
   averageTriangleDrawCalls: number;
   averageRectDrawCalls: number;
   audioUnderruns: number;
+  audioCallbackCount: number;
+  audioPartialUnderruns: number;
+  audioEmptyUnderruns: number;
+  audioMaxCallbackGapMs: number;
   averageCoreResidualMs: number;
 }
 
@@ -186,6 +190,10 @@ export function createN64BenchmarkSession(
   let triangleDrawCalls = 0;
   let rectDrawCalls = 0;
   let audioUnderruns = 0;
+  let audioCallbackCount = 0;
+  let audioPartialUnderruns = 0;
+  let audioEmptyUnderruns = 0;
+  let audioMaxCallbackGapMs = 0;
   let coreResidualMs = 0;
   let complete = false;
 
@@ -219,6 +227,10 @@ export function createN64BenchmarkSession(
       triangleDrawCalls += report.triangleDrawCalls;
       rectDrawCalls += report.rectDrawCalls;
       audioUnderruns += report.audioUnderruns;
+      audioCallbackCount += report.audioCallbackCount;
+      audioPartialUnderruns += report.audioPartialUnderruns;
+      audioEmptyUnderruns += report.audioEmptyUnderruns;
+      audioMaxCallbackGapMs = Math.max(audioMaxCallbackGapMs, report.audioMaxCallbackGapMs);
       coreResidualMs += report.coreResidualMs;
 
       if (sampleElapsedMs < sampleMs) return null;
@@ -248,6 +260,10 @@ export function createN64BenchmarkSession(
           averageTriangleDrawCalls: viCount === 0 ? 0 : triangleDrawCalls / viCount,
           averageRectDrawCalls: viCount === 0 ? 0 : rectDrawCalls / viCount,
           audioUnderruns,
+          audioCallbackCount,
+          audioPartialUnderruns,
+          audioEmptyUnderruns,
+          audioMaxCallbackGapMs,
           averageCoreResidualMs: viCount === 0 ? 0 : coreResidualMs / viCount,
         },
       };

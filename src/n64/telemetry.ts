@@ -21,6 +21,10 @@ export interface N64TelemetryReport {
   triangleDrawCalls: number;
   rectDrawCalls: number;
   audioUnderruns: number;
+  audioCallbackCount: number;
+  audioPartialUnderruns: number;
+  audioEmptyUnderruns: number;
+  audioMaxCallbackGapMs: number;
   coreResidualMs: number;
 }
 
@@ -42,6 +46,10 @@ export interface N64Telemetry {
     triangleDrawCalls?: number,
     rectDrawCalls?: number,
     audioUnderruns?: number,
+    audioCallbackCount?: number,
+    audioPartialUnderruns?: number,
+    audioEmptyUnderruns?: number,
+    audioMaxCallbackGapMs?: number,
   ): void;
   reset(): void;
 }
@@ -79,7 +87,14 @@ export function createN64Telemetry({
   let triangleDrawCalls = 0;
   let rectDrawCalls = 0;
   let audioUnderruns = 0;
+  let audioCallbackCount = 0;
+  let audioPartialUnderruns = 0;
+  let audioEmptyUnderruns = 0;
+  let audioMaxCallbackGapMs = 0;
   let lastAudioUnderrunCount = 0;
+  let lastAudioCallbackCount = 0;
+  let lastAudioPartialUnderrunCount = 0;
+  let lastAudioEmptyUnderrunCount = 0;
 
   const reset = () => {
     viStart = null;
@@ -103,6 +118,10 @@ export function createN64Telemetry({
     triangleDrawCalls = 0;
     rectDrawCalls = 0;
     audioUnderruns = 0;
+    audioCallbackCount = 0;
+    audioPartialUnderruns = 0;
+    audioEmptyUnderruns = 0;
+    audioMaxCallbackGapMs = 0;
   };
 
   return {
@@ -125,6 +144,10 @@ export function createN64Telemetry({
       viTriangleDrawCalls = 0,
       viRectDrawCalls = 0,
       viAudioUnderruns = 0,
+      viAudioCallbackCount = 0,
+      viAudioPartialUnderruns = 0,
+      viAudioEmptyUnderruns = 0,
+      viAudioMaxCallbackGapMs = 0,
     ) {
       const endedAt = now();
       const viMs = viStart === null ? 0 : endedAt - viStart;
@@ -150,6 +173,19 @@ export function createN64Telemetry({
         ? viAudioUnderruns - lastAudioUnderrunCount
         : viAudioUnderruns;
       lastAudioUnderrunCount = viAudioUnderruns;
+      audioCallbackCount += viAudioCallbackCount >= lastAudioCallbackCount
+        ? viAudioCallbackCount - lastAudioCallbackCount
+        : viAudioCallbackCount;
+      audioPartialUnderruns += viAudioPartialUnderruns >= lastAudioPartialUnderrunCount
+        ? viAudioPartialUnderruns - lastAudioPartialUnderrunCount
+        : viAudioPartialUnderruns;
+      audioEmptyUnderruns += viAudioEmptyUnderruns >= lastAudioEmptyUnderrunCount
+        ? viAudioEmptyUnderruns - lastAudioEmptyUnderrunCount
+        : viAudioEmptyUnderruns;
+      lastAudioCallbackCount = viAudioCallbackCount;
+      lastAudioPartialUnderrunCount = viAudioPartialUnderruns;
+      lastAudioEmptyUnderrunCount = viAudioEmptyUnderruns;
+      audioMaxCallbackGapMs = Math.max(audioMaxCallbackGapMs, viAudioMaxCallbackGapMs);
 
       const elapsedMs = endedAt - windowStart;
       if (elapsedMs < reportIntervalMs) return;
@@ -178,6 +214,10 @@ export function createN64Telemetry({
         triangleDrawCalls,
         rectDrawCalls,
         audioUnderruns,
+        audioCallbackCount,
+        audioPartialUnderruns,
+        audioEmptyUnderruns,
+        audioMaxCallbackGapMs,
         coreResidualMs: Math.max(0, totalViMs - rspMs - presentMs - audioMs),
       });
       reset();

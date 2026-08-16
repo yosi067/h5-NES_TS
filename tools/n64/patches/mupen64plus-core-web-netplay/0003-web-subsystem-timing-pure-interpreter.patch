@@ -1,15 +1,17 @@
 diff --git a/src/device/r4300/pure_interp.c b/src/device/r4300/pure_interp.c
-index 2265d63a..00000000 100644
+index 2265d63a..12e02565 100644
 --- a/src/device/r4300/pure_interp.c
 +++ b/src/device/r4300/pure_interp.c
-@@ -47 +47,13 @@ extern void beginStats();
+@@ -47 +47,27 @@ extern void beginStats();
 -extern void endStats(uint32_t numRecompiles);
 +extern void endStats(uint32_t numRecompiles, double rspMs, double dlistMs,
 +double rdpMs, double presentMs, double audioMs, double triangleDrawMs,
 +double rectDrawMs, double trianglePrepareMs, double triangleUploadMs,
 +double triangleSubmitMs, double triangleRestoreMs,
 +uint32_t triangleDrawCalls, uint32_t rectDrawCalls,
-+uint32_t audioUnderruns);
++uint32_t audioUnderruns, uint32_t audioCallbackCount,
++uint32_t audioPartialUnderruns, uint32_t audioEmptyUnderruns,
++double audioMaxCallbackGapMs);
 +extern void n64_web_timing_reset(void);
 +extern double n64_web_timing_rsp_ms(void);
 +extern double n64_web_timing_dlist_ms(void);
@@ -25,9 +27,13 @@ index 2265d63a..00000000 100644
 +extern uint32_t n64_web_timing_triangle_draw_calls(void);
 +extern uint32_t n64_web_timing_rect_draw_calls(void);
 +extern uint32_t n64_web_audio_underruns(void);
-@@ -742,0 +750 @@ static void  pure_interpreter_loop(struct r4300_core* r4300)
-+n64_web_timing_reset();
-@@ -757 +770,5 @@ static void  pure_interpreter_loop(struct r4300_core* r4300)
++extern uint32_t n64_web_audio_callback_count(void);
++extern uint32_t n64_web_audio_partial_underruns(void);
++extern uint32_t n64_web_audio_empty_underruns(void);
++extern double n64_web_audio_max_callback_gap_ms(void);
+@@ -742,0 +769 @@ static void  pure_interpreter_loop(struct r4300_core* r4300)
++  n64_web_timing_reset();
+@@ -757 +784,9 @@ static void  pure_interpreter_loop(struct r4300_core* r4300)
 -  endStats(0);
 +endStats(0, n64_web_timing_rsp_ms(), n64_web_timing_dlist_ms(),
 +n64_web_timing_rdp_ms(), n64_web_timing_present_ms(),
@@ -35,4 +41,7 @@ index 2265d63a..00000000 100644
 +n64_web_timing_rect_draw_ms(), n64_web_timing_triangle_prepare_ms(),
 +n64_web_timing_triangle_upload_ms(), n64_web_timing_triangle_submit_ms(),
 +n64_web_timing_triangle_restore_ms(), n64_web_timing_triangle_draw_calls(),
-+n64_web_timing_rect_draw_calls(), n64_web_audio_underruns());
++n64_web_timing_rect_draw_calls(), n64_web_audio_underruns(),
++n64_web_audio_callback_count(), n64_web_audio_partial_underruns(),
++n64_web_audio_empty_underruns(), n64_web_audio_max_callback_gap_ms());
+ }

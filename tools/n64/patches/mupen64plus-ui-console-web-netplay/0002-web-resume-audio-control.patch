@@ -1,14 +1,97 @@
 diff --git a/src/main.c b/src/main.c
-index f4ae21a..0000000 100644
+index f4ae21a..b50b637 100644
 --- a/src/main.c
 +++ b/src/main.c
-@@ -1170,6 +1170,13 @@ int main(int argc, char *argv[])
+@@ -1080,4 +1080,18 @@ int main(int argc, char *argv[])
+         const stop = function() {
++                    if (Module.n64AudioWorkletPort) {
++                        Module.n64AudioWorkletPort.postMessage({ type: 'state', running: false, muted: true });
++                        Module.n64AudioWorkletPort.close();
++                    }
++                    if (Module.n64AudioWorkletNode) {
++                        Module.n64AudioWorkletNode.disconnect();
++                        Module.n64AudioWorkletNode = undefined;
++                    }
++                    if (Module.n64AudioWorkletSilentGain) {
++                        Module.n64AudioWorkletSilentGain.disconnect();
++                        Module.n64AudioWorkletSilentGain = undefined;
++                    }
++                    Module.n64AudioWorkletPort = undefined;
++                    Module.n64AudioWorkletPromise = undefined;
+           const doStop = Module.cwrap('stopEmulator', null, null);
+           doStop();
+         };
+@@ -1170,6 +1184,77 @@ int main(int argc, char *argv[])
            }
          };
  
++                const configureAudioWorklet = function(workletUrl) {
++                    if (Module.n64AudioWorkletNode) return Promise.resolve(true);
++                    if (Module.n64AudioWorkletPromise) return Module.n64AudioWorkletPromise;
++
++                    Module.n64AudioWorkletPromise = new Promise(function(resolve) {
++                        let attempts = 0;
++                        const waitForAudio = function() {
++                            const SDL2 = Module.SDL2;
++                            const audio = SDL2 && SDL2.audio;
++                            if (!SDL2 || !SDL2.audioContext || !audio || !audio.scriptProcessorNode) {
++                                if (++attempts >= 80) {
++                                    Module.n64AudioWorkletPromise = undefined;
++                                    resolve(false);
++                                } else {
++                                    setTimeout(waitForAudio, 25);
++                                }
++                                return;
++                            }
++                            if (!SDL2.audioContext.audioWorklet || typeof AudioWorkletNode === 'undefined') {
++                                Module.n64AudioWorkletPromise = undefined;
++                                resolve(false);
++                                return;
++                            }
++
++                            SDL2.audioContext.audioWorklet.addModule(workletUrl)
++                                .then(function() {
++                                    if (Module.n64AudioWorkletNode) return true;
++                                    if (!Module.SDL2 || !Module.SDL2.audio || !Module.SDL2.audio.scriptProcessorNode) {
++                                        return false;
++                                    }
++                                    const scriptProcessor = Module.SDL2.audio.scriptProcessorNode;
++                                    const workletNode = new AudioWorkletNode(SDL2.audioContext, 'n64-audio-processor', {
++                                        numberOfInputs: 0,
++                                        numberOfOutputs: 1,
++                                        outputChannelCount: [2]
++                                    });
++                                    const silentGain = SDL2.audioContext.createGain();
++                                    silentGain.gain.value = 0;
++                                    scriptProcessor.disconnect();
++                                    scriptProcessor.connect(silentGain);
++                                    silentGain.connect(SDL2.audioContext.destination);
++                                    workletNode.connect(SDL2.audioContext.destination);
++                                    Module.n64AudioWorkletNode = workletNode;
++                                    Module.n64AudioWorkletSilentGain = silentGain;
++                                    Module.n64AudioWorkletPort = workletNode.port;
++                                    return true;
++                                })
++                                .then(resolve)
++                                .catch(function(error) {
++                                    Module.n64AudioWorkletPromise = undefined;
++                                    console.warn('[N64] AudioWorklet fallback to ScriptProcessor:', error);
++                                    resolve(false);
++                                });
++                        };
++                        waitForAudio();
++                    });
++                    return Module.n64AudioWorkletPromise;
++                };
++
 +                const resumeAudio = function() {
-+                    if (Module.SDL2 && Module.SDL2.audioContext && Module.SDL2.audioContext.state !== 'running') {
-+                        return Module.SDL2.audioContext.resume();
++                    const SDL2 = Module.SDL2;
++                    const audioSuspended = SDL2 && SDL2.audioContext && SDL2.audioContext.state !== 'running';
++                    if (audioSuspended && Module.n64AudioWorkletPort) {
++                        Module.n64AudioWorkletPort.postMessage({ type: 'clear' });
++                    }
++                    if (audioSuspended) {
++                        return SDL2.audioContext.resume();
 +                    }
 +                    return Promise.resolve();
 +                };
@@ -16,10 +99,11 @@ index f4ae21a..0000000 100644
          // Can't seem to use normal object syntax here
          // (e.g. "emulatorControls = { start, pause, resume }" fails to build)
          const emulatorControls = {};
-@@ -1178,6 +1185,7 @@ int main(int argc, char *argv[])
+@@ -1178,6 +1263,8 @@ int main(int argc, char *argv[])
          emulatorControls.pause = pause;
          emulatorControls.resume = resume;
          emulatorControls.forceDumpSaveFiles = forceDumpSaveFiles;
++        emulatorControls.configureAudioWorklet = configureAudioWorklet;
 +        emulatorControls.resumeAudio = resumeAudio;
  
          Module.emulatorControls = emulatorControls;

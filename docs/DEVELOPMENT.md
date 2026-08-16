@@ -67,6 +67,10 @@ N64 模式必須使用全新的 WebGL canvas，不能沿用已建立 2D context 
 
 手機正常模式預設使用固定 commit 與 Emscripten 3.1.25 重建的 fork，並開啟已通過 iPhone A/B 的 Rice triangle streaming ring；桌機預設維持 npm 1.5.7，`?n64Runtime=npm` 可強制手機回退。rectangle ring 與較大的 4096/2048 iOS 音頻緩衝因沒有改善 VI/s、draw timing 或 underrun 數而維持停用。SDL callback 資料不足時會播放仍可安全 resample 的前段，只將缺少的尾端補靜音。
 
+N64 SDL 音頻現在可在初始化完成後切換到 `AudioWorkletNode` 輸出：SDL ScriptProcessor 仍保留並接到 zero-gain sink，負責維持既有 callback/fallback 路徑；C-side callback 將 S16 PCM 轉為可轉移的 Float32 chunk，送入 `n64-audio-processor` queue。Worklet 會先累積 1024 frames 再輸出，queue 超過 6144 frames 時丟棄最舊 chunk，並在 pause、resume、stop 時清理過期資料。若 AudioWorklet 不可用，SDL ScriptProcessor 仍可直接輸出聲音。
+
+這個設計改善的是短暫主執行緒排程抖動，不會修復 SDL callback 根本沒有產生 PCM 的長時間空窗；因此 `[N64 perf]` 的 SDL underrun 與 Worklet queue underflow 必須分開判讀。正式裝置驗收應同時記錄 callback count、partial/empty underrun、最大 callback gap、Worklet queue underflow、queue 深度與實際延遲，不能只用 AudioWorklet 成功載入判定音效改善。
+
 `src/n64/telemetry.ts` 透過 Mupen 的 `beginStats` / `endStats` hook 每五秒輸出 VI/s、平均/最長 VI、long VI、recompiles、RSP/DList/RDP、triangle/rectangle draw timing/calls 與 audio underruns。約 56 VI/s 以上代表 NTSC 遊戲接近 real-time。true null-video 為 60.0 VI/s、Rice no-draw 為 59.98 VI/s，已把主要瓶頸定位到 Rice GL draw 入口與 WebGL 資料提交，而不是 R4300 或一般 DList parsing。
 
 重建 fork 時先執行 `npm run n64:source`，再以 Docker 執行 `npm run n64:build`。production build 會驗證 `artifacts/n64` 的 manifest、64 MiB initial memory，以及帶相同 asset version 的 bundle/Wasm/data 實體檔名；`.gitattributes` 必須將 `*.data` 視為 binary，避免 Git 換行正規化破壞 preload archive。完整 A/B 參數、實測數據與回退條件見 [N64 瀏覽器核心分階段優化計畫](N64_CORE_OPTIMIZATION_PLAN.md)。
