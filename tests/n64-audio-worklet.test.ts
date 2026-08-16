@@ -51,4 +51,21 @@ describe('N64 audio worklet', () => {
     expect(resumed[0][0][80]).toBeGreaterThan(0.9);
     expect(resumed[0][1][80]).toBeGreaterThan(0.9);
   });
+
+  it('smoothly recovers after a valid prefix is followed by a source gap', () => {
+    const processor = createProcessor();
+    processor.port.onmessage?.({ data: { type: 'state', running: true, muted: false } });
+    postSamples(processor, 1024, 0.5);
+    output(processor, 1024);
+
+    postSamples(processor, 128, 0.25);
+    const gapStart = output(processor, 192);
+    postSamples(processor, 128, 1);
+    const resumed = output(processor, 128);
+
+    expect(gapStart[0][0][127]).toBeCloseTo(0.25, 2);
+    expect(gapStart[0][0][191]).toBeGreaterThan(0.1);
+    expect(resumed[0][0][0]).toBeGreaterThan(0.1);
+    expect(resumed[0][0][80]).toBeGreaterThan(0.9);
+  });
 });

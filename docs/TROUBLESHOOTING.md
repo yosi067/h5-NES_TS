@@ -376,9 +376,9 @@
 
 **量測**：開啟瀏覽器遠端主控台，搜尋 `[N64 perf]`。每五秒會顯示 VI/s、VI avg/max、long VI、recompiles與audio underruns。NTSC 遊戲穩定低於約 56 VI/s 表示核心本身未達 real-time；若 long VI 與 recompiles 同時偏高，啟動初期的 Wasm 動態重編譯是主要卡點。若recompiles已下降但audio underruns仍持續增加，表示renderer或其他主執行緒長工作仍在餓死SDL/Web Audio供料。
 
-**音訊短缺處理**：rebuilt fork會保留SDL callback當下仍可安全resample的樣本，只將不足尾端補靜音，不再因少量短缺捨棄整個callback。SDL累積underrun counter透過既有每VI telemetry傳回，沒有新增高頻JS crossing。這可降低破碎幅度並提供客觀計數，但無法替代把Rice renderer降到real-time預算內；若手機持續大量underrun，仍應先降低主執行緒render stall。
+**音訊短缺處理**：rebuilt fork會保留SDL callback當下仍可安全resample的樣本，只將不足尾端補靜音，不再因少量短缺捨棄整個callback。傳往 N64 AudioWorklet 的 chunk 只包含有效前段，不會把補靜音尾端排入 queue；Worklet 會在真正缺資料時做短暫衰減，收到下一段 PCM 時再 crossfade 接回。SDL累積underrun counter透過既有每VI telemetry傳回，沒有新增高頻JS crossing。這可降低破碎幅度並提供客觀計數，但無法替代把Rice renderer降到real-time預算內；若手機持續大量underrun，仍應先降低主執行緒render stall。
 
-**AudioWorklet 輸出路徑**：N64 SDL callback 會把 S16 PCM 轉成 Float32 chunk，送到 `n64-audio-processor`。Worklet 初次先累積 1024 frames，queue 超過 6144 frames 時丟棄最舊資料；短暫 drain 後以 64-frame crossfade 恢復，避免欠載恢復時產生新的 click。SDL ScriptProcessor 則保留在 zero-gain sink，作為 PCM producer 與 AudioWorklet 不可用時的 audible fallback。這可以遮住短暫的主執行緒 callback gap，但不能替代缺失的 PCM，也不保證降低延遲。現有 `[N64 perf]` audio counters 是 SDL source-side 數據，不等於 Worklet underflow；正式測試需要另外記錄 Worklet underflow、queue depth、drop count 與輸出延遲。
+**AudioWorklet 輸出路徑**：N64 SDL callback 會把 S16 PCM 轉成 Float32 chunk，送到 `n64-audio-processor`；partial underrun 的零值尾端不會送入 queue。Worklet 初次先累積 1024 frames，queue 超過 6144 frames 時丟棄最舊資料；短暫 drain 後以 64-frame crossfade 恢復，避免欠載恢復時產生新的 click。SDL ScriptProcessor 則保留在 zero-gain sink，作為 PCM producer 與 AudioWorklet 不可用時的 audible fallback。這可以遮住短暫的主執行緒 callback gap，但不能替代缺失的 PCM，也不保證降低延遲。現有 `[N64 perf]` audio counters 是 SDL source-side 數據，不等於 Worklet underflow；正式測試需要另外記錄 Worklet underflow、queue depth、drop count 與輸出延遲。
 
 **啟動或切換後無聲**：app AudioWorklet與Mupen SDL使用不同的AudioContext。N64啟動前呼叫resume時，SDL context可能尚未建立；Safari也可能在背景切換後再次暫停context。頁面現在保留click、keydown與touchstart恢復監聽，在Rice第一個VI後再恢復SDL，並於頁面回到visible時同時恢復兩個context。fork control必須讀取`Module.SDL2.audioContext`，直接引用lexical `SDL2`會因符號不在該scope而靜默失效。production preview將兩個context模擬為suspended後，visibility與後續click均確認觸發兩次resume。
 

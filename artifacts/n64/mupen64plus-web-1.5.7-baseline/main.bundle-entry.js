@@ -1,4 +1,4 @@
-﻿export const mainMupen64PlusWebJsFileName = "index.7f0ebbf78c.js";
+export const mainMupen64PlusWebJsFileName = "index.7f0ebbf78c.js";
 import createModule from "./index.7f0ebbf78c.cjs"
 // The correct import for createModule will be injected during the build process
 import baseModule from './module';

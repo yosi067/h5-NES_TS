@@ -65,9 +65,9 @@ N64 模式必須使用全新的 WebGL canvas，不能沿用已建立 2D context 
 
 `src/n64/performance.ts` 會依 user agent、觸控能力、CPU 邏輯核心數與可用記憶體選擇 desktop / ios-high-end / mobile / mobile-low-end profile，並在寫入 IDBFS 前重寫 `mupen64plus.cfg`。iOS 使用 cached interpreter (`emuMode=1`)、rAF、關閉 SkipFrame、3072/1024 samples 音頻緩衝與已編入 fork 的 `src-linear` resampler，降低 33600/44100 Hz 轉換造成的高頻失真；Android 手機使用 dynamic recompiler (`emuMode=2`)、timer，並依 profile 啟用 SkipFrame 與較低成本的 trivial resampler。手機共同套用快速材質載入、16-bit texture、關閉 mipmap 與 OSD。ROM reset 共用原始 `ArrayBuffer`，避免為 32-64 MB ROM 製造額外記憶體尖峰。
 
-手機正常模式預設使用固定 commit 與 Emscripten 3.1.25 重建的 fork，並開啟已通過 iPhone A/B 的 Rice triangle streaming ring；桌機預設維持 npm 1.5.7，`?n64Runtime=npm` 可強制手機回退。rectangle ring 與較大的 4096/2048 iOS 音頻緩衝因沒有改善 VI/s、draw timing 或 underrun 數而維持停用。SDL callback 資料不足時會播放仍可安全 resample 的前段，只將缺少的尾端補靜音。
+手機正常模式預設使用固定 commit 與 Emscripten 3.1.25 重建的 fork，並開啟已通過 iPhone A/B 的 Rice triangle streaming ring；桌機預設維持 npm 1.5.7，`?n64Runtime=npm` 可強制手機回退。rectangle ring 與較大的 4096/2048 iOS 音頻緩衝因沒有改善 VI/s、draw timing 或 underrun 數而維持停用。SDL callback 資料不足時會播放仍可安全 resample 的前段，只將缺少的尾端補靜音；送往 N64 Worklet 的 transport 只排入有效前段，不把這段補靜音再次當成 PCM 排隊。
 
-N64 SDL 音頻現在可在初始化完成後切換到 `AudioWorkletNode` 輸出：SDL ScriptProcessor 仍保留並接到 zero-gain sink，負責維持既有 callback/fallback 路徑；C-side callback 將 S16 PCM 轉為可轉移的 Float32 chunk，送入 `n64-audio-processor` queue。Worklet 僅在初次啟動時累積 1024 frames，queue 超過 6144 frames 時丟棄最舊 chunk；短暫 queue drain 後會以 64-frame crossfade 接回新 PCM，不再重新等待整個 priming window，並在 pause、resume、stop 時清理過期資料。若 AudioWorklet 不可用，SDL ScriptProcessor 仍可直接輸出聲音。
+N64 SDL 音頻現在可在初始化完成後切換到 `AudioWorkletNode` 輸出：SDL ScriptProcessor 仍保留並接到 zero-gain sink，負責維持既有 callback/fallback 路徑；C-side callback 將 S16 PCM 轉為可轉移的 Float32 chunk，送入 `n64-audio-processor` queue，partial underrun 時只送出有效前段，避免把大段零值尾端誤當成正常音訊。Worklet 僅在初次啟動時累積 1024 frames，queue 超過 6144 frames 時丟棄最舊 chunk；短暫 queue drain 後會以 64-frame crossfade 接回新 PCM，不再重新等待整個 priming window，並在 pause、resume、stop 時清理過期資料。若 AudioWorklet 不可用，SDL ScriptProcessor 仍可直接輸出聲音。
 
 這個設計改善的是短暫主執行緒排程抖動，不會修復 SDL callback 根本沒有產生 PCM 的長時間空窗；因此 `[N64 perf]` 的 SDL underrun 與 Worklet queue underflow 必須分開判讀。正式裝置驗收應同時記錄 callback count、partial/empty underrun、最大 callback gap、Worklet queue underflow、queue 深度與實際延遲，不能只用 AudioWorklet 成功載入判定音效改善。
 

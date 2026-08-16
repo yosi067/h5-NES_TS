@@ -78,11 +78,14 @@ index 8771917..1318da8 100644
 @@ -125 +153 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
 -    sdl_backend->last_cb_time = SDL_GetTicks();
 +    sdl_backend->last_cb_time = now;
+@@ -132,0 +161,1 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
++    size_t web_audio_len = len;
 @@ -144,0 +173,5 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
 +        size_t partial_len = (available * newsamplerate) / oldsamplerate;
 +        partial_len = (partial_len / SDL_SAMPLE_BYTES) * SDL_SAMPLE_BYTES;
 +        if (partial_len > (size_t)len)
 +            partial_len = len;
++        web_audio_len = partial_len;
 +
 @@ -146 +179,13 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
 -        memset(stream, 0, len);
@@ -102,7 +105,7 @@ index 8771917..1318da8 100644
 @@ -147,0 +193,29 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
 +
 +#if EMSCRIPTEN
-+    audio_web_push_samples(stream, len);
++    audio_web_push_samples(stream, web_audio_len);
 +#endif
 +}
 +

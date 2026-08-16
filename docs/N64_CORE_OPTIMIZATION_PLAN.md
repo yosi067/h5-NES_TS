@@ -26,8 +26,8 @@
 
 **N64 SDL 音訊穩定性更新（2026-08-16）**：
 
-- SDL patch 現同時提供 callback、partial/empty underrun、最大 callback gap telemetry，以及 S16 PCM 到 `n64-audio-processor` 的 transferable Float32 bridge；目前 v2/v5 source cache reverse-check 均通過。
-- N64 UI 在 `Module.SDL2.audioContext` 初始化後建立 AudioWorklet 輸出，保留 ScriptProcessor 作為 zero-gain callback/fallback source；Worklet queue 以 1024 frames priming、6144 frames high-water 避免短暫主執行緒抖動直接變成可聽爆音，並在 resume/stop 清空舊資料。
+- SDL patch 現同時提供 callback、partial/empty underrun、最大 callback gap telemetry，以及 S16 PCM 到 `n64-audio-processor` 的 transferable Float32 bridge；partial underrun 只傳有效 PCM 前段，不把補靜音尾端排入 Worklet queue。目前 v2/v5 source cache reverse-check 均通過。
+- N64 UI 在 `Module.SDL2.audioContext` 初始化後建立 AudioWorklet 輸出，保留 ScriptProcessor 作為 zero-gain callback/fallback source；Worklet queue 以 1024 frames priming、6144 frames high-water 避免短暫主執行緒抖動直接變成可聽爆音，partial gap 以衰減與 64-frame crossfade 恢復，並在 resume/stop 清空舊資料。
 - 桌面 fork smoke 已確認 Worklet attach、重啟後重新 attach，以及 callback telemetry 正常回報；這不是 iPhone 17 Pro 的音效 A/B，不能將桌面 callback/underrun 數直接外推為正式改善百分比。
 - 目前 telemetry 仍主要描述 SDL source-side underrun，尚未包含 Worklet queue underflow、queue depth、drop count 與輸出延遲；正式環境測試前應先補齊這些欄位，才能區分「PCM 沒產生」與「PCM 已產生但輸出端餓死」。
 - 過去 iPhone triangle-stream A/B 的 underrun 由706降至290（-58.9%）是 renderer 主執行緒負載與 partial-underrun 輸出共同改善的結果，不歸因於 AudioWorklet 單一改動。iOS 維持 3072/1024，不採用已驗證無客觀收益且增加延遲的 4096/2048。
