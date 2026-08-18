@@ -1336,3 +1336,132 @@ body.android-device-mode .rom-selector .upload-btn {
     font-size: 6.5px;
   }
 }
+
+/* ROM cards: let the artwork lead while keeping the description readable. */
+#rom-selector #rom-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 18px 20px;
+}
+
+#rom-selector #rom-list .rom-item {
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  padding: 14px;
+  grid-template-areas:
+    "number number"
+    "cover copy";
+  grid-template-columns: minmax(96px, 112px) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 12px 15px;
+  align-items: start;
+}
+
+#rom-selector #rom-list .rom-item-number {
+  grid-area: number;
+  align-self: auto;
+}
+
+#rom-selector #rom-list .rom-cover-frame {
+  grid-area: cover;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  align-self: start;
+}
+
+#rom-selector #rom-list .rom-cover-placeholder {
+  font-size: 11px;
+}
+
+#rom-selector #rom-list .rom-copy {
+  grid-area: copy;
+  display: grid;
+  align-content: start;
+  gap: 9px;
+}
+
+#rom-selector #rom-list .rom-name {
+  grid-area: auto;
+  margin: 0;
+  font-size: clamp(20px, 2.4vw, 31px);
+  line-height: 1.12;
+}
+
+#rom-selector #rom-list .rom-description {
+  display: block;
+  grid-area: auto;
+  max-height: none;
+  overflow: visible;
+  color: #493d2f;
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: initial;
+  -webkit-line-clamp: unset;
+}
+
+#rom-selector #rom-list .rom-item-meta {
+  grid-area: auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 2px;
+}
+
+#rom-selector #rom-list .rom-item-meta > span {
+  padding: 7px 8px;
+}
+
+#rom-selector #rom-list .rom-arrow {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  #rom-selector #rom-list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  #rom-selector #rom-list .rom-item {
+    padding: 11px;
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: 10px 12px;
+  }
+
+  #rom-selector #rom-list .rom-name {
+    font-size: clamp(20px, 5.5vw, 27px);
+  }
+
+  #rom-selector #rom-list .rom-description {
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) and (max-width: 720px) {
+  #rom-selector #rom-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  #rom-selector #rom-list .rom-item {
+    padding: 9px;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 8px 10px;
+  }
+
+  #rom-selector #rom-list .rom-name {
+    font-size: 16px;
+  }
+
+  #rom-selector #rom-list .rom-description {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  #rom-selector #rom-list .rom-item-meta > span {
+    padding: 5px 6px;
+    font-size: 9px;
+  }
+}

@@ -56,10 +56,23 @@ interface RomInfo {
   name: string;
   file: string;
   system?: string;  // 'nes' | 'gb' | 'gg' | 'snes' | 'n64' (可選，自動偵測)
+  cover?: string;
+  description?: string;
+  region?: string;
+  variant?: string;
+  cartridge?: boolean;
+  coverSource?: string;
+  descriptionSource?: string;
+  verified?: boolean;
 }
 
 interface RomListResponse {
   roms: RomInfo[];
+}
+
+interface GameMetadataResponse {
+  version: number;
+  games: Record<string, Partial<RomInfo>>;
 }
 
 type SystemKey = 'nes' | 'gb' | 'gg' | 'sms' | 'snes' | 'n64' | 'arcade';
@@ -484,6 +497,19 @@ function getRomDisplayName(rom: RomInfo): string {
   return rom.name
     .replace(/\s*\((?:NES|FC|GB|GBC|GG|SMS|SFC|SNES|N64|FBNeo\s+Arcade|Arcade)\)\s*$/i, '')
     .trim();
+}
+
+function getRomCatalogEntry(filename: string, fallbackName = filename): RomInfo {
+  return romCatalog.find(rom => rom.file === filename) ?? {
+    name: fallbackName,
+    file: filename,
+  };
+}
+
+function getRomCoverUrl(rom: RomInfo): string {
+  if (!rom.cover) return '';
+  if (/^(?:https?:|data:|blob:|\/)/i.test(rom.cover)) return rom.cover;
+  return getPublicAssetUrl(rom.cover.replace(/^\/+/, ''));
 }
 
 function renderKeyboardBindings(bindings: KeyboardBindingView[]): string {
@@ -1203,6 +1229,12 @@ function updateGameLoadingProgress(sequence: number, progress: number | null, st
 function hideGameLoading(sequence: number): void {
   if (sequence !== gameLoadingSequence) return;
   const overlay = document.getElementById('game-loading-overlay');
+  const cartridgeSequence = document.getElementById('cartridge-sequence');
+  overlay?.removeAttribute('data-loading-mode');
+  if (cartridgeSequence) {
+    cartridgeSequence.hidden = true;
+    cartridgeSequence.classList.remove('is-playing');
+  }
   if (overlay) overlay.hidden = true;
 }
 
@@ -1430,7 +1462,17 @@ async function loadRomList(): Promise<void> {
     }
     
     const data: RomListResponse = await response.json();
-    romCatalog = data.roms;
+    let metadata: GameMetadataResponse = { version: 1, games: {} };
+    try {
+      const metadataResponse = await fetch(`${baseUrl}game-metadata.json`, { cache: 'no-store' });
+      if (metadataResponse.ok) metadata = await metadataResponse.json() as GameMetadataResponse;
+    } catch (metadataError) {
+      console.warn('遊戲 metadata 載入失敗，使用基本 ROM 清單:', metadataError);
+    }
+    romCatalog = data.roms.map(rom => ({
+      ...rom,
+      ...(metadata.games[rom.file] ?? {}),
+    }));
     document.getElementById('lobby-crt')?.classList.toggle(
       'is-ready',
       romCatalog.some(rom => rom.file === LOBBY_MARIO_ROM_FILE),
@@ -1566,16 +1608,23 @@ function renderRomList(system: SystemKey): void {
   romListEl.innerHTML = roms.map((rom, index) => {
     const meta = getRomMagazineMeta(rom);
     const number = String(index + 1).padStart(3, '0');
+    const coverUrl = getRomCoverUrl(rom);
+    const coverMarkup = coverUrl
+      ? `<img class="rom-cover-image" src="${escapeHtml(coverUrl)}" alt="" loading="lazy" decoding="async"><span class="rom-cover-placeholder" aria-hidden="true" hidden>${escapeHtml(getRomDisplayName(rom).slice(0, 18))}</span>`
+      : `<span class="rom-cover-placeholder" aria-hidden="true">${escapeHtml(getRomDisplayName(rom).slice(0, 18))}</span>`;
+    const description = rom.description?.trim() || '中文簡介待核對';
     return `
       <button class="rom-item" data-index="${index}" data-system="${system}" data-file="${encodeURIComponent(rom.file)}">
         <span class="rom-item-number">No.${number}</span>
-        <span class="rom-name">${escapeHtml(getRomDisplayName(rom))}</span>
-        <span class="rom-item-meta">
-          <span><small>發售年份</small>${escapeHtml(meta.year)}</span>
-          <span><small>遊戲類型</small>${escapeHtml(meta.genre)}</span>
-          <span><small>玩家人數</small>${escapeHtml(meta.players)}</span>
+        <span class="rom-cover-frame${coverUrl ? '' : ' is-missing'}">${coverMarkup}</span>
+        <span class="rom-copy">
+          <span class="rom-name">${escapeHtml(getRomDisplayName(rom))}</span>
+          <span class="rom-description">${escapeHtml(description)}</span>
+          <span class="rom-item-meta">
+            <span><small>發售年份</small>${escapeHtml(meta.year)}</span>
+            <span><small>遊戲類型</small>${escapeHtml(meta.genre)}</span>
+          </span>
         </span>
-        <span class="rom-arrow">▶ PLAY</span>
       </button>
     `;
   }).join('');
@@ -1590,6 +1639,15 @@ function renderRomList(system: SystemKey): void {
       }
     });
   });
+
+  romListEl.querySelectorAll<HTMLImageElement>('.rom-cover-image').forEach(image => {
+    image.addEventListener('error', () => {
+      image.hidden = true;
+      image.closest('.rom-cover-frame')?.classList.add('is-missing');
+      const fallback = image.nextElementSibling as HTMLElement | null;
+      if (fallback) fallback.hidden = false;
+    }, { once: true });
+  });
 }
 
 /**
@@ -1597,8 +1655,10 @@ function renderRomList(system: SystemKey): void {
  */
 async function loadRomFromServer(filename: string): Promise<void> {
   const loadController = beginGameLoad();
-  const loadingSequence = await showGameLoading(filename, '正在下載遊戲檔案…');
+  const rom = getRomCatalogEntry(filename);
+  let loadingSequence = 0;
   try {
+    loadingSequence = await showGameLoading(rom.name, '正在下載遊戲檔案…');
     // 使用 Vite 的 BASE_URL 確保在 GitHub Pages 等子目錄部署時路徑正確
     const baseUrl = import.meta.env.BASE_URL;
     const response = await fetch(getRomAssetUrl(baseUrl, filename), { signal: loadController.signal });
@@ -1661,7 +1721,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
     await showAppAlert('載入遊戲失敗，請重試');
   } finally {
     if (gameLoadAbortController === loadController) gameLoadAbortController = null;
-    hideGameLoading(loadingSequence);
+    if (loadingSequence > 0) hideGameLoading(loadingSequence);
   }
 }
 
@@ -1670,8 +1730,10 @@ async function loadRomFromServer(filename: string): Promise<void> {
  */
 async function loadRomFromFile(file: File): Promise<void> {
   const loadController = beginGameLoad();
-  const loadingSequence = await showGameLoading(file.name, '正在讀取遊戲檔案…');
+  const rom = getRomCatalogEntry(file.name, file.name);
+  let loadingSequence = 0;
   try {
+    loadingSequence = await showGameLoading(rom.name, '正在讀取遊戲檔案…');
     const lower = file.name.toLowerCase();
     let buffer: ArrayBuffer;
     let romName = file.name;
@@ -1731,7 +1793,7 @@ async function loadRomFromFile(file: File): Promise<void> {
     await showAppAlert('載入遊戲失敗，請重試');
   } finally {
     if (gameLoadAbortController === loadController) gameLoadAbortController = null;
-    hideGameLoading(loadingSequence);
+    if (loadingSequence > 0) hideGameLoading(loadingSequence);
   }
 }
 
