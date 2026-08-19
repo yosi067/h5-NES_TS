@@ -182,13 +182,13 @@ function getFbNeoGameName(filename: string): FbNeoGameName | null {
 }
 
 const MACHINES: MachineInfo[] = [
-  { key: 'nes', title: 'FC/NES', label: '經典中的經典，傳說的紅白機。', artClass: 'nes', artFile: 'nes.svg', section: 'FEATURE', issue: 'VOL.01', year: '1988', page: '012' },
-  { key: 'gb', title: 'Game Boy', label: '最想帶去學校還有躲在棉被裡玩的好東西。', artClass: 'gb', artFile: 'gb.svg', section: 'SPECIAL', issue: 'NO.08', year: '1989', page: '024' },
-  { key: 'snes', title: 'SFC 超任', label: '無數經典的超任，是你爸媽最想藏起來不讓你碰的東西。', artClass: 'snes', artFile: 'snes.svg', section: 'CLASSIC', issue: 'VOL.16', year: '1990', page: '036' },
-  { key: 'arcade', title: '大型電玩', label: '雜貨店外面那些有搖桿的街機，要投錢幣的那種。', artClass: 'arcade', artFile: 'arcade.svg', section: 'ARCADE', issue: 'NO.88', year: '1992', page: '048' },
-  { key: 'gg', title: 'Game Gear', label: '經典的彩色掌機還可以看電視，一次吃你六顆鹼性電池的小怪物。', artClass: 'gg', artFile: 'gg.svg', section: 'RETRO', issue: 'VOL.06', year: '1991', page: '060' },
-  { key: 'sms', title: 'Master System', label: '電動店總是會放這台讓音速小子跑一整天。', artClass: 'sms', artFile: 'sms.svg', section: 'HARDWARE', issue: 'NO.16', year: '1988', page: '072' },
-  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，不過手機還跑不動，建議先在電腦上玩。', artClass: 'n64', artFile: 'n64.svg', section: 'NEW', issue: 'VOL.64', year: '1995', page: '084' },
+  { key: 'nes', title: 'FC/NES', label: '經典中的經典，傳說的紅白機。', artClass: 'nes', artFile: 'nes.png', section: 'FEATURE', issue: 'VOL.01', year: '1988', page: '012' },
+  { key: 'gb', title: 'Game Boy', label: '最想帶去學校還有躲在棉被裡玩的好東西。', artClass: 'gb', artFile: 'gb.png', section: 'SPECIAL', issue: 'NO.08', year: '1989', page: '024' },
+  { key: 'snes', title: 'SFC 超任', label: '無數經典的超任，是你爸媽最想藏起來不讓你碰的東西。', artClass: 'snes', artFile: 'snes.png', section: 'CLASSIC', issue: 'VOL.16', year: '1990', page: '036' },
+  { key: 'arcade', title: '大型電玩', label: '雜貨店外面那些有搖桿的街機，要投錢幣的那種。', artClass: 'arcade', artFile: 'arcade.png', section: 'ARCADE', issue: 'NO.88', year: '1992', page: '048' },
+  { key: 'gg', title: 'Game Gear', label: '經典的彩色掌機還可以看電視，一次吃你六顆鹼性電池的小怪物。', artClass: 'gg', artFile: 'gg.png', section: 'RETRO', issue: 'VOL.06', year: '1991', page: '060' },
+  { key: 'sms', title: 'Master System', label: '電動店總是會放這台讓音速小子跑一整天。', artClass: 'sms', artFile: 'sms.png', section: 'HARDWARE', issue: 'NO.16', year: '1988', page: '072' },
+  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，不過手機還跑不動，建議先在電腦上玩。', artClass: 'n64', artFile: 'n64.png', section: 'NEW', issue: 'VOL.64', year: '1995', page: '084' },
 ];
 
 const LOBBY_MARIO_ROM_FILE = '超级玛丽.nes';

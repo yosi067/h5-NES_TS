@@ -1465,3 +1465,567 @@ body.android-device-mode .rom-selector .upload-btn {
     font-size: 9px;
   }
 }
+
+#rom-selector.rom-selector {
+  --selector-ink: #171713;
+  --selector-muted: #6d6454;
+  --selector-border: #cbbd9e;
+  --selector-surface: #e2d4aa;
+  --selector-surface-soft: #f0e4c2;
+  --selector-accent: #a52824;
+  --selector-accent-dark: #7c1e1b;
+  --selector-green: #304b3d;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: clamp(18px, 3vw, 34px);
+  overflow-y: auto;
+  color: var(--selector-ink);
+  font-family: "Avenir Next", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(91, 64, 30, 0.11) 0 1px, transparent 2px),
+    radial-gradient(circle at 79% 62%, rgba(109, 73, 33, 0.08) 0 2px, transparent 3px),
+    repeating-linear-gradient(93deg, rgba(57, 43, 24, 0.025) 0 1px, transparent 1px 5px),
+    #c7b78d;
+}
+
+#rom-selector.rom-selector::before,
+#rom-selector.rom-selector::after,
+#rom-selector .machine-card::before,
+#rom-selector .machine-card::after {
+  display: none;
+  content: none;
+}
+
+#rom-selector .rom-selector-content,
+#rom-selector body:not(.mobile-landscape-mode) .rom-selector-content,
+body:not(.mobile-landscape-mode) #rom-selector .rom-selector-content {
+  width: min(1180px, 100%);
+  max-width: 1180px;
+  min-height: calc(100vh - clamp(36px, 6vw, 68px));
+  margin: 0 auto;
+  padding: clamp(22px, 3.2vw, 42px);
+  border: 1px solid var(--selector-border);
+  border-radius: 8px;
+  overflow: visible;
+  background:
+    linear-gradient(90deg, transparent calc(50% - 1px), rgba(65, 48, 25, 0.08) 50%, transparent calc(50% + 2px)),
+    repeating-linear-gradient(0deg, rgba(47, 36, 22, 0.025) 0 1px, transparent 1px 4px),
+    var(--selector-surface);
+  box-shadow: 0 22px 30px rgba(0, 0, 0, 0.03);
+}
+
+#rom-selector .rom-selector-header,
+body:not(.mobile-landscape-mode) #rom-selector .rom-selector-header {
+  min-height: 0;
+  margin: 0 0 30px;
+  padding: 0 0 20px;
+  border: 0;
+  border-bottom: 1px solid var(--selector-border);
+  background: transparent;
+  box-shadow: none;
+}
+
+#rom-selector .cover-topline {
+  padding-bottom: 11px;
+  border-bottom: 1px solid var(--selector-border);
+  color: var(--selector-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+#rom-selector .rom-selector-header .brand-name,
+body:not(.mobile-landscape-mode) #rom-selector .rom-selector-header .brand-name {
+  margin-top: 20px;
+  color: var(--selector-ink);
+  font-family: "Avenir Next", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: clamp(52px, 8vw, 96px);
+  font-weight: 800;
+  line-height: 0.86;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+#rom-selector .brand-logo-red {
+  color: var(--selector-accent);
+  text-shadow: none;
+}
+
+#rom-selector .brand-logo-white {
+  color: var(--selector-ink);
+}
+
+#rom-selector .cover-deck {
+  margin-top: 16px;
+  color: var(--selector-green);
+  font-family: "Avenir Next", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+#rom-selector .rom-selector-header h2,
+body:not(.mobile-landscape-mode) #rom-selector .rom-selector-header h2 {
+  margin: 12px 0 0;
+  color: var(--selector-ink);
+  font-size: clamp(17px, 2vw, 23px);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+#rom-selector .selector-subtitle,
+body:not(.mobile-landscape-mode) #rom-selector .selector-subtitle {
+  margin-top: 8px;
+  color: var(--selector-muted);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+#rom-selector .cover-issue {
+  top: 20px;
+  right: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--selector-ink);
+  border-radius: 4px;
+  color: var(--selector-surface);
+  background: var(--selector-ink);
+  box-shadow: none;
+  font-family: "Avenir Next", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+#rom-selector .machine-grid,
+body:not(.mobile-landscape-mode) #rom-selector .machine-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  padding: 0 0 28px;
+  overflow: visible;
+}
+
+#rom-selector .machine-card-shell,
+body:not(.mobile-landscape-mode) #rom-selector .machine-card-shell {
+  min-height: 278px;
+  padding: 0;
+}
+
+#rom-selector .machine-card,
+body:not(.mobile-landscape-mode) #rom-selector .machine-card {
+  width: 100%;
+  min-height: 278px;
+  padding: 16px;
+  border: 1px solid var(--selector-border);
+  border-radius: 8px;
+  display: grid;
+  grid-template: "folio folio" auto "art copy" minmax(142px, 1fr) "footer footer" auto / 38% minmax(0, 1fr);
+  gap: 13px 16px;
+  overflow: hidden;
+  color: var(--selector-ink);
+  text-align: left;
+  background:
+    repeating-linear-gradient(0deg, rgba(47, 36, 22, 0.025) 0 1px, transparent 1px 4px),
+    var(--selector-surface);
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+#rom-selector .machine-card:hover,
+#rom-selector .machine-card:focus-visible,
+body:not(.mobile-landscape-mode) #rom-selector .machine-card:hover,
+body:not(.mobile-landscape-mode) #rom-selector .machine-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: #b9c8bf;
+  outline: 2px solid rgba(216, 60, 50, 0.22);
+  outline-offset: 3px;
+  box-shadow: 0 24px 34px rgba(0, 0, 0, 0.05);
+}
+
+#rom-selector .machine-folio {
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--selector-border);
+  color: var(--selector-muted);
+  font-family: "Avenir Next", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+#rom-selector .machine-section {
+  color: var(--selector-accent);
+  font-size: 11px;
+}
+
+#rom-selector .machine-issue {
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: var(--selector-surface);
+  background: var(--selector-green);
+}
+
+#rom-selector .machine-art,
+body:not(.mobile-landscape-mode) #rom-selector .machine-art {
+  grid-area: art;
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 142px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-right: 1px solid var(--selector-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#rom-selector .machine-art-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 180px;
+  max-height: 152px;
+  padding: 4px 8px 4px 0;
+  object-fit: contain;
+  object-position: center;
+  filter: none;
+  image-rendering: auto;
+}
+
+#rom-selector .machine-copy {
+  min-width: 0;
+}
+
+#rom-selector .machine-title,
+body:not(.mobile-landscape-mode) #rom-selector .machine-title {
+  display: block;
+  padding: 0;
+  color: var(--selector-ink);
+  font-family: "Avenir Next", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: clamp(24px, 2.8vw, 34px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0;
+}
+
+#rom-selector .machine-meta,
+body:not(.mobile-landscape-mode) #rom-selector .machine-meta,
+body.android-device-mode #rom-selector .machine-meta {
+  margin-top: 9px;
+  padding: 9px 0 0;
+  border-top: 0;
+  color: var(--selector-muted);
+  -webkit-text-fill-color: var(--selector-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.55;
+}
+
+#rom-selector .machine-card-footer {
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--selector-border);
+  color: var(--selector-muted);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+#rom-selector .machine-count,
+#rom-selector .machine-tag,
+#rom-selector .machine-page {
+  color: var(--selector-muted);
+}
+
+#rom-selector .machine-count b {
+  color: var(--selector-accent);
+}
+
+#rom-selector .machine-page {
+  padding-left: 9px;
+  border-left: 1px solid var(--selector-border);
+}
+
+#rom-selector .rom-selector-footer {
+  margin: 4px 0 0;
+  padding: 20px 0 0;
+  border-top: 1px solid var(--selector-border);
+  text-align: right;
+}
+
+#rom-selector .upload-btn {
+  min-width: min(100%, 320px);
+  padding: 12px 18px;
+  border: 1px solid var(--selector-accent);
+  border-radius: 6px;
+  color: var(--selector-surface);
+  background: var(--selector-accent);
+  box-shadow: none;
+  font-family: "Avenir Next", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-shadow: none;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+#rom-selector .upload-btn:hover,
+#rom-selector .upload-btn:focus-visible {
+  transform: none;
+  border-color: var(--selector-accent-dark);
+  outline: 2px solid rgba(216, 60, 50, 0.22);
+  outline-offset: 2px;
+  background: var(--selector-accent-dark);
+  box-shadow: none;
+}
+
+#rom-selector .rom-browser-header {
+  min-height: 0;
+  margin: 0 0 28px;
+  border: 1px solid var(--selector-border);
+  border-top: 4px solid var(--system-color);
+  border-bottom: 1px solid var(--selector-border);
+  border-radius: 8px;
+  background: var(--selector-surface);
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.03);
+}
+
+#rom-selector .rom-back-btn {
+  margin: 16px 0 0 16px;
+  padding: 9px 13px;
+  border: 1px solid var(--selector-border);
+  border-radius: 6px;
+  color: var(--selector-ink);
+  background: var(--selector-surface-soft);
+  box-shadow: none;
+}
+
+#rom-selector .rom-feature-copy {
+  padding: 22px 24px 24px;
+}
+
+#rom-selector .rom-feature-art {
+  margin: 22px;
+  border-left: 1px solid var(--selector-border);
+}
+
+#rom-selector .rom-feature-art img {
+  filter: none;
+}
+
+#rom-selector #rom-list .rom-item {
+  border: 1px solid var(--selector-border);
+  border-top: 4px solid var(--system-color);
+  border-radius: 8px;
+  background: var(--selector-surface);
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.03);
+}
+
+#rom-selector #rom-list .rom-item:hover,
+#rom-selector #rom-list .rom-item:focus-visible {
+  transform: translateY(-2px);
+  outline: 2px solid color-mix(in srgb, var(--system-color) 28%, transparent);
+  outline-offset: 3px;
+  box-shadow: 0 24px 34px rgba(0, 0, 0, 0.05);
+}
+
+#rom-selector #rom-list .rom-cover-frame {
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+#rom-selector .rom-scroll-top {
+  right: 18px;
+  bottom: 18px;
+  border: 1px solid var(--selector-ink);
+  border-radius: 6px;
+  background: var(--selector-ink);
+  box-shadow: none;
+}
+
+#rom-selector .crt-cabinet,
+#rom-selector .crt-bezel {
+  border-radius: 6px;
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.04), inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+@media (max-width: 760px) {
+  #rom-selector.rom-selector {
+    padding: 12px;
+  }
+
+  #rom-selector .rom-selector-content,
+  body:not(.mobile-landscape-mode) #rom-selector .rom-selector-content {
+    min-height: calc(100vh - 24px);
+    padding: 18px 16px 22px;
+  }
+
+  #rom-selector .rom-selector-header,
+  body:not(.mobile-landscape-mode) #rom-selector .rom-selector-header {
+    margin-bottom: 22px;
+    padding-bottom: 16px;
+  }
+
+  #rom-selector .rom-selector-header.lobby-cover-header {
+    grid-template-columns: minmax(0, 1fr) clamp(104px, 32vw, 122px);
+    gap: 12px;
+  }
+
+  #rom-selector .lobby-cover-copy {
+    min-width: 0;
+  }
+
+  #rom-selector .lobby-crt {
+    width: 100%;
+    align-self: center;
+  }
+
+  #rom-selector .rom-selector-header .brand-name,
+  body:not(.mobile-landscape-mode) #rom-selector .rom-selector-header .brand-name {
+    padding-right: 0;
+    font-size: clamp(34px, 10vw, 42px);
+    line-height: 0.95;
+    white-space: nowrap;
+  }
+
+  #rom-selector .cover-issue {
+    top: 18px;
+    right: 0;
+  }
+
+  #rom-selector .machine-grid,
+  body:not(.mobile-landscape-mode) #rom-selector .machine-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    padding-bottom: 24px;
+  }
+
+  #rom-selector .machine-card-shell,
+  body:not(.mobile-landscape-mode) #rom-selector .machine-card-shell,
+  #rom-selector .machine-card,
+  body:not(.mobile-landscape-mode) #rom-selector .machine-card {
+    min-height: 260px;
+  }
+
+  #rom-selector .machine-card,
+  body:not(.mobile-landscape-mode) #rom-selector .machine-card {
+    padding: 16px;
+    grid-template: "folio folio" auto "art copy" minmax(142px, 1fr) "footer footer" auto / 36% minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  #rom-selector .machine-art,
+  body:not(.mobile-landscape-mode) #rom-selector .machine-art {
+    min-height: 142px;
+  }
+
+  #rom-selector .machine-title,
+  body:not(.mobile-landscape-mode) #rom-selector .machine-title {
+    font-size: clamp(24px, 8vw, 31px);
+  }
+
+  #rom-selector .machine-meta,
+  body:not(.mobile-landscape-mode) #rom-selector .machine-meta {
+    margin-top: 7px;
+    font-size: 11px;
+  }
+
+  #rom-selector .machine-tag {
+    display: none;
+  }
+
+  #rom-selector .machine-card-footer {
+    grid-template-columns: 1fr auto;
+  }
+
+  #rom-selector .rom-selector-footer {
+    padding-top: 16px;
+  }
+
+  #rom-selector .upload-btn {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #rom-selector .rom-feature-copy {
+    padding: 10px 14px 18px;
+  }
+
+  #rom-selector .rom-feature-art {
+    margin: 10px 10px 0 0;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  body.mobile-landscape-mode #rom-selector .rom-selector-content {
+    width: 100%;
+    height: calc(var(--app-height, 100dvh) - 24px);
+    min-height: 0;
+    padding: 14px;
+  }
+
+  body.mobile-landscape-mode #rom-selector .rom-selector-header.lobby-cover-header {
+    flex-basis: 82px;
+    min-height: 82px;
+    height: 82px;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--selector-border);
+  }
+
+  body.mobile-landscape-mode #rom-selector .machine-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-auto-rows: 112px;
+    gap: 12px;
+    padding: 0 0 12px;
+  }
+
+  body.mobile-landscape-mode #rom-selector .machine-card-shell,
+  body.mobile-landscape-mode #rom-selector .machine-card {
+    min-height: 112px;
+    height: 112px;
+  }
+
+  body.mobile-landscape-mode #rom-selector .machine-card {
+    padding: 10px;
+    grid-template: "art copy" minmax(0, 1fr) / 76px minmax(0, 1fr);
+    gap: 10px;
+    border-radius: 6px;
+  }
+
+  body.mobile-landscape-mode #rom-selector .machine-folio,
+  body.mobile-landscape-mode #rom-selector .machine-meta,
+  body.mobile-landscape-mode #rom-selector .machine-card-footer {
+    display: none;
+  }
+
+  body.mobile-landscape-mode #rom-selector .machine-art {
+    width: 76px;
+    height: 76px;
+    min-height: 0;
+    border: 0;
+  }
+
+  body.mobile-landscape-mode #rom-selector .machine-art-img {
+    padding: 2px;
+  }
+
+  body.mobile-landscape-mode #rom-selector .machine-title {
+    display: -webkit-box;
+    align-self: center;
+    min-width: 0;
+    overflow: hidden;
+    font-size: clamp(13px, 1.8vw, 17px);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  body.mobile-landscape-mode #rom-selector .rom-selector-footer {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+}
