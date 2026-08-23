@@ -551,7 +551,17 @@ Super Mario 64 Rice no-draw實測為59.98 VI/s、12.19 ms/VI、DList 0.24 ms；�
 5. DMC request 會保留到資料真正交付，emulator 以 halt/dummy/alignment/read phase 執行：下一個 CPU slot 為偶數時耗用 3 slots，為奇數時耗用 4 slots；stale request 可在 read 前取消，DMC ready 時可 steal OAM DMA 的 read slot，OAM 傳輸會暫停該 slot。
 6. 在 Rust APU/emulator 測試中加入 DMC 精確週期、啟用/停用延遲、DMA parity、取消、OAM overlap、loop/IRQ/address wrap/silence、frame counter 邊界、IRQ acknowledge 與 pulse duty phase 回歸驗證。
 
-**驗證**：`cargo test --manifest-path nes-wasm/Cargo.toml --lib` 通過；目前共 77 個 Rust 測試通過，另有 3 個需 ROM 的手動 trace 測試預設忽略。這些測試驗證了核心 register/timing 狀態，但尚未取代以同一個測試 ROM 擷取 FCEUmm、Nestopia 與本核心 PCM 波形的 golden comparison。DMC DMA 已不再固定 4 slots，並涵蓋 ready read 對 OAM DMA 的 slot steal；由於本核心 CPU 尚未拆成逐 bus cycle 的微循環，仍未完整模擬 `$4000-$401F` internal bus conflict、controller bit deletion，以及 DMC/OAM 同時進行時的所有硬體讀取順序。
+**驗證**：`cargo test --manifest-path nes-wasm/Cargo.toml --lib` 通過；目前共 79 個 Rust 測試通過，另有 3 個需 ROM 的手動 trace 測試預設忽略。這些測試驗證了核心 register/timing 狀態，但尚未取代以同一個測試 ROM 擷取 FCEUmm、Nestopia 與本核心 PCM 波形的 golden comparison。DMC DMA 已不再固定 4 slots，並涵蓋 ready read 對 OAM DMA 的 slot steal；由於本核心 CPU 尚未拆成逐 bus cycle 的微循環，仍未完整模擬 `$4000-$401F` internal bus conflict、controller bit deletion，以及 DMC/OAM 同時進行時的所有硬體讀取順序。
+
+### Q22.3: DMC 搶用 OAM DMA 讀取槽 — 足球小將 2 閃爍彩色方塊
+
+**現象**：足球小將 2 開頭人物畫面會間歇出現位置與顏色不定的 8x8 方塊；可能落在人物、黑色背景或畫面左側，單張截圖不一定能捕捉。其他同時使用 DMC 音效與 OAM DMA 的遊戲也可能出現短暫 sprite tile 雜訊。
+
+**原因**：DMC DMA 在偶數 CPU slot 搶走 OAM DMA 的 source read 後，OAM DMA 的下一個奇數 write slot 仍把前一次殘留的 `dma_data` 寫入新 OAM 位址並前進 index。這會令 sprite 的 Y、tile、attribute 或 X byte 偶發重複/錯位。先前的 sprite Y row 修正只能校正 CHR 取樣列，無法避免 OAM 本身被污染。
+
+**解決**：OAM DMA 新增 `dma_data_ready` 狀態。只有完成 source read 才允許下一個 write；成功寫入後立即清除 ready。若 read 被 DMC 搶走，緊接的 write slot 會停住，直到下一次 OAM read 真正取得資料。
+
+**驗證**：回歸測試會預先放入 stale `dma_data`，讓 DMC 搶走 OAM read，再推進到下一個 write slot，確認 OAM byte 與 DMA address 都沒有變動。完整 Rust suite 為 79 passed、3 ignored，`npm run build` 通過。
 
 ## Game Gear / Master System — Z80 CPU
 

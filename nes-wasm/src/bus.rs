@@ -35,6 +35,8 @@ pub struct Bus {
     pub dma_address: u8,
     /// DMA 讀取到的資料
     pub dma_data: u8,
+    /// DMA 讀取槽是否已取得可供下一個寫入槽使用的資料
+    pub dma_data_ready: bool,
     /// 是否正在進行 DMA 傳輸
     pub dma_transfer: bool,
     /// DMA 等待對齊旗標
@@ -49,6 +51,7 @@ impl Bus {
             dma_page: 0,
             dma_address: 0,
             dma_data: 0,
+            dma_data_ready: false,
             dma_transfer: false,
             dma_dummy: true,
         }
@@ -60,6 +63,7 @@ impl Bus {
         self.dma_page = 0;
         self.dma_address = 0;
         self.dma_data = 0;
+        self.dma_data_ready = false;
         self.dma_transfer = false;
         self.dma_dummy = true;
     }
@@ -146,6 +150,7 @@ impl Bus {
         if addr == 0x4014 {
             self.dma_page = data;
             self.dma_address = 0;
+            self.dma_data_ready = false;
             self.dma_transfer = true;
             self.dma_dummy = true;
             return;
@@ -190,9 +195,11 @@ impl Bus {
                 // 偶數週期：從 CPU 記憶體讀取
                 let addr = (self.dma_page as u16) << 8 | self.dma_address as u16;
                 self.dma_data = self.cpu_read(addr, ppu, apu, cartridge, ctrl1, ctrl2);
-            } else {
+                self.dma_data_ready = true;
+            } else if self.dma_data_ready {
                 // 奇數週期：寫入 PPU OAM
                 ppu.oam[self.dma_address as usize] = self.dma_data;
+                self.dma_data_ready = false;
                 self.dma_address = self.dma_address.wrapping_add(1);
                 if self.dma_address == 0 {
                     // 已傳輸 256 位元組，DMA 完成

@@ -1495,6 +1495,8 @@ mod tests {
         emulator.bus.dma_address = 0;
         emulator.bus.dma_dummy = false;
         emulator.bus.dma_transfer = true;
+        emulator.bus.dma_data = 0xA5;
+        emulator.ppu.oam[0] = 0x5A;
         emulator.dmc_dma_address = Some(0x8000);
         emulator.dmc_dma_phase = DmcDmaPhase::Read;
 
@@ -1505,6 +1507,13 @@ mod tests {
         assert!(emulator.bus.dma_transfer);
         assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Idle);
         assert!(emulator.apu.dmc_read_request.is_none());
+
+        for _ in 0..3 {
+            emulator.clock();
+        }
+
+        assert_eq!(emulator.ppu.oam[0], 0x5A);
+        assert_eq!(emulator.bus.dma_address, 0);
     }
 
     #[test]
