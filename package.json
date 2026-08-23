@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "wasm:build": "cd nes-wasm && wasm-pack build --target web --out-dir ../src/wasm",
+    "fceumm:build": "powershell -ExecutionPolicy Bypass -File tools/fceumm/build-fceumm.ps1",
     "n64:source": "powershell -ExecutionPolicy Bypass -File tools/n64/bootstrap-mupen.ps1",
     "n64:build": "powershell -ExecutionPolicy Bypass -File tools/n64/build-mupen.ps1",
     "dev": "vite",

@@ -1,0 +1,8 @@
+{
+  "name": "fceumm",
+  "extensions": ["fds", "nes", "unif", "unf"],
+  "options": {},
+  "save": "srm",
+  "license": "Copying",
+  "repo": "https://github.com/EmulatorJS/libretro-fceumm"
+}

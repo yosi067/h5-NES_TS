@@ -1,0 +1,42 @@
+{
+  "core": "fceumm",
+  "source": {
+    "repository": "https://github.com/EmulatorJS/libretro-fceumm.git",
+    "revision": "e1630de02074801eb96f3bc4ff33f69df9554c69"
+  },
+  "patchSha256": "e35454c30e6f0a63d2791b92e89b30c3f4b8634c7d3eb3b28f42fa1da15e8a2b",
+  "linker": {
+    "repository": "https://github.com/EmulatorJS/RetroArch.git",
+    "revision": "31ccb892522a7b0e914dc71731f0834c6495a218"
+  },
+  "runtime": {
+    "repository": "https://github.com/EmulatorJS/EmulatorJS.git",
+    "revision": "e150dc0491ae747028919fb82d6598954976ede6"
+  },
+  "buildRecipeRevision": "76e0858f2212ae8612b2a0725b88a80f05d0ca22",
+  "toolchain": {
+    "emscripten": "3.1.74"
+  },
+  "build": {
+    "start": "2026-08-23T04:53:42Z",
+    "end": "2026-08-23T04:56:23Z",
+    "metadata": {
+      "minimumEJSVersion": "4.2.2",
+      "version": "2.0.2"
+    }
+  },
+  "artifacts": {
+    "fceumm-wasm.data": {
+      "sha256": "63ef2957a231acdb6676b0dfc73bb57a35b2b732c7ae1536fbf236b5179322dd"
+    },
+    "fceumm-thread-wasm.data": {
+      "sha256": "af2cd64b58b14f468b00decf329f078fa331f9f79627ce37c49f188c3a877875"
+    },
+    "fceumm-legacy-wasm.data": {
+      "sha256": "3caa46cbd7008b4cec4e9983efa9eaa9392e712f30569d2f1268710338ffc52f"
+    },
+    "fceumm-thread-legacy-wasm.data": {
+      "sha256": "48f409329b70ce56cff49b1fbd18df2b2bc1563492bf7363658a13ef45f11407"
+    }
+  }
+}

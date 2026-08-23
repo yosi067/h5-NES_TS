@@ -33,6 +33,9 @@ interface EmulatorJsGameManager {
 
 interface EmulatorJsInstance {
   gameManager?: EmulatorJsGameManager;
+  Module?: {
+    _get_current_frame_count?: () => number;
+  };
   started?: boolean;
   callEvent?(event: string): void;
 }
@@ -215,6 +218,12 @@ function escapeInlineScript(value: string): string {
   return JSON.stringify(value).replace(/</g, '\\u003c');
 }
 
+function getFceummTestDefaultOptions(search: string): Record<string, string> | undefined {
+  const channel = Number(new URLSearchParams(search).get('fceumm-disable-channel'));
+  if (!Number.isInteger(channel) || channel < 1 || channel > 5) return undefined;
+  return { [`fceumm_apu_${channel}`]: 'disabled' };
+}
+
 export function shouldUseSnes9x(rom: Uint8Array, romName: string): boolean {
   const copierHeaderSize = rom.length % 0x8000 === 512 ? 512 : 0;
   for (const headerOffset of [0x7FD5, 0xFFD5, 0x40FFD5]) {
@@ -276,6 +285,9 @@ export async function startSnes9xBackend(
   const runtimeUrl = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/loader.js`, window.location.href).href;
   const dataPath = new URL(`${import.meta.env.BASE_URL}emulatorjs/data/`, window.location.href).href;
   const forceLegacyCore = shouldForceLegacySnesCore(navigator.userAgent);
+  const fceummTestDefaultOptions = core === 'nes'
+    ? getFceummTestDefaultOptions(window.location.search)
+    : undefined;
   const romBlob = new Blob([rom], { type: 'application/octet-stream' });
   const romUrl = URL.createObjectURL(romBlob);
   const iframe = document.createElement('iframe');
@@ -304,6 +316,7 @@ window.EJS_startOnLoaded=true;
 window.EJS_DEBUG_XX=true;
 window.EJS_threads=false;
 window.EJS_forceLegacyCores=${forceLegacyCore};
+window.EJS_defaultOptions=${fceummTestDefaultOptions ? JSON.stringify(fceummTestDefaultOptions) : 'undefined'};
 window.EJS_disableAutoLang=true;
 window.EJS_language='en-US';
 const normalizePromptText=value=>String(value||'').replace(/\\s+/g,' ').trim();
@@ -362,7 +375,14 @@ window.parent.postMessage({source:'h5-emu-snes9x-shortcut',action,slot:action===
       }, START_TIMEOUT_MS);
       const poll = window.setInterval(() => {
         const emulator = (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator;
-        if (emulator?.gameManager && emulator.started) {
+        const canvas = iframe.contentDocument?.querySelector('canvas');
+        const frameCount = emulator?.Module?._get_current_frame_count?.();
+        const hasRenderedFrame = canvas != null
+          && canvas.width >= 256
+          && canvas.height >= 224
+          && frameCount !== undefined
+          && frameCount > 0;
+        if (emulator?.gameManager && emulator.started && hasRenderedFrame) {
           cleanup();
           resolve();
         }
