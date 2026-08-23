@@ -75,6 +75,26 @@ const targets = [
     file: 'Ninku (Japan) [T-En by Some Good Shit Translations v0.1] [i].gg',
     source: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTqLdltvNLMqYpeDBl0XjvMQXR-DPmpC4kN37sQ2Wx17Q&s=10',
   },
+  {
+    file: 'Aladdin (USA).zip',
+    source: 'https://wowroms-photos.com/emulators-roms-logo/44/25209/420-420/Aladdin+(USA)-image.jpg',
+  },
+  {
+    file: 'Golden Axe III (Japan).zip',
+    source: 'https://wowroms-photos.com/emulators-roms-logo/44/25707/420-420/Golden+Axe+III+(Japan)-image.jpg',
+  },
+  {
+    file: "Michael Jackson's Moonwalker (World).zip",
+    source: "https://wowroms-photos.com/emulators-roms-logo/44/25991/420-420/Michael+Jackson's+Moonwalker+(World)-image.jpg",
+  },
+  {
+    file: 'Sonic & Knuckles + Sonic The Hedgehog 3 (World).zip',
+    source: 'https://wowroms-photos.com/emulators-roms-logo/44/26418/420-420/Sonic+&+Knuckles+--plus--+Sonic+The+Hedgehog+3+(World)-image.jpg',
+  },
+  {
+    file: 'Streets of Rage 2 (USA).zip',
+    source: 'https://wowroms-photos.com/emulators-roms-logo/44/26500/420-420/Streets+of+Rage+2+(USA)-image.jpg',
+  },
 ];
 
 const uncertaintyMarkers = [

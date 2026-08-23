@@ -1814,17 +1814,60 @@
       "descriptionSource": "editorial:https://en.wikipedia.org/wiki/Sonic_Drift_2",
       "descriptionStatus": "editorial"
     },
-    "Sonic The Hedgehog 2 (Europe, Brazil) (En) (Rev 1).sms": {
-      "cover": "assets/covers/cover-3d414079374a.jpg",
-      "coverSource": "https://en.wikipedia.org/wiki/Sonic%20the%20Hedgehog%202%20(8-bit%20video%20game)#File%3ASonic_the_Hedgehog_2_8-Bit_Coverart.png",
-      "coverImageSource": "https://upload.wikimedia.org/wikipedia/en/thumb/9/93/Sonic_the_Hedgehog_2_8-Bit_Coverart.png/250px-Sonic_the_Hedgehog_2_8-Bit_Coverart.png?utm_source=en.wikipedia.org&utm_campaign=parser&utm_content=thumbnail",
-      "coverStatus": "candidate-box-art",
-      "coverConfidence": "high",
-      "coverSearchUrl": "https://www.google.com/search?tbm=isch&q=%E9%9F%B3%E9%80%9F%E5%B0%8F%E5%AD%90%202%20%E9%81%8A%E6%88%B2%20%E5%B0%81%E9%9D%A2",
+    "Aladdin (USA).zip": {
       "verified": false,
-      "description": "《音速小子 2》是 Master System 的高速動作平台遊戲，索尼克與塔爾斯穿越關卡、收集金環並阻止蛋頭博士。",
+      "description": "《阿拉丁》是 Disney 動畫電影改編的 Mega Drive 橫向動作遊戲，玩家操作阿拉丁在阿格拉巴街道、洞窟與宮殿間奔跑、跳躍，並以彎刀和蘋果迎戰敵人。",
       "descriptionSource": "editorial",
-      "descriptionStatus": "editorial"
+      "descriptionStatus": "editorial",
+      "cover": "assets/covers/cover-f03f42c7f9f6.jpg",
+      "coverSource": "https://wowroms-photos.com/emulators-roms-logo/44/25209/420-420/Aladdin+(USA)-image.jpg",
+      "coverImageSource": "https://wowroms-photos.com/emulators-roms-logo/44/25209/420-420/Aladdin+(USA)-image.jpg",
+      "coverStatus": "user-selected-artwork",
+      "coverConfidence": "review"
+    },
+    "Golden Axe III (Japan).zip": {
+      "verified": false,
+      "description": "《戰斧 3》是 SEGA 的奇幻清版動作遊戲，玩家從多名戰士中選擇角色，以武器、格鬥技與魔法突破分歧關卡，並支援雙人合作。",
+      "descriptionSource": "editorial",
+      "descriptionStatus": "editorial",
+      "cover": "assets/covers/cover-407a1fa1dd60.jpg",
+      "coverSource": "https://wowroms-photos.com/emulators-roms-logo/44/25707/420-420/Golden+Axe+III+(Japan)-image.jpg",
+      "coverImageSource": "https://wowroms-photos.com/emulators-roms-logo/44/25707/420-420/Golden+Axe+III+(Japan)-image.jpg",
+      "coverStatus": "user-selected-artwork",
+      "coverConfidence": "review"
+    },
+    "Michael Jackson's Moonwalker (World).zip": {
+      "verified": false,
+      "description": "《麥可傑克森 月球漫步》是以同名電影與音樂為題材的動作遊戲，玩家操作 Michael Jackson 搜尋受困孩童，運用舞步與特殊能力擊退敵人。",
+      "descriptionSource": "editorial",
+      "descriptionStatus": "editorial",
+      "cover": "assets/covers/cover-d99bd4b7f7a0.jpg",
+      "coverSource": "https://wowroms-photos.com/emulators-roms-logo/44/25991/420-420/Michael+Jackson's+Moonwalker+(World)-image.jpg",
+      "coverImageSource": "https://wowroms-photos.com/emulators-roms-logo/44/25991/420-420/Michael+Jackson's+Moonwalker+(World)-image.jpg",
+      "coverStatus": "user-selected-artwork",
+      "coverConfidence": "review"
+    },
+    "Sonic & Knuckles + Sonic The Hedgehog 3 (World).zip": {
+      "verified": false,
+      "description": "《音速小子 3 與納克魯斯》是透過鎖定技術結合兩部作品的完整冒險，可操作 Sonic、Tails 或 Knuckles 穿越大型關卡，收集混沌翡翠並對抗蛋頭博士。",
+      "descriptionSource": "editorial",
+      "descriptionStatus": "editorial",
+      "cover": "assets/covers/cover-5dbc83632d31.jpg",
+      "coverSource": "https://wowroms-photos.com/emulators-roms-logo/44/26418/420-420/Sonic+&+Knuckles+--plus--+Sonic+The+Hedgehog+3+(World)-image.jpg",
+      "coverImageSource": "https://wowroms-photos.com/emulators-roms-logo/44/26418/420-420/Sonic+&+Knuckles+--plus--+Sonic+The+Hedgehog+3+(World)-image.jpg",
+      "coverStatus": "user-selected-artwork",
+      "coverConfidence": "review"
+    },
+    "Streets of Rage 2 (USA).zip": {
+      "verified": false,
+      "description": "《怒之鐵拳 2》是 SEGA 經典橫向清版動作遊戲，玩家可選擇不同能力的角色，以拳腳、摔技、武器與特殊招式對抗犯罪組織，並支援雙人合作。",
+      "descriptionSource": "editorial",
+      "descriptionStatus": "editorial",
+      "cover": "assets/covers/cover-927e7decc0fc.jpg",
+      "coverSource": "https://wowroms-photos.com/emulators-roms-logo/44/26500/420-420/Streets+of+Rage+2+(USA)-image.jpg",
+      "coverImageSource": "https://wowroms-photos.com/emulators-roms-logo/44/26500/420-420/Streets+of+Rage+2+(USA)-image.jpg",
+      "coverStatus": "user-selected-artwork",
+      "coverConfidence": "review"
     },
     "Legend of Zelda, The - Ocarina of Time.z64": {
       "cover": "assets/covers/cover-953beb0aa3e5.jpg",

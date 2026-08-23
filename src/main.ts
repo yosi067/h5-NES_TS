@@ -42,6 +42,7 @@ import {
   shouldUseDigitalArcadeDpad,
   shouldUseSnes9x,
   startSnes9xBackend,
+  type EmulatorJsCore,
   type Snes9xBackend,
 } from './snes/snes9x-backend';
 
@@ -55,7 +56,7 @@ type N64EmulatorControls = EmulatorControls & {
 interface RomInfo {
   name: string;
   file: string;
-  system?: string;  // 'nes' | 'gb' | 'gg' | 'snes' | 'n64' (可選，自動偵測)
+  system?: string;  // 'nes' | 'gb' | 'gg' | 'sms' | 'genesis' | 'snes' | 'n64' (可選，自動偵測)
   cover?: string;
   description?: string;
   region?: string;
@@ -75,7 +76,7 @@ interface GameMetadataResponse {
   games: Record<string, Partial<RomInfo>>;
 }
 
-type SystemKey = 'nes' | 'gb' | 'gg' | 'sms' | 'snes' | 'n64' | 'arcade';
+type SystemKey = 'nes' | 'gb' | 'gg' | 'sms' | 'genesis' | 'snes' | 'n64' | 'arcade';
 
 interface MachineInfo {
   key: SystemKey;
@@ -182,13 +183,13 @@ function getFbNeoGameName(filename: string): FbNeoGameName | null {
 }
 
 const MACHINES: MachineInfo[] = [
-  { key: 'nes', title: 'FC/NES', label: '經典中的經典，傳說的紅白機。', artClass: 'nes', artFile: 'nes.png', section: 'FEATURE', issue: 'VOL.01', year: '1988', page: '012' },
+  { key: 'nes', title: 'FC/NES', label: '經典中的經典，傳說的紅白機。', artClass: 'nes', artFile: 'nes.png', section: 'FEATURE', issue: 'VOL.01', year: '1983', page: '012' },
   { key: 'gb', title: 'Game Boy', label: '最想帶去學校還有躲在棉被裡玩的好東西。', artClass: 'gb', artFile: 'gb.png', section: 'SPECIAL', issue: 'NO.08', year: '1989', page: '024' },
   { key: 'snes', title: 'SFC 超任', label: '無數經典的超任，是你爸媽最想藏起來不讓你碰的東西。', artClass: 'snes', artFile: 'snes.png', section: 'CLASSIC', issue: 'VOL.16', year: '1990', page: '036' },
   { key: 'arcade', title: '大型電玩', label: '雜貨店外面那些有搖桿的街機，要投錢幣的那種。', artClass: 'arcade', artFile: 'arcade.png', section: 'ARCADE', issue: 'NO.88', year: '1992', page: '048' },
-  { key: 'gg', title: 'Game Gear', label: '經典的彩色掌機還可以看電視，一次吃你六顆鹼性電池的小怪物。', artClass: 'gg', artFile: 'gg.png', section: 'RETRO', issue: 'VOL.06', year: '1991', page: '060' },
-  { key: 'sms', title: 'Master System', label: '電動店總是會放這台讓音速小子跑一整天。', artClass: 'sms', artFile: 'sms.png', section: 'HARDWARE', issue: 'NO.16', year: '1988', page: '072' },
-  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，不過手機還跑不動，建議先在電腦上玩。', artClass: 'n64', artFile: 'n64.png', section: 'NEW', issue: 'VOL.64', year: '1995', page: '084' },
+  { key: 'gg', title: 'Game Gear', label: '經典的彩色掌機還可以看電視，一次吃你六顆鹼性電池的小怪物。', artClass: 'gg', artFile: 'gg.png', section: 'RETRO', issue: 'VOL.06', year: '1990', page: '060' },
+  { key: 'genesis', title: 'Mega Drive', label: '電動店總是會放這台讓音速小子跑一整天。', artClass: 'md', artFile: 'md.png', section: 'HARDWARE', issue: 'MD.88', year: '1988', page: '072' },
+  { key: 'n64', title: 'Nintendo 64', label: '劃時代的 3D 主機，不過手機還跑不動，建議先在電腦上玩。', artClass: 'n64', artFile: 'n64.png', section: 'NEW', issue: 'VOL.64', year: '1996', page: '084' },
 ];
 
 const LOBBY_MARIO_ROM_FILE = '超级玛丽.nes';
@@ -231,6 +232,14 @@ function isSnesCore(): boolean {
   return (activeBackend === 'snes9x' && emulatorJsCore === 'snes') || nes?.getCoreType() === 'snes';
 }
 
+function isGenesisCore(): boolean {
+  return activeBackend === 'snes9x' && emulatorJsCore === 'genesis';
+}
+
+function usesSixButtonController(): boolean {
+  return isSnesCore() || isGenesisCore();
+}
+
 // ===== 全域變數 =====
 
 let nes: EmuWasm | null = null;
@@ -246,7 +255,7 @@ let isRunning: boolean = false;
 let currentRomFilename: string = '';
 let activeBackend: 'wasm' | 'mupen64' | 'fbneo' | 'snes9x' = 'wasm';
 let snes9xBackend: Snes9xBackend | null = null;
-let emulatorJsCore: 'snes' | 'nes' | null = null;
+let emulatorJsCore: EmulatorJsCore | null = null;
 let n64Controls: N64EmulatorControls | null = null;
 let currentN64RomData: ArrayBuffer | null = null;
 let n64PerformanceProfile: N64PerformanceProfile = selectN64PerformanceProfile();
@@ -469,7 +478,7 @@ function isFbNeoArcadeRomName(filename: string): boolean {
 function detectRomSystem(rom: RomInfo): SystemKey {
   const normalized = rom.system?.toLowerCase();
   if (normalized === 'fbneo' || normalized === 'arcade') return 'arcade';
-  if (normalized === 'nes' || normalized === 'gb' || normalized === 'gg' || normalized === 'sms' || normalized === 'snes' || normalized === 'n64') {
+  if (normalized === 'nes' || normalized === 'gb' || normalized === 'gg' || normalized === 'sms' || normalized === 'genesis' || normalized === 'snes' || normalized === 'n64') {
     return normalized;
   }
 
@@ -477,6 +486,7 @@ function detectRomSystem(rom: RomInfo): SystemKey {
   if (isFbNeoArcadeRomName(rom.file)) return 'arcade';
   if (isN64RomName(rom.file)) return 'n64';
   if (lower.endsWith('.sfc') || lower.endsWith('.smc') || lower.endsWith('.fig')) return 'snes';
+  if (lower.endsWith('.md') || lower.endsWith('.gen') || lower.endsWith('.smd')) return 'genesis';
   if (lower.endsWith('.sms')) return 'sms';
   if (lower.endsWith('.gg')) return 'gg';
   if (lower.endsWith('.gb') || lower.endsWith('.gbc')) return 'gb';
@@ -495,7 +505,7 @@ function escapeHtml(value: string): string {
 
 function getRomDisplayName(rom: RomInfo): string {
   return rom.name
-    .replace(/\s*\((?:NES|FC|GB|GBC|GG|SMS|SFC|SNES|N64|FBNeo\s+Arcade|Arcade)\)\s*$/i, '')
+    .replace(/\s*\((?:NES|FC|GB|GBC|GG|SMS|MD|Mega\s+Drive|Genesis|SFC|SNES|N64|FBNeo\s+Arcade|Arcade)\)\s*$/i, '')
     .trim();
 }
 
@@ -557,6 +567,17 @@ function updateKeyboardGuide(): void {
       { action: 'D / E / F', keys: ['S', 'Q', 'W'] },
       { action: 'Coin', keys: ['5'] },
       { action: '1P Start', keys: ['1', 'Enter'] },
+    ];
+  } else if (isGenesisCore()) {
+    title = 'Mega Drive / Genesis 鍵盤控制';
+    note = '三鍵遊戲使用 A/B/C，六鍵遊戲另可使用 X/Y/Z 與 Mode。';
+    bindings = [
+      { action: '方向', keys: ['↑', '↓', '←', '→'] },
+      { action: 'C / B', keys: ['Z', 'X'] },
+      { action: 'A / Y', keys: ['A', 'S'] },
+      { action: 'X / Z', keys: ['Q', 'W'] },
+      { action: 'Start', keys: ['Enter'] },
+      { action: 'Mode', keys: ['Right Shift'] },
     ];
   } else if (isSnesCore()) {
     title = 'SFC / SNES 鍵盤控制';
@@ -1043,7 +1064,7 @@ function setupKeyboardInput(): void {
       if (setArcadeKeyboardInput(e.code, true)) e.preventDefault();
       return;
     }
-    if (isSnesCore()) {
+    if (usesSixButtonController()) {
       const button = KEYBOARD_MAP_SNES[e.code];
       if (button !== undefined) {
         setSnesButton(button, true);
@@ -1064,7 +1085,7 @@ function setupKeyboardInput(): void {
       if (setArcadeKeyboardInput(e.code, false)) e.preventDefault();
       return;
     }
-    if (isSnesCore()) {
+    if (usesSixButtonController()) {
       const button = KEYBOARD_MAP_SNES[e.code];
       if (button !== undefined) {
         setSnesButton(button, false);
@@ -1681,7 +1702,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
       // 解壓 ZIP
       updateGameLoading(loadingSequence, '正在解壓縮遊戲檔案…');
       const zip = await JSZip.loadAsync(buffer);
-      const romExtensions = ['.nes', '.smc', '.sfc', '.fig', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
+      const romExtensions = ['.nes', '.smc', '.sfc', '.fig', '.gb', '.gbc', '.gg', '.sms', '.md', '.gen', '.smd', '.z64', '.n64', '.v64'];
       let romFile: JSZip.JSZipObject | null = null;
       let romFileName = '';
 
@@ -1751,7 +1772,7 @@ async function loadRomFromFile(file: File): Promise<void> {
       // 解壓 ZIP，找第一個遊戲檔案
       updateGameLoading(loadingSequence, '正在解壓縮遊戲檔案…');
       const zip = await JSZip.loadAsync(await file.arrayBuffer());
-      const romExtensions = ['.nes', '.smc', '.sfc', '.fig', '.gb', '.gbc', '.gg', '.sms', '.z64', '.n64', '.v64'];
+      const romExtensions = ['.nes', '.smc', '.sfc', '.fig', '.gb', '.gbc', '.gg', '.sms', '.md', '.gen', '.smd', '.z64', '.n64', '.v64'];
       let romFile: JSZip.JSZipObject | null = null;
       let romFileName = '';
 
@@ -1896,6 +1917,11 @@ async function startGame(
     return;
   }
 
+  if (lower.endsWith('.md') || lower.endsWith('.gen') || lower.endsWith('.smd')) {
+    await startSnes9xGame(romData, 'genesis', signal);
+    return;
+  }
+
   const isSnesRom = lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig');
   if (isSnesRom && shouldUseSnes9x(romBytes, currentRomFilename)) {
     await startSnes9xGame(romData, 'snes', signal);
@@ -1999,7 +2025,7 @@ async function startGame(
 
 async function startSnes9xGame(
   romData: ArrayBuffer,
-  core: 'snes' | 'nes' = 'snes',
+  core: EmulatorJsCore = 'snes',
   signal?: AbortSignal,
 ): Promise<void> {
   const screen = document.getElementById('screen');
@@ -2022,7 +2048,7 @@ async function startSnes9xGame(
     hideRomSelector();
     updateControllerLayout();
     powerLed?.classList.add('on');
-    showToast(core === 'nes' ? 'FC 核心已啟動' : 'SFC 核心已啟動');
+    showToast(core === 'genesis' ? 'Mega Drive 核心已啟動' : core === 'nes' ? 'FC 核心已啟動' : 'SFC 核心已啟動');
   } catch (error) {
     activeBackend = 'wasm';
     await stopSnes9xBackend();
@@ -3838,7 +3864,8 @@ function updateControllerLayout(): void {
     isFbNeoActive() && shouldUseDigitalArcadeDpad(navigator.userAgent, typeof PointerEvent !== 'undefined'),
   );
   document.body.classList.toggle('arcade-vertical-mode', isFbNeoActive() && arcadeRotation !== 'none');
-  document.body.classList.toggle('snes-mode', !isMupenN64Active() && !isFbNeoActive() && isSnesCore());
+  document.body.classList.toggle('snes-mode', !isMupenN64Active() && !isFbNeoActive() && usesSixButtonController());
+  updateSnesControllerLabels();
   if (isMupenN64Active()) {
     if (nesCtrl) nesCtrl.style.display = 'none';
     if (snesCtrl) snesCtrl.style.display = 'none';
@@ -3851,7 +3878,7 @@ function updateControllerLayout(): void {
     if (arcadeCtrl) arcadeCtrl.style.display = 'flex';
     if (n64Ctrl) n64Ctrl.style.display = 'none';
     setupArcadeButtons();
-  } else if (isSnesCore()) {
+  } else if (usesSixButtonController()) {
     if (nesCtrl) nesCtrl.style.display = 'none';
     if (snesCtrl) snesCtrl.style.display = 'flex';
     if (arcadeCtrl) arcadeCtrl.style.display = 'none';
@@ -3864,6 +3891,18 @@ function updateControllerLayout(): void {
     if (n64Ctrl) n64Ctrl.style.display = 'none';
   }
   updateKeyboardGuide();
+}
+
+function updateSnesControllerLabels(): void {
+  const labels = isGenesisCore()
+    ? { l: 'X', r: 'Z', x: 'Y', y: 'A', a: 'C', b: 'B', select: 'MODE', start: 'START' }
+    : { l: 'L', r: 'R', x: 'X', y: 'Y', a: 'A', b: 'B', select: 'SEL', start: 'STA' };
+  for (const [id, label] of Object.entries(labels)) {
+    const element = id === 'select' || id === 'start'
+      ? document.querySelector<HTMLElement>(`#snes-controller-area [data-snes-btn="${id}"]`)
+      : document.getElementById(`snes-btn-${id}`);
+    if (element) element.textContent = label;
+  }
 }
 
 function updateArcadeButtonCount(buttonCount: number | null): void {

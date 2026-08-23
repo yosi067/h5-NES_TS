@@ -697,12 +697,12 @@ impl Ppu {
             }
 
             // ===== 精靈評估 =====
-            if self.cycle == 257 && self.scanline >= 0 {
+            if self.cycle == 257 && self.scanline >= -1 {
                 self.evaluate_sprites();
             }
 
             // 在第 340 週期載入精靈圖案
-            if self.cycle == 340 && self.scanline >= 0 {
+            if self.cycle == 340 && self.scanline >= -1 {
                 self.load_sprite_patterns();
             }
         }
@@ -846,9 +846,9 @@ impl Ppu {
 
         for i in 0..64 {
             let y = self.oam[i * 4] as i16;
-            let diff = target_scanline - y;
+            let row = (target_scanline - y - 1).rem_euclid(256);
 
-            if diff >= 0 && diff < sprite_height {
+            if row < sprite_height {
                 if self.sprite_count < 8 {
                     if i == 0 {
                         self.sprite_zero_hit_possible = true;
@@ -881,7 +881,7 @@ impl Ppu {
             let attributes = self.secondary_oam[i * 4 + 2];
             let flip_v = attributes & 0x80 != 0;
 
-            let mut row = target_scanline - sprite_y;
+            let mut row = (target_scanline - sprite_y - 1).rem_euclid(256);
 
             let pattern_addr = if self.ctrl & 0x20 != 0 {
                 // 8x16 精靈模式
@@ -1061,9 +1061,44 @@ mod tests {
     fn sprite_evaluation_prepares_the_next_scanline() {
         let mut ppu = Ppu::new();
         ppu.scanline = 10;
-        ppu.oam[0] = 11;
+        ppu.oam.fill(0xFF);
+        ppu.oam[0] = 10;
 
         ppu.evaluate_sprites();
+
+        assert_eq!(ppu.sprite_count, 1);
+    }
+
+    #[test]
+    fn sprite_pattern_uses_first_row_on_its_top_scanline() {
+        let mut ppu = Ppu::new();
+        let mut chr = vec![0; 8192];
+        chr[0x10] = 0x80;
+        chr[0x11] = 0x40;
+        ppu.set_chr_data(chr, false);
+        ppu.scanline = 10;
+        ppu.oam.fill(0xFF);
+        ppu.oam[0] = 10;
+        ppu.oam[1] = 1;
+        ppu.oam[2] = 0;
+        ppu.oam[3] = 0;
+
+        ppu.evaluate_sprites();
+        ppu.load_sprite_patterns();
+
+        assert_eq!(ppu.sprite_shifter_lo[0], 0x80);
+    }
+
+    #[test]
+    fn prerender_scanline_prepares_sprites_for_scanline_zero() {
+        let mut ppu = Ppu::new();
+        ppu.mask = 0x10;
+        ppu.scanline = -1;
+        ppu.cycle = 257;
+        ppu.oam.fill(0);
+        ppu.oam[0] = 0xFF;
+
+        ppu.clock();
 
         assert_eq!(ppu.sprite_count, 1);
     }

@@ -131,7 +131,11 @@
     {"name": "米老鼠傳奇幻境", "file": "Legend of Illusion Starring Mickey Mouse (J).gg", "system": "gg"},
     {"name": "音速小子賽車 2", "file": "Sonic Drift 2 (World).gg", "system": "gg"},
 
-    {"name": "音速小子 2", "file": "Sonic The Hedgehog 2 (Europe, Brazil) (En) (Rev 1).sms", "system": "sms"},
+    {"name": "阿拉丁", "file": "Aladdin (USA).zip", "system": "genesis"},
+    {"name": "戰斧 3", "file": "Golden Axe III (Japan).zip", "system": "genesis"},
+    {"name": "麥可傑克森 月球漫步", "file": "Michael Jackson's Moonwalker (World).zip", "system": "genesis"},
+    {"name": "音速小子 3 與納克魯斯", "file": "Sonic & Knuckles + Sonic The Hedgehog 3 (World).zip", "system": "genesis"},
+    {"name": "怒之鐵拳 2", "file": "Streets of Rage 2 (USA).zip", "system": "genesis"},
 
     {"name": "超級瑪利歐世界", "file": "Super Mario World (USA).sfc", "system": "snes"},
     {"name": "超級瑪利歐賽車 (日版)", "file": "Super Mario Kart (Japan).zip", "system": "snes"},

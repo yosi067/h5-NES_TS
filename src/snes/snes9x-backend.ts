@@ -12,6 +12,8 @@ export interface Snes9xBackend {
   stop(): Promise<void>;
 }
 
+export type EmulatorJsCore = 'snes' | 'nes' | 'genesis';
+
 interface EmulatorJsFileSystem {
   analyzePath(path: string): { exists: boolean };
   readFile(path: string): Uint8Array;
@@ -262,7 +264,7 @@ export async function startSnes9xBackend(
   host: HTMLElement,
   rom: ArrayBuffer,
   romName: string,
-  core: 'snes' | 'nes' = 'snes',
+  core: EmulatorJsCore = 'snes',
   signal?: AbortSignal,
 ): Promise<Snes9xBackend> {
   const navigatorWithMemory = navigator as Navigator & { deviceMemory?: number };
@@ -280,9 +282,9 @@ export async function startSnes9xBackend(
   const romUrl = URL.createObjectURL(romBlob);
   const iframe = document.createElement('iframe');
   iframe.id = 'snes9x-screen';
-  iframe.title = 'Snes9x game screen';
+  iframe.title = `${core === 'genesis' ? 'Mega Drive' : core === 'nes' ? 'NES' : 'Snes9x'} game screen`;
   iframe.allow = 'autoplay; fullscreen; gamepad';
-  iframe.style.aspectRatio = '256 / 224';
+  iframe.style.aspectRatio = core === 'genesis' ? '320 / 224' : '256 / 224';
   iframe.srcdoc = `<!doctype html>
 <html><head><meta charset="utf-8"><style>
 html,body,#game{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
@@ -296,7 +298,7 @@ const reason=event.reason;
 if(reason&&reason.name==='NotAllowedError'&&/wake\s*lock|WakeLock/i.test(reason.message||''))event.preventDefault();
 });
 window.EJS_player='#game';
-window.EJS_core=${escapeInlineScript(core)};
+window.EJS_core=${escapeInlineScript(core === 'genesis' ? 'segaMD' : core)};
 window.EJS_gameUrl=${escapeInlineScript(romUrl)};
 window.EJS_gameName=${escapeInlineScript(romName)};
 window.EJS_pathtodata=${escapeInlineScript(dataPath)};
@@ -358,7 +360,7 @@ window.parent.postMessage({source:'h5-emu-snes9x-shortcut',action,slot:action===
     await new Promise<void>((resolve, reject) => {
       const timeout = window.setTimeout(() => {
         cleanup();
-        reject(new Error(`${core === 'nes' ? 'NES' : 'Snes9x'} 核心啟動逾時`));
+        reject(new Error(`${core === 'genesis' ? 'Mega Drive' : core === 'nes' ? 'NES' : 'Snes9x'} 核心啟動逾時`));
       }, START_TIMEOUT_MS);
       const poll = window.setInterval(() => {
         const emulator = (iframe.contentWindow as EmulatorJsWindow | null)?.EJS_emulator;
@@ -369,7 +371,7 @@ window.parent.postMessage({source:'h5-emu-snes9x-shortcut',action,slot:action===
       }, 50);
       const onError = () => {
         cleanup();
-        reject(new Error(`${core === 'nes' ? 'NES' : 'Snes9x'} runtime 載入失敗`));
+        reject(new Error(`${core === 'genesis' ? 'Mega Drive' : core === 'nes' ? 'NES' : 'Snes9x'} runtime 載入失敗`));
       };
       const onAbort = () => {
         cleanup();

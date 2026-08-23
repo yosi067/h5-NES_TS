@@ -5,7 +5,7 @@ import JSZip from 'jszip';
 import { EmuWasm, initSync } from '../src/wasm/nes_wasm.js';
 
 const ROM_EXTENSIONS = new Set([
-  '.nes', '.gb', '.gbc', '.gg', '.sms', '.sfc', '.smc', '.fig', '.z64', '.n64', '.v64',
+  '.nes', '.gb', '.gbc', '.gg', '.sms', '.md', '.gen', '.smd', '.sfc', '.smc', '.fig', '.z64', '.n64', '.v64',
 ]);
 const SNES_EXTENSIONS = new Set(['.sfc', '.smc', '.fig']);
 const FRAME_COUNT = 600;
@@ -78,7 +78,8 @@ function countNonBlackPixels(emulator) {
 }
 
 function bootRom(record) {
-  if (record.extension === '.z64' || record.extension === '.n64' || record.extension === '.v64') {
+  if (record.extension === '.z64' || record.extension === '.n64' || record.extension === '.v64'
+    || record.extension === '.md' || record.extension === '.gen' || record.extension === '.smd') {
     return { status: 'external-runtime', loaded: null, nonBlackPixels: null };
   }
 

@@ -274,6 +274,7 @@ function emulatorJsAssetsPlugin() {
   const coreDirs = [
     resolve(__dirname, 'node_modules/@emulatorjs/core-snes9x'),
     resolve(__dirname, 'node_modules/@emulatorjs/core-fceumm'),
+    resolve(__dirname, 'node_modules/@emulatorjs/core-genesis_plus_gx'),
   ];
   const publicPath = '/emulatorjs/data/';
 
@@ -321,7 +322,7 @@ function emulatorJsAssetsPlugin() {
         }
         copyDirectory(resolve(coreDir, 'reports'), resolve(distCoresDir, 'reports'));
       }
-      console.log('Copied EmulatorJS Snes9x and FCEUmm runtimes');
+      console.log('Copied EmulatorJS Snes9x, FCEUmm, and Genesis Plus GX runtimes');
     },
   };
 }
