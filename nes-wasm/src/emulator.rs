@@ -22,6 +22,15 @@ use crate::bus::Bus;
 use crate::cartridge::Cartridge;
 use crate::controller::Controller;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DmcDmaPhase {
+    Idle,
+    Halt,
+    Dummy,
+    Align,
+    Read,
+}
+
 /// NES 模擬器
 pub struct Emulator {
     /// 6502 CPU
@@ -46,7 +55,14 @@ pub struct Emulator {
     pub audio_enabled: bool,
 
     dmc_dma_address: Option<u16>,
-    dmc_dma_cycles: u8,
+    dmc_dma_phase: DmcDmaPhase,
+
+    #[cfg(test)]
+    pub(crate) mapper_scanline_events: Vec<(i16, u16)>,
+    #[cfg(test)]
+    pub(crate) mapper_cpu_writes: Vec<(u64, u16, u8)>,
+    #[cfg(test)]
+    pub(crate) mapper_scanline_enabled: bool,
 }
 
 impl Emulator {
@@ -63,7 +79,13 @@ impl Emulator {
             system_clock: 0,
             audio_enabled: true,
             dmc_dma_address: None,
-            dmc_dma_cycles: 0,
+            dmc_dma_phase: DmcDmaPhase::Idle,
+            #[cfg(test)]
+            mapper_scanline_events: Vec::new(),
+            #[cfg(test)]
+            mapper_cpu_writes: Vec::new(),
+            #[cfg(test)]
+            mapper_scanline_enabled: true,
         }
     }
 
@@ -90,7 +112,12 @@ impl Emulator {
         self.bus.reset();
         self.system_clock = 0;
         self.dmc_dma_address = None;
-        self.dmc_dma_cycles = 0;
+        self.dmc_dma_phase = DmcDmaPhase::Idle;
+        #[cfg(test)]
+        {
+            self.mapper_scanline_events.clear();
+            self.mapper_cpu_writes.clear();
+        }
 
         // 同步 Mapper 狀態到 PPU（鏡像模式和 CHR bank 映射）
         self.sync_mapper_to_ppu();
@@ -126,19 +153,22 @@ impl Emulator {
             // 檢查 DMA 傳輸
             if self.bus.dma_transfer {
                 let odd = self.system_clock % 2 == 1;
-                self.bus.do_dma_cycle(
-                    odd,
-                    &mut self.ppu, &mut self.apu, &self.cartridge,
-                    &mut self.ctrl1, &mut self.ctrl2,
-                );
-            } else if self.dmc_dma_cycles > 0 {
-                self.dmc_dma_cycles -= 1;
-                if self.dmc_dma_cycles == 0 {
-                    if let Some(addr) = self.dmc_dma_address.take() {
-                        let data = self.bus_read(addr);
-                        self.apu.dmc_provide_sample(data);
+                let dmc_can_steal_read = !odd && self.dmc_dma_phase == DmcDmaPhase::Read;
+                if dmc_can_steal_read {
+                    self.clock_dmc_dma(odd, true);
+                } else {
+                    self.bus.do_dma_cycle(
+                        odd,
+                        &mut self.ppu, &mut self.apu, &self.cartridge,
+                        &mut self.ctrl1, &mut self.ctrl2,
+                    );
+                    if self.dmc_dma_phase != DmcDmaPhase::Idle {
+                        self.clock_dmc_dma(odd, false);
                     }
                 }
+            } else if self.dmc_dma_phase != DmcDmaPhase::Idle {
+                let odd = self.system_clock % 2 == 1;
+                self.clock_dmc_dma(odd, true);
             } else {
                 // 執行 CPU
                 self.cpu_clock();
@@ -148,10 +178,10 @@ impl Emulator {
             self.apu.clock();
 
             // 處理 DMC 讀取請求
-            if self.dmc_dma_address.is_none() {
-                if let Some(addr) = self.apu.dmc_read_request.take() {
+            if self.dmc_dma_phase == DmcDmaPhase::Idle {
+                if let Some(addr) = self.apu.dmc_read_request {
                     self.dmc_dma_address = Some(addr);
-                    self.dmc_dma_cycles = 4;
+                    self.dmc_dma_phase = DmcDmaPhase::Halt;
                 }
             }
 
@@ -166,9 +196,17 @@ impl Emulator {
 
         // === 檢查 Scanline IRQ（用於 MMC3 等 Mapper）===
         if self.ppu.check_scanline_irq() {
-            self.cartridge.scanline();
-            // 同步 Mapper 狀態到 PPU（scanline 可能改變 bank 映射）
-            self.sync_mapper_to_ppu();
+            #[cfg(test)]
+            self.mapper_scanline_events.push((self.ppu.scanline, self.ppu.cycle));
+            #[cfg(test)]
+            let mapper_scanline_enabled = self.mapper_scanline_enabled;
+            #[cfg(not(test))]
+            let mapper_scanline_enabled = true;
+            if mapper_scanline_enabled {
+                self.cartridge.scanline();
+                // 同步 Mapper 狀態到 PPU（scanline 可能改變 bank 映射）
+                self.sync_mapper_to_ppu();
+            }
         }
 
         // IRQ 是 level-sensitive：source acknowledge 後必須立即解除 CPU IRQ line。
@@ -176,6 +214,46 @@ impl Emulator {
             || self.cartridge.check_irq();
 
         self.system_clock += 1;
+    }
+
+    fn clock_dmc_dma(&mut self, odd_cycle: bool, allow_read: bool) {
+        let Some(address) = self.dmc_dma_address else {
+            self.dmc_dma_phase = DmcDmaPhase::Idle;
+            return;
+        };
+
+        if self.apu.dmc_read_request != Some(address) {
+            self.dmc_dma_address = None;
+            self.dmc_dma_phase = DmcDmaPhase::Idle;
+            return;
+        }
+
+        match self.dmc_dma_phase {
+            DmcDmaPhase::Idle => {}
+            DmcDmaPhase::Halt => {
+                self.dmc_dma_phase = DmcDmaPhase::Dummy;
+            }
+            DmcDmaPhase::Dummy => {
+                self.dmc_dma_phase = if odd_cycle {
+                    DmcDmaPhase::Read
+                } else {
+                    DmcDmaPhase::Align
+                };
+            }
+            DmcDmaPhase::Align => {
+                self.dmc_dma_phase = DmcDmaPhase::Read;
+            }
+            DmcDmaPhase::Read => {
+                if !allow_read {
+                    return;
+                }
+
+                let data = self.bus_read(address);
+                self.apu.dmc_provide_sample(data);
+                self.dmc_dma_address = None;
+                self.dmc_dma_phase = DmcDmaPhase::Idle;
+            }
+        }
     }
 
     /// 執行一個 CPU 時鐘週期
@@ -207,6 +285,7 @@ impl Emulator {
         let opcode = self.bus_read(self.cpu.pc);
         self.cpu.pc = self.cpu.pc.wrapping_add(1);
         self.execute_cpu_instruction(opcode);
+
         // 扣除本次時鐘週期（fetch + execute 本身消耗 1 cycle）
         self.cpu.cycles = self.cpu.cycles.saturating_sub(1);
     }
@@ -222,6 +301,11 @@ impl Emulator {
 
     /// 匯流排寫入
     fn bus_write(&mut self, addr: u16, data: u8) {
+        #[cfg(test)]
+        if addr >= 0x8000 {
+            self.mapper_cpu_writes.push((self.system_clock, addr, data));
+        }
+
         self.bus.cpu_write(
             addr, data,
             &mut self.ppu, &mut self.apu, &mut self.cartridge,
@@ -896,6 +980,7 @@ impl Emulator {
         while !self.ppu.frame_complete {
             self.clock();
         }
+        self.apu.end_frame();
     }
 
     /// 取得畫面緩衝區指標
@@ -1030,6 +1115,264 @@ mod tests {
         rom
     }
 
+    fn framebuffer_summary(frame_buffer: &[u8], previous_frame: Option<&[u8]>) -> (u64, usize, usize) {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &byte in frame_buffer {
+            hash ^= u64::from(byte);
+            hash = hash.wrapping_mul(0x100000001b3u64);
+        }
+
+        let non_black_pixels = frame_buffer
+            .chunks_exact(4)
+            .filter(|pixel| pixel[..3].iter().any(|&channel| channel != 0))
+            .count();
+        let changed_pixels = previous_frame
+            .filter(|previous| previous.len() == frame_buffer.len())
+            .map(|previous| {
+                frame_buffer
+                    .chunks_exact(4)
+                    .zip(previous.chunks_exact(4))
+                    .filter(|(current_pixel, previous_pixel)| current_pixel != previous_pixel)
+                    .count()
+            })
+            .unwrap_or(0);
+
+        (hash, non_black_pixels, changed_pixels)
+    }
+
+    fn audio_summary(samples: &[f32]) -> (f32, f32, f32, usize) {
+        if samples.is_empty() {
+            return (0.0, 0.0, 0.0, 0);
+        }
+
+        let mut sum = 0.0f64;
+        let mut sum_squared = 0.0f64;
+        let mut peak = 0.0f32;
+        let mut zero_crossings = 0;
+        let mut previous = samples[0];
+
+        for &sample in samples {
+            sum += f64::from(sample);
+            sum_squared += f64::from(sample) * f64::from(sample);
+            peak = peak.max(sample.abs());
+            if (sample < 0.0) != (previous < 0.0) {
+                zero_crossings += 1;
+            }
+            previous = sample;
+        }
+
+        let count = samples.len() as f64;
+        (
+            (sum / count) as f32,
+            (sum_squared / count).sqrt() as f32,
+            peak,
+            zero_crossings,
+        )
+    }
+
+    #[test]
+    #[ignore]
+    fn trace_priority_rom_audio() {
+        let output_dir = std::path::Path::new("target/nes-audio-trace");
+        std::fs::create_dir_all(output_dir).expect("audio trace directory must be writable");
+        let frame_count = std::env::var("NES_AUDIO_TRACE_FRAMES")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .filter(|&value| value > 0)
+            .unwrap_or(180);
+        let filter_mode = std::env::var("NES_AUDIO_TRACE_FILTER")
+            .unwrap_or_else(|_| "stock".to_string());
+
+        for (path, name) in [
+            (
+                "../roms/Captain Tsubasa II - Super Striker (Japan).nes",
+                "captain-tsubasa-ii",
+            ),
+            (
+                "../roms/Rockman 6 - Shijou Saidai no Tatakai (Rockman 6 Hack).nes",
+                "rockman-6",
+            ),
+        ] {
+            let rom = std::fs::read(path).expect("priority ROM must be present");
+            for (sample_rate, rate_name) in [(44_100.0, "44100"), (48_000.0, "48000")] {
+                let mut emulator = Emulator::new();
+                assert!(emulator.load_rom(&rom), "failed to load {path}");
+                emulator.set_audio_sample_rate(sample_rate);
+                emulator.apu.set_test_filter_mode(&filter_mode);
+
+                let mut raw_output = Vec::new();
+                let mut csv = String::from("frame,samples,dc,rms,peak,zero_crossings\n");
+                for frame_index in 0..frame_count {
+                    emulator.frame();
+                    let sample_count = emulator.get_audio_buffer_len();
+                    let samples = &emulator.apu.audio_buffer[..sample_count];
+                    let (dc, rms, peak, zero_crossings) = audio_summary(samples);
+                    csv.push_str(&format!(
+                        "{frame_index},{sample_count},{dc:.9},{rms:.9},{peak:.9},{zero_crossings}\n"
+                    ));
+                    raw_output.extend(samples.iter().flat_map(|sample| sample.to_le_bytes()));
+                    emulator.consume_audio_samples();
+                }
+
+                let trace_stem = if filter_mode == "stock" {
+                    format!("{name}-{rate_name}")
+                } else {
+                    format!("{name}-{rate_name}-{filter_mode}")
+                };
+                std::fs::write(output_dir.join(format!("{trace_stem}.f32")), raw_output)
+                    .expect("audio trace samples must be writable");
+                if filter_mode == "stock" && rate_name == "44100" {
+                    let mut register_csv = String::from("apu_cycle,address,data\n");
+                    for &(apu_cycle, address, data) in &emulator.apu.test_register_writes {
+                        register_csv.push_str(&format!("{apu_cycle},${address:04X},${data:02X}\n"));
+                    }
+                    std::fs::write(output_dir.join(format!("{name}-apu-writes.csv")), register_csv)
+                        .expect("APU register trace must be writable");
+                }
+                std::fs::write(output_dir.join(format!("{trace_stem}.csv")), csv)
+                    .expect("audio trace metrics must be writable");
+                println!(
+                    "{path}: wrote {} samples at {sample_rate} Hz",
+                    std::fs::metadata(output_dir.join(format!("{trace_stem}.f32")))
+                        .expect("audio trace must exist")
+                        .len()
+                        / 4
+                );
+            }
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn trace_priority_mmc3_roms() {
+        for path in [
+            "../roms/Captain Tsubasa II - Super Striker (Japan).nes",
+            "../roms/Rockman 6 - Shijou Saidai no Tatakai (Rockman 6 Hack).nes",
+        ] {
+            let rom = std::fs::read(path).expect("priority ROM must be present");
+            let mut emulator = Emulator::new();
+            assert!(emulator.load_rom(&rom), "failed to load {path}");
+            let mut previous_frame = None;
+            let mut previous_offsets = None;
+            let mut previous_mapper_state = None;
+            let mut first_output_change_frame = None;
+            let mut first_non_black_frame = None;
+            let mut first_all_black_frame = None;
+
+            for frame_index in 0..180 {
+                let event_start = emulator.mapper_scanline_events.len();
+                let write_start = emulator.mapper_cpu_writes.len();
+                emulator.frame();
+
+                let (frame_hash, non_black_pixels, changed_pixels) = framebuffer_summary(
+                    &emulator.ppu.frame_buffer,
+                    previous_frame.as_deref(),
+                );
+                let offsets = emulator.ppu.chr_bank_offsets_for_test();
+                let chr_changed = previous_offsets.map_or(true, |previous| previous != offsets);
+                let events = &emulator.mapper_scanline_events[event_start..];
+                let writes = &emulator.mapper_cpu_writes[write_start..];
+                let mapper_state = emulator.cartridge.mapper.trace_state();
+                let mapper_changed = previous_mapper_state != mapper_state;
+
+                if changed_pixels > 0 && first_output_change_frame.is_none() {
+                    first_output_change_frame = Some(frame_index);
+                }
+                if non_black_pixels > 0 && first_non_black_frame.is_none() {
+                    first_non_black_frame = Some(frame_index);
+                }
+                if non_black_pixels == 0 && first_all_black_frame.is_none() {
+                    first_all_black_frame = Some(frame_index);
+                }
+
+                println!(
+                    "{path}: frame={frame_index:03} pc={:04X} ppu=({}, {}) fb={frame_hash:016X} non_black={non_black_pixels} changed={changed_pixels} chr_changed={chr_changed} chr={offsets:?} mapper_events={} writes={} write_span={:?}->{:?}",
+                    emulator.cpu.pc,
+                    emulator.ppu.scanline,
+                    emulator.ppu.cycle,
+                    events.len(),
+                    writes.len(),
+                    writes.first(),
+                    writes.last(),
+                );
+                if mapper_changed {
+                    println!("{path}: frame={frame_index:03} mapper={mapper_state:?}");
+                }
+
+                previous_frame = Some(emulator.ppu.frame_buffer.clone());
+                previous_offsets = Some(offsets);
+                previous_mapper_state = mapper_state;
+            }
+
+            let qualified: Vec<_> = emulator
+                .ppu
+                .a12_trace
+                .iter()
+                .filter(|event| event.qualified)
+                .take(12)
+                .collect();
+            println!(
+                "{path}: ctrl={:02X} mask={:02X} a12_rises={} qualified={} coarse_events={} writes={} first_qualified={qualified:?}",
+                emulator.ppu.ctrl,
+                emulator.ppu.mask,
+                emulator.ppu.a12_rising_edges,
+                emulator.ppu.a12_qualified_edges,
+                emulator.mapper_scanline_events.len(),
+                emulator.mapper_cpu_writes.len(),
+            );
+            println!(
+                "{path}: first_mapper_events={:?} first_mapper_writes={:?}",
+                &emulator.mapper_scanline_events[..emulator.mapper_scanline_events.len().min(8)],
+                &emulator.mapper_cpu_writes[..emulator.mapper_cpu_writes.len().min(16)],
+            );
+            println!(
+                "{path}: first_output_change={first_output_change_frame:?} first_non_black={first_non_black_frame:?} first_all_black={first_all_black_frame:?} final_mapper={:?}",
+                emulator.cartridge.mapper.trace_state(),
+            );
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn compare_mmc3_scanline_notifications() {
+        for path in [
+            "../roms/Captain Tsubasa II - Super Striker (Japan).nes",
+            "../roms/Rockman 6 - Shijou Saidai no Tatakai (Rockman 6 Hack).nes",
+        ] {
+            let rom = std::fs::read(path).expect("priority ROM must be present");
+            let mut enabled = Emulator::new();
+            let mut disabled = Emulator::new();
+            assert!(enabled.load_rom(&rom), "failed to load {path}");
+            assert!(disabled.load_rom(&rom), "failed to load {path}");
+            disabled.mapper_scanline_enabled = false;
+
+            let mut first_difference = None;
+            for frame_index in 0..180 {
+                enabled.frame();
+                disabled.frame();
+
+                let enabled_hash = framebuffer_summary(&enabled.ppu.frame_buffer, None).0;
+                let disabled_hash = framebuffer_summary(&disabled.ppu.frame_buffer, None).0;
+                if enabled_hash != disabled_hash || enabled.cpu.pc != disabled.cpu.pc {
+                    first_difference = Some((
+                        frame_index,
+                        enabled_hash,
+                        disabled_hash,
+                        enabled.cpu.pc,
+                        disabled.cpu.pc,
+                    ));
+                    break;
+                }
+            }
+
+            println!(
+                "{path}: coarse_scanline_difference={first_difference:?} enabled_mapper={:?} disabled_mapper={:?}",
+                enabled.cartridge.mapper.trace_state(),
+                disabled.cartridge.mapper.trace_state(),
+            );
+        }
+    }
+
     #[test]
     fn frame_runs_exact_ntsc_ppu_clock_count_when_rendering_is_disabled() {
         let mut emulator = Emulator::new();
@@ -1049,20 +1392,119 @@ mod tests {
 
         emulator.clock();
         let cpu_cycles = emulator.cpu.cycles;
-        assert_eq!(emulator.dmc_dma_cycles, 4);
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Halt);
+        assert_eq!(emulator.dmc_dma_address, Some(0x8000));
 
         for _ in 0..12 {
             emulator.clock();
         }
 
-        assert_eq!(emulator.dmc_dma_cycles, 0);
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Idle);
         assert_eq!(emulator.cpu.cycles, cpu_cycles);
         assert!(emulator.dmc_dma_address.is_none());
+        assert!(emulator.apu.dmc_read_request.is_none());
 
         for _ in 0..3 {
             emulator.clock();
         }
         assert!(emulator.cpu.cycles < cpu_cycles);
+    }
+
+    #[test]
+    fn dmc_dma_uses_three_slots_when_next_cpu_slot_is_even() {
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&nrom_with_program(&[0xEA, 0xEA, 0xEA])));
+        emulator.system_clock = 3;
+        emulator.apu.dmc_read_request = Some(0x8000);
+
+        emulator.clock();
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Halt);
+
+        for _ in 0..9 {
+            emulator.clock();
+        }
+
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Idle);
+        assert!(emulator.apu.dmc_read_request.is_none());
+    }
+
+    #[test]
+    fn dmc_dma_is_cancelled_before_halt_when_request_is_cleared() {
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&nrom_with_program(&[0xEA, 0xEA, 0xEA])));
+        emulator.apu.dmc_read_request = Some(0x8000);
+
+        emulator.clock();
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Halt);
+
+        emulator.apu.dmc_read_request = None;
+        for _ in 0..3 {
+            emulator.clock();
+        }
+
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Idle);
+        assert!(emulator.dmc_dma_address.is_none());
+    }
+
+    #[test]
+    fn dmc_dma_is_cancelled_during_dummy_when_request_is_cleared() {
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&nrom_with_program(&[0xEA, 0xEA, 0xEA])));
+        emulator.system_clock = 3;
+        emulator.apu.dmc_read_request = Some(0x8000);
+
+        emulator.clock();
+        for _ in 0..3 {
+            emulator.clock();
+        }
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Dummy);
+
+        emulator.apu.dmc_read_request = None;
+        for _ in 0..3 {
+            emulator.clock();
+        }
+
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Idle);
+        assert!(emulator.dmc_dma_address.is_none());
+    }
+
+    #[test]
+    fn dmc_dma_disable_cancels_pending_request_after_control_delay() {
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&nrom_with_program(&[0xEA, 0xEA, 0xEA])));
+        emulator.apu.dmc_read_request = Some(0x8000);
+
+        emulator.clock();
+        emulator.bus_write(0x4015, 0x00);
+
+        for _ in 0..12 {
+            emulator.clock();
+        }
+
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Idle);
+        assert!(emulator.dmc_dma_address.is_none());
+        assert!(emulator.apu.dmc_read_request.is_none());
+    }
+
+    #[test]
+    fn dmc_dma_steals_a_ready_oam_read_slot() {
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&nrom_with_program(&[0xEA, 0xEA, 0xEA])));
+        emulator.apu.dmc_read_request = Some(0x8000);
+        emulator.bus.dma_page = 0x80;
+        emulator.bus.dma_address = 0;
+        emulator.bus.dma_dummy = false;
+        emulator.bus.dma_transfer = true;
+        emulator.dmc_dma_address = Some(0x8000);
+        emulator.dmc_dma_phase = DmcDmaPhase::Read;
+
+        emulator.clock();
+
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Idle);
+        assert_eq!(emulator.bus.dma_address, 0);
+        assert!(emulator.bus.dma_transfer);
+        assert_eq!(emulator.dmc_dma_phase, DmcDmaPhase::Idle);
+        assert!(emulator.apu.dmc_read_request.is_none());
     }
 
     #[test]

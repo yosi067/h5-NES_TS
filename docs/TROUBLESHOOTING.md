@@ -531,6 +531,28 @@ Super Mario 64 Rice no-draw實測為59.98 VI/s、12.19 ms/VI、DList 0.24 ms；�
 
 ---
 
+### Q22.2: NES APU 與主流模擬器的 DMC / frame counter / pulse 相位差異
+
+**現象**：DMC 音高偏低或音效播放速度不對；包絡線、長度計數器與掃頻變化約快一倍；pulse 音色在重新寫入 `$4003/$4007` 後相位不一致。
+
+**排查**：對照 Mesen2 `Core/NES/APU/DeltaModulationChannel.cpp`、`ApuFrameCounter.h` 與 FCEUX `src/sound.cpp`、`documentation/tech/cpu/dmc.txt`：
+
+1. DMC rate table 的數值是 CPU cycle 間隔，DMC 必須每個 CPU cycle clock；428、380、…、54 會以 `period - 1` 載入倒數器，才能得到精確的 `period` 個 CPU cycles。
+2. NTSC frame counter 邊界是 7457、14913、22371、29829；4-step IRQ window 從 29828 開始，29829 才 clock 最後的 quarter/half frame；5-step 模式最後一步是 37281。原 Rust 值 3729、7457、11186、14915、18641 是約一半的序列。
+3. Mesen2/FCEUX 的 pulse duty table 採反向計數相位；寫入 `$4003/$4007` 將位置重設為 0 後，下一個 timer rollover 會走到位置 7。
+4. DMC 啟用後的第一次 fetch 不是立即發生，而是依 CPU parity 延後 2 或 3 個 APU cycles；DMA 本身依序經過 halt、dummy、必要的 alignment 與 memory read。
+
+**解決**：
+
+1. 將 DMC clock 移到每個 CPU cycle，並以 `period - 1` 套用 NTSC rate table。
+2. 校正 4-step/5-step frame counter 的 NTSC CPU-cycle 邊界。
+3. 將 pulse sequencer 改為 3-bit 反向計數，保留 length write 的位置重設行為。
+4. `$4015` 讀取現在立即解除 frame IRQ line，但保留 status bit 到下一個 APU cycle 才清除；`$4017` 的 IRQ inhibit 仍立即生效。
+5. DMC request 會保留到資料真正交付，emulator 以 halt/dummy/alignment/read phase 執行：下一個 CPU slot 為偶數時耗用 3 slots，為奇數時耗用 4 slots；stale request 可在 read 前取消，DMC ready 時可 steal OAM DMA 的 read slot，OAM 傳輸會暫停該 slot。
+6. 在 Rust APU/emulator 測試中加入 DMC 精確週期、啟用/停用延遲、DMA parity、取消、OAM overlap、loop/IRQ/address wrap/silence、frame counter 邊界、IRQ acknowledge 與 pulse duty phase 回歸驗證。
+
+**驗證**：`cargo test --manifest-path nes-wasm/Cargo.toml --lib` 通過；目前共 77 個 Rust 測試通過，另有 3 個需 ROM 的手動 trace 測試預設忽略。這些測試驗證了核心 register/timing 狀態，但尚未取代以同一個測試 ROM 擷取 FCEUmm、Nestopia 與本核心 PCM 波形的 golden comparison。DMC DMA 已不再固定 4 slots，並涵蓋 ready read 對 OAM DMA 的 slot steal；由於本核心 CPU 尚未拆成逐 bus cycle 的微循環，仍未完整模擬 `$4000-$401F` internal bus conflict、controller bit deletion，以及 DMC/OAM 同時進行時的所有硬體讀取順序。
+
 ## Game Gear / Master System — Z80 CPU
 
 ### Q23: DAA H 旗標不精確 — Ninku 開頭崩潰

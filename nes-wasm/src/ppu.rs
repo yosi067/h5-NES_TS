@@ -39,6 +39,15 @@ const PALETTE: [(u8, u8, u8); 64] = [
     (160, 214, 228), (160, 162, 160), (0, 0, 0),       (0, 0, 0),
 ];
 
+#[cfg(test)]
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct A12TraceEvent {
+    pub scanline: i16,
+    pub cycle: u16,
+    pub low_cycles: u64,
+    pub qualified: bool,
+}
+
 /// PPU 結構體
 pub struct Ppu {
     // ===== PPU 暫存器 =====
@@ -155,6 +164,18 @@ pub struct Ppu {
     chr_use_bank_mapping: bool,
     /// CHR bank 可寫入遮罩：每個位元代表一個 1KB bank 是否可寫入（用於混合 CHR ROM/RAM mapper 如 253）
     chr_writable_mask: u8,
+    #[cfg(test)]
+    pub(crate) a12_state: bool,
+    #[cfg(test)]
+    pub(crate) a12_last_fall_clock: u64,
+    #[cfg(test)]
+    pub(crate) ppu_clock_count: u64,
+    #[cfg(test)]
+    pub(crate) a12_rising_edges: u64,
+    #[cfg(test)]
+    pub(crate) a12_qualified_edges: u64,
+    #[cfg(test)]
+    pub(crate) a12_trace: Vec<A12TraceEvent>,
 }
 
 /// 名稱表鏡像模式
@@ -210,6 +231,18 @@ impl Ppu {
             chr_bank_offsets: [0, 0x400, 0x800, 0xC00, 0x1000, 0x1400, 0x1800, 0x1C00],
             chr_use_bank_mapping: false,
             chr_writable_mask: 0,
+            #[cfg(test)]
+            a12_state: false,
+            #[cfg(test)]
+            a12_last_fall_clock: 0,
+            #[cfg(test)]
+            ppu_clock_count: 0,
+            #[cfg(test)]
+            a12_rising_edges: 0,
+            #[cfg(test)]
+            a12_qualified_edges: 0,
+            #[cfg(test)]
+            a12_trace: Vec::new(),
         }
     }
 
@@ -230,6 +263,15 @@ impl Ppu {
         self.odd_frame = false;
         self.nmi_occurred = false;
         self.scanline_irq = false;
+        #[cfg(test)]
+        {
+            self.a12_state = false;
+            self.a12_last_fall_clock = 0;
+            self.ppu_clock_count = 0;
+            self.a12_rising_edges = 0;
+            self.a12_qualified_edges = 0;
+            self.a12_trace.clear();
+        }
         self.bg_next_tile_id = 0;
         self.bg_next_tile_attr = 0;
         self.bg_next_tile_lsb = 0;
@@ -258,6 +300,12 @@ impl Ppu {
     /// offsets: 8 個 1KB bank 的起始位元組偏移量（在 chr_data 中的位置）
     pub fn set_chr_bank_offsets(&mut self, offsets: [u32; 8]) {
         self.chr_bank_offsets = offsets;
+        self.chr_use_bank_mapping = true;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn chr_bank_offsets_for_test(&self) -> [u32; 8] {
+        self.chr_bank_offsets
     }
 
     /// 設定 CHR bank 可寫入遮罩
@@ -409,6 +457,42 @@ impl Ppu {
         }
     }
 
+    fn ppu_fetch(&mut self, addr: u16) -> u8 {
+        #[cfg(test)]
+        self.trace_a12(addr);
+        self.ppu_read(addr)
+    }
+
+    #[cfg(test)]
+    fn trace_a12(&mut self, addr: u16) {
+        let a12 = addr < 0x2000 && (addr & 0x1000) != 0;
+        if a12 == self.a12_state {
+            return;
+        }
+
+        let low_cycles = if a12 {
+            self.ppu_clock_count.saturating_sub(self.a12_last_fall_clock)
+        } else {
+            0
+        };
+        let qualified = a12 && low_cycles >= 8;
+        if a12 {
+            self.a12_rising_edges += 1;
+            if qualified {
+                self.a12_qualified_edges += 1;
+            }
+        } else {
+            self.a12_last_fall_clock = self.ppu_clock_count;
+        }
+        self.a12_trace.push(A12TraceEvent {
+            scanline: self.scanline,
+            cycle: self.cycle,
+            low_cycles,
+            qualified,
+        });
+        self.a12_state = a12;
+    }
+
     /// 寫入 PPU 位址空間
     fn ppu_write(&mut self, addr: u16, data: u8) {
         let addr = addr & 0x3FFF;
@@ -549,7 +633,7 @@ impl Ppu {
                         // 將新的圖磚資料載入移位暫存器
                         self.load_bg_shifters();
                         // 從名稱表讀取圖磚 ID
-                        self.bg_next_tile_id = self.ppu_read(0x2000 | (self.v & 0x0FFF));
+                        self.bg_next_tile_id = self.ppu_fetch(0x2000 | (self.v & 0x0FFF));
                     }
                     2 => {
                         // 讀取屬性表
@@ -557,7 +641,7 @@ impl Ppu {
                             | (self.v & 0x0C00)
                             | ((self.v >> 4) & 0x38)
                             | ((self.v >> 2) & 0x07);
-                        self.bg_next_tile_attr = self.ppu_read(attr_addr);
+                        self.bg_next_tile_attr = self.ppu_fetch(attr_addr);
 
                         // 根據圖磚在 2x2 方塊中的位置選擇正確的 2 位元調色盤
                         if self.v & 0x40 != 0 {
@@ -573,7 +657,7 @@ impl Ppu {
                         let bg_pattern_addr = ((self.ctrl as u16 & 0x10) << 8)
                             + (self.bg_next_tile_id as u16 * 16)
                             + ((self.v >> 12) & 0x07);
-                        self.bg_next_tile_lsb = self.ppu_read(bg_pattern_addr);
+                        self.bg_next_tile_lsb = self.ppu_fetch(bg_pattern_addr);
                     }
                     6 => {
                         // 讀取圖案表高位元組（偏移 8 位元組）
@@ -581,7 +665,7 @@ impl Ppu {
                             + (self.bg_next_tile_id as u16 * 16)
                             + ((self.v >> 12) & 0x07)
                             + 8;
-                        self.bg_next_tile_msb = self.ppu_read(bg_pattern_addr);
+                        self.bg_next_tile_msb = self.ppu_fetch(bg_pattern_addr);
                     }
                     7 => {
                         // 水平位置遞增
@@ -609,7 +693,7 @@ impl Ppu {
 
             // 超出畫面的名稱表讀取（模擬真實硬體行為）
             if self.cycle == 338 || self.cycle == 340 {
-                self.bg_next_tile_id = self.ppu_read(0x2000 | (self.v & 0x0FFF));
+                self.bg_next_tile_id = self.ppu_fetch(0x2000 | (self.v & 0x0FFF));
             }
 
             // ===== 精靈評估 =====
@@ -653,6 +737,11 @@ impl Ppu {
                 self.frame_complete = true;
                 self.odd_frame = !self.odd_frame;
             }
+        }
+
+        #[cfg(test)]
+        {
+            self.ppu_clock_count += 1;
         }
     }
 
@@ -753,10 +842,11 @@ impl Ppu {
         self.sprite_zero_hit_possible = false;
 
         let sprite_height: i16 = if self.ctrl & 0x20 != 0 { 16 } else { 8 };
+        let target_scanline = self.scanline + 1;
 
         for i in 0..64 {
             let y = self.oam[i * 4] as i16;
-            let diff = self.scanline - y;
+            let diff = target_scanline - y;
 
             if diff >= 0 && diff < sprite_height {
                 if self.sprite_count < 8 {
@@ -783,13 +873,15 @@ impl Ppu {
 
     /// 載入精靈圖案到移位暫存器
     fn load_sprite_patterns(&mut self) {
+        let target_scanline = self.scanline + 1;
+
         for i in 0..self.sprite_count as usize {
             let sprite_y = self.secondary_oam[i * 4] as i16;
             let tile_id = self.secondary_oam[i * 4 + 1];
             let attributes = self.secondary_oam[i * 4 + 2];
             let flip_v = attributes & 0x80 != 0;
 
-            let mut row = self.scanline - sprite_y;
+            let mut row = target_scanline - sprite_y;
 
             let pattern_addr = if self.ctrl & 0x20 != 0 {
                 // 8x16 精靈模式
@@ -812,8 +904,8 @@ impl Ppu {
                 table + tile_id as u16 * 16 + row as u16
             };
 
-            let mut lo = self.ppu_read(pattern_addr);
-            let mut hi = self.ppu_read(pattern_addr + 8);
+            let mut lo = self.ppu_fetch(pattern_addr);
+            let mut hi = self.ppu_fetch(pattern_addr + 8);
 
             // 水平翻轉
             if attributes & 0x40 != 0 {
@@ -947,5 +1039,32 @@ impl Ppu {
         } else {
             false
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Ppu;
+
+    #[test]
+    fn chr_ram_reads_follow_mapper_bank_offsets() {
+        let mut ppu = Ppu::new();
+        let mut chr = vec![0; 8192];
+        chr[0x0400] = 0xA5;
+        ppu.set_chr_data(chr, true);
+        ppu.set_chr_bank_offsets([0x0400, 0x0800, 0x0C00, 0x1000, 0x1400, 0x1800, 0x1C00, 0]);
+
+        assert_eq!(ppu.ppu_read(0x0000), 0xA5);
+    }
+
+    #[test]
+    fn sprite_evaluation_prepares_the_next_scanline() {
+        let mut ppu = Ppu::new();
+        ppu.scanline = 10;
+        ppu.oam[0] = 11;
+
+        ppu.evaluate_sprites();
+
+        assert_eq!(ppu.sprite_count, 1);
     }
 }

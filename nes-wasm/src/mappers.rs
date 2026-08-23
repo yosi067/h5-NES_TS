@@ -36,6 +36,20 @@ pub struct MapperWriteResult {
     pub mirror_mode: Option<MirrorMode>,
 }
 
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct MapperTraceState {
+    pub registers: [u8; 8],
+    pub bank_select: u8,
+    pub prg_rom_bank_mode: bool,
+    pub chr_a12_inversion: bool,
+    pub irq_counter: u8,
+    pub irq_latch: u8,
+    pub irq_enabled: bool,
+    pub irq_reload: bool,
+    pub irq_pending: bool,
+}
+
 impl MapperWriteResult {
     /// 建立無副作用的結果
     pub fn none() -> Self {
@@ -88,6 +102,9 @@ pub trait MapperTrait {
     /// 取得 CHR bank 可寫入遮罩（用於混合 CHR ROM/RAM mapper）
     /// 每個位元代表一個 1KB bank 是否可寫入
     fn chr_writable_mask(&self) -> u8 { 0 }
+
+    #[cfg(test)]
+    fn trace_state(&self) -> Option<MapperTraceState> { None }
 }
 
 // ============================================================
@@ -606,6 +623,21 @@ impl MapperTrait for Mapper4 {
 
     fn check_irq(&mut self) -> bool {
         self.irq_pending
+    }
+
+    #[cfg(test)]
+    fn trace_state(&self) -> Option<MapperTraceState> {
+        Some(MapperTraceState {
+            registers: self.registers,
+            bank_select: self.bank_select,
+            prg_rom_bank_mode: self.prg_rom_bank_mode,
+            chr_a12_inversion: self.chr_a12_inversion,
+            irq_counter: self.irq_counter,
+            irq_latch: self.irq_latch,
+            irq_enabled: self.irq_enabled,
+            irq_reload: self.irq_reload,
+            irq_pending: self.irq_pending,
+        })
     }
 }
 

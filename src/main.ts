@@ -1710,7 +1710,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
       throwIfSignalAborted(loadController.signal);
       currentRomFilename = romFileName.split('/').pop() || romFileName;
       updateGameLoading(loadingSequence, '正在啟動模擬器…');
-      await startGame(romBuffer, loadController.signal, filename);
+      await startGame(romBuffer, loadController.signal);
     } else {
       currentRomFilename = filename;
       await startGame(buffer, loadController.signal);
@@ -1786,7 +1786,7 @@ async function loadRomFromFile(file: File): Promise<void> {
 
     currentRomFilename = romName;
     updateGameLoading(loadingSequence, '正在啟動模擬器…');
-    await startGame(buffer, loadController.signal, file.name);
+    await startGame(buffer, loadController.signal);
   } catch (error) {
     if (isAbortError(error)) return;
     console.error('載入 ROM 失敗:', error);
@@ -1884,7 +1884,6 @@ async function startFbNeoGame(
 async function startGame(
   romData: ArrayBuffer,
   signal?: AbortSignal,
-  sourceName = currentRomFilename,
 ): Promise<void> {
   throwIfSignalAborted(signal);
   const romBytes = new Uint8Array(romData);
@@ -1900,14 +1899,6 @@ async function startGame(
   const isSnesRom = lower.endsWith('.smc') || lower.endsWith('.sfc') || lower.endsWith('.fig');
   if (isSnesRom && shouldUseSnes9x(romBytes, currentRomFilename)) {
     await startSnes9xGame(romData, 'snes', signal);
-    return;
-  }
-
-  const sourceBaseName = sourceName.replace(/\.zip$/i, '');
-  const requiresFceumm = sourceBaseName === '機器貓小叮噹冒險'
-    || sourceBaseName === '机器猫小叮当冒险';
-  if (lower.endsWith('.nes') && requiresFceumm) {
-    await startSnes9xGame(romData, 'nes', signal);
     return;
   }
 
@@ -1939,20 +1930,22 @@ async function startGame(
     } catch (error) {
       if (!lower.endsWith('.nes')) throw error;
       console.warn(`[NES] 原生 WASM 核心拒絕 ${currentRomFilename}，改用 FCEUmm`, error);
+      await startSnes9xGame(romData, 'nes', signal);
+      return;
     }
-  }
-
-  if (!loaded && lower.endsWith('.nes')) {
-    throwIfSignalAborted(signal);
-    console.warn(`[NES] 原生 WASM 核心不支援 ${currentRomFilename}，改用 FCEUmm`);
-    await startSnes9xGame(romData, 'nes', signal);
-    return;
   }
 
   if (!loaded && isSnesRom) {
     throwIfSignalAborted(signal);
     console.warn(`[SNES] 原生 WASM 核心不支援 ${currentRomFilename}，改用 Snes9x`);
     await startSnes9xGame(romData, 'snes', signal);
+    return;
+  }
+
+  if (!loaded && lower.endsWith('.nes')) {
+    throwIfSignalAborted(signal);
+    console.warn(`[NES] 原生 WASM 核心不支援 ${currentRomFilename}，改用 FCEUmm`);
+    await startSnes9xGame(romData, 'nes', signal);
     return;
   }
 
@@ -2021,6 +2014,7 @@ async function startSnes9xGame(
   activeBackend = 'snes9x';
   emulatorJsCore = core;
   screen.style.display = 'none';
+  hideRomSelector();
 
   try {
     snes9xBackend = await startSnes9xBackend(host, romData, currentRomFilename, core, signal);

@@ -38,11 +38,14 @@ use wasm_bindgen::prelude::*;
 pub mod cpu;
 pub mod ppu;
 pub mod apu;
+mod fceumm_audio;
 pub mod bus;
 pub mod cartridge;
 pub mod mappers;
 pub mod controller;
 pub mod emulator;
+
+mod fceumm_coeffs; // New module for FCEUmm coefficient
 
 // Game Boy 模組
 pub mod gb;
