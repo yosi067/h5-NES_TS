@@ -1,0 +1,17 @@
+{
+  // Captain Tsubasa II - Super Striker (Japan), verified local dump.
+  "schemaVersion": 1,
+  "id": "captain-tsubasa-2-jp",
+  "game": {
+    "sha256": "bf5038afe4c9df1c1c7eff0bc74a12f3cd8ed994b9aab92617d066d9d10ad746",
+    "sha256Aliases": [
+      // Catalog ZIP dump; PRG and CHR are byte-identical, only three header bytes differ.
+      "ee08f9134ef0e9e3a5f77e4f08244d24739c68d781cb58e2be737916bb3ab5ae"
+    ],
+    "mapper": 4
+  },
+  "prgReadOverlays": [],
+  "chrReadOverlays": [],
+  "chrOverlayPages": [],
+  "memoryWrites": []
+}

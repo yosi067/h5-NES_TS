@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://h5-nes.local/schema/nes-script-ir.schema.json",
+  "title": "NES Translation Script IR",
+  "type": "object",
+  "required": ["schemaVersion", "adapterId", "sourceSha256", "units"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "adapterId": { "type": "string", "minLength": 1 },
+    "sourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "scene", "source", "target", "location"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "category": {
+            "enum": ["dialogue", "battleMessage", "interface", "dictionary"]
+          },
+          "scene": { "type": "string", "minLength": 1 },
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "location": {
+            "type": "object",
+            "required": ["prgBank", "bankOffset", "encodedLength"],
+            "properties": {
+              "prgBank": { "type": "integer", "minimum": 0 },
+              "bankOffset": { "type": "integer", "minimum": 0 },
+              "encodedLength": { "type": "integer", "minimum": 0 },
+              "pointerTable": { "type": "string" },
+              "pointerIndex": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": false
+          },
+          "textBox": {
+            "type": "object",
+            "required": ["columns", "rows"],
+            "properties": {
+              "columns": { "type": "integer", "minimum": 1 },
+              "rows": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+          },
+          "glyphBank": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

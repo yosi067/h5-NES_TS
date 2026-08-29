@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://h5-nes.local/schema/nes-runtime-profile.schema.json",
+  "title": "NES Runtime Game Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "game"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "game": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "mapper"],
+      "properties": {
+        "sha256": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" },
+        "sha256Aliases": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[0-9a-fA-F]{64}$" }
+        },
+        "mapper": { "type": "integer", "minimum": 0, "maximum": 255 }
+      }
+    },
+    "prgReadOverlays": {
+      "type": "array",
+      "default": [],
+      "items": { "$ref": "#/$defs/byteOverlay" }
+    },
+    "chrReadOverlays": {
+      "type": "array",
+      "default": [],
+      "items": { "$ref": "#/$defs/byteOverlay" }
+    },
+    "chrOverlayPages": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "guard", "overlays"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "guard": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["address", "value"],
+            "properties": {
+              "address": { "type": "integer", "minimum": 8192, "maximum": 12287 },
+              "value": { "type": "integer", "minimum": 0, "maximum": 255 },
+              "requireActiveTable": { "type": "boolean", "default": false }
+            }
+          },
+          "overlays": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/$defs/byteOverlay" }
+          }
+        }
+      }
+    },
+    "memoryWrites": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "space", "address", "value", "apply"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "space": { "enum": ["cpuRam", "prgRam"] },
+          "address": { "type": "integer", "minimum": 0, "maximum": 65535 },
+          "value": { "type": "integer", "minimum": 0, "maximum": 255 },
+          "apply": { "enum": ["reset", "frame"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "byteOverlay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "offset", "expectedOriginal", "value"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "offset": { "type": "integer", "minimum": 0 },
+        "expectedOriginal": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "value": { "type": "integer", "minimum": 0, "maximum": 255 }
+      }
+    }
+  }
+}

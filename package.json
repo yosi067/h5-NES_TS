@@ -16,6 +16,17 @@
     "test:ppu": "vitest run --testPathPattern=ppu",
     "test:apu": "vitest run --testPathPattern=apu",
     "test:ui": "vitest --ui",
+    "test:profiles": "node --test tools/game-profile.test.mjs tools/captain-tsubasa-2-adapter.test.mjs tools/compile-captain-tsubasa-2-opening.test.mjs",
+    "profile": "node tools/game-profile.mjs",
+    "profile:captain-tsubasa-2": "node tools/compile-captain-tsubasa-2.mjs",
+    "profile:captain-tsubasa-2:build-opening": "node tools/compile-captain-tsubasa-2-opening.mjs",
+    "profile:captain-tsubasa-2:build-opening-alias": "node tools/compile-captain-tsubasa-2-opening.mjs \"roms/天使之翼2(足球小將2).zip\" public/game-profiles/captain-tsubasa-2-jp/captain-tsubasa-2-opening-zh-Hant-header-variant.gmod",
+    "profile:captain-tsubasa-2:compile-opening": "node tools/captain-tsubasa-2-adapter.mjs compile-script --input game-profiles/captain-tsubasa-2-jp/translations/opening.intro.00.zh-Hant.json --output artifacts/captain-tsubasa-2-opening-zh-Hant-compiled.json",
+    "profile:captain-tsubasa-2:compile-dictionary": "node tools/captain-tsubasa-2-adapter.mjs compile-dictionary --input game-profiles/captain-tsubasa-2-jp/translations/fixed-bank-words.zh-Hant.json --output artifacts/captain-tsubasa-2-fixed-bank-words-compiled.json",
+    "profile:captain-tsubasa-2:export-opening": "node tools/captain-tsubasa-2-adapter.mjs export-script --output game-profiles/captain-tsubasa-2-jp/translations/opening.intro.00.zh-Hant.json",
+    "profile:captain-tsubasa-2:roundtrip": "node tools/captain-tsubasa-2-adapter.mjs verify-roundtrip",
+    "extract:zombie-hunter": "node tools/build-zombie-hunter-evidence.mjs",
+    "extract:zombie-hunter:static": "node tools/extract-zombie-hunter-static.mjs",
     "audit:games": "node tools/audit-game-catalog.mjs",
     "normalize:descriptions": "node tools/normalize-editorial-descriptions.mjs",
     "apply:user-descriptions": "node tools/apply-user-editorial-descriptions.mjs",
@@ -50,7 +61,10 @@
     "@emulatorjs/core-snes9x": "^4.2.3",
     "@emulatorjs/emulatorjs": "^4.2.3",
     "@mantou/fbneo": "^0.0.4",
+    "fast-xml-parser": "^5.11.1",
+    "jsonc-parser": "^3.3.1",
     "jszip": "^3.10.1",
-    "mupen64plus-web": "^1.5.7"
+    "mupen64plus-web": "^1.5.7",
+    "rom-patcher": "^3.1.0-b"
   }
 }

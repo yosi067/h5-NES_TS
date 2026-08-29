@@ -327,6 +327,36 @@ function emulatorJsAssetsPlugin() {
   };
 }
 
+function romPatcherAssetsPlugin() {
+  const sourceDir = resolve(__dirname, 'node_modules/rom-patcher/rom-patcher-js/modules');
+  const assetFiles = ['BinFile.js', 'HashCalculator.js', 'RomPatcher.format.bps.js'];
+  const publicPath = '/rom-patcher/';
+
+  return {
+    name: 'rom-patcher-assets',
+    configureServer(server: any) {
+      server.middlewares.use((req: any, res: any, next: any) => {
+        const url = decodeURIComponent(req.url || '').split('?')[0];
+        if (!url.startsWith(publicPath)) return next();
+        const fileName = url.slice(publicPath.length);
+        if (!assetFiles.includes(fileName)) return next();
+        const filePath = resolve(sourceDir, fileName);
+        if (!existsSync(filePath)) return next();
+        res.setHeader('Content-Type', 'text/javascript');
+        res.end(readFileSync(filePath));
+      });
+    },
+    writeBundle() {
+      const destinationDir = resolve(__dirname, 'dist/rom-patcher');
+      mkdirSync(destinationDir, { recursive: true });
+      for (const fileName of assetFiles) {
+        copyFileSync(resolve(sourceDir, fileName), resolve(destinationDir, fileName));
+      }
+      console.log('Copied RomPatcher.js BPS worker assets');
+    },
+  };
+}
+
 export default defineConfig({
   // GitHub Pages 部署需要設定正確的 base 路徑
   // 使用環境變數 VITE_BASE_PATH，預設為 './' (本地開發)
@@ -365,7 +395,7 @@ export default defineConfig({
       },
     },
   },
-  plugins: [copyRomsPlugin(), serveRomBinaryPlugin(), mupen64AssetsPlugin(), emulatorJsAssetsPlugin()],
+  plugins: [copyRomsPlugin(), serveRomBinaryPlugin(), mupen64AssetsPlugin(), emulatorJsAssetsPlugin(), romPatcherAssetsPlugin()],
   test: {
     globals: true,
     environment: 'jsdom',

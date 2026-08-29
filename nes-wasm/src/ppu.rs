@@ -150,6 +150,13 @@ pub struct Ppu {
     chr_data: Vec<u8>,
     /// 是否使用 CHR RAM
     chr_ram: bool,
+    chr_overlay_values: Vec<u8>,
+    chr_overlay_mask: Vec<bool>,
+    chr_base_overlay_values: Vec<u8>,
+    chr_base_overlay_mask: Vec<bool>,
+    conditional_chr_overlay_pages: Vec<ConditionalChrOverlayPage>,
+    #[cfg(test)]
+    pub(crate) chr_read_counts: Vec<u64>,
     /// 鏡像模式
     mirror_mode: MirrorMode,
 
@@ -176,6 +183,13 @@ pub struct Ppu {
     pub(crate) a12_qualified_edges: u64,
     #[cfg(test)]
     pub(crate) a12_trace: Vec<A12TraceEvent>,
+}
+
+struct ConditionalChrOverlayPage {
+    guard_address: u16,
+    guard_value: u8,
+    require_active_table: bool,
+    overlays: Vec<(usize, u8)>,
 }
 
 /// 名稱表鏡像模式
@@ -227,6 +241,13 @@ impl Ppu {
             frame_buffer: vec![0; 256 * 240 * 4],
             chr_data: Vec::new(),
             chr_ram: false,
+            chr_overlay_values: Vec::new(),
+            chr_overlay_mask: Vec::new(),
+            chr_base_overlay_values: Vec::new(),
+            chr_base_overlay_mask: Vec::new(),
+            conditional_chr_overlay_pages: Vec::new(),
+            #[cfg(test)]
+            chr_read_counts: Vec::new(),
             mirror_mode: MirrorMode::Horizontal,
             chr_bank_offsets: [0, 0x400, 0x800, 0xC00, 0x1000, 0x1400, 0x1800, 0x1C00],
             chr_use_bank_mapping: false,
@@ -271,6 +292,7 @@ impl Ppu {
             self.a12_rising_edges = 0;
             self.a12_qualified_edges = 0;
             self.a12_trace.clear();
+            self.chr_read_counts.fill(0);
         }
         self.bg_next_tile_id = 0;
         self.bg_next_tile_attr = 0;
@@ -287,6 +309,15 @@ impl Ppu {
     pub fn set_chr_data(&mut self, data: Vec<u8>, is_ram: bool) {
         self.chr_data = data;
         self.chr_ram = is_ram;
+        self.chr_overlay_values = vec![0; self.chr_data.len()];
+        self.chr_overlay_mask = vec![false; self.chr_data.len()];
+        self.chr_base_overlay_values = vec![0; self.chr_data.len()];
+        self.chr_base_overlay_mask = vec![false; self.chr_data.len()];
+        self.conditional_chr_overlay_pages.clear();
+        #[cfg(test)]
+        {
+            self.chr_read_counts = vec![0; self.chr_data.len().div_ceil(1024)];
+        }
         // CHR RAM 使用直接存取，CHR ROM 使用 bank 映射
         if is_ram {
             self.chr_use_bank_mapping = false;
@@ -304,6 +335,73 @@ impl Ppu {
     }
 
     #[cfg(test)]
+    pub(crate) fn clear_chr_read_counts_for_test(&mut self) {
+        self.chr_read_counts.fill(0);
+    }
+
+    pub fn install_chr_overlays(&mut self, overlays: &[(usize, u8)]) {
+        self.clear_chr_overlays();
+        for &(offset, value) in overlays {
+            if offset < self.chr_base_overlay_values.len() {
+                self.chr_base_overlay_values[offset] = value;
+                self.chr_base_overlay_mask[offset] = true;
+            }
+        }
+        self.refresh_chr_overlays();
+    }
+
+    pub fn install_conditional_chr_overlay_pages(
+        &mut self,
+        pages: Vec<(u16, u8, bool, Vec<(usize, u8)>)>,
+    ) {
+        self.conditional_chr_overlay_pages = pages.into_iter()
+            .map(|(guard_address, guard_value, require_active_table, overlays)| ConditionalChrOverlayPage {
+                guard_address,
+                guard_value,
+                require_active_table,
+                overlays,
+            })
+            .collect();
+        self.refresh_chr_overlays();
+    }
+
+    pub fn clear_chr_overlays(&mut self) {
+        self.chr_base_overlay_mask.fill(false);
+        self.chr_overlay_mask.fill(false);
+        self.conditional_chr_overlay_pages.clear();
+    }
+
+    fn refresh_chr_overlays(&mut self) {
+        self.chr_overlay_values.copy_from_slice(&self.chr_base_overlay_values);
+        self.chr_overlay_mask.copy_from_slice(&self.chr_base_overlay_mask);
+        for page in &self.conditional_chr_overlay_pages {
+            let guard_index = self.mirror_nametable_addr(page.guard_address);
+            let guard_table = ((page.guard_address - 0x2000) >> 10) as u8;
+            if self.nametable[guard_index] != page.guard_value
+                || (page.require_active_table && self.ctrl & 0x03 != guard_table) {
+                continue;
+            }
+            for &(offset, value) in &page.overlays {
+                if offset < self.chr_overlay_values.len() {
+                    self.chr_overlay_values[offset] = value;
+                    self.chr_overlay_mask[offset] = true;
+                }
+            }
+        }
+    }
+
+    fn read_chr_byte(&mut self, index: usize) -> u8 {
+        #[cfg(test)]
+        if let Some(count) = self.chr_read_counts.get_mut(index / 1024) {
+            *count += 1;
+        }
+        if self.chr_overlay_mask.get(index).copied().unwrap_or(false) {
+            self.chr_overlay_values[index]
+        } else {
+            self.chr_data.get(index).copied().unwrap_or(0)
+        }
+    }
+
     pub(crate) fn chr_bank_offsets_for_test(&self) -> [u32; 8] {
         self.chr_bank_offsets
     }
@@ -363,6 +461,9 @@ impl Ppu {
             0x0000 => {
                 let prev_nmi = self.ctrl & 0x80 != 0;
                 self.ctrl = data;
+                if !self.conditional_chr_overlay_pages.is_empty() {
+                    self.refresh_chr_overlays();
+                }
                 // 更新 t 暫存器的名稱表選擇位元
                 self.t = (self.t & 0xF3FF) | ((data as u16 & 0x03) << 10);
                 // 如果 NMI 剛被啟用且 VBlank 中，立即觸發 NMI
@@ -422,7 +523,7 @@ impl Ppu {
     // ===== PPU 內部記憶體讀寫 =====
 
     /// 讀取 PPU 位址空間
-    fn ppu_read(&self, addr: u16) -> u8 {
+    fn ppu_read(&mut self, addr: u16) -> u8 {
         let addr = addr & 0x3FFF; // PPU 位址空間為 $0000-$3FFF
 
         if addr < 0x2000 {
@@ -436,12 +537,12 @@ impl Ppu {
                 let bank_offset = self.chr_bank_offsets[bank_index] as usize;
                 let offset_in_bank = (addr & 0x03FF) as usize;
                 let chr_index = (bank_offset + offset_in_bank) % self.chr_data.len();
-                self.chr_data[chr_index]
+                self.read_chr_byte(chr_index)
             } else {
                 // 直接存取（CHR RAM 或無 bank 切換）
                 let index = addr as usize;
                 if index < self.chr_data.len() {
-                    self.chr_data[index]
+                    self.read_chr_byte(index)
                 } else {
                     0
                 }
@@ -521,6 +622,11 @@ impl Ppu {
             // 名稱表
             let mirrored = self.mirror_nametable_addr(addr);
             self.nametable[mirrored] = data;
+            if self.conditional_chr_overlay_pages.iter().any(|page| {
+                self.mirror_nametable_addr(page.guard_address) == mirrored
+            }) {
+                self.refresh_chr_overlays();
+            }
         } else {
             // 調色盤
             let palette_addr = self.mirror_palette_addr(addr);
@@ -1055,6 +1161,36 @@ mod tests {
         ppu.set_chr_bank_offsets([0x0400, 0x0800, 0x0C00, 0x1000, 0x1400, 0x1800, 0x1C00, 0]);
 
         assert_eq!(ppu.ppu_read(0x0000), 0xA5);
+    }
+
+    #[test]
+    fn chr_overlay_changes_reads_without_mutating_rom() {
+        let mut ppu = Ppu::new();
+        ppu.set_chr_data(vec![0x11; 8192], false);
+
+        ppu.install_chr_overlays(&[(0, 0x22)]);
+        assert_eq!(ppu.ppu_read(0x0000), 0x22);
+        assert_eq!(ppu.chr_data[0], 0x11);
+
+        ppu.clear_chr_overlays();
+        assert_eq!(ppu.ppu_read(0x0000), 0x11);
+    }
+
+    #[test]
+    fn conditional_chr_overlay_tracks_nametable_guard() {
+        let mut ppu = Ppu::new();
+        ppu.set_chr_data(vec![0x11; 8192], false);
+        ppu.install_conditional_chr_overlay_pages(vec![(0x2269, 0x80, true, vec![(0, 0x22)])]);
+
+        assert_eq!(ppu.ppu_read(0x0000), 0x11);
+        ppu.ppu_write(0x2269, 0x80);
+        assert_eq!(ppu.ppu_read(0x0000), 0x22);
+        ppu.cpu_write(0x2000, 0x01);
+        assert_eq!(ppu.ppu_read(0x0000), 0x11);
+        ppu.cpu_write(0x2000, 0x00);
+        assert_eq!(ppu.ppu_read(0x0000), 0x22);
+        ppu.ppu_write(0x2269, 0x00);
+        assert_eq!(ppu.ppu_read(0x0000), 0x11);
     }
 
     #[test]

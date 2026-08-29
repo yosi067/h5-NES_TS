@@ -44,6 +44,7 @@ pub mod cartridge;
 pub mod mappers;
 pub mod controller;
 pub mod emulator;
+pub mod game_profile;
 
 mod fceumm_coeffs; // New module for FCEUmm coefficient
 
@@ -86,6 +87,21 @@ impl NesWasm {
     #[wasm_bindgen(js_name = "loadRom")]
     pub fn load_rom(&mut self, rom_data: &[u8]) -> bool {
         self.emu.load_rom(rom_data)
+    }
+
+    #[wasm_bindgen(js_name = "loadGameProfile")]
+    pub fn load_game_profile(&mut self, json: &str) -> Result<(), JsValue> {
+        self.emu.load_game_profile(json).map_err(|error| JsValue::from_str(&error))
+    }
+
+    #[wasm_bindgen(js_name = "clearGameProfile")]
+    pub fn clear_game_profile(&mut self) {
+        self.emu.clear_game_profile();
+    }
+
+    #[wasm_bindgen(js_name = "getActiveGameProfileId")]
+    pub fn active_game_profile_id(&self) -> String {
+        self.emu.active_game_profile_id().to_string()
     }
 
     /// 重置模擬器
@@ -222,6 +238,30 @@ impl EmuWasm {
         }
 
         false
+    }
+
+    #[wasm_bindgen(js_name = "loadGameProfile")]
+    pub fn load_game_profile(&mut self, json: &str) -> Result<(), JsValue> {
+        match &mut self.core {
+            CoreType::Nes(emu) => emu.load_game_profile(json)
+                .map_err(|error| JsValue::from_str(&error)),
+            _ => Err(JsValue::from_str("game profiles currently require the NES core")),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "clearGameProfile")]
+    pub fn clear_game_profile(&mut self) {
+        if let CoreType::Nes(emu) = &mut self.core {
+            emu.clear_game_profile();
+        }
+    }
+
+    #[wasm_bindgen(js_name = "getActiveGameProfileId")]
+    pub fn active_game_profile_id(&self) -> String {
+        match &self.core {
+            CoreType::Nes(emu) => emu.active_game_profile_id().to_string(),
+            _ => String::new(),
+        }
     }
 
     /// 載入 Game Gear ROM

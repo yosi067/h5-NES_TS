@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "adapterId": "captain-tsubasa-2-jp",
+  "platform": "nes",
+  "status": "scaffold",
+  "sourceRoms": [
+    { "sha256": "bf5038afe4c9df1c1c7eff0bc74a12f3cd8ed994b9aab92617d066d9d10ad746" },
+    { "sha256": "ee08f9134ef0e9e3a5f77e4f08244d24739c68d781cb58e2be737916bb3ab5ae" }
+  ],
+  "translationCategories": [
+    "dialogue",
+    "battleMessage",
+    "interface",
+    "menu",
+    "dictionary"
+  ],
+  "translationDomains": [
+    {
+      "id": "dialogue",
+      "category": "dialogue",
+      "sourceTables": ["opening-cutscenes", "cutscenes-bank-04", "cutscenes-bank-05"]
+    },
+    {
+      "id": "battle-messages",
+      "category": "battleMessage",
+      "sourceTables": ["battle-clouds"]
+    },
+    {
+      "id": "menus",
+      "category": "menu",
+      "sourceCatalog": "translations.json",
+      "unitIdPrefixes": ["title.menu."]
+    },
+    {
+      "id": "interface",
+      "category": "interface",
+      "sourceCatalog": "translations.json",
+      "unitIdPrefixes": ["interface."]
+    },
+    {
+      "id": "dictionary",
+      "category": "dictionary",
+      "sourceTables": ["fixed-bank-words"]
+    }
+  ],
+  "scriptModel": {
+    "addressing": "mapper4-bank-relative",
+    "pointerTables": [
+      {
+        "id": "opening-cutscenes",
+        "physicalPrgOffset": 24576,
+        "cpuBase": 40960,
+        "entryCount": 16,
+        "encoding": "little-endian-u16"
+      },
+      {
+        "id": "cutscenes-bank-04",
+        "physicalPrgOffset": 32768,
+        "cpuBase": 40960,
+        "entryCount": 16,
+        "encoding": "little-endian-u16"
+      },
+      {
+        "id": "cutscenes-bank-05",
+        "physicalPrgOffset": 40960,
+        "cpuBase": 40960,
+        "entryCount": 64,
+        "encoding": "little-endian-u16",
+        "allowsAliases": true
+      }
+    ],
+    "cloudTables": [
+      {
+        "id": "battle-clouds",
+        "pointerTablePhysicalPrgOffset": 201248,
+        "bankPhysicalPrgOffset": 196608,
+        "cpuBase": 32768,
+        "entryCount": 240,
+        "encoding": "little-endian-u16",
+        "allowsAliases": true
+      }
+    ],
+    "dictionaries": [
+      {
+        "id": "fixed-bank-words",
+        "bankPhysicalPrgOffset": 253952,
+        "bankSize": 8192,
+        "cpuBase": 57344,
+        "pointerTablePhysicalPrgOffset": 258857,
+        "pointerTableCpuAddress": 62249,
+        "entryCount": 240,
+        "encoding": "little-endian-u16",
+        "dataPhysicalPrgOffset": 259337,
+        "dataCpuBase": 62729,
+        "recordTerminator": 252,
+        "externalEntries": [
+          { "index": 0, "pointer": 1515, "kind": "ram" }
+        ]
+      }
+    ],
+    "controlCodes": [
+      { "token": "{NEW_LINE}", "parameters": [] },
+      { "token": "{OFFSET}", "parameters": ["x", "y"] },
+      { "token": "{SPEED}", "parameters": ["frames"] },
+      { "token": "{PAUSE}", "parameters": ["frames"] },
+      { "token": "{CLEAR}", "parameters": [] },
+      { "token": "{JUMP}", "parameters": ["target"] }
+    ],
+    "scenes": [
+      {
+        "id": "opening.intro.00",
+        "pointerTable": "opening-cutscenes",
+        "pointerIndex": 0,
+        "endPointerIndex": 1,
+        "physicalPrgOffset": 24608,
+        "encodedLength": 641,
+        "sha256": "4daf9db8f0e9b43a34235a3753174dd69718f27e288aa8f844a5e448188bbbf5"
+      }
+    ],
+  },
+  "fontModel": {
+    "dialogueCell": { "width": 16, "height": 16, "tilesWide": 2, "tilesHigh": 2 },
+    "interfaceCell": { "width": 8, "height": 8, "tilesWide": 1, "tilesHigh": 1 },
+    "glyphBanks": []
+  },
+  "buildGates": {
+    "requireByteIdenticalRoundTrip": true,
+    "rejectUnknownControlCodes": true,
+    "rejectPointerOverflow": true,
+    "rejectTextBoxOverflow": true,
+    "rejectMissingGlyphs": true
+  },
+  "output": {
+    "format": "bps",
+    "packageFormat": "gmod-v2",
+    "writePatchedRom": false
+  }
+}

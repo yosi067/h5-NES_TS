@@ -1,0 +1,3956 @@
+{
+  "schemaVersion": 2,
+  "adapterId": "captain-tsubasa-2-jp",
+  "sourceSha256": "bf5038afe4c9df1c1c7eff0bc74a12f3cd8ed994b9aab92617d066d9d10ad746",
+  "cloudTableId": "battle-clouds",
+  "targetLanguage": "zh-Hant",
+  "metrics": {
+    "messageCount": 240,
+    "uniqueMessageCount": 236,
+    "aliasCount": 4,
+    "renderMessageCount": 223,
+    "opaqueMessageCount": 13,
+    "encodedBytes": 6428,
+    "textRuns": 513,
+    "sourceGlyphs": 2697,
+    "uniqueSourceGlyphCodes": 134
+  },
+  "aliases": [
+    {
+      "messageId": "battle-clouds.4F",
+      "aliasOf": "battle-clouds.4E"
+    },
+    {
+      "messageId": "battle-clouds.A8",
+      "aliasOf": "battle-clouds.A7"
+    },
+    {
+      "messageId": "battle-clouds.DD",
+      "aliasOf": "battle-clouds.DC"
+    },
+    {
+      "messageId": "battle-clouds.E0",
+      "aliasOf": "battle-clouds.DF"
+    }
+  ],
+  "opaqueMessages": [
+    "battle-clouds.00",
+    "battle-clouds.0D",
+    "battle-clouds.22",
+    "battle-clouds.31",
+    "battle-clouds.37",
+    "battle-clouds.69",
+    "battle-clouds.6D",
+    "battle-clouds.71",
+    "battle-clouds.73",
+    "battle-clouds.74",
+    "battle-clouds.88",
+    "battle-clouds.DC",
+    "battle-clouds.EA"
+  ],
+  "scripts": [
+    {
+      "sceneId": "battle-clouds.01",
+      "sceneSha256": "33844db84d387055fa12e0efb5ed1a1689aa0f893b552fe70d2dc86ce7ec8e4b",
+      "entries": [
+        {
+          "id": "battle-clouds.01.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.02",
+      "sceneSha256": "9590880f7ecb51d06c109e640ec91a8015da8a9a121e5382f637a30cada1e876",
+      "entries": [
+        {
+          "id": "battle-clouds.02.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.03",
+      "sceneSha256": "548a3b4ba6e948052539b3d4638c2ee49d96d4015a694954b3272d7576294056",
+      "entries": [
+        {
+          "id": "battle-clouds.03.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.03.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.03.text.0011",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.03.text.0013",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.04",
+      "sceneSha256": "a541561fc037d46b29bf4f6191ff5e442f7904849503101d64a4894a106b3e38",
+      "entries": [
+        {
+          "id": "battle-clouds.04.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.04.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.04.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.05",
+      "sceneSha256": "a8a499300fed446ba4d4c273a3e217351be2b2bfea6726af8c171dbec32156bc",
+      "entries": [
+        {
+          "id": "battle-clouds.05.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.05.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.06",
+      "sceneSha256": "ca22ad6afbde5221a98cdebc61f535d0bf25d09cd2813110e876acb722a8200e",
+      "entries": [
+        {
+          "id": "battle-clouds.06.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.06.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.07",
+      "sceneSha256": "04c64242cd66d91b63f2f619df42865e1d57be69a9d63a953f0da83e885ae401",
+      "entries": [
+        {
+          "id": "battle-clouds.07.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.08",
+      "sceneSha256": "aa74237d28f6c996bba5d29f28288afa04859cfc56cf1a0e92b6186fadc8e7c9",
+      "entries": [
+        {
+          "id": "battle-clouds.08.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.08.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.09",
+      "sceneSha256": "36738000c2b77bf6e3fc8794ce5ea7480f88f824f61d1bf713c61ccee338805e",
+      "entries": [
+        {
+          "id": "battle-clouds.09.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.0A",
+      "sceneSha256": "40d8fe2289466194c21f8fe17341f4ceb1705d4043370e7f80900de9c4b03581",
+      "entries": [
+        {
+          "id": "battle-clouds.0A.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.0A.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.0A.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.0B",
+      "sceneSha256": "499adf1e3b9d3a2fdcfb5b375c23888835868bcf178428cd61b191efd67e9367",
+      "entries": [
+        {
+          "id": "battle-clouds.0B.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.0B.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.0C",
+      "sceneSha256": "70c49300935ba049ffa0f843810bcec7c9fac9a5cf522f6db7fcfa6f1eef410a",
+      "entries": [
+        {
+          "id": "battle-clouds.0C.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.0C.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.0E",
+      "sceneSha256": "caa57f692369931728b8418f4f2c82699bcfbe8d54f9f2c6aceb91ce1a1d4ab4",
+      "entries": [
+        {
+          "id": "battle-clouds.0E.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.0F",
+      "sceneSha256": "503fa19f4b24ae19f7fb4da86470053a8b88124e4b223441f79c5d35d2c411cc",
+      "entries": [
+        {
+          "id": "battle-clouds.0F.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.10",
+      "sceneSha256": "d1d1bc28a8665042e35d582d460fb962d249f53c9f0153c07a71cf0c67eca9da",
+      "entries": [
+        {
+          "id": "battle-clouds.10.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.10.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.10.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.11",
+      "sceneSha256": "d1e4d88a3388f5cad43ea29b9591d1f0b09b44e017a5be619141a89dc233727d",
+      "entries": [
+        {
+          "id": "battle-clouds.11.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.11.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.12",
+      "sceneSha256": "bd3b5338a5fc94ba6d528a7c64d4020b4817f4115c8ac603cb795e9934e646ee",
+      "entries": [
+        {
+          "id": "battle-clouds.12.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.12.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.12.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.13",
+      "sceneSha256": "25d2e86ba72c19600b2f7dcb410a52ef8f44e8b77724034fac2f70aeeae5ce94",
+      "entries": [
+        {
+          "id": "battle-clouds.13.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.14",
+      "sceneSha256": "b2761d9fa61ead0250af75b644853a2484ea20b62c14176e384484e69f60c94d",
+      "entries": [
+        {
+          "id": "battle-clouds.14.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.14.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.14.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.14.text.0010",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.15",
+      "sceneSha256": "18eead3109876cf7dded3c9d23d8c808f0ae97e80743f9e0570225baf6d44335",
+      "entries": [
+        {
+          "id": "battle-clouds.15.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.16",
+      "sceneSha256": "3814d44e6446baf514d4d9a105be7900bd51e31c94e25374f3cdff7fa39f3820",
+      "entries": [
+        {
+          "id": "battle-clouds.16.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.16.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.17",
+      "sceneSha256": "06b61c27437f69865ed92b825befb51b034daea3310420634eb6ef5414d545f4",
+      "entries": [
+        {
+          "id": "battle-clouds.17.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.17.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.17.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.18",
+      "sceneSha256": "7a55cd8d63e6cae08d67d5fa4a6e37e1b37b6318093af384544a633a023c8612",
+      "entries": [
+        {
+          "id": "battle-clouds.18.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.18.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.18.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.18.text.0010",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.18.text.0019",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.19",
+      "sceneSha256": "a7c049746b3f068dea6a3918effad204d48cb131f9f2e9ec32af33902333777f",
+      "entries": [
+        {
+          "id": "battle-clouds.19.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.19.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.1A",
+      "sceneSha256": "d6f45066a0313ee28e8a2b1771a4996e38ea73528555b138cc6c61e5ac47f1c5",
+      "entries": [
+        {
+          "id": "battle-clouds.1A.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1A.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.1B",
+      "sceneSha256": "f49240c95532ac2b88c3de0c2d76e8ba6cb85b08de6c0a170402e7fbfcce7ffc",
+      "entries": [
+        {
+          "id": "battle-clouds.1B.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1B.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.1C",
+      "sceneSha256": "354b806cfd55e9f8fe45476a9fc179a58253f033cc0486d990a187c40061b54e",
+      "entries": [
+        {
+          "id": "battle-clouds.1C.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1C.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1C.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.1D",
+      "sceneSha256": "cd6bdef0d5095878326f3afe964ed258435d513c11b6bb86d502b16da36bf6f8",
+      "entries": [
+        {
+          "id": "battle-clouds.1D.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1D.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1D.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1D.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.1E",
+      "sceneSha256": "ef2ec63319087bd6efe1816a5fde4bcee5bd0696ac29ba59d182dec5adfb1470",
+      "entries": [
+        {
+          "id": "battle-clouds.1E.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1E.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1E.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1E.text.0016",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.1F",
+      "sceneSha256": "44076a4dbd3b3d310bb60534ab67cd09c78a544a4e526db223086cf423a06803",
+      "entries": [
+        {
+          "id": "battle-clouds.1F.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1F.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.1F.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.20",
+      "sceneSha256": "7126258df055feafdb7b5f4b1da1108eab0a1090b69324489362c66c2f3def90",
+      "entries": [
+        {
+          "id": "battle-clouds.20.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.21",
+      "sceneSha256": "1fd7dd9a42e800cfe631811ab6737fa8db65c8021d76ba7bbcaabedb763311ae",
+      "entries": [
+        {
+          "id": "battle-clouds.21.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.21.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.21.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.23",
+      "sceneSha256": "732a36db6ae9106c4f979632a7225490073730bd98807279b71c862a22c7751d",
+      "entries": [
+        {
+          "id": "battle-clouds.23.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.24",
+      "sceneSha256": "57e10ad042aa5019e5c753a990206043f4e6e484b390a8318b5a4171f6b0c2de",
+      "entries": [
+        {
+          "id": "battle-clouds.24.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.24.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.24.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.25",
+      "sceneSha256": "8952bc0345d64428d3882696439cc916e74101201ef2094fdcf84187165dea63",
+      "entries": [
+        {
+          "id": "battle-clouds.25.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.25.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.26",
+      "sceneSha256": "f9db705aeb7952a2054ee7d8e8a005e03f9925f331e43751189e9853a9b2cf06",
+      "entries": [
+        {
+          "id": "battle-clouds.26.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.26.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.26.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.26.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.27",
+      "sceneSha256": "750d3169950dad3f2c34908d733da83b04c36c44fffb668ae86244ddc32aa529",
+      "entries": [
+        {
+          "id": "battle-clouds.27.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.27.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.28",
+      "sceneSha256": "2613d98443e9826cbc85f033b0069f87cb9e44a6dc31e93cc3c98ea4830397b9",
+      "entries": [
+        {
+          "id": "battle-clouds.28.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.28.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.29",
+      "sceneSha256": "502e9ca9c44ae27d07b832a361ea111ac8823ae4fbd35f42d720447391d1d896",
+      "entries": [
+        {
+          "id": "battle-clouds.29.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.29.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.2A",
+      "sceneSha256": "e2968d79d161e1624a9524e3289acc759e1d342566df5def775452f5d7b271d2",
+      "entries": [
+        {
+          "id": "battle-clouds.2A.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.2A.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.2B",
+      "sceneSha256": "8bf151d4893deeddcb1392eb2f45ff22ca895658e52e590b203a9fc5d264662b",
+      "entries": [
+        {
+          "id": "battle-clouds.2B.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.2B.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.2C",
+      "sceneSha256": "f4625ba239b3054f00d2d7cdc5e929d809d258330d353b756c302e1848dc53dd",
+      "entries": [
+        {
+          "id": "battle-clouds.2C.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.2C.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.2D",
+      "sceneSha256": "b29167aac46d0c689e3d7a4ad794b659da35b0b26b8f47ab068430f485863262",
+      "entries": [
+        {
+          "id": "battle-clouds.2D.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.2D.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.2E",
+      "sceneSha256": "8d010950580771566bc25898131bf6b78ea2eb8af58f2b4ff79d09a9eae48473",
+      "entries": [
+        {
+          "id": "battle-clouds.2E.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.2E.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.2F",
+      "sceneSha256": "87426da9b3456e048851f168370238480efd2020db82faa431157bab800005d7",
+      "entries": [
+        {
+          "id": "battle-clouds.2F.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.2F.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.30",
+      "sceneSha256": "55e554dfcebece1827901b22ef3ea26ceb9a08e7f97a3374e3ebb52243c4be43",
+      "entries": [
+        {
+          "id": "battle-clouds.30.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.32",
+      "sceneSha256": "64d713caa5a31fbbfde201a46cd076c8d5dd630528c032f3f9b4bbae8ce7c65d",
+      "entries": [
+        {
+          "id": "battle-clouds.32.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.32.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.32.text.000f",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.32.text.0019",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.32.text.0021",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.32.text.0023",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.33",
+      "sceneSha256": "492db2eb31bfcbc7af6b83b8d49387e03de7806f0d49421c4bd4a397c866f6bb",
+      "entries": [
+        {
+          "id": "battle-clouds.33.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.33.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.34",
+      "sceneSha256": "7212dd679eeb33e00a7421f2f12d9f97c54e031a7d5156c628404c967e1f26fc",
+      "entries": [
+        {
+          "id": "battle-clouds.34.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.34.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.35",
+      "sceneSha256": "c75f47b88b28f2ba4c616e2b94754044f7a13e8b30e5d1844005a15ce8edfa38",
+      "entries": [
+        {
+          "id": "battle-clouds.35.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.35.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.36",
+      "sceneSha256": "c452d8185b18180acb92c3b5dd4801dc561c0c05a2ff1d0ec03ef381cfb3cf94",
+      "entries": [
+        {
+          "id": "battle-clouds.36.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.38",
+      "sceneSha256": "86c840caf61a9c0ea521900b3ef73244cbd8a3909166129427f00ca4cbf71ff2",
+      "entries": [
+        {
+          "id": "battle-clouds.38.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.39",
+      "sceneSha256": "5300412f734e746acc1252633d51a5ff04cf7d0201bd18823450e22baaf85658",
+      "entries": [
+        {
+          "id": "battle-clouds.39.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.39.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.3A",
+      "sceneSha256": "b9dfea3caf8a662d5bce5cf77fc1a46dbee301db1ee601f9ce5402a0daa79624",
+      "entries": [
+        {
+          "id": "battle-clouds.3A.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.3B",
+      "sceneSha256": "cee37bd1e3dc7190fd03bad233b24c3b85e3e17658d7dcb2313b25b39a604c38",
+      "entries": [
+        {
+          "id": "battle-clouds.3B.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.3C",
+      "sceneSha256": "7b44174c0660b5ad4a0bb1324711d4840dec067b642910ec6a6e0a9b5f78b03d",
+      "entries": [
+        {
+          "id": "battle-clouds.3C.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.3C.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.3D",
+      "sceneSha256": "31ce810c6a1017e5f428ce93fc013b4fc8af766af6064b37ea2fc5e3cbfeaf07",
+      "entries": [
+        {
+          "id": "battle-clouds.3D.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.3D.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.3D.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.3D.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.3D.text.0011",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.3E",
+      "sceneSha256": "55ad990b30f62c67b4266ae24d3912d9f9e861a0ed7d5ab0ebf4da8f4cf82dc9",
+      "entries": [
+        {
+          "id": "battle-clouds.3E.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.3E.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.3F",
+      "sceneSha256": "8cde0f8a7eff98a04eba29185f50a8bb6d4c0b1d6b4556a4965b710ef6886f3c",
+      "entries": [
+        {
+          "id": "battle-clouds.3F.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.3F.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.40",
+      "sceneSha256": "cee37bd1e3dc7190fd03bad233b24c3b85e3e17658d7dcb2313b25b39a604c38",
+      "entries": [
+        {
+          "id": "battle-clouds.40.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.41",
+      "sceneSha256": "30fff834c30e5159fb4ced1d062357a5a28c64a589042ac71ff9b0ee114aeece",
+      "entries": [
+        {
+          "id": "battle-clouds.41.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.41.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.42",
+      "sceneSha256": "28eae7c3ee4e4bf9db5859b6570505c89c5e38d33ad9a6a09dca34d056bd5e5d",
+      "entries": [
+        {
+          "id": "battle-clouds.42.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.42.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.43",
+      "sceneSha256": "9fc9bd464e90b4dc24e445a4c33d1903841e74b5a6d0e14a4006c5b3325cc269",
+      "entries": [
+        {
+          "id": "battle-clouds.43.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.43.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.43.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.43.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.44",
+      "sceneSha256": "540d36c2dd8a51dee08f04da1fc6a63c7bc6091111e9e8428f342ab84c7f5016",
+      "entries": [
+        {
+          "id": "battle-clouds.44.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.44.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.45",
+      "sceneSha256": "2d012dddf64c182180c452ddde65d7e3d74514850083fc118b9bfaac04c4575b",
+      "entries": [
+        {
+          "id": "battle-clouds.45.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.45.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.46",
+      "sceneSha256": "3fe19c221d542ed2ba8386c9662f3777c94af644b05f4bbd358755388bf18974",
+      "entries": [
+        {
+          "id": "battle-clouds.46.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.47",
+      "sceneSha256": "6752999ac52cc4cde3690d0330c6d73b173d5aa6c169c52ed1aa3ffb31c7bbf6",
+      "entries": [
+        {
+          "id": "battle-clouds.47.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.47.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.48",
+      "sceneSha256": "9fe7ed4de6683896f14e3b2658a57cf23c036f0abefe28bbd10935c4b28f20a3",
+      "entries": [
+        {
+          "id": "battle-clouds.48.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.49",
+      "sceneSha256": "8f97082c00ec716dcb74559f4add31b2f3da9116703285538f54740d45d572b7",
+      "entries": [
+        {
+          "id": "battle-clouds.49.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.49.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.49.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.4A",
+      "sceneSha256": "0040d10e56a0a3431b7d535439637bec273679292f513165186cfecdb68e2bff",
+      "entries": [
+        {
+          "id": "battle-clouds.4A.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.4A.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.4A.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.4A.text.000f",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.4B",
+      "sceneSha256": "46f9c355583a9cf63c80f01748a47de9fec4f9277cfceb5643a15d6252248fd0",
+      "entries": [
+        {
+          "id": "battle-clouds.4B.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.4B.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.4C",
+      "sceneSha256": "45c3bd761f21c91466a3dce33ff89751ec02f9a62a6069b0ceaf313ef871bcf3",
+      "entries": [
+        {
+          "id": "battle-clouds.4C.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.4C.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.4D",
+      "sceneSha256": "722b1d50584f2655ec6320fe7ba481ae6df9ac787bc07b444568bda720f9a3f0",
+      "entries": [
+        {
+          "id": "battle-clouds.4D.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.4E",
+      "sceneSha256": "9244342829af88a5ebf6c19deb1c60269d072c929f9f279b1fda1b0493ca93ed",
+      "entries": [
+        {
+          "id": "battle-clouds.4E.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.50",
+      "sceneSha256": "c34d483f3d78a9e1e239a0d43797208f0706d26c97c49503c95e38d3a5f59250",
+      "entries": [
+        {
+          "id": "battle-clouds.50.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.51",
+      "sceneSha256": "a4a213fb8344ddd322f0a2d9007fa03402f3878de268ae9ed7eb3302dd407a05",
+      "entries": [
+        {
+          "id": "battle-clouds.51.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.51.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.51.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.51.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.51.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.51.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.51.text.000f",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.51.text.0019",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.52",
+      "sceneSha256": "020a3a8754264a8d894b3f6564ae1d75ef17edcbeabe96d0f707181e2492f26f",
+      "entries": [
+        {
+          "id": "battle-clouds.52.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.52.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.52.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.52.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.52.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.52.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.52.text.000f",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.52.text.001b",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.53",
+      "sceneSha256": "47941b0f377a86364f1eb8055a36847489cd9246196c991587a7308f74444d86",
+      "entries": [
+        {
+          "id": "battle-clouds.53.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.53.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.53.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.53.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.53.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.53.text.0011",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.53.text.0013",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.53.text.001e",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.54",
+      "sceneSha256": "952b90d85c839c64dcb46f3b9b04d5fb0c75ed6437a22499a13d5c23377ec637",
+      "entries": [
+        {
+          "id": "battle-clouds.54.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.54.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.54.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.54.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.54.text.000f",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.54.text.0011",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.54.text.0013",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.54.text.0015",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.54.text.001f",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.55",
+      "sceneSha256": "4ad75a637c8736abc790a442d776e61d4ca25098be0929fc2c174396fb441db6",
+      "entries": [
+        {
+          "id": "battle-clouds.55.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.55.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.55.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.55.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.55.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.55.text.0011",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.55.text.0013",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.55.text.001d",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.56",
+      "sceneSha256": "ce2185daae84fd6a6d084fd6f3efb231ebc0f984afc2cbac4ffb6e157caff049",
+      "entries": [
+        {
+          "id": "battle-clouds.56.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.57",
+      "sceneSha256": "fc224ad505bedf0e5251c2cd953806657027d902b22f38bfa0a01ea38a96dda4",
+      "entries": [
+        {
+          "id": "battle-clouds.57.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.57.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.57.text.000f",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.58",
+      "sceneSha256": "605f5209b53e5dbe93c22b0dcf979f8a6850ceda46a508c65bc8ed59ddf78127",
+      "entries": [
+        {
+          "id": "battle-clouds.58.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.59",
+      "sceneSha256": "a23e0076dc8df3893fda767ad97e3963862c6b3b47a1658fe5c51f6fac8e20f5",
+      "entries": [
+        {
+          "id": "battle-clouds.59.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.5A",
+      "sceneSha256": "b68244aff471671201f85a98efc0497757e009e19b55ea3d68be06968c4282d6",
+      "entries": [
+        {
+          "id": "battle-clouds.5A.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5A.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.5B",
+      "sceneSha256": "cb4a23a2c3c338e0adeee21ab09283a70f3ebb2f638c02ca7e9e9d02090a6e76",
+      "entries": [
+        {
+          "id": "battle-clouds.5B.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5B.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5B.text.0013",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5B.text.0015",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.5C",
+      "sceneSha256": "4347a1e3985c0e09f81f66a7260f8d7bb88e7167246d027a23663b6bcbf62f3b",
+      "entries": [
+        {
+          "id": "battle-clouds.5C.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5C.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5C.text.0014",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.5D",
+      "sceneSha256": "24975c40f9bc99c28faddf71925850a94818a25a64460165232279f0b8acafd7",
+      "entries": [
+        {
+          "id": "battle-clouds.5D.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5D.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5D.text.0010",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.5E",
+      "sceneSha256": "67b131fcc48078f88c93ab1b655b8a8b2a718f60d24ddfddf3e23909c5d92712",
+      "entries": [
+        {
+          "id": "battle-clouds.5E.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5E.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5E.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5E.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.5F",
+      "sceneSha256": "4a0f2796bb91d82687fb51327c8f9357d96502d8497153b0a6ce8a447ee54e55",
+      "entries": [
+        {
+          "id": "battle-clouds.5F.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5F.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.5F.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.60",
+      "sceneSha256": "ff7b8364073b9d63058cb129d280a6ec1e7ee0173cb73333174225ba4a38aceb",
+      "entries": [
+        {
+          "id": "battle-clouds.60.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.60.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.60.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.61",
+      "sceneSha256": "7360bc86504759ddcad974471bd3a2e8d2810b0b5fddf280bf54a8801e502ac1",
+      "entries": [
+        {
+          "id": "battle-clouds.61.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.61.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.62",
+      "sceneSha256": "0c1622f24beebecd8e2783c389692af9d3e565aefe77d220af63c7fa23363214",
+      "entries": [
+        {
+          "id": "battle-clouds.62.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.62.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.63",
+      "sceneSha256": "4c63606f9749e440c39696aafaa868c76c1ad152ae832a61c5b271afa594d5ea",
+      "entries": [
+        {
+          "id": "battle-clouds.63.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.63.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.64",
+      "sceneSha256": "815cde738926529f44f92dd0c9e586cf896ddfc756ec8b3bc5ba1435a6033d4b",
+      "entries": [
+        {
+          "id": "battle-clouds.64.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.64.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.65",
+      "sceneSha256": "ec265c2d11777892e759985dff590c10f616c252bb09f28d142d32dc2c5fef1f",
+      "entries": [
+        {
+          "id": "battle-clouds.65.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.65.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.65.text.000f",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.66",
+      "sceneSha256": "6c283f9836591fe4064de4c3623cbe4ba36f4de6021faac61ed475a9e478b83e",
+      "entries": [
+        {
+          "id": "battle-clouds.66.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.66.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.66.text.0010",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.67",
+      "sceneSha256": "7abe7a1934d66e6b03e331c9c26297d038d9f940af444f0061160eb6f10f8298",
+      "entries": [
+        {
+          "id": "battle-clouds.67.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.67.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.67.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.68",
+      "sceneSha256": "3a49955266438dc531c8f2ec07430e4236d91f92d90932187b9b5520c2609926",
+      "entries": [
+        {
+          "id": "battle-clouds.68.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.68.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.68.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.6A",
+      "sceneSha256": "524aeb7a68837a24767eaabf5f60210c21dcd0ea58a570bd9b1c71d32c4ed7cb",
+      "entries": [
+        {
+          "id": "battle-clouds.6A.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.6A.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.6B",
+      "sceneSha256": "1261e481c7af39442c8e40de1920f96b5236bfc0fedc8cfe6aa42a8c04815a93",
+      "entries": [
+        {
+          "id": "battle-clouds.6B.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.6B.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.6C",
+      "sceneSha256": "d78a6873bf2f26141bedfb918a9461fad40fddcdb7aed98565b3e8e9cf811010",
+      "entries": [
+        {
+          "id": "battle-clouds.6C.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.6C.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.6E",
+      "sceneSha256": "cdddd158953aa1c290af4ef44f37d0ef9ad828997c81b53f55a46b881e4f0f71",
+      "entries": [
+        {
+          "id": "battle-clouds.6E.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.6E.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.6E.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.6E.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.6F",
+      "sceneSha256": "0e1d25901aee910fb28650291d9e58b72ab4b65b7e14825bc899e765c8881d2c",
+      "entries": [
+        {
+          "id": "battle-clouds.6F.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.6F.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.6F.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.70",
+      "sceneSha256": "be07fafa90f6cc43d9d14c2310fd1f45344c7e2c059c63952d8da8e568af199b",
+      "entries": [
+        {
+          "id": "battle-clouds.70.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.70.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.70.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.72",
+      "sceneSha256": "ddc006f08cba8587d1251ad7f0a1b3bae83abfe98cd05497ed4ba79bc50395bd",
+      "entries": [
+        {
+          "id": "battle-clouds.72.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.72.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.75",
+      "sceneSha256": "e37658c88acea3780b8cdd7df12c5b96d2432cc6bf6b8a0d9d6ac7bcb5a39fbb",
+      "entries": [
+        {
+          "id": "battle-clouds.75.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.76",
+      "sceneSha256": "dfc8e7cfa0679c5f0d6f0eae87af99ff53314ddd66837be439da89439847280f",
+      "entries": [
+        {
+          "id": "battle-clouds.76.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.76.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.76.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.77",
+      "sceneSha256": "8e866727ff64c361abfa674ac95322e3eb651526f6db03567d1b2a2edb2714e6",
+      "entries": [
+        {
+          "id": "battle-clouds.77.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.78",
+      "sceneSha256": "1d514ff577d569413379d1811000042e7a34903f1e167f49cbbdc0539046d546",
+      "entries": [
+        {
+          "id": "battle-clouds.78.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.78.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.78.text.0012",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.79",
+      "sceneSha256": "5755dd7cf98a69f539bfb5e5c6de4c8917e927f2ed48b9a5fbcbb5eccf22d2bb",
+      "entries": [
+        {
+          "id": "battle-clouds.79.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.79.text.0011",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.7A",
+      "sceneSha256": "ddef5d6867ded136cad1a5b17107866b83e328fdde262d91d05e4df44a211b98",
+      "entries": [
+        {
+          "id": "battle-clouds.7A.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.7B",
+      "sceneSha256": "ddf4d89b2f52a5fdf094a9fdf940954b25304701d04724a5a483d5185851b859",
+      "entries": [
+        {
+          "id": "battle-clouds.7B.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.7C",
+      "sceneSha256": "0ae287d57a89c901e510609f3dca5746930102219a977cfac0e6c2c8546e4034",
+      "entries": [
+        {
+          "id": "battle-clouds.7C.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.7C.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.7D",
+      "sceneSha256": "fbd1a7c11fbef1e28388aaa7ef57ab4c578ea6d8648fb40036bdb2a03f546b36",
+      "entries": [
+        {
+          "id": "battle-clouds.7D.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.7D.text.0012",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.7E",
+      "sceneSha256": "b3699b554d998557c038e84b6ed5843a571ef4680956f5fe5ed4fc44e0c0b942",
+      "entries": [
+        {
+          "id": "battle-clouds.7E.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.7F",
+      "sceneSha256": "80b5ec60cba5537d4d60af8a14ab83bd12d7b017075cd1133e0368db344fcd14",
+      "entries": [
+        {
+          "id": "battle-clouds.7F.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.80",
+      "sceneSha256": "40d0e3de5c0a6a4dcb9585fec5124a7021f9adc1901972b1b09762da2b7fd73a",
+      "entries": [
+        {
+          "id": "battle-clouds.80.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.80.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.80.text.001e",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.81",
+      "sceneSha256": "541a1d90e8616e92ed4c91e0b3ca546a9ac3a7db9470d0c2a1baf40a0b659f80",
+      "entries": [
+        {
+          "id": "battle-clouds.81.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.82",
+      "sceneSha256": "c03a8e504355bdd74a4fd31f8c3e7068631328ace1f073e68418e58e221417f0",
+      "entries": [
+        {
+          "id": "battle-clouds.82.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.83",
+      "sceneSha256": "cccc36b8b0f0b41eda32739c4d4514121c1704926e22c85d46a4afd936ea9bb3",
+      "entries": [
+        {
+          "id": "battle-clouds.83.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.83.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.83.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.84",
+      "sceneSha256": "36729910a4c5cb943484edbfe24201e04d4d89d4a5e65257a14176b0d545a1f1",
+      "entries": [
+        {
+          "id": "battle-clouds.84.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.85",
+      "sceneSha256": "4d50e7ddc696320f98e332aaad1ecf6019257348eb4bb2779de536b4775b167c",
+      "entries": [
+        {
+          "id": "battle-clouds.85.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.85.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.86",
+      "sceneSha256": "77b62fbe84fb6baf65131fdc6469033d5390e0dd67ee8f26fc0de87af7d890d6",
+      "entries": [
+        {
+          "id": "battle-clouds.86.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.87",
+      "sceneSha256": "568613671961523cf48a77a86d4fe1a75475e6cbcaab606a10e3e1b67372c4ab",
+      "entries": [
+        {
+          "id": "battle-clouds.87.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.89",
+      "sceneSha256": "77c00876c938c67f681089de413f7323e352dfed3427542fe810bb3fd2f184d3",
+      "entries": [
+        {
+          "id": "battle-clouds.89.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.8A",
+      "sceneSha256": "a914b3adb1fa9f04e0e4ddcbc23b79887d450105efc9f7c6e601e3d18f278449",
+      "entries": [
+        {
+          "id": "battle-clouds.8A.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.8B",
+      "sceneSha256": "cb0e4340a9068bc996e843ac394b09d7a2d435f2bc940623245fd4f798d0dd01",
+      "entries": [
+        {
+          "id": "battle-clouds.8B.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.8B.text.0015",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.8B.text.0027",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.8C",
+      "sceneSha256": "aa078c8fb16ec3ecd41caf373679dd9be088182034a72cdb9a45feac0ba83002",
+      "entries": [
+        {
+          "id": "battle-clouds.8C.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.8C.text.0011",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.8C.text.0020",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.8D",
+      "sceneSha256": "7e8db55096cc0491c1a228c5f4057b7ead1c22051d8b2d53ab08281f3db9fe2d",
+      "entries": [
+        {
+          "id": "battle-clouds.8D.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.8E",
+      "sceneSha256": "8a8c6dc4bd52d5534b1102d764afd05eaa873793c6de5a85c699ae44e226b0ac",
+      "entries": [
+        {
+          "id": "battle-clouds.8E.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.8F",
+      "sceneSha256": "5e4f9a50d9c2279b3d63f831635ca90c6e23e623a81680485d21c81edf9e5dca",
+      "entries": [
+        {
+          "id": "battle-clouds.8F.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.90",
+      "sceneSha256": "a217907af1b28717ac525e160b16a12e31fd09466d4efdae9b731ef3d9fc6762",
+      "entries": [
+        {
+          "id": "battle-clouds.90.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.91",
+      "sceneSha256": "8e6845755728dbac0b5d93a4b564400f6ebbec189d827825c20a6145d731740b",
+      "entries": [
+        {
+          "id": "battle-clouds.91.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.92",
+      "sceneSha256": "ee37ed9ddc3abb3177acf8c5c14066c9a3d144e371e45e5b40e4649cc5c4bde2",
+      "entries": [
+        {
+          "id": "battle-clouds.92.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.93",
+      "sceneSha256": "144b9287c2d68f7560c3284880afabc3222cceff2f607c5d14cca1ba1b8f509c",
+      "entries": [
+        {
+          "id": "battle-clouds.93.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.94",
+      "sceneSha256": "b71030c195464e19ba3cee58308aea6f1ca84cc5a8877417db28aff2534faca9",
+      "entries": [
+        {
+          "id": "battle-clouds.94.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.95",
+      "sceneSha256": "a9ace98e79a217d85586a527972dfa9ba9471db6d6d1e290147eb852e6b02c77",
+      "entries": [
+        {
+          "id": "battle-clouds.95.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.95.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.96",
+      "sceneSha256": "0f0ad1a43ebd5d5bceecc99a13e961d166440a1b854adc72a3375deee4bc55c1",
+      "entries": [
+        {
+          "id": "battle-clouds.96.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.96.text.000f",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.96.text.0011",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.96.text.0020",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.97",
+      "sceneSha256": "875806ddba02e9690cd29a437e5bf2b6b3259a49764417bbbec8ac3158c5fc4b",
+      "entries": [
+        {
+          "id": "battle-clouds.97.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.97.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.98",
+      "sceneSha256": "c374b99dcf48c3dd044d8670b7c189c95b1156787b37faa8b0425e307c2923a2",
+      "entries": [
+        {
+          "id": "battle-clouds.98.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.98.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.99",
+      "sceneSha256": "83695e8521fc9e074f9efdbad8362db229a78e198238178e79f207803830d09e",
+      "entries": [
+        {
+          "id": "battle-clouds.99.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.9A",
+      "sceneSha256": "b6d0750bd431f27807c4df1a8460b557b1575b11d7b0bde5a6001d54c1f133ce",
+      "entries": [
+        {
+          "id": "battle-clouds.9A.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.9B",
+      "sceneSha256": "dd72442e532d1d10948a0b4902e3e0f33f069f063183caf3efdc89ad21081a02",
+      "entries": [
+        {
+          "id": "battle-clouds.9B.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9B.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9B.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.9C",
+      "sceneSha256": "0c914b8b33cb5fc954b7a424de51dd6e1c08c0cc3f1946b9570a7fc41466d632",
+      "entries": [
+        {
+          "id": "battle-clouds.9C.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9C.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9C.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9C.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9C.text.0016",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9C.text.0019",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9C.text.0026",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.9D",
+      "sceneSha256": "d9a1064f4f4e6db5d55e8e7ed97704c0c1c71788c8f8e11f675ac8772113e3b5",
+      "entries": [
+        {
+          "id": "battle-clouds.9D.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9D.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9D.text.001b",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9D.text.0022",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.9E",
+      "sceneSha256": "2a2c461df4f30e12a9f932c3e92b9bf090eef98ca8c42f19e626875cc810e96e",
+      "entries": [
+        {
+          "id": "battle-clouds.9E.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9E.text.000f",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9E.text.001d",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.9E.text.0026",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.9F",
+      "sceneSha256": "139a85586801636faae8330aae12b900f10df5c09b07f116f7ea9c373a16a278",
+      "entries": [
+        {
+          "id": "battle-clouds.9F.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.A0",
+      "sceneSha256": "36a0ad9256a994e3712dab81e8312bd7cf992b9b2751b016255da92bdb553726",
+      "entries": [
+        {
+          "id": "battle-clouds.A0.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.A0.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.A0.text.0016",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.A1",
+      "sceneSha256": "d0e0587a4cb92da7c21aa2337a7197617633a4a144185d1483de215caf86e489",
+      "entries": [
+        {
+          "id": "battle-clouds.A1.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.A2",
+      "sceneSha256": "8d15271d1555234bd31a4c7d8720d5d891591d642cfea1dd184531d9026d4573",
+      "entries": [
+        {
+          "id": "battle-clouds.A2.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.A3",
+      "sceneSha256": "64093cd820e57d01e60f42da867ca5c88d096a80afcfb1c52749703a64a88168",
+      "entries": [
+        {
+          "id": "battle-clouds.A3.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.A3.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.A3.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.A4",
+      "sceneSha256": "eac9c4bbab5888d4e41ea77270f76397952a34cef86d9f76344b36184b9f6153",
+      "entries": [
+        {
+          "id": "battle-clouds.A4.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.A4.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.A4.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.A5",
+      "sceneSha256": "f44a95000409c5fc3fc6fa5c72e834f5898180690b86ed6eee739adec7ac3642",
+      "entries": [
+        {
+          "id": "battle-clouds.A5.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.A5.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.A5.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.A6",
+      "sceneSha256": "495fcb1f78cd900af46eb5d3aa6a32fb22a8b924f274fa065023dcd85122111a",
+      "entries": [
+        {
+          "id": "battle-clouds.A6.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.A6.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.A7",
+      "sceneSha256": "752c927137932a6bb515bedc5b3d1c206d7c0b73c4bf1c591d9527ad41e33e0e",
+      "entries": [
+        {
+          "id": "battle-clouds.A7.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.A9",
+      "sceneSha256": "447448a54818259c9a872402177f383a50d5f4d4415f445f614acb24104e7d75",
+      "entries": [
+        {
+          "id": "battle-clouds.A9.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.AA",
+      "sceneSha256": "fa1bfaafbc3b70701cf3f866f0198f13d4372a86fba04053a8188b11856187b1",
+      "entries": [
+        {
+          "id": "battle-clouds.AA.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.AB",
+      "sceneSha256": "c1d8a2accec8183bf9989c748cd2969201d389f6882ea6262d1019906a17e2e2",
+      "entries": [
+        {
+          "id": "battle-clouds.AB.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.AC",
+      "sceneSha256": "f60bf2c1e2a89d2c18029795b886e7787ef9502a3a96161ff471bd6e8f6ffe24",
+      "entries": [
+        {
+          "id": "battle-clouds.AC.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.AD",
+      "sceneSha256": "da1116e78c6d798edadceb316c912804777a618d6f5f6f37543134dac0770921",
+      "entries": [
+        {
+          "id": "battle-clouds.AD.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.AE",
+      "sceneSha256": "bc28557864ec82ba60ae5692b3123320d5d4af40d63a801ae45665ad5b7639cc",
+      "entries": [
+        {
+          "id": "battle-clouds.AE.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.AF",
+      "sceneSha256": "184f7a27e147eeaf059fc1951f01519d6c091618b3a760eec043c9428e0dca1f",
+      "entries": [
+        {
+          "id": "battle-clouds.AF.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.AF.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.B0",
+      "sceneSha256": "35d2d32b9778591be595b013d82d6346054017646d057e2f6e0921d4f3dbd545",
+      "entries": [
+        {
+          "id": "battle-clouds.B0.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.B1",
+      "sceneSha256": "c059193eed709a9bba7cf34703968e39d4f1e124aabde198797660c501b903b4",
+      "entries": [
+        {
+          "id": "battle-clouds.B1.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.B2",
+      "sceneSha256": "a155966867f752efdee0018127a661274e8535285df51748decb128e267e7829",
+      "entries": [
+        {
+          "id": "battle-clouds.B2.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.B2.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.B2.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.B3",
+      "sceneSha256": "f33f33885ac67b783ec412d077c4478a6eb4c9d681945b5d097a455e751ab774",
+      "entries": [
+        {
+          "id": "battle-clouds.B3.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.B3.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.B3.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.B3.text.0012",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.B3.text.0014",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.B3.text.0017",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.B4",
+      "sceneSha256": "68260eb5e5120c6d6b5466ad628a19327d06a0bac54cb34beb11d77bc877ce3d",
+      "entries": [
+        {
+          "id": "battle-clouds.B4.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.B5",
+      "sceneSha256": "2fcf251e56504d8df88cea2a33d8d95388411fe8f63e076f3d6aab47a6258e8e",
+      "entries": [
+        {
+          "id": "battle-clouds.B5.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.B6",
+      "sceneSha256": "0e1c04ea9840aba392747344bd39a740c391a23c2d606f2a9ee5b7ef86f72547",
+      "entries": [
+        {
+          "id": "battle-clouds.B6.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.B7",
+      "sceneSha256": "d755a4b8efd0cf9ab34bf0a839e1f44773556b130b0a2c1d72b5f7af95d9a210",
+      "entries": [
+        {
+          "id": "battle-clouds.B7.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.B8",
+      "sceneSha256": "7173d7f18d7f20f5ae1ee3f604db887fe4ae9895e6dd0421dbb3b20c8efdb926",
+      "entries": [
+        {
+          "id": "battle-clouds.B8.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.B9",
+      "sceneSha256": "8e2cb66da65e88041ec16cde5b5ad37011ea10a35b1236b21a41913a14caeba2",
+      "entries": [
+        {
+          "id": "battle-clouds.B9.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.B9.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.B9.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.BA",
+      "sceneSha256": "4fb51d5298e4b0c0e594f6ef5e9f5dc9421aa3deac281e29990f91f8919a9efe",
+      "entries": [
+        {
+          "id": "battle-clouds.BA.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.BA.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.BB",
+      "sceneSha256": "4b932a498151a39fbd7c2c122c06a537f2e7b296fc7fce01f7292be7e975e7f0",
+      "entries": [
+        {
+          "id": "battle-clouds.BB.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.BB.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.BC",
+      "sceneSha256": "aaa2f3adfb26043d926d0a21d474532d6189a3509f1b6144ec59d10b79961fe5",
+      "entries": [
+        {
+          "id": "battle-clouds.BC.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.BD",
+      "sceneSha256": "0f82dee14504d54d87444eafd1120e9508b83e5b42fe915a0abb08de621f7570",
+      "entries": [
+        {
+          "id": "battle-clouds.BD.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.BD.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.BD.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.BE",
+      "sceneSha256": "05ecc778fe993d634b968f4c7620e8734e1b0935ea7ed1ed9623250cfe3b61b2",
+      "entries": [
+        {
+          "id": "battle-clouds.BE.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.BF",
+      "sceneSha256": "d582fb0006e2c4e2b32d7c8e7dfa3dee9b399162896ac4a68fe602fde4711a75",
+      "entries": [
+        {
+          "id": "battle-clouds.BF.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.BF.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.C0",
+      "sceneSha256": "12ea2f19326f55dc90769811f90e5a02b7aa32d258b503930a03131b691631e7",
+      "entries": [
+        {
+          "id": "battle-clouds.C0.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.C1",
+      "sceneSha256": "049e9accf9fd20a55dde34a8a7a4388b7d2945f300f6195edac09b75819d48dd",
+      "entries": [
+        {
+          "id": "battle-clouds.C1.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.C2",
+      "sceneSha256": "d43b1d0f30551d48ad66a72b16e7764fd99284584921675c78b8e35f0ab34fbb",
+      "entries": [
+        {
+          "id": "battle-clouds.C2.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.C3",
+      "sceneSha256": "4d1eb7ec12980505280cfa442a96e47c842fe71e692da4e685d6e67f4e3a204b",
+      "entries": [
+        {
+          "id": "battle-clouds.C3.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.C4",
+      "sceneSha256": "2d2059c00f53ac0a3e3999dfd95e1ef4bed793e9afb3ece26355551713db1e7b",
+      "entries": [
+        {
+          "id": "battle-clouds.C4.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.C5",
+      "sceneSha256": "7609529b34be768c2626b83fdf3b696437e16fe18c853adf796c34de3d964e33",
+      "entries": [
+        {
+          "id": "battle-clouds.C5.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.C6",
+      "sceneSha256": "603dd41861bc49698d46484ef83bda7b2a96c6995f6575a392f44852b87f18b8",
+      "entries": [
+        {
+          "id": "battle-clouds.C6.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.C7",
+      "sceneSha256": "46a954ab0aa221fe87e021a4b182cc51848696c79b832bed4a0a4e639a9bc5f9",
+      "entries": [
+        {
+          "id": "battle-clouds.C7.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.C8",
+      "sceneSha256": "baa40851f0811c5e7c5ee31378e07f4d46653a5bd4c2234d7aff806cf45facd1",
+      "entries": [
+        {
+          "id": "battle-clouds.C8.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.C8.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.C9",
+      "sceneSha256": "41c821fd8900b61a2e9e285eb2bcdec2c267321531e46a6291166b16298dd565",
+      "entries": [
+        {
+          "id": "battle-clouds.C9.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.CA",
+      "sceneSha256": "13a2e9cb668ec8e55a98a748d093fa4d72dc9c9baef5e37186f3a1bd78846a2a",
+      "entries": [
+        {
+          "id": "battle-clouds.CA.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.CB",
+      "sceneSha256": "730d3ad0ad52ad2ab070b786c9f7b725c83ebe6fb1a940728e9d00f05cf8398d",
+      "entries": [
+        {
+          "id": "battle-clouds.CB.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.CC",
+      "sceneSha256": "a4c7bacb72137cd9cd4b95b60c9fea3d4c3569718d01c5505b81a993f79e471b",
+      "entries": [
+        {
+          "id": "battle-clouds.CC.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CC.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CC.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CC.text.000f",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CC.text.001e",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CC.text.0020",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CC.text.0023",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.CD",
+      "sceneSha256": "e9e1c7128aa797c7dd1e44a48f2985d61351329e51a047f4b588c43c0b40c998",
+      "entries": [
+        {
+          "id": "battle-clouds.CD.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.CE",
+      "sceneSha256": "4b5a37ab733aee7ee9894cfa90ba3251c0e3ef3e04b8aa9f7772d21f368ff6e3",
+      "entries": [
+        {
+          "id": "battle-clouds.CE.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.CF",
+      "sceneSha256": "b615829ec59fcf32cdf8c400b69562f25dfb06f523142364fb472134f58d23f9",
+      "entries": [
+        {
+          "id": "battle-clouds.CF.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CF.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CF.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CF.text.0012",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CF.text.0018",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CF.text.0027",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.CF.text.0033",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.D0",
+      "sceneSha256": "53530d7da69d2720ba842b3c0f0e6a5fef9add10da6a3e614a7ef7eae98f3544",
+      "entries": [
+        {
+          "id": "battle-clouds.D0.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.D1",
+      "sceneSha256": "3424411774ca9379c9fca769bd255c32a90b52e9ec428d27c4541c802af51a74",
+      "entries": [
+        {
+          "id": "battle-clouds.D1.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.D2",
+      "sceneSha256": "ca11174ede670ce8a117dbeec817dabf41c2524b8a22ec0aa6d509b0d220cd60",
+      "entries": [
+        {
+          "id": "battle-clouds.D2.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D2.text.0010",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D2.text.001a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D2.text.0024",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D2.text.0032",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.D3",
+      "sceneSha256": "ab4ba70e557ddfc2006ef9cd46f5b6cb103793cee0262798df6272f7677a02e1",
+      "entries": [
+        {
+          "id": "battle-clouds.D3.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.D4",
+      "sceneSha256": "a3382c0f3dc37c8f41d95583836e18853f085ca219abd141372506dd1a9f7397",
+      "entries": [
+        {
+          "id": "battle-clouds.D4.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.D5",
+      "sceneSha256": "b5c62dc938a0c707a2a3e47b04340dd22ee5fbe1fe01c677035b5d76a7837729",
+      "entries": [
+        {
+          "id": "battle-clouds.D5.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D5.text.000d",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.D6",
+      "sceneSha256": "70fe03558589ab3bf38b178b2d031777e077e8af80b63d5a522bb0bf0adbe78f",
+      "entries": [
+        {
+          "id": "battle-clouds.D6.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D6.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D6.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D6.text.001a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D6.text.001c",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D6.text.0023",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.D7",
+      "sceneSha256": "798d3c78b2009cf26ae4261c6deec6d63382455fb08d01fce9ec824fc2528796",
+      "entries": [
+        {
+          "id": "battle-clouds.D7.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.D8",
+      "sceneSha256": "91f9f25da6071b72cff5eb0a9a67dabdde40789174adae4371c019e71d7787c1",
+      "entries": [
+        {
+          "id": "battle-clouds.D8.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D8.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D8.text.0014",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.D9",
+      "sceneSha256": "46cd7903d01754d1fb230d5f26d8b6dade87b2ed20035b52ea272628f43912e1",
+      "entries": [
+        {
+          "id": "battle-clouds.D9.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.D9.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.DA",
+      "sceneSha256": "661607998bf3ff345b57c5eb4f087875330ae2df2ef26023071a2b1ed2b342a8",
+      "entries": [
+        {
+          "id": "battle-clouds.DA.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.DA.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.DA.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.DB",
+      "sceneSha256": "63f98c34bd0dbdf9107bc469a9e3f313a22f41c84405e3247178be3faa1f9235",
+      "entries": [
+        {
+          "id": "battle-clouds.DB.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.DB.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.DE",
+      "sceneSha256": "e024e5e6642f5b97a5fd41e42a8be2ed21950059d588a1edcc020f635b2ac95c",
+      "entries": [
+        {
+          "id": "battle-clouds.DE.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.DE.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.DF",
+      "sceneSha256": "291832285eaa747d291e4d5e2f8eb4db33da14ee772280726842edefa53c7974",
+      "entries": [
+        {
+          "id": "battle-clouds.DF.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.DF.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.E1",
+      "sceneSha256": "75e7bc349016f5410bcf607824c23683f5c938cc8ac5164590bc3866dc180702",
+      "entries": [
+        {
+          "id": "battle-clouds.E1.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E1.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.E2",
+      "sceneSha256": "a576cea9fb5835fe8e3822421df1ddf300f91d0bbfee175dfcfc38216ea5287f",
+      "entries": [
+        {
+          "id": "battle-clouds.E2.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E2.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E2.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E2.text.0018",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E2.text.001a",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E2.text.0024",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E2.text.0027",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E2.text.0033",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.E3",
+      "sceneSha256": "3dc9d2aff6d7718f0c1cc40aabf2320de1c0450e793ae3342213bda71f78ce75",
+      "entries": [
+        {
+          "id": "battle-clouds.E3.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E3.text.000e",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E3.text.0011",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E3.text.0013",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.E4",
+      "sceneSha256": "f57170553de948725cb33086f70319344336f54eb22fc462ef2a601da5231427",
+      "entries": [
+        {
+          "id": "battle-clouds.E4.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E4.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E4.text.000b",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E4.text.0014",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E4.text.001f",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.E5",
+      "sceneSha256": "9f412938a4c2e70d25926095b7b50b9018a42b9fdee4f658bb31db4a887095dc",
+      "entries": [
+        {
+          "id": "battle-clouds.E5.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E5.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.E6",
+      "sceneSha256": "4507240576b2b89ca8cfc612dbd3e7ec6ac128e4243e7142d05fdda1e6af9083",
+      "entries": [
+        {
+          "id": "battle-clouds.E6.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E6.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.E7",
+      "sceneSha256": "6e5dbbdd7a264e48470e9ccf05197a4995be653f1cc3731a24a6e855abea08e2",
+      "entries": [
+        {
+          "id": "battle-clouds.E7.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E7.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.E8",
+      "sceneSha256": "8f0cf25546052896023f03fe16be41238d1b22f4a5ff6b4303b474257400819a",
+      "entries": [
+        {
+          "id": "battle-clouds.E8.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.E9",
+      "sceneSha256": "89ff4ef929c1c34dd91dbc25e940627cc79cac93b4364a41fca5eba198c2c18c",
+      "entries": [
+        {
+          "id": "battle-clouds.E9.text.0004",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E9.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.E9.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.EB",
+      "sceneSha256": "2ce751011c6ded0a7573fba2f20b40661057d4720e110d38b277912c4eaf5b34",
+      "entries": [
+        {
+          "id": "battle-clouds.EB.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EB.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EB.text.000a",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.EC",
+      "sceneSha256": "7227fdd3c0d01d433a5716b8312573380a3f4dc92f09278d295c3b39e30e0e8d",
+      "entries": [
+        {
+          "id": "battle-clouds.EC.text.0003",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EC.text.0005",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EC.text.0007",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.ED",
+      "sceneSha256": "af9837365c7a8cc4c65ed9bd7ffb38ffeff8f5834f1050427f0df126a76e284e",
+      "entries": [
+        {
+          "id": "battle-clouds.ED.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.ED.text.000c",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.ED.text.0014",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.EE",
+      "sceneSha256": "f0ed4c9991ab62d37e702fad2b304522823fe6b6ddc8e351bc4cddd457ed5b78",
+      "entries": [
+        {
+          "id": "battle-clouds.EE.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EE.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EE.text.0008",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EE.text.0010",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EE.text.001c",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EE.text.001e",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "battle-clouds.EF",
+      "sceneSha256": "216ced9e2fa7389989ab16254dd04ec069eb51cbfeacbba322b9f64673395d2e",
+      "entries": [
+        {
+          "id": "battle-clouds.EF.text.0002",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EF.text.0006",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EF.text.0009",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EF.text.0012",
+          "category": "battleMessage",
+          "translation": ""
+        },
+        {
+          "id": "battle-clouds.EF.text.0014",
+          "category": "battleMessage",
+          "translation": ""
+        }
+      ]
+    }
+  ]
+}

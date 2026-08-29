@@ -1,0 +1,1950 @@
+{
+  "schemaVersion": 1,
+  "adapterId": "captain-tsubasa-2-jp",
+  "sourceSha256": "bf5038afe4c9df1c1c7eff0bc74a12f3cd8ed994b9aab92617d066d9d10ad746",
+  "sceneId": "opening.intro.00",
+  "sourceSceneSha256": "4daf9db8f0e9b43a34235a3753174dd69718f27e288aa8f844a5e448188bbbf5",
+  "physicalPrgOffset": 24608,
+  "encodedLength": 641,
+  "usedLength": 481,
+  "paddingLength": 160,
+  "layout": {
+    "columns": 20,
+    "alignment": "source"
+  },
+  "glyphs": [
+    {
+      "code": 0,
+      "character": " "
+    },
+    {
+      "code": 1,
+      "character": "衝"
+    },
+    {
+      "code": 2,
+      "character": "啊"
+    },
+    {
+      "code": 3,
+      "character": "!"
+    },
+    {
+      "code": 4,
+      "character": "朝"
+    },
+    {
+      "code": 5,
+      "character": "巴"
+    },
+    {
+      "code": 6,
+      "character": "西"
+    },
+    {
+      "code": 7,
+      "character": "球"
+    },
+    {
+      "code": 8,
+      "character": "門"
+    },
+    {
+      "code": 9,
+      "character": "前"
+    },
+    {
+      "code": 10,
+      "character": "進"
+    },
+    {
+      "code": 11,
+      "character": "全"
+    },
+    {
+      "code": 12,
+      "character": "日"
+    },
+    {
+      "code": 13,
+      "character": "本"
+    },
+    {
+      "code": 14,
+      "character": "青"
+    },
+    {
+      "code": 15,
+      "character": "年"
+    },
+    {
+      "code": 16,
+      "character": "隊"
+    },
+    {
+      "code": 17,
+      "character": "長"
+    },
+    {
+      "code": 18,
+      "character": "大"
+    },
+    {
+      "code": 19,
+      "character": "空"
+    },
+    {
+      "code": 20,
+      "character": "翼"
+    },
+    {
+      "code": 21,
+      "character": "帶"
+    },
+    {
+      "code": 22,
+      "character": "突"
+    },
+    {
+      "code": 23,
+      "character": "破"
+    },
+    {
+      "code": 24,
+      "character": "中"
+    },
+    {
+      "code": 25,
+      "character": "央"
+    },
+    {
+      "code": 26,
+      "character": "聖"
+    },
+    {
+      "code": 27,
+      "character": "保"
+    },
+    {
+      "code": 28,
+      "character": "羅"
+    },
+    {
+      "code": 29,
+      "character": "F"
+    },
+    {
+      "code": 30,
+      "character": "C"
+    },
+    {
+      "code": 31,
+      "character": "場"
+    },
+    {
+      "code": 32,
+      "character": "向"
+    },
+    {
+      "code": 33,
+      "character": "君"
+    },
+    {
+      "code": 34,
+      "character": "然"
+    },
+    {
+      "code": 35,
+      "character": "使"
+    },
+    {
+      "code": 36,
+      "character": "出"
+    },
+    {
+      "code": 37,
+      "character": "猛"
+    },
+    {
+      "code": 38,
+      "character": "虎"
+    },
+    {
+      "code": 39,
+      "character": "鏟"
+    },
+    {
+      "code": 40,
+      "character": "如"
+    },
+    {
+      "code": 41,
+      "character": "緊"
+    },
+    {
+      "code": 42,
+      "character": "盯"
+    },
+    {
+      "code": 43,
+      "character": "獵"
+    },
+    {
+      "code": 44,
+      "character": "物"
+    },
+    {
+      "code": 45,
+      "character": "把"
+    },
+    {
+      "code": 46,
+      "character": "搶"
+    },
+    {
+      "code": 47,
+      "character": "走"
+    },
+    {
+      "code": 48,
+      "character": "了"
+    },
+    {
+      "code": 49,
+      "character": "小"
+    },
+    {
+      "code": 50,
+      "character": "次"
+    },
+    {
+      "code": 51,
+      "character": "郎"
+    },
+    {
+      "code": 52,
+      "character": "東"
+    },
+    {
+      "code": 53,
+      "character": "邦"
+    },
+    {
+      "code": 54,
+      "character": "學"
+    },
+    {
+      "code": 55,
+      "character": "園"
+    },
+    {
+      "code": 56,
+      "character": "鋒"
+    },
+    {
+      "code": 57,
+      "character": "來"
+    },
+    {
+      "code": 58,
+      "character": "黃"
+    },
+    {
+      "code": 59,
+      "character": "金"
+    },
+    {
+      "code": 60,
+      "character": "搭"
+    },
+    {
+      "code": 61,
+      "character": "檔"
+    },
+    {
+      "code": 62,
+      "character": "必"
+    },
+    {
+      "code": 63,
+      "character": "殺"
+    },
+    {
+      "code": 64,
+      "character": "的"
+    },
+    {
+      "code": 65,
+      "character": "雙"
+    },
+    {
+      "code": 66,
+      "character": "人"
+    },
+    {
+      "code": 67,
+      "character": "射"
+    },
+    {
+      "code": 68,
+      "character": "兩"
+    },
+    {
+      "code": 69,
+      "character": "默"
+    },
+    {
+      "code": 70,
+      "character": "契"
+    },
+    {
+      "code": 71,
+      "character": "天"
+    },
+    {
+      "code": 72,
+      "character": "衣"
+    },
+    {
+      "code": 73,
+      "character": "無"
+    },
+    {
+      "code": 74,
+      "character": "縫"
+    },
+    {
+      "code": 75,
+      "character": "上"
+    },
+    {
+      "code": 76,
+      "character": "吧"
+    },
+    {
+      "code": 77,
+      "character": "岬"
+    },
+    {
+      "code": 78,
+      "character": "太"
+    },
+    {
+      "code": 79,
+      "character": "南"
+    },
+    {
+      "code": 80,
+      "character": "葛"
+    },
+    {
+      "code": 81,
+      "character": "高"
+    },
+    {
+      "code": 82,
+      "character": "若"
+    },
+    {
+      "code": 83,
+      "character": "林"
+    },
+    {
+      "code": 84,
+      "character": "同"
+    },
+    {
+      "code": 85,
+      "character": "單"
+    },
+    {
+      "code": 86,
+      "character": "手"
+    },
+    {
+      "code": 87,
+      "character": "接"
+    },
+    {
+      "code": 88,
+      "character": "不"
+    },
+    {
+      "code": 89,
+      "character": "愧"
+    },
+    {
+      "code": 90,
+      "character": "是"
+    },
+    {
+      "code": 91,
+      "character": "洋"
+    },
+    {
+      "code": 92,
+      "character": "守"
+    },
+    {
+      "code": 93,
+      "character": "護"
+    },
+    {
+      "code": 94,
+      "character": "神"
+    },
+    {
+      "code": 95,
+      "character": "偉"
+    },
+    {
+      "code": 96,
+      "character": "超"
+    },
+    {
+      "code": 97,
+      "character": "級"
+    },
+    {
+      "code": 98,
+      "character": "員"
+    },
+    {
+      "code": 99,
+      "character": "源"
+    },
+    {
+      "code": 100,
+      "character": "三"
+    },
+    {
+      "code": 101,
+      "character": "德"
+    },
+    {
+      "code": 102,
+      "character": "漢"
+    },
+    {
+      "code": 103,
+      "character": "堡"
+    },
+    {
+      "code": 104,
+      "character": "S"
+    },
+    {
+      "code": 105,
+      "character": "V"
+    },
+    {
+      "code": 106,
+      "character": "面"
+    },
+    {
+      "code": 107,
+      "character": "對"
+    },
+    {
+      "code": 108,
+      "character": "最"
+    },
+    {
+      "code": 109,
+      "character": "強"
+    },
+    {
+      "code": 110,
+      "character": "敵"
+    },
+    {
+      "code": 111,
+      "character": "賭"
+    },
+    {
+      "code": 112,
+      "character": "成"
+    },
+    {
+      "code": 113,
+      "character": "為"
+    },
+    {
+      "code": 114,
+      "character": "世"
+    },
+    {
+      "code": 115,
+      "character": "界"
+    },
+    {
+      "code": 116,
+      "character": "第"
+    },
+    {
+      "code": 117,
+      "character": "一"
+    },
+    {
+      "code": 118,
+      "character": "足"
+    },
+    {
+      "code": 119,
+      "character": "夢"
+    },
+    {
+      "code": 120,
+      "character": "我"
+    },
+    {
+      "code": 121,
+      "character": "們"
+    },
+    {
+      "code": 122,
+      "character": "決"
+    },
+    {
+      "code": 123,
+      "character": "賽"
+    },
+    {
+      "code": 124,
+      "character": "即"
+    },
+    {
+      "code": 125,
+      "character": "將"
+    },
+    {
+      "code": 126,
+      "character": "開"
+    },
+    {
+      "code": 127,
+      "character": "始"
+    }
+  ],
+  "instructionOffsets": [
+    {
+      "sourceOffset": 0,
+      "targetOffset": 0
+    },
+    {
+      "sourceOffset": 2,
+      "targetOffset": 2
+    },
+    {
+      "sourceOffset": 4,
+      "targetOffset": 4
+    },
+    {
+      "sourceOffset": 7,
+      "targetOffset": 7
+    },
+    {
+      "sourceOffset": 8,
+      "targetOffset": 8
+    },
+    {
+      "sourceOffset": 9,
+      "targetOffset": 9
+    },
+    {
+      "sourceOffset": 10,
+      "targetOffset": 10
+    },
+    {
+      "sourceOffset": 12,
+      "targetOffset": 12
+    },
+    {
+      "sourceOffset": 13,
+      "targetOffset": 13
+    },
+    {
+      "sourceOffset": 15,
+      "targetOffset": 15
+    },
+    {
+      "sourceOffset": 17,
+      "targetOffset": 17
+    },
+    {
+      "sourceOffset": 19,
+      "targetOffset": 19
+    },
+    {
+      "sourceOffset": 22,
+      "targetOffset": 22
+    },
+    {
+      "sourceOffset": 24,
+      "targetOffset": 24
+    },
+    {
+      "sourceOffset": 26,
+      "targetOffset": 26
+    },
+    {
+      "sourceOffset": 28,
+      "targetOffset": 28
+    },
+    {
+      "sourceOffset": 30,
+      "targetOffset": 30
+    },
+    {
+      "sourceOffset": 32,
+      "targetOffset": 32
+    },
+    {
+      "sourceOffset": 37,
+      "targetOffset": 35
+    },
+    {
+      "sourceOffset": 38,
+      "targetOffset": 36
+    },
+    {
+      "sourceOffset": 50,
+      "targetOffset": 44
+    },
+    {
+      "sourceOffset": 51,
+      "targetOffset": 45
+    },
+    {
+      "sourceOffset": 65,
+      "targetOffset": 53
+    },
+    {
+      "sourceOffset": 66,
+      "targetOffset": 54
+    },
+    {
+      "sourceOffset": 77,
+      "targetOffset": 57
+    },
+    {
+      "sourceOffset": 78,
+      "targetOffset": 58
+    },
+    {
+      "sourceOffset": 94,
+      "targetOffset": 65
+    },
+    {
+      "sourceOffset": 95,
+      "targetOffset": 66
+    },
+    {
+      "sourceOffset": 96,
+      "targetOffset": 67
+    },
+    {
+      "sourceOffset": 97,
+      "targetOffset": 68
+    },
+    {
+      "sourceOffset": 98,
+      "targetOffset": 69
+    },
+    {
+      "sourceOffset": 100,
+      "targetOffset": 71
+    },
+    {
+      "sourceOffset": 102,
+      "targetOffset": 73
+    },
+    {
+      "sourceOffset": 103,
+      "targetOffset": 74
+    },
+    {
+      "sourceOffset": 105,
+      "targetOffset": 76
+    },
+    {
+      "sourceOffset": 108,
+      "targetOffset": 79
+    },
+    {
+      "sourceOffset": 110,
+      "targetOffset": 81
+    },
+    {
+      "sourceOffset": 112,
+      "targetOffset": 83
+    },
+    {
+      "sourceOffset": 114,
+      "targetOffset": 85
+    },
+    {
+      "sourceOffset": 125,
+      "targetOffset": 91
+    },
+    {
+      "sourceOffset": 126,
+      "targetOffset": 92
+    },
+    {
+      "sourceOffset": 135,
+      "targetOffset": 99
+    },
+    {
+      "sourceOffset": 136,
+      "targetOffset": 100
+    },
+    {
+      "sourceOffset": 148,
+      "targetOffset": 110
+    },
+    {
+      "sourceOffset": 149,
+      "targetOffset": 111
+    },
+    {
+      "sourceOffset": 151,
+      "targetOffset": 113
+    },
+    {
+      "sourceOffset": 152,
+      "targetOffset": 114
+    },
+    {
+      "sourceOffset": 153,
+      "targetOffset": 115
+    },
+    {
+      "sourceOffset": 154,
+      "targetOffset": 116
+    },
+    {
+      "sourceOffset": 156,
+      "targetOffset": 118
+    },
+    {
+      "sourceOffset": 160,
+      "targetOffset": 122
+    },
+    {
+      "sourceOffset": 162,
+      "targetOffset": 124
+    },
+    {
+      "sourceOffset": 164,
+      "targetOffset": 126
+    },
+    {
+      "sourceOffset": 166,
+      "targetOffset": 128
+    },
+    {
+      "sourceOffset": 167,
+      "targetOffset": 129
+    },
+    {
+      "sourceOffset": 169,
+      "targetOffset": 131
+    },
+    {
+      "sourceOffset": 170,
+      "targetOffset": 132
+    },
+    {
+      "sourceOffset": 172,
+      "targetOffset": 134
+    },
+    {
+      "sourceOffset": 173,
+      "targetOffset": 135
+    },
+    {
+      "sourceOffset": 175,
+      "targetOffset": 137
+    },
+    {
+      "sourceOffset": 177,
+      "targetOffset": 139
+    },
+    {
+      "sourceOffset": 179,
+      "targetOffset": 141
+    },
+    {
+      "sourceOffset": 181,
+      "targetOffset": 143
+    },
+    {
+      "sourceOffset": 186,
+      "targetOffset": 145
+    },
+    {
+      "sourceOffset": 188,
+      "targetOffset": 147
+    },
+    {
+      "sourceOffset": 189,
+      "targetOffset": 148
+    },
+    {
+      "sourceOffset": 190,
+      "targetOffset": 149
+    },
+    {
+      "sourceOffset": 204,
+      "targetOffset": 158
+    },
+    {
+      "sourceOffset": 205,
+      "targetOffset": 159
+    },
+    {
+      "sourceOffset": 206,
+      "targetOffset": 160
+    },
+    {
+      "sourceOffset": 220,
+      "targetOffset": 167
+    },
+    {
+      "sourceOffset": 221,
+      "targetOffset": 168
+    },
+    {
+      "sourceOffset": 232,
+      "targetOffset": 174
+    },
+    {
+      "sourceOffset": 233,
+      "targetOffset": 175
+    },
+    {
+      "sourceOffset": 234,
+      "targetOffset": 176
+    },
+    {
+      "sourceOffset": 236,
+      "targetOffset": 178
+    },
+    {
+      "sourceOffset": 237,
+      "targetOffset": 179
+    },
+    {
+      "sourceOffset": 238,
+      "targetOffset": 180
+    },
+    {
+      "sourceOffset": 240,
+      "targetOffset": 182
+    },
+    {
+      "sourceOffset": 241,
+      "targetOffset": 183
+    },
+    {
+      "sourceOffset": 243,
+      "targetOffset": 185
+    },
+    {
+      "sourceOffset": 246,
+      "targetOffset": 188
+    },
+    {
+      "sourceOffset": 248,
+      "targetOffset": 190
+    },
+    {
+      "sourceOffset": 250,
+      "targetOffset": 192
+    },
+    {
+      "sourceOffset": 252,
+      "targetOffset": 194
+    },
+    {
+      "sourceOffset": 263,
+      "targetOffset": 201
+    },
+    {
+      "sourceOffset": 264,
+      "targetOffset": 202
+    },
+    {
+      "sourceOffset": 276,
+      "targetOffset": 210
+    },
+    {
+      "sourceOffset": 277,
+      "targetOffset": 211
+    },
+    {
+      "sourceOffset": 279,
+      "targetOffset": 213
+    },
+    {
+      "sourceOffset": 280,
+      "targetOffset": 214
+    },
+    {
+      "sourceOffset": 281,
+      "targetOffset": 215
+    },
+    {
+      "sourceOffset": 282,
+      "targetOffset": 216
+    },
+    {
+      "sourceOffset": 284,
+      "targetOffset": 218
+    },
+    {
+      "sourceOffset": 286,
+      "targetOffset": 220
+    },
+    {
+      "sourceOffset": 288,
+      "targetOffset": 222
+    },
+    {
+      "sourceOffset": 291,
+      "targetOffset": 225
+    },
+    {
+      "sourceOffset": 293,
+      "targetOffset": 227
+    },
+    {
+      "sourceOffset": 295,
+      "targetOffset": 229
+    },
+    {
+      "sourceOffset": 297,
+      "targetOffset": 231
+    },
+    {
+      "sourceOffset": 299,
+      "targetOffset": 233
+    },
+    {
+      "sourceOffset": 302,
+      "targetOffset": 236
+    },
+    {
+      "sourceOffset": 303,
+      "targetOffset": 237
+    },
+    {
+      "sourceOffset": 305,
+      "targetOffset": 239
+    },
+    {
+      "sourceOffset": 314,
+      "targetOffset": 244
+    },
+    {
+      "sourceOffset": 315,
+      "targetOffset": 245
+    },
+    {
+      "sourceOffset": 324,
+      "targetOffset": 251
+    },
+    {
+      "sourceOffset": 326,
+      "targetOffset": 253
+    },
+    {
+      "sourceOffset": 331,
+      "targetOffset": 256
+    },
+    {
+      "sourceOffset": 332,
+      "targetOffset": 257
+    },
+    {
+      "sourceOffset": 333,
+      "targetOffset": 258
+    },
+    {
+      "sourceOffset": 347,
+      "targetOffset": 268
+    },
+    {
+      "sourceOffset": 348,
+      "targetOffset": 269
+    },
+    {
+      "sourceOffset": 352,
+      "targetOffset": 272
+    },
+    {
+      "sourceOffset": 353,
+      "targetOffset": 273
+    },
+    {
+      "sourceOffset": 354,
+      "targetOffset": 274
+    },
+    {
+      "sourceOffset": 355,
+      "targetOffset": 275
+    },
+    {
+      "sourceOffset": 356,
+      "targetOffset": 276
+    },
+    {
+      "sourceOffset": 358,
+      "targetOffset": 278
+    },
+    {
+      "sourceOffset": 359,
+      "targetOffset": 279
+    },
+    {
+      "sourceOffset": 361,
+      "targetOffset": 281
+    },
+    {
+      "sourceOffset": 364,
+      "targetOffset": 284
+    },
+    {
+      "sourceOffset": 366,
+      "targetOffset": 286
+    },
+    {
+      "sourceOffset": 368,
+      "targetOffset": 288
+    },
+    {
+      "sourceOffset": 370,
+      "targetOffset": 290
+    },
+    {
+      "sourceOffset": 380,
+      "targetOffset": 296
+    },
+    {
+      "sourceOffset": 381,
+      "targetOffset": 297
+    },
+    {
+      "sourceOffset": 393,
+      "targetOffset": 305
+    },
+    {
+      "sourceOffset": 394,
+      "targetOffset": 306
+    },
+    {
+      "sourceOffset": 396,
+      "targetOffset": 308
+    },
+    {
+      "sourceOffset": 397,
+      "targetOffset": 309
+    },
+    {
+      "sourceOffset": 398,
+      "targetOffset": 310
+    },
+    {
+      "sourceOffset": 399,
+      "targetOffset": 311
+    },
+    {
+      "sourceOffset": 401,
+      "targetOffset": 313
+    },
+    {
+      "sourceOffset": 403,
+      "targetOffset": 315
+    },
+    {
+      "sourceOffset": 405,
+      "targetOffset": 317
+    },
+    {
+      "sourceOffset": 410,
+      "targetOffset": 322
+    },
+    {
+      "sourceOffset": 412,
+      "targetOffset": 324
+    },
+    {
+      "sourceOffset": 414,
+      "targetOffset": 326
+    },
+    {
+      "sourceOffset": 416,
+      "targetOffset": 328
+    },
+    {
+      "sourceOffset": 426,
+      "targetOffset": 335
+    },
+    {
+      "sourceOffset": 428,
+      "targetOffset": 337
+    },
+    {
+      "sourceOffset": 436,
+      "targetOffset": 340
+    },
+    {
+      "sourceOffset": 437,
+      "targetOffset": 341
+    },
+    {
+      "sourceOffset": 438,
+      "targetOffset": 342
+    },
+    {
+      "sourceOffset": 452,
+      "targetOffset": 350
+    },
+    {
+      "sourceOffset": 453,
+      "targetOffset": 351
+    },
+    {
+      "sourceOffset": 468,
+      "targetOffset": 359
+    },
+    {
+      "sourceOffset": 469,
+      "targetOffset": 360
+    },
+    {
+      "sourceOffset": 480,
+      "targetOffset": 365
+    },
+    {
+      "sourceOffset": 481,
+      "targetOffset": 366
+    },
+    {
+      "sourceOffset": 482,
+      "targetOffset": 367
+    },
+    {
+      "sourceOffset": 483,
+      "targetOffset": 368
+    },
+    {
+      "sourceOffset": 484,
+      "targetOffset": 369
+    },
+    {
+      "sourceOffset": 486,
+      "targetOffset": 371
+    },
+    {
+      "sourceOffset": 487,
+      "targetOffset": 372
+    },
+    {
+      "sourceOffset": 489,
+      "targetOffset": 374
+    },
+    {
+      "sourceOffset": 492,
+      "targetOffset": 377
+    },
+    {
+      "sourceOffset": 494,
+      "targetOffset": 379
+    },
+    {
+      "sourceOffset": 496,
+      "targetOffset": 381
+    },
+    {
+      "sourceOffset": 498,
+      "targetOffset": 383
+    },
+    {
+      "sourceOffset": 510,
+      "targetOffset": 389
+    },
+    {
+      "sourceOffset": 511,
+      "targetOffset": 390
+    },
+    {
+      "sourceOffset": 521,
+      "targetOffset": 397
+    },
+    {
+      "sourceOffset": 522,
+      "targetOffset": 398
+    },
+    {
+      "sourceOffset": 535,
+      "targetOffset": 408
+    },
+    {
+      "sourceOffset": 536,
+      "targetOffset": 409
+    },
+    {
+      "sourceOffset": 538,
+      "targetOffset": 411
+    },
+    {
+      "sourceOffset": 539,
+      "targetOffset": 412
+    },
+    {
+      "sourceOffset": 540,
+      "targetOffset": 413
+    },
+    {
+      "sourceOffset": 541,
+      "targetOffset": 414
+    },
+    {
+      "sourceOffset": 543,
+      "targetOffset": 416
+    },
+    {
+      "sourceOffset": 544,
+      "targetOffset": 417
+    },
+    {
+      "sourceOffset": 547,
+      "targetOffset": 420
+    },
+    {
+      "sourceOffset": 549,
+      "targetOffset": 422
+    },
+    {
+      "sourceOffset": 550,
+      "targetOffset": 423
+    },
+    {
+      "sourceOffset": 570,
+      "targetOffset": 435
+    },
+    {
+      "sourceOffset": 571,
+      "targetOffset": 436
+    },
+    {
+      "sourceOffset": 572,
+      "targetOffset": 437
+    },
+    {
+      "sourceOffset": 590,
+      "targetOffset": 449
+    },
+    {
+      "sourceOffset": 591,
+      "targetOffset": 450
+    },
+    {
+      "sourceOffset": 605,
+      "targetOffset": 459
+    },
+    {
+      "sourceOffset": 606,
+      "targetOffset": 460
+    },
+    {
+      "sourceOffset": 607,
+      "targetOffset": 461
+    },
+    {
+      "sourceOffset": 627,
+      "targetOffset": 467
+    },
+    {
+      "sourceOffset": 628,
+      "targetOffset": 468
+    },
+    {
+      "sourceOffset": 629,
+      "targetOffset": 469
+    },
+    {
+      "sourceOffset": 630,
+      "targetOffset": 470
+    },
+    {
+      "sourceOffset": 631,
+      "targetOffset": 471
+    },
+    {
+      "sourceOffset": 632,
+      "targetOffset": 472
+    },
+    {
+      "sourceOffset": 634,
+      "targetOffset": 474
+    },
+    {
+      "sourceOffset": 635,
+      "targetOffset": 475
+    },
+    {
+      "sourceOffset": 637,
+      "targetOffset": 477
+    },
+    {
+      "sourceOffset": 638,
+      "targetOffset": 478
+    }
+  ],
+  "rawBytes": [
+    232,
+    1,
+    249,
+    0,
+    251,
+    1,
+    141,
+    233,
+    223,
+    234,
+    237,
+    88,
+    220,
+    241,
+    1,
+    236,
+    0,
+    249,
+    1,
+    251,
+    1,
+    110,
+    248,
+    10,
+    243,
+    0,
+    245,
+    0,
+    237,
+    104,
+    242,
+    5,
+    1,
+    2,
+    3,
+    220,
+    0,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    252,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    16,
+    17,
+    252,
+    18,
+    19,
+    20,
+    252,
+    21,
+    7,
+    22,
+    23,
+    24,
+    25,
+    3,
+    252,
+    220,
+    234,
+    253,
+    232,
+    1,
+    236,
+    255,
+    238,
+    250,
+    3,
+    251,
+    1,
+    117,
+    243,
+    0,
+    244,
+    5,
+    242,
+    1,
+    0,
+    0,
+    0,
+    18,
+    19,
+    20,
+    252,
+    0,
+    0,
+    0,
+    0,
+    0,
+    5,
+    6,
+    252,
+    0,
+    0,
+    26,
+    27,
+    28,
+    29,
+    30,
+    0,
+    24,
+    31,
+    252,
+    244,
+    4,
+    222,
+    234,
+    253,
+    249,
+    8,
+    251,
+    2,
+    193,
+    130,
+    243,
+    0,
+    245,
+    16,
+    237,
+    40,
+    218,
+    237,
+    40,
+    218,
+    237,
+    40,
+    218,
+    237,
+    14,
+    241,
+    1,
+    236,
+    5,
+    242,
+    5,
+    12,
+    32,
+    237,
+    107,
+    33,
+    252,
+    22,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    7,
+    3,
+    252,
+    219,
+    40,
+    37,
+    38,
+    41,
+    42,
+    43,
+    44,
+    252,
+    45,
+    7,
+    46,
+    47,
+    48,
+    3,
+    252,
+    220,
+    237,
+    2,
+    234,
+    253,
+    236,
+    255,
+    238,
+    250,
+    7,
+    251,
+    1,
+    118,
+    243,
+    0,
+    244,
+    5,
+    242,
+    2,
+    0,
+    0,
+    12,
+    32,
+    49,
+    50,
+    51,
+    252,
+    0,
+    52,
+    53,
+    54,
+    55,
+    0,
+    24,
+    56,
+    252,
+    244,
+    4,
+    222,
+    234,
+    253,
+    241,
+    1,
+    236,
+    2,
+    249,
+    9,
+    251,
+    1,
+    132,
+    243,
+    0,
+    245,
+    1,
+    237,
+    14,
+    242,
+    5,
+    57,
+    48,
+    3,
+    219,
+    237,
+    9,
+    0,
+    58,
+    59,
+    60,
+    61,
+    252,
+    62,
+    63,
+    64,
+    0,
+    65,
+    66,
+    237,
+    48,
+    67,
+    8,
+    3,
+    252,
+    219,
+    68,
+    66,
+    64,
+    69,
+    70,
+    71,
+    72,
+    73,
+    74,
+    3,
+    252,
+    75,
+    76,
+    3,
+    252,
+    220,
+    234,
+    253,
+    236,
+    255,
+    238,
+    250,
+    3,
+    251,
+    1,
+    119,
+    243,
+    0,
+    244,
+    5,
+    242,
+    2,
+    0,
+    0,
+    0,
+    77,
+    78,
+    51,
+    252,
+    0,
+    79,
+    80,
+    81,
+    24,
+    0,
+    24,
+    31,
+    252,
+    244,
+    4,
+    222,
+    234,
+    253,
+    241,
+    1,
+    236,
+    4,
+    249,
+    10,
+    251,
+    3,
+    192,
+    162,
+    125,
+    243,
+    0,
+    237,
+    7,
+    242,
+    5,
+    82,
+    83,
+    84,
+    54,
+    0,
+    85,
+    86,
+    237,
+    18,
+    87,
+    7,
+    3,
+    252,
+    219,
+    88,
+    89,
+    90,
+    52,
+    91,
+    92,
+    93,
+    94,
+    252,
+    95,
+    18,
+    64,
+    96,
+    97,
+    92,
+    8,
+    98,
+    252,
+    82,
+    83,
+    99,
+    100,
+    3,
+    252,
+    220,
+    234,
+    253,
+    236,
+    255,
+    238,
+    250,
+    11,
+    251,
+    1,
+    124,
+    243,
+    0,
+    244,
+    5,
+    242,
+    1,
+    0,
+    0,
+    82,
+    83,
+    99,
+    100,
+    252,
+    0,
+    0,
+    0,
+    0,
+    0,
+    6,
+    101,
+    252,
+    0,
+    0,
+    102,
+    103,
+    104,
+    105,
+    0,
+    92,
+    8,
+    98,
+    252,
+    244,
+    4,
+    222,
+    234,
+    253,
+    236,
+    255,
+    238,
+    251,
+    1,
+    13,
+    242,
+    0,
+    227,
+    106,
+    107,
+    108,
+    109,
+    110,
+    66,
+    0,
+    5,
+    6,
+    14,
+    15,
+    16,
+    252,
+    226,
+    111,
+    75,
+    112,
+    113,
+    114,
+    115,
+    116,
+    117,
+    64,
+    118,
+    7,
+    119,
+    252,
+    120,
+    121,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    64,
+    252,
+    227,
+    122,
+    123,
+    124,
+    125,
+    126,
+    127,
+    252,
+    233,
+    218,
+    223,
+    223,
+    244,
+    5,
+    253,
+    248,
+    0,
+    223,
+    254,
+    32,
+    160,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255,
+    255
+  ]
+}

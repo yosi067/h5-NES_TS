@@ -50,6 +50,15 @@ pub(crate) struct MapperTraceState {
     pub irq_pending: bool,
 }
 
+#[cfg(test)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Mapper1TraceState {
+    pub control: u8,
+    pub chr_bank0: u8,
+    pub chr_bank1: u8,
+    pub prg_bank: u8,
+}
+
 impl MapperWriteResult {
     /// 建立無副作用的結果
     pub fn none() -> Self {
@@ -105,6 +114,9 @@ pub trait MapperTrait {
 
     #[cfg(test)]
     fn trace_state(&self) -> Option<MapperTraceState> { None }
+
+    #[cfg(test)]
+    fn trace_mapper1_state(&self) -> Option<Mapper1TraceState> { None }
 }
 
 // ============================================================
@@ -303,6 +315,16 @@ impl MapperTrait for Mapper1 {
         self.chr_bank0 = 0;
         self.chr_bank1 = 0;
         self.prg_bank = 0;
+    }
+
+    #[cfg(test)]
+    fn trace_mapper1_state(&self) -> Option<Mapper1TraceState> {
+        Some(Mapper1TraceState {
+            control: self.control,
+            chr_bank0: self.chr_bank0,
+            chr_bank1: self.chr_bank1,
+            prg_bank: self.prg_bank,
+        })
     }
 }
 

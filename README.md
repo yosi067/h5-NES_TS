@@ -120,6 +120,7 @@ docs/                # 技術、除錯、規格與優化文件
 - [Near 與 Snes9x 團隊的模擬器故事與致敬](docs/NEAR_AND_SNES9X_TRIBUTE.md)
 - [技術概覽與完整架構](docs/TECHNICAL_OVERVIEW.md)
 - [開發指南](docs/DEVELOPMENT.md)
+- [NES runtime translation development status](docs/NES_RUNTIME_TRANSLATION_STATUS.md)
 - [問題與修復紀錄](docs/TROUBLESHOOTING.md)
 - [模擬核心優化計畫](docs/CORE_OPTIMIZATION_PLAN.md)
 - [N64 瀏覽器核心優化計畫](docs/N64_CORE_OPTIMIZATION_PLAN.md)

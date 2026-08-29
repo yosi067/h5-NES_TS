@@ -11,6 +11,7 @@
 
 import init, { EmuWasm } from './wasm/nes_wasm.js';
 import JSZip from 'jszip';
+import { applyBpsPatch } from './game-profiles/bps';
 import { getRomMagazineMeta } from './data/rom-metadata';
 import type { EmulatorControls } from 'mupen64plus-web';
 import {
@@ -262,6 +263,177 @@ let n64PerformanceProfile: N64PerformanceProfile = selectN64PerformanceProfile()
 let n64BenchmarkSession: N64BenchmarkSession | null = null;
 let removeN64BenchmarkDiagnostics: (() => void) | null = null;
 
+interface GameProfileIndex {
+  schemaVersion: number;
+  profiles: Record<string, string>;
+}
+
+interface GamePresentationRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color?: string;
+}
+
+interface GamePresentationLabel {
+  text: string;
+  x: number;
+  y: number;
+  size: number;
+  align?: CanvasTextAlign;
+  color?: string;
+}
+
+interface GamePresentationRegionGuard {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  hash: string;
+  sampleStep?: number;
+}
+
+interface GamePresentationCue {
+  id: string;
+  trigger: {
+    type: 'frame' | 'afterInput';
+    from: number;
+    to?: number;
+  };
+  regionGuard?: GamePresentationRegionGuard;
+  masks: GamePresentationRect[];
+  labels: GamePresentationLabel[];
+}
+
+interface GamePresentation {
+  schemaVersion: number;
+  profileId: string;
+  inputArmFrame: number;
+  cues: GamePresentationCue[];
+}
+
+interface PreparedGameProfile {
+  romBytes: Uint8Array;
+  runtimeJson: string | null;
+  presentation: GamePresentation | null;
+}
+
+interface GmodManifestV2 {
+  format: 'gmod';
+  formatVersion: 2;
+  profileId: string;
+  platform: 'nes';
+  source: { sha256: string; sha256Aliases?: string[] };
+  target: { sha256: string };
+  patch: { format: 'bps'; file: string };
+  runtime?: { file: string };
+  presentation?: { file: string };
+}
+
+let gameProfileIndexPromise: Promise<GameProfileIndex> | null = null;
+let activeGamePresentation: GamePresentation | null = null;
+let activeGamePresentationFrame = 0;
+let activeGamePresentationInputFrame: number | null = null;
+
+async function loadGameProfileIndex(signal?: AbortSignal): Promise<GameProfileIndex> {
+  if (!gameProfileIndexPromise) {
+    const url = new URL('game-profiles/index.json', window.location.href);
+    gameProfileIndexPromise = fetch(url, { signal })
+      .then(async response => {
+        if (!response.ok) throw new Error(`profile index HTTP ${response.status}`);
+        const index = await response.json() as GameProfileIndex;
+        if (index.schemaVersion !== 1 || typeof index.profiles !== 'object') {
+          throw new Error('unsupported game profile index');
+        }
+        return index;
+      })
+      .catch(error => {
+        gameProfileIndexPromise = null;
+        throw error;
+      });
+  }
+  return gameProfileIndexPromise;
+}
+
+async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', Uint8Array.from(bytes));
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function prepareGameProfileForRom(romBytes: Uint8Array, signal?: AbortSignal): Promise<PreparedGameProfile | null> {
+  activeGamePresentation = null;
+  activeGamePresentationFrame = 0;
+  activeGamePresentationInputFrame = null;
+  if (!globalThis.crypto?.subtle) return null;
+  const sha256 = await sha256Hex(romBytes);
+  throwIfSignalAborted(signal);
+  const index = await loadGameProfileIndex(signal);
+  const profilePath = index.profiles[sha256];
+  if (!profilePath) return null;
+
+  const response = await fetch(new URL(profilePath, window.location.href), { signal });
+  if (!response.ok) throw new Error(`profile HTTP ${response.status}`);
+  let runtimeJson: string | null = null;
+  let presentation: GamePresentation | null = null;
+  if (profilePath.toLowerCase().endsWith('.gmod')) {
+    const archive = await JSZip.loadAsync(await response.arrayBuffer());
+    const manifestFile = archive.file('manifest.json');
+    if (!manifestFile) throw new Error('gmod package is missing manifest.json');
+    const manifest = JSON.parse(await manifestFile.async('string')) as GmodManifestV2 | { formatVersion: 1 };
+    if (manifest.formatVersion === 2) {
+      const v2 = manifest as GmodManifestV2;
+      const acceptedSources = [v2.source?.sha256, ...(v2.source?.sha256Aliases ?? [])];
+      if (v2.format !== 'gmod' || v2.platform !== 'nes' || v2.patch?.format !== 'bps'
+          || !acceptedSources.includes(sha256)) {
+        throw new Error('gmod v2 manifest does not match the source ROM');
+      }
+      const patchFile = archive.file(v2.patch.file);
+      if (!patchFile) throw new Error(`gmod package is missing ${v2.patch.file}`);
+      const patchedBytes = await applyBpsPatch(romBytes, await patchFile.async('uint8array'));
+      if (await sha256Hex(patchedBytes) !== v2.target?.sha256) {
+        throw new Error('gmod target SHA-256 mismatch');
+      }
+      const runtime = v2.runtime ? archive.file(v2.runtime.file) : null;
+      if (v2.runtime && !runtime) throw new Error(`gmod package is missing ${v2.runtime.file}`);
+      runtimeJson = runtime ? await runtime.async('string') : null;
+      const presentationFile = v2.presentation ? archive.file(v2.presentation.file) : null;
+      if (v2.presentation && !presentationFile) throw new Error(`gmod package is missing ${v2.presentation.file}`);
+      presentation = presentationFile
+        ? JSON.parse(await presentationFile.async('string')) as GamePresentation
+        : null;
+      return { romBytes: patchedBytes, runtimeJson, presentation };
+    }
+    const runtime = archive.file('runtime.json');
+    if (!runtime) throw new Error('gmod package is missing runtime.json');
+    runtimeJson = await runtime.async('string');
+    const presentationFile = archive.file('presentation.json');
+    if (presentationFile) {
+      presentation = JSON.parse(await presentationFile.async('string')) as GamePresentation;
+    }
+  } else {
+    runtimeJson = await response.text();
+  }
+  return { romBytes, runtimeJson, presentation };
+}
+
+function activatePreparedGameProfile(prepared: PreparedGameProfile): void {
+  if (!nes || !prepared.runtimeJson) return;
+  nes.loadGameProfile(prepared.runtimeJson);
+  const presentation = prepared.presentation;
+  if (presentation?.schemaVersion === 1 && presentation.profileId === nes.getActiveGameProfileId()) {
+    activeGamePresentation = presentation;
+  }
+  console.log(`[NES] 已套用遊戲設定檔 ${nes.getActiveGameProfileId()}`);
+}
+
+function noteGamePresentationInput(button: ControllerButton, pressed: boolean): void {
+  if (!pressed || !activeGamePresentation || activeGamePresentationInputFrame !== null) return;
+  if (button !== ControllerButton.A && button !== ControllerButton.Start) return;
+  if (activeGamePresentationFrame < activeGamePresentation.inputArmFrame) return;
+  activeGamePresentationInputFrame = activeGamePresentationFrame;
+}
+
 function describeN64Failure(reason: unknown): { message: string; stack?: string } {
   if (reason instanceof Error) {
     return { message: reason.message, stack: reason.stack };
@@ -431,6 +603,7 @@ function isEmulatorJsNesActive(): boolean {
 }
 
 function setNesButton(button: ControllerButton, pressed: boolean): void {
+  noteGamePresentationInput(button, pressed);
   if (isEmulatorJsNesActive()) {
     const libretroButton = button === ControllerButton.A ? 8
       : button === ControllerButton.B ? 0
@@ -701,6 +874,7 @@ function restoreWasmCanvas(): void {
   canvas = wasmCanvas;
   canvas.id = 'screen';
   ctx = canvas.getContext('2d');
+  if (ctx) ctx.imageSmoothingEnabled = false;
   imageData = null;
 }
 
@@ -747,6 +921,7 @@ function setupAppShell(): boolean {
     console.error('無法取得 Canvas 2D 上下文');
     return false;
   }
+  ctx.imageSmoothingEnabled = false;
 
   imageData = ctx.createImageData(256, 240);  // 預設 NES 尺寸，載入 ROM 後會更新
 
@@ -1874,6 +2049,7 @@ async function startFbNeoGame(
     canvas.width = canvasWidth;
     canvas.height = canvasHeight;
     canvas.style.aspectRatio = `${canvasWidth} / ${canvasHeight}`;
+    ctx.imageSmoothingEnabled = false;
     imageData = ctx.createImageData(canvasWidth, canvasHeight);
 
     hideRomSelector();
@@ -1937,6 +2113,19 @@ async function startGame(
   await stopSnes9xBackend();
   stopFbNeoBackend();
   activeBackend = 'wasm';
+  let preparedProfile: PreparedGameProfile | null = null;
+  let preparedRomBytes: Uint8Array = romBytes;
+  if (lower.endsWith('.nes')) {
+    try {
+      preparedProfile = await prepareGameProfileForRom(romBytes, signal);
+      if (preparedProfile) preparedRomBytes = preparedProfile.romBytes;
+    } catch (error) {
+      if (isAbortError(error)) throw error;
+      console.warn('[NES] 遊戲設定檔準備失敗，將使用原始 ROM 執行', error);
+      preparedProfile = null;
+      preparedRomBytes = romBytes;
+    }
+  }
   let loaded = false;
   if (lower.endsWith('.gg')) {
     loaded = nes.loadGgRom(romBytes);
@@ -1952,7 +2141,7 @@ async function startGame(
     }
   } else {
     try {
-      loaded = nes.loadRom(romBytes);
+      loaded = nes.loadRom(preparedRomBytes);
     } catch (error) {
       if (!lower.endsWith('.nes')) throw error;
       console.warn(`[NES] 原生 WASM 核心拒絕 ${currentRomFilename}，改用 FCEUmm`, error);
@@ -1978,6 +2167,14 @@ async function startGame(
   if (loaded) {
     // 取得核心類型及對應的螢幕尺寸
     const coreType = nes.getCoreType();
+    if (coreType === 'nes' && preparedProfile) {
+      try {
+        activatePreparedGameProfile(preparedProfile);
+      } catch (error) {
+        if (isAbortError(error)) throw error;
+        console.warn(`[NES] 遊戲設定檔載入失敗，將使用原始 ROM 執行`, error);
+      }
+    }
     const screenW = nes.getScreenWidth();
     const screenH = nes.getScreenHeight();
     const displayH = coreType === 'nes'
@@ -1989,6 +2186,7 @@ async function startGame(
     if (canvas && ctx) {
       canvas.width = screenW;
       canvas.height = displayH;
+      ctx.imageSmoothingEnabled = false;
       imageData = ctx.createImageData(screenW, displayH);
       canvas.style.aspectRatio = coreType === 'nes' ? '4 / 3' : `${screenW} / ${displayH}`;
     }
@@ -2830,7 +3028,7 @@ function handleButtonPress(btnType: string, pressed: boolean): void {
   
   const button = buttonMap[btnType];
   if (button !== undefined) {
-    nes?.setButton(0, button, pressed);
+    setNesButton(button, pressed);
   }
 }
 
@@ -3032,6 +3230,7 @@ function startEmulation(): void {
     while (accumulator >= TARGET_FRAME_TIME) {
       nes.frame();
       bootDiagFrameCount++;
+      if (coreType === 'nes' && activeGamePresentation) activeGamePresentationFrame++;
       // Boot diagnostic: dump state at key frames to find when BRK crash happens
       if (coreType === 'snes' && (bootDiagFrameCount <= 10 ||
           bootDiagFrameCount === 15 || bootDiagFrameCount === 20 ||
@@ -3277,6 +3476,58 @@ function renderFrame(): void {
     imageData.data.set(frameBuffer);
   }
   ctx.putImageData(imageData, 0, 0);
+  renderGamePresentation();
+}
+
+function renderGamePresentation(): void {
+  if (!ctx || !imageData || !activeGamePresentation || nes?.getCoreType() !== 'nes') return;
+
+  const inputFrame = activeGamePresentationInputFrame;
+  for (const cue of activeGamePresentation.cues) {
+    const elapsed = cue.trigger.type === 'frame'
+      ? activeGamePresentationFrame
+      : inputFrame === null ? -1 : activeGamePresentationFrame - inputFrame;
+    const openEndedFrameCueWasDismissed = cue.trigger.type === 'frame'
+      && cue.trigger.to === undefined
+      && inputFrame !== null;
+    if (elapsed < cue.trigger.from
+        || (cue.trigger.to !== undefined && elapsed > cue.trigger.to)
+        || openEndedFrameCueWasDismissed) continue;
+    if (cue.regionGuard && hashPresentationRegion(imageData, cue.regionGuard) !== cue.regionGuard.hash) continue;
+
+    ctx.save();
+    for (const mask of cue.masks) {
+      ctx.fillStyle = mask.color ?? '#000000';
+      ctx.fillRect(mask.x, mask.y, mask.width, mask.height);
+    }
+    for (const label of cue.labels) {
+      ctx.font = `700 ${label.size}px "Microsoft JhengHei", "Noto Sans TC", sans-serif`;
+      ctx.textAlign = label.align ?? 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = label.color ?? '#ffffff';
+      ctx.shadowColor = '#000000';
+      ctx.shadowBlur = 1;
+      ctx.fillText(label.text, label.x, label.y);
+    }
+    ctx.restore();
+  }
+}
+
+function hashPresentationRegion(frame: ImageData, region: GamePresentationRegionGuard): string {
+  let hash = 0x811c9dc5;
+  const sampleStep = region.sampleStep ?? 1;
+  const endX = Math.min(region.x + region.width, frame.width);
+  const endY = Math.min(region.y + region.height, frame.height);
+  for (let y = region.y; y < endY; y += sampleStep) {
+    for (let x = region.x; x < endX; x += sampleStep) {
+      const offset = (y * frame.width + x) * 4;
+      for (let channel = 0; channel < 3; channel++) {
+        hash ^= frame.data[offset + channel];
+        hash = Math.imul(hash, 0x01000193);
+      }
+    }
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
 function renderFbNeoFrame(): void {

@@ -1,0 +1,8966 @@
+{
+  "schemaVersion": 1,
+  "adapterId": "captain-tsubasa-2-jp",
+  "sourceSha256": "bf5038afe4c9df1c1c7eff0bc74a12f3cd8ed994b9aab92617d066d9d10ad746",
+  "sceneId": "opening.intro.00",
+  "location": {
+    "physicalPrgOffset": 24608,
+    "encodedLength": 641
+  },
+  "sceneSha256": "4daf9db8f0e9b43a34235a3753174dd69718f27e288aa8f844a5e448188bbbf5",
+  "rawBytes": [
+    232,
+    1,
+    249,
+    0,
+    251,
+    1,
+    141,
+    233,
+    223,
+    234,
+    237,
+    88,
+    220,
+    241,
+    1,
+    236,
+    0,
+    249,
+    1,
+    251,
+    1,
+    110,
+    248,
+    10,
+    243,
+    0,
+    245,
+    0,
+    237,
+    104,
+    242,
+    5,
+    26,
+    12,
+    41,
+    47,
+    121,
+    220,
+    0,
+    197,
+    103,
+    186,
+    105,
+    184,
+    125,
+    105,
+    45,
+    34,
+    165,
+    12,
+    252,
+    168,
+    46,
+    22,
+    30,
+    46,
+    101,
+    125,
+    77,
+    0,
+    71,
+    112,
+    207,
+    83,
+    110,
+    252,
+    5,
+    5,
+    169,
+    39,
+    0,
+    18,
+    175,
+    11,
+    8,
+    46,
+    160,
+    252,
+    194,
+    104,
+    197,
+    105,
+    173,
+    0,
+    17,
+    49,
+    3,
+    5,
+    3,
+    20,
+    47,
+    200,
+    170,
+    121,
+    252,
+    220,
+    234,
+    253,
+    232,
+    1,
+    236,
+    255,
+    238,
+    250,
+    3,
+    251,
+    1,
+    117,
+    243,
+    0,
+    244,
+    5,
+    242,
+    1,
+    0,
+    0,
+    0,
+    5,
+    5,
+    169,
+    39,
+    0,
+    18,
+    175,
+    11,
+    252,
+    0,
+    0,
+    0,
+    0,
+    0,
+    197,
+    103,
+    186,
+    105,
+    252,
+    0,
+    0,
+    75,
+    110,
+    205,
+    67,
+    107,
+    134,
+    131,
+    0,
+    140,
+    134,
+    252,
+    244,
+    4,
+    222,
+    234,
+    253,
+    249,
+    8,
+    251,
+    2,
+    193,
+    130,
+    243,
+    0,
+    245,
+    16,
+    237,
+    40,
+    218,
+    237,
+    40,
+    218,
+    237,
+    40,
+    218,
+    237,
+    14,
+    241,
+    1,
+    236,
+    5,
+    242,
+    5,
+    27,
+    49,
+    3,
+    160,
+    8,
+    237,
+    107,
+    46,
+    252,
+    2,
+    7,
+    21,
+    40,
+    0,
+    80,
+    66,
+    180,
+    125,
+    80,
+    111,
+    72,
+    105,
+    121,
+    252,
+    219,
+    4,
+    35,
+    25,
+    45,
+    24,
+    39,
+    3,
+    0,
+    84,
+    103,
+    25,
+    164,
+    20,
+    8,
+    252,
+    199,
+    125,
+    105,
+    45,
+    3,
+    175,
+    2,
+    20,
+    47,
+    16,
+    121,
+    252,
+    220,
+    237,
+    2,
+    234,
+    253,
+    236,
+    255,
+    238,
+    250,
+    7,
+    251,
+    1,
+    118,
+    243,
+    0,
+    244,
+    5,
+    242,
+    2,
+    0,
+    0,
+    27,
+    49,
+    3,
+    160,
+    0,
+    10,
+    166,
+    43,
+    3,
+    252,
+    0,
+    20,
+    3,
+    30,
+    3,
+    160,
+    8,
+    4,
+    46,
+    0,
+    131,
+    134,
+    252,
+    244,
+    4,
+    222,
+    234,
+    253,
+    241,
+    1,
+    236,
+    2,
+    249,
+    9,
+    251,
+    1,
+    132,
+    243,
+    0,
+    245,
+    1,
+    237,
+    14,
+    242,
+    5,
+    173,
+    16,
+    121,
+    219,
+    237,
+    9,
+    0,
+    184,
+    125,
+    105,
+    193,
+    110,
+    74,
+    110,
+    196,
+    252,
+    27,
+    47,
+    11,
+    18,
+    25,
+    0,
+    82,
+    66,
+    110,
+    237,
+    48,
+    76,
+    113,
+    125,
+    84,
+    121,
+    252,
+    219,
+    28,
+    16,
+    40,
+    25,
+    2,
+    7,
+    26,
+    0,
+    201,
+    47,
+    16,
+    40,
+    170,
+    121,
+    252,
+    2,
+    9,
+    125,
+    121,
+    252,
+    220,
+    234,
+    253,
+    236,
+    255,
+    238,
+    250,
+    3,
+    251,
+    1,
+    119,
+    243,
+    0,
+    244,
+    5,
+    242,
+    2,
+    0,
+    0,
+    0,
+    32,
+    11,
+    7,
+    0,
+    16,
+    43,
+    3,
+    252,
+    0,
+    21,
+    46,
+    6,
+    18,
+    10,
+    3,
+    10,
+    3,
+    0,
+    140,
+    134,
+    252,
+    244,
+    4,
+    222,
+    234,
+    253,
+    241,
+    1,
+    236,
+    4,
+    249,
+    10,
+    251,
+    3,
+    192,
+    162,
+    125,
+    243,
+    0,
+    237,
+    7,
+    242,
+    5,
+    44,
+    6,
+    175,
+    36,
+    12,
+    8,
+    46,
+    0,
+    108,
+    110,
+    237,
+    18,
+    90,
+    110,
+    194,
+    71,
+    112,
+    111,
+    81,
+    121,
+    252,
+    219,
+    11,
+    13,
+    160,
+    0,
+    20,
+    3,
+    38,
+    3,
+    25,
+    12,
+    49,
+    164,
+    12,
+    46,
+    252,
+    182,
+    106,
+    125,
+    84,
+    77,
+    125,
+    205,
+    125,
+    184,
+    125,
+    105,
+    71,
+    125,
+    205,
+    125,
+    252,
+    44,
+    6,
+    175,
+    36,
+    12,
+    0,
+    163,
+    46,
+    169,
+    3,
+    121,
+    252,
+    220,
+    234,
+    253,
+    236,
+    255,
+    238,
+    250,
+    11,
+    251,
+    1,
+    124,
+    243,
+    0,
+    244,
+    5,
+    242,
+    1,
+    0,
+    0,
+    44,
+    6,
+    175,
+    36,
+    12,
+    0,
+    163,
+    46,
+    169,
+    3,
+    252,
+    0,
+    0,
+    0,
+    0,
+    0,
+    86,
+    76,
+    194,
+    66,
+    82,
+    252,
+    0,
+    0,
+    90,
+    110,
+    197,
+    105,
+    180,
+    125,
+    143,
+    145,
+    0,
+    135,
+    139,
+    252,
+    244,
+    4,
+    222,
+    234,
+    253,
+    236,
+    255,
+    238,
+    251,
+    1,
+    13,
+    242,
+    0,
+    227,
+    11,
+    2,
+    170,
+    2,
+    25,
+    19,
+    7,
+    0,
+    197,
+    103,
+    186,
+    105,
+    101,
+    125,
+    77,
+    45,
+    31,
+    4,
+    22,
+    12,
+    252,
+    226,
+    75,
+    111,
+    70,
+    125,
+    14,
+    6,
+    2,
+    2,
+    17,
+    29,
+    25,
+    0,
+    37,
+    34,
+    45,
+    6,
+    9,
+    16,
+    252,
+    44,
+    42,
+    39,
+    160,
+    0,
+    168,
+    46,
+    22,
+    30,
+    46,
+    101,
+    125,
+    77,
+    25,
+    252,
+    227,
+    92,
+    115,
+    66,
+    85,
+    105,
+    183,
+    125,
+    97,
+    160,
+    0,
+    26,
+    166,
+    31,
+    43,
+    3,
+    20,
+    12,
+    19,
+    2,
+    16,
+    252,
+    233,
+    218,
+    223,
+    223,
+    244,
+    5,
+    253,
+    248,
+    0,
+    223,
+    254,
+    32,
+    160
+  ],
+  "tokens": [
+    {
+      "offset": 0,
+      "value": 232,
+      "kind": "control"
+    },
+    {
+      "offset": 1,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 2,
+      "value": 249,
+      "kind": "control"
+    },
+    {
+      "offset": 3,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 4,
+      "value": 251,
+      "kind": "control"
+    },
+    {
+      "offset": 5,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 6,
+      "value": 141,
+      "kind": "glyph"
+    },
+    {
+      "offset": 7,
+      "value": 233,
+      "kind": "control"
+    },
+    {
+      "offset": 8,
+      "value": 223,
+      "kind": "pause"
+    },
+    {
+      "offset": 9,
+      "value": 234,
+      "kind": "control"
+    },
+    {
+      "offset": 10,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 11,
+      "value": 88,
+      "kind": "glyph"
+    },
+    {
+      "offset": 12,
+      "value": 220,
+      "kind": "pause"
+    },
+    {
+      "offset": 13,
+      "value": 241,
+      "kind": "control"
+    },
+    {
+      "offset": 14,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 15,
+      "value": 236,
+      "kind": "control"
+    },
+    {
+      "offset": 16,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 17,
+      "value": 249,
+      "kind": "control"
+    },
+    {
+      "offset": 18,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 19,
+      "value": 251,
+      "kind": "control"
+    },
+    {
+      "offset": 20,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 21,
+      "value": 110,
+      "kind": "glyph"
+    },
+    {
+      "offset": 22,
+      "value": 248,
+      "kind": "control"
+    },
+    {
+      "offset": 23,
+      "value": 10,
+      "kind": "glyph"
+    },
+    {
+      "offset": 24,
+      "value": 243,
+      "kind": "control"
+    },
+    {
+      "offset": 25,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 26,
+      "value": 245,
+      "kind": "control"
+    },
+    {
+      "offset": 27,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 28,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 29,
+      "value": 104,
+      "kind": "glyph"
+    },
+    {
+      "offset": 30,
+      "value": 242,
+      "kind": "control"
+    },
+    {
+      "offset": 31,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 32,
+      "value": 26,
+      "kind": "glyph"
+    },
+    {
+      "offset": 33,
+      "value": 12,
+      "kind": "glyph"
+    },
+    {
+      "offset": 34,
+      "value": 41,
+      "kind": "glyph"
+    },
+    {
+      "offset": 35,
+      "value": 47,
+      "kind": "glyph"
+    },
+    {
+      "offset": 36,
+      "value": 121,
+      "kind": "glyph"
+    },
+    {
+      "offset": 37,
+      "value": 220,
+      "kind": "pause"
+    },
+    {
+      "offset": 38,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 39,
+      "value": 197,
+      "kind": "glyph"
+    },
+    {
+      "offset": 40,
+      "value": 103,
+      "kind": "glyph"
+    },
+    {
+      "offset": 41,
+      "value": 186,
+      "kind": "glyph"
+    },
+    {
+      "offset": 42,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 43,
+      "value": 184,
+      "kind": "glyph"
+    },
+    {
+      "offset": 44,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 45,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 46,
+      "value": 45,
+      "kind": "glyph"
+    },
+    {
+      "offset": 47,
+      "value": 34,
+      "kind": "glyph"
+    },
+    {
+      "offset": 48,
+      "value": 165,
+      "kind": "glyph"
+    },
+    {
+      "offset": 49,
+      "value": 12,
+      "kind": "glyph"
+    },
+    {
+      "offset": 50,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 51,
+      "value": 168,
+      "kind": "glyph"
+    },
+    {
+      "offset": 52,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 53,
+      "value": 22,
+      "kind": "glyph"
+    },
+    {
+      "offset": 54,
+      "value": 30,
+      "kind": "glyph"
+    },
+    {
+      "offset": 55,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 56,
+      "value": 101,
+      "kind": "glyph"
+    },
+    {
+      "offset": 57,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 58,
+      "value": 77,
+      "kind": "glyph"
+    },
+    {
+      "offset": 59,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 60,
+      "value": 71,
+      "kind": "glyph"
+    },
+    {
+      "offset": 61,
+      "value": 112,
+      "kind": "glyph"
+    },
+    {
+      "offset": 62,
+      "value": 207,
+      "kind": "glyph"
+    },
+    {
+      "offset": 63,
+      "value": 83,
+      "kind": "glyph"
+    },
+    {
+      "offset": 64,
+      "value": 110,
+      "kind": "glyph"
+    },
+    {
+      "offset": 65,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 66,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 67,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 68,
+      "value": 169,
+      "kind": "glyph"
+    },
+    {
+      "offset": 69,
+      "value": 39,
+      "kind": "glyph"
+    },
+    {
+      "offset": 70,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 71,
+      "value": 18,
+      "kind": "glyph"
+    },
+    {
+      "offset": 72,
+      "value": 175,
+      "kind": "glyph"
+    },
+    {
+      "offset": 73,
+      "value": 11,
+      "kind": "glyph"
+    },
+    {
+      "offset": 74,
+      "value": 8,
+      "kind": "glyph"
+    },
+    {
+      "offset": 75,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 76,
+      "value": 160,
+      "kind": "glyph"
+    },
+    {
+      "offset": 77,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 78,
+      "value": 194,
+      "kind": "glyph"
+    },
+    {
+      "offset": 79,
+      "value": 104,
+      "kind": "glyph"
+    },
+    {
+      "offset": 80,
+      "value": 197,
+      "kind": "glyph"
+    },
+    {
+      "offset": 81,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 82,
+      "value": 173,
+      "kind": "glyph"
+    },
+    {
+      "offset": 83,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 84,
+      "value": 17,
+      "kind": "glyph"
+    },
+    {
+      "offset": 85,
+      "value": 49,
+      "kind": "glyph"
+    },
+    {
+      "offset": 86,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 87,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 88,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 89,
+      "value": 20,
+      "kind": "glyph"
+    },
+    {
+      "offset": 90,
+      "value": 47,
+      "kind": "glyph"
+    },
+    {
+      "offset": 91,
+      "value": 200,
+      "kind": "glyph"
+    },
+    {
+      "offset": 92,
+      "value": 170,
+      "kind": "glyph"
+    },
+    {
+      "offset": 93,
+      "value": 121,
+      "kind": "glyph"
+    },
+    {
+      "offset": 94,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 95,
+      "value": 220,
+      "kind": "pause"
+    },
+    {
+      "offset": 96,
+      "value": 234,
+      "kind": "control"
+    },
+    {
+      "offset": 97,
+      "value": 253,
+      "kind": "control"
+    },
+    {
+      "offset": 98,
+      "value": 232,
+      "kind": "control"
+    },
+    {
+      "offset": 99,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 100,
+      "value": 236,
+      "kind": "control"
+    },
+    {
+      "offset": 101,
+      "value": 255,
+      "kind": "control"
+    },
+    {
+      "offset": 102,
+      "value": 238,
+      "kind": "control"
+    },
+    {
+      "offset": 103,
+      "value": 250,
+      "kind": "control"
+    },
+    {
+      "offset": 104,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 105,
+      "value": 251,
+      "kind": "control"
+    },
+    {
+      "offset": 106,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 107,
+      "value": 117,
+      "kind": "glyph"
+    },
+    {
+      "offset": 108,
+      "value": 243,
+      "kind": "control"
+    },
+    {
+      "offset": 109,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 110,
+      "value": 244,
+      "kind": "control"
+    },
+    {
+      "offset": 111,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 112,
+      "value": 242,
+      "kind": "control"
+    },
+    {
+      "offset": 113,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 114,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 115,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 116,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 117,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 118,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 119,
+      "value": 169,
+      "kind": "glyph"
+    },
+    {
+      "offset": 120,
+      "value": 39,
+      "kind": "glyph"
+    },
+    {
+      "offset": 121,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 122,
+      "value": 18,
+      "kind": "glyph"
+    },
+    {
+      "offset": 123,
+      "value": 175,
+      "kind": "glyph"
+    },
+    {
+      "offset": 124,
+      "value": 11,
+      "kind": "glyph"
+    },
+    {
+      "offset": 125,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 126,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 127,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 128,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 129,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 130,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 131,
+      "value": 197,
+      "kind": "glyph"
+    },
+    {
+      "offset": 132,
+      "value": 103,
+      "kind": "glyph"
+    },
+    {
+      "offset": 133,
+      "value": 186,
+      "kind": "glyph"
+    },
+    {
+      "offset": 134,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 135,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 136,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 137,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 138,
+      "value": 75,
+      "kind": "glyph"
+    },
+    {
+      "offset": 139,
+      "value": 110,
+      "kind": "glyph"
+    },
+    {
+      "offset": 140,
+      "value": 205,
+      "kind": "glyph"
+    },
+    {
+      "offset": 141,
+      "value": 67,
+      "kind": "glyph"
+    },
+    {
+      "offset": 142,
+      "value": 107,
+      "kind": "glyph"
+    },
+    {
+      "offset": 143,
+      "value": 134,
+      "kind": "glyph"
+    },
+    {
+      "offset": 144,
+      "value": 131,
+      "kind": "glyph"
+    },
+    {
+      "offset": 145,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 146,
+      "value": 140,
+      "kind": "glyph"
+    },
+    {
+      "offset": 147,
+      "value": 134,
+      "kind": "glyph"
+    },
+    {
+      "offset": 148,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 149,
+      "value": 244,
+      "kind": "control"
+    },
+    {
+      "offset": 150,
+      "value": 4,
+      "kind": "glyph"
+    },
+    {
+      "offset": 151,
+      "value": 222,
+      "kind": "pause"
+    },
+    {
+      "offset": 152,
+      "value": 234,
+      "kind": "control"
+    },
+    {
+      "offset": 153,
+      "value": 253,
+      "kind": "control"
+    },
+    {
+      "offset": 154,
+      "value": 249,
+      "kind": "control"
+    },
+    {
+      "offset": 155,
+      "value": 8,
+      "kind": "glyph"
+    },
+    {
+      "offset": 156,
+      "value": 251,
+      "kind": "control"
+    },
+    {
+      "offset": 157,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 158,
+      "value": 193,
+      "kind": "glyph"
+    },
+    {
+      "offset": 159,
+      "value": 130,
+      "kind": "glyph"
+    },
+    {
+      "offset": 160,
+      "value": 243,
+      "kind": "control"
+    },
+    {
+      "offset": 161,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 162,
+      "value": 245,
+      "kind": "control"
+    },
+    {
+      "offset": 163,
+      "value": 16,
+      "kind": "glyph"
+    },
+    {
+      "offset": 164,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 165,
+      "value": 40,
+      "kind": "glyph"
+    },
+    {
+      "offset": 166,
+      "value": 218,
+      "kind": "pause"
+    },
+    {
+      "offset": 167,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 168,
+      "value": 40,
+      "kind": "glyph"
+    },
+    {
+      "offset": 169,
+      "value": 218,
+      "kind": "pause"
+    },
+    {
+      "offset": 170,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 171,
+      "value": 40,
+      "kind": "glyph"
+    },
+    {
+      "offset": 172,
+      "value": 218,
+      "kind": "pause"
+    },
+    {
+      "offset": 173,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 174,
+      "value": 14,
+      "kind": "glyph"
+    },
+    {
+      "offset": 175,
+      "value": 241,
+      "kind": "control"
+    },
+    {
+      "offset": 176,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 177,
+      "value": 236,
+      "kind": "control"
+    },
+    {
+      "offset": 178,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 179,
+      "value": 242,
+      "kind": "control"
+    },
+    {
+      "offset": 180,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 181,
+      "value": 27,
+      "kind": "glyph"
+    },
+    {
+      "offset": 182,
+      "value": 49,
+      "kind": "glyph"
+    },
+    {
+      "offset": 183,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 184,
+      "value": 160,
+      "kind": "glyph"
+    },
+    {
+      "offset": 185,
+      "value": 8,
+      "kind": "glyph"
+    },
+    {
+      "offset": 186,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 187,
+      "value": 107,
+      "kind": "glyph"
+    },
+    {
+      "offset": 188,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 189,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 190,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 191,
+      "value": 7,
+      "kind": "glyph"
+    },
+    {
+      "offset": 192,
+      "value": 21,
+      "kind": "glyph"
+    },
+    {
+      "offset": 193,
+      "value": 40,
+      "kind": "glyph"
+    },
+    {
+      "offset": 194,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 195,
+      "value": 80,
+      "kind": "glyph"
+    },
+    {
+      "offset": 196,
+      "value": 66,
+      "kind": "glyph"
+    },
+    {
+      "offset": 197,
+      "value": 180,
+      "kind": "glyph"
+    },
+    {
+      "offset": 198,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 199,
+      "value": 80,
+      "kind": "glyph"
+    },
+    {
+      "offset": 200,
+      "value": 111,
+      "kind": "glyph"
+    },
+    {
+      "offset": 201,
+      "value": 72,
+      "kind": "glyph"
+    },
+    {
+      "offset": 202,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 203,
+      "value": 121,
+      "kind": "glyph"
+    },
+    {
+      "offset": 204,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 205,
+      "value": 219,
+      "kind": "pause"
+    },
+    {
+      "offset": 206,
+      "value": 4,
+      "kind": "glyph"
+    },
+    {
+      "offset": 207,
+      "value": 35,
+      "kind": "glyph"
+    },
+    {
+      "offset": 208,
+      "value": 25,
+      "kind": "glyph"
+    },
+    {
+      "offset": 209,
+      "value": 45,
+      "kind": "glyph"
+    },
+    {
+      "offset": 210,
+      "value": 24,
+      "kind": "glyph"
+    },
+    {
+      "offset": 211,
+      "value": 39,
+      "kind": "glyph"
+    },
+    {
+      "offset": 212,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 213,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 214,
+      "value": 84,
+      "kind": "glyph"
+    },
+    {
+      "offset": 215,
+      "value": 103,
+      "kind": "glyph"
+    },
+    {
+      "offset": 216,
+      "value": 25,
+      "kind": "glyph"
+    },
+    {
+      "offset": 217,
+      "value": 164,
+      "kind": "glyph"
+    },
+    {
+      "offset": 218,
+      "value": 20,
+      "kind": "glyph"
+    },
+    {
+      "offset": 219,
+      "value": 8,
+      "kind": "glyph"
+    },
+    {
+      "offset": 220,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 221,
+      "value": 199,
+      "kind": "glyph"
+    },
+    {
+      "offset": 222,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 223,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 224,
+      "value": 45,
+      "kind": "glyph"
+    },
+    {
+      "offset": 225,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 226,
+      "value": 175,
+      "kind": "glyph"
+    },
+    {
+      "offset": 227,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 228,
+      "value": 20,
+      "kind": "glyph"
+    },
+    {
+      "offset": 229,
+      "value": 47,
+      "kind": "glyph"
+    },
+    {
+      "offset": 230,
+      "value": 16,
+      "kind": "glyph"
+    },
+    {
+      "offset": 231,
+      "value": 121,
+      "kind": "glyph"
+    },
+    {
+      "offset": 232,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 233,
+      "value": 220,
+      "kind": "pause"
+    },
+    {
+      "offset": 234,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 235,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 236,
+      "value": 234,
+      "kind": "control"
+    },
+    {
+      "offset": 237,
+      "value": 253,
+      "kind": "control"
+    },
+    {
+      "offset": 238,
+      "value": 236,
+      "kind": "control"
+    },
+    {
+      "offset": 239,
+      "value": 255,
+      "kind": "control"
+    },
+    {
+      "offset": 240,
+      "value": 238,
+      "kind": "control"
+    },
+    {
+      "offset": 241,
+      "value": 250,
+      "kind": "control"
+    },
+    {
+      "offset": 242,
+      "value": 7,
+      "kind": "glyph"
+    },
+    {
+      "offset": 243,
+      "value": 251,
+      "kind": "control"
+    },
+    {
+      "offset": 244,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 245,
+      "value": 118,
+      "kind": "glyph"
+    },
+    {
+      "offset": 246,
+      "value": 243,
+      "kind": "control"
+    },
+    {
+      "offset": 247,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 248,
+      "value": 244,
+      "kind": "control"
+    },
+    {
+      "offset": 249,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 250,
+      "value": 242,
+      "kind": "control"
+    },
+    {
+      "offset": 251,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 252,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 253,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 254,
+      "value": 27,
+      "kind": "glyph"
+    },
+    {
+      "offset": 255,
+      "value": 49,
+      "kind": "glyph"
+    },
+    {
+      "offset": 256,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 257,
+      "value": 160,
+      "kind": "glyph"
+    },
+    {
+      "offset": 258,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 259,
+      "value": 10,
+      "kind": "glyph"
+    },
+    {
+      "offset": 260,
+      "value": 166,
+      "kind": "glyph"
+    },
+    {
+      "offset": 261,
+      "value": 43,
+      "kind": "glyph"
+    },
+    {
+      "offset": 262,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 263,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 264,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 265,
+      "value": 20,
+      "kind": "glyph"
+    },
+    {
+      "offset": 266,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 267,
+      "value": 30,
+      "kind": "glyph"
+    },
+    {
+      "offset": 268,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 269,
+      "value": 160,
+      "kind": "glyph"
+    },
+    {
+      "offset": 270,
+      "value": 8,
+      "kind": "glyph"
+    },
+    {
+      "offset": 271,
+      "value": 4,
+      "kind": "glyph"
+    },
+    {
+      "offset": 272,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 273,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 274,
+      "value": 131,
+      "kind": "glyph"
+    },
+    {
+      "offset": 275,
+      "value": 134,
+      "kind": "glyph"
+    },
+    {
+      "offset": 276,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 277,
+      "value": 244,
+      "kind": "control"
+    },
+    {
+      "offset": 278,
+      "value": 4,
+      "kind": "glyph"
+    },
+    {
+      "offset": 279,
+      "value": 222,
+      "kind": "pause"
+    },
+    {
+      "offset": 280,
+      "value": 234,
+      "kind": "control"
+    },
+    {
+      "offset": 281,
+      "value": 253,
+      "kind": "control"
+    },
+    {
+      "offset": 282,
+      "value": 241,
+      "kind": "control"
+    },
+    {
+      "offset": 283,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 284,
+      "value": 236,
+      "kind": "control"
+    },
+    {
+      "offset": 285,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 286,
+      "value": 249,
+      "kind": "control"
+    },
+    {
+      "offset": 287,
+      "value": 9,
+      "kind": "glyph"
+    },
+    {
+      "offset": 288,
+      "value": 251,
+      "kind": "control"
+    },
+    {
+      "offset": 289,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 290,
+      "value": 132,
+      "kind": "glyph"
+    },
+    {
+      "offset": 291,
+      "value": 243,
+      "kind": "control"
+    },
+    {
+      "offset": 292,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 293,
+      "value": 245,
+      "kind": "control"
+    },
+    {
+      "offset": 294,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 295,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 296,
+      "value": 14,
+      "kind": "glyph"
+    },
+    {
+      "offset": 297,
+      "value": 242,
+      "kind": "control"
+    },
+    {
+      "offset": 298,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 299,
+      "value": 173,
+      "kind": "glyph"
+    },
+    {
+      "offset": 300,
+      "value": 16,
+      "kind": "glyph"
+    },
+    {
+      "offset": 301,
+      "value": 121,
+      "kind": "glyph"
+    },
+    {
+      "offset": 302,
+      "value": 219,
+      "kind": "pause"
+    },
+    {
+      "offset": 303,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 304,
+      "value": 9,
+      "kind": "glyph"
+    },
+    {
+      "offset": 305,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 306,
+      "value": 184,
+      "kind": "glyph"
+    },
+    {
+      "offset": 307,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 308,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 309,
+      "value": 193,
+      "kind": "glyph"
+    },
+    {
+      "offset": 310,
+      "value": 110,
+      "kind": "glyph"
+    },
+    {
+      "offset": 311,
+      "value": 74,
+      "kind": "glyph"
+    },
+    {
+      "offset": 312,
+      "value": 110,
+      "kind": "glyph"
+    },
+    {
+      "offset": 313,
+      "value": 196,
+      "kind": "glyph"
+    },
+    {
+      "offset": 314,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 315,
+      "value": 27,
+      "kind": "glyph"
+    },
+    {
+      "offset": 316,
+      "value": 47,
+      "kind": "glyph"
+    },
+    {
+      "offset": 317,
+      "value": 11,
+      "kind": "glyph"
+    },
+    {
+      "offset": 318,
+      "value": 18,
+      "kind": "glyph"
+    },
+    {
+      "offset": 319,
+      "value": 25,
+      "kind": "glyph"
+    },
+    {
+      "offset": 320,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 321,
+      "value": 82,
+      "kind": "glyph"
+    },
+    {
+      "offset": 322,
+      "value": 66,
+      "kind": "glyph"
+    },
+    {
+      "offset": 323,
+      "value": 110,
+      "kind": "glyph"
+    },
+    {
+      "offset": 324,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 325,
+      "value": 48,
+      "kind": "glyph"
+    },
+    {
+      "offset": 326,
+      "value": 76,
+      "kind": "glyph"
+    },
+    {
+      "offset": 327,
+      "value": 113,
+      "kind": "glyph"
+    },
+    {
+      "offset": 328,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 329,
+      "value": 84,
+      "kind": "glyph"
+    },
+    {
+      "offset": 330,
+      "value": 121,
+      "kind": "glyph"
+    },
+    {
+      "offset": 331,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 332,
+      "value": 219,
+      "kind": "pause"
+    },
+    {
+      "offset": 333,
+      "value": 28,
+      "kind": "glyph"
+    },
+    {
+      "offset": 334,
+      "value": 16,
+      "kind": "glyph"
+    },
+    {
+      "offset": 335,
+      "value": 40,
+      "kind": "glyph"
+    },
+    {
+      "offset": 336,
+      "value": 25,
+      "kind": "glyph"
+    },
+    {
+      "offset": 337,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 338,
+      "value": 7,
+      "kind": "glyph"
+    },
+    {
+      "offset": 339,
+      "value": 26,
+      "kind": "glyph"
+    },
+    {
+      "offset": 340,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 341,
+      "value": 201,
+      "kind": "glyph"
+    },
+    {
+      "offset": 342,
+      "value": 47,
+      "kind": "glyph"
+    },
+    {
+      "offset": 343,
+      "value": 16,
+      "kind": "glyph"
+    },
+    {
+      "offset": 344,
+      "value": 40,
+      "kind": "glyph"
+    },
+    {
+      "offset": 345,
+      "value": 170,
+      "kind": "glyph"
+    },
+    {
+      "offset": 346,
+      "value": 121,
+      "kind": "glyph"
+    },
+    {
+      "offset": 347,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 348,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 349,
+      "value": 9,
+      "kind": "glyph"
+    },
+    {
+      "offset": 350,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 351,
+      "value": 121,
+      "kind": "glyph"
+    },
+    {
+      "offset": 352,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 353,
+      "value": 220,
+      "kind": "pause"
+    },
+    {
+      "offset": 354,
+      "value": 234,
+      "kind": "control"
+    },
+    {
+      "offset": 355,
+      "value": 253,
+      "kind": "control"
+    },
+    {
+      "offset": 356,
+      "value": 236,
+      "kind": "control"
+    },
+    {
+      "offset": 357,
+      "value": 255,
+      "kind": "control"
+    },
+    {
+      "offset": 358,
+      "value": 238,
+      "kind": "control"
+    },
+    {
+      "offset": 359,
+      "value": 250,
+      "kind": "control"
+    },
+    {
+      "offset": 360,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 361,
+      "value": 251,
+      "kind": "control"
+    },
+    {
+      "offset": 362,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 363,
+      "value": 119,
+      "kind": "glyph"
+    },
+    {
+      "offset": 364,
+      "value": 243,
+      "kind": "control"
+    },
+    {
+      "offset": 365,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 366,
+      "value": 244,
+      "kind": "control"
+    },
+    {
+      "offset": 367,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 368,
+      "value": 242,
+      "kind": "control"
+    },
+    {
+      "offset": 369,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 370,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 371,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 372,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 373,
+      "value": 32,
+      "kind": "glyph"
+    },
+    {
+      "offset": 374,
+      "value": 11,
+      "kind": "glyph"
+    },
+    {
+      "offset": 375,
+      "value": 7,
+      "kind": "glyph"
+    },
+    {
+      "offset": 376,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 377,
+      "value": 16,
+      "kind": "glyph"
+    },
+    {
+      "offset": 378,
+      "value": 43,
+      "kind": "glyph"
+    },
+    {
+      "offset": 379,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 380,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 381,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 382,
+      "value": 21,
+      "kind": "glyph"
+    },
+    {
+      "offset": 383,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 384,
+      "value": 6,
+      "kind": "glyph"
+    },
+    {
+      "offset": 385,
+      "value": 18,
+      "kind": "glyph"
+    },
+    {
+      "offset": 386,
+      "value": 10,
+      "kind": "glyph"
+    },
+    {
+      "offset": 387,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 388,
+      "value": 10,
+      "kind": "glyph"
+    },
+    {
+      "offset": 389,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 390,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 391,
+      "value": 140,
+      "kind": "glyph"
+    },
+    {
+      "offset": 392,
+      "value": 134,
+      "kind": "glyph"
+    },
+    {
+      "offset": 393,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 394,
+      "value": 244,
+      "kind": "control"
+    },
+    {
+      "offset": 395,
+      "value": 4,
+      "kind": "glyph"
+    },
+    {
+      "offset": 396,
+      "value": 222,
+      "kind": "pause"
+    },
+    {
+      "offset": 397,
+      "value": 234,
+      "kind": "control"
+    },
+    {
+      "offset": 398,
+      "value": 253,
+      "kind": "control"
+    },
+    {
+      "offset": 399,
+      "value": 241,
+      "kind": "control"
+    },
+    {
+      "offset": 400,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 401,
+      "value": 236,
+      "kind": "control"
+    },
+    {
+      "offset": 402,
+      "value": 4,
+      "kind": "glyph"
+    },
+    {
+      "offset": 403,
+      "value": 249,
+      "kind": "control"
+    },
+    {
+      "offset": 404,
+      "value": 10,
+      "kind": "glyph"
+    },
+    {
+      "offset": 405,
+      "value": 251,
+      "kind": "control"
+    },
+    {
+      "offset": 406,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 407,
+      "value": 192,
+      "kind": "glyph"
+    },
+    {
+      "offset": 408,
+      "value": 162,
+      "kind": "glyph"
+    },
+    {
+      "offset": 409,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 410,
+      "value": 243,
+      "kind": "control"
+    },
+    {
+      "offset": 411,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 412,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 413,
+      "value": 7,
+      "kind": "glyph"
+    },
+    {
+      "offset": 414,
+      "value": 242,
+      "kind": "control"
+    },
+    {
+      "offset": 415,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 416,
+      "value": 44,
+      "kind": "glyph"
+    },
+    {
+      "offset": 417,
+      "value": 6,
+      "kind": "glyph"
+    },
+    {
+      "offset": 418,
+      "value": 175,
+      "kind": "glyph"
+    },
+    {
+      "offset": 419,
+      "value": 36,
+      "kind": "glyph"
+    },
+    {
+      "offset": 420,
+      "value": 12,
+      "kind": "glyph"
+    },
+    {
+      "offset": 421,
+      "value": 8,
+      "kind": "glyph"
+    },
+    {
+      "offset": 422,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 423,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 424,
+      "value": 108,
+      "kind": "glyph"
+    },
+    {
+      "offset": 425,
+      "value": 110,
+      "kind": "glyph"
+    },
+    {
+      "offset": 426,
+      "value": 237,
+      "kind": "control"
+    },
+    {
+      "offset": 427,
+      "value": 18,
+      "kind": "glyph"
+    },
+    {
+      "offset": 428,
+      "value": 90,
+      "kind": "glyph"
+    },
+    {
+      "offset": 429,
+      "value": 110,
+      "kind": "glyph"
+    },
+    {
+      "offset": 430,
+      "value": 194,
+      "kind": "glyph"
+    },
+    {
+      "offset": 431,
+      "value": 71,
+      "kind": "glyph"
+    },
+    {
+      "offset": 432,
+      "value": 112,
+      "kind": "glyph"
+    },
+    {
+      "offset": 433,
+      "value": 111,
+      "kind": "glyph"
+    },
+    {
+      "offset": 434,
+      "value": 81,
+      "kind": "glyph"
+    },
+    {
+      "offset": 435,
+      "value": 121,
+      "kind": "glyph"
+    },
+    {
+      "offset": 436,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 437,
+      "value": 219,
+      "kind": "pause"
+    },
+    {
+      "offset": 438,
+      "value": 11,
+      "kind": "glyph"
+    },
+    {
+      "offset": 439,
+      "value": 13,
+      "kind": "glyph"
+    },
+    {
+      "offset": 440,
+      "value": 160,
+      "kind": "glyph"
+    },
+    {
+      "offset": 441,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 442,
+      "value": 20,
+      "kind": "glyph"
+    },
+    {
+      "offset": 443,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 444,
+      "value": 38,
+      "kind": "glyph"
+    },
+    {
+      "offset": 445,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 446,
+      "value": 25,
+      "kind": "glyph"
+    },
+    {
+      "offset": 447,
+      "value": 12,
+      "kind": "glyph"
+    },
+    {
+      "offset": 448,
+      "value": 49,
+      "kind": "glyph"
+    },
+    {
+      "offset": 449,
+      "value": 164,
+      "kind": "glyph"
+    },
+    {
+      "offset": 450,
+      "value": 12,
+      "kind": "glyph"
+    },
+    {
+      "offset": 451,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 452,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 453,
+      "value": 182,
+      "kind": "glyph"
+    },
+    {
+      "offset": 454,
+      "value": 106,
+      "kind": "glyph"
+    },
+    {
+      "offset": 455,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 456,
+      "value": 84,
+      "kind": "glyph"
+    },
+    {
+      "offset": 457,
+      "value": 77,
+      "kind": "glyph"
+    },
+    {
+      "offset": 458,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 459,
+      "value": 205,
+      "kind": "glyph"
+    },
+    {
+      "offset": 460,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 461,
+      "value": 184,
+      "kind": "glyph"
+    },
+    {
+      "offset": 462,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 463,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 464,
+      "value": 71,
+      "kind": "glyph"
+    },
+    {
+      "offset": 465,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 466,
+      "value": 205,
+      "kind": "glyph"
+    },
+    {
+      "offset": 467,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 468,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 469,
+      "value": 44,
+      "kind": "glyph"
+    },
+    {
+      "offset": 470,
+      "value": 6,
+      "kind": "glyph"
+    },
+    {
+      "offset": 471,
+      "value": 175,
+      "kind": "glyph"
+    },
+    {
+      "offset": 472,
+      "value": 36,
+      "kind": "glyph"
+    },
+    {
+      "offset": 473,
+      "value": 12,
+      "kind": "glyph"
+    },
+    {
+      "offset": 474,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 475,
+      "value": 163,
+      "kind": "glyph"
+    },
+    {
+      "offset": 476,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 477,
+      "value": 169,
+      "kind": "glyph"
+    },
+    {
+      "offset": 478,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 479,
+      "value": 121,
+      "kind": "glyph"
+    },
+    {
+      "offset": 480,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 481,
+      "value": 220,
+      "kind": "pause"
+    },
+    {
+      "offset": 482,
+      "value": 234,
+      "kind": "control"
+    },
+    {
+      "offset": 483,
+      "value": 253,
+      "kind": "control"
+    },
+    {
+      "offset": 484,
+      "value": 236,
+      "kind": "control"
+    },
+    {
+      "offset": 485,
+      "value": 255,
+      "kind": "control"
+    },
+    {
+      "offset": 486,
+      "value": 238,
+      "kind": "control"
+    },
+    {
+      "offset": 487,
+      "value": 250,
+      "kind": "control"
+    },
+    {
+      "offset": 488,
+      "value": 11,
+      "kind": "glyph"
+    },
+    {
+      "offset": 489,
+      "value": 251,
+      "kind": "control"
+    },
+    {
+      "offset": 490,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 491,
+      "value": 124,
+      "kind": "glyph"
+    },
+    {
+      "offset": 492,
+      "value": 243,
+      "kind": "control"
+    },
+    {
+      "offset": 493,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 494,
+      "value": 244,
+      "kind": "control"
+    },
+    {
+      "offset": 495,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 496,
+      "value": 242,
+      "kind": "control"
+    },
+    {
+      "offset": 497,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 498,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 499,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 500,
+      "value": 44,
+      "kind": "glyph"
+    },
+    {
+      "offset": 501,
+      "value": 6,
+      "kind": "glyph"
+    },
+    {
+      "offset": 502,
+      "value": 175,
+      "kind": "glyph"
+    },
+    {
+      "offset": 503,
+      "value": 36,
+      "kind": "glyph"
+    },
+    {
+      "offset": 504,
+      "value": 12,
+      "kind": "glyph"
+    },
+    {
+      "offset": 505,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 506,
+      "value": 163,
+      "kind": "glyph"
+    },
+    {
+      "offset": 507,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 508,
+      "value": 169,
+      "kind": "glyph"
+    },
+    {
+      "offset": 509,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 510,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 511,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 512,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 513,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 514,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 515,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 516,
+      "value": 86,
+      "kind": "glyph"
+    },
+    {
+      "offset": 517,
+      "value": 76,
+      "kind": "glyph"
+    },
+    {
+      "offset": 518,
+      "value": 194,
+      "kind": "glyph"
+    },
+    {
+      "offset": 519,
+      "value": 66,
+      "kind": "glyph"
+    },
+    {
+      "offset": 520,
+      "value": 82,
+      "kind": "glyph"
+    },
+    {
+      "offset": 521,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 522,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 523,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 524,
+      "value": 90,
+      "kind": "glyph"
+    },
+    {
+      "offset": 525,
+      "value": 110,
+      "kind": "glyph"
+    },
+    {
+      "offset": 526,
+      "value": 197,
+      "kind": "glyph"
+    },
+    {
+      "offset": 527,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 528,
+      "value": 180,
+      "kind": "glyph"
+    },
+    {
+      "offset": 529,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 530,
+      "value": 143,
+      "kind": "glyph"
+    },
+    {
+      "offset": 531,
+      "value": 145,
+      "kind": "glyph"
+    },
+    {
+      "offset": 532,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 533,
+      "value": 135,
+      "kind": "glyph"
+    },
+    {
+      "offset": 534,
+      "value": 139,
+      "kind": "glyph"
+    },
+    {
+      "offset": 535,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 536,
+      "value": 244,
+      "kind": "control"
+    },
+    {
+      "offset": 537,
+      "value": 4,
+      "kind": "glyph"
+    },
+    {
+      "offset": 538,
+      "value": 222,
+      "kind": "pause"
+    },
+    {
+      "offset": 539,
+      "value": 234,
+      "kind": "control"
+    },
+    {
+      "offset": 540,
+      "value": 253,
+      "kind": "control"
+    },
+    {
+      "offset": 541,
+      "value": 236,
+      "kind": "control"
+    },
+    {
+      "offset": 542,
+      "value": 255,
+      "kind": "control"
+    },
+    {
+      "offset": 543,
+      "value": 238,
+      "kind": "control"
+    },
+    {
+      "offset": 544,
+      "value": 251,
+      "kind": "control"
+    },
+    {
+      "offset": 545,
+      "value": 1,
+      "kind": "glyph"
+    },
+    {
+      "offset": 546,
+      "value": 13,
+      "kind": "glyph"
+    },
+    {
+      "offset": 547,
+      "value": 242,
+      "kind": "control"
+    },
+    {
+      "offset": 548,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 549,
+      "value": 227,
+      "kind": "legacyOffset"
+    },
+    {
+      "offset": 550,
+      "value": 11,
+      "kind": "glyph"
+    },
+    {
+      "offset": 551,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 552,
+      "value": 170,
+      "kind": "glyph"
+    },
+    {
+      "offset": 553,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 554,
+      "value": 25,
+      "kind": "glyph"
+    },
+    {
+      "offset": 555,
+      "value": 19,
+      "kind": "glyph"
+    },
+    {
+      "offset": 556,
+      "value": 7,
+      "kind": "glyph"
+    },
+    {
+      "offset": 557,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 558,
+      "value": 197,
+      "kind": "glyph"
+    },
+    {
+      "offset": 559,
+      "value": 103,
+      "kind": "glyph"
+    },
+    {
+      "offset": 560,
+      "value": 186,
+      "kind": "glyph"
+    },
+    {
+      "offset": 561,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 562,
+      "value": 101,
+      "kind": "glyph"
+    },
+    {
+      "offset": 563,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 564,
+      "value": 77,
+      "kind": "glyph"
+    },
+    {
+      "offset": 565,
+      "value": 45,
+      "kind": "glyph"
+    },
+    {
+      "offset": 566,
+      "value": 31,
+      "kind": "glyph"
+    },
+    {
+      "offset": 567,
+      "value": 4,
+      "kind": "glyph"
+    },
+    {
+      "offset": 568,
+      "value": 22,
+      "kind": "glyph"
+    },
+    {
+      "offset": 569,
+      "value": 12,
+      "kind": "glyph"
+    },
+    {
+      "offset": 570,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 571,
+      "value": 226,
+      "kind": "legacyOffset"
+    },
+    {
+      "offset": 572,
+      "value": 75,
+      "kind": "glyph"
+    },
+    {
+      "offset": 573,
+      "value": 111,
+      "kind": "glyph"
+    },
+    {
+      "offset": 574,
+      "value": 70,
+      "kind": "glyph"
+    },
+    {
+      "offset": 575,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 576,
+      "value": 14,
+      "kind": "glyph"
+    },
+    {
+      "offset": 577,
+      "value": 6,
+      "kind": "glyph"
+    },
+    {
+      "offset": 578,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 579,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 580,
+      "value": 17,
+      "kind": "glyph"
+    },
+    {
+      "offset": 581,
+      "value": 29,
+      "kind": "glyph"
+    },
+    {
+      "offset": 582,
+      "value": 25,
+      "kind": "glyph"
+    },
+    {
+      "offset": 583,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 584,
+      "value": 37,
+      "kind": "glyph"
+    },
+    {
+      "offset": 585,
+      "value": 34,
+      "kind": "glyph"
+    },
+    {
+      "offset": 586,
+      "value": 45,
+      "kind": "glyph"
+    },
+    {
+      "offset": 587,
+      "value": 6,
+      "kind": "glyph"
+    },
+    {
+      "offset": 588,
+      "value": 9,
+      "kind": "glyph"
+    },
+    {
+      "offset": 589,
+      "value": 16,
+      "kind": "glyph"
+    },
+    {
+      "offset": 590,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 591,
+      "value": 44,
+      "kind": "glyph"
+    },
+    {
+      "offset": 592,
+      "value": 42,
+      "kind": "glyph"
+    },
+    {
+      "offset": 593,
+      "value": 39,
+      "kind": "glyph"
+    },
+    {
+      "offset": 594,
+      "value": 160,
+      "kind": "glyph"
+    },
+    {
+      "offset": 595,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 596,
+      "value": 168,
+      "kind": "glyph"
+    },
+    {
+      "offset": 597,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 598,
+      "value": 22,
+      "kind": "glyph"
+    },
+    {
+      "offset": 599,
+      "value": 30,
+      "kind": "glyph"
+    },
+    {
+      "offset": 600,
+      "value": 46,
+      "kind": "glyph"
+    },
+    {
+      "offset": 601,
+      "value": 101,
+      "kind": "glyph"
+    },
+    {
+      "offset": 602,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 603,
+      "value": 77,
+      "kind": "glyph"
+    },
+    {
+      "offset": 604,
+      "value": 25,
+      "kind": "glyph"
+    },
+    {
+      "offset": 605,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 606,
+      "value": 227,
+      "kind": "legacyOffset"
+    },
+    {
+      "offset": 607,
+      "value": 92,
+      "kind": "glyph"
+    },
+    {
+      "offset": 608,
+      "value": 115,
+      "kind": "glyph"
+    },
+    {
+      "offset": 609,
+      "value": 66,
+      "kind": "glyph"
+    },
+    {
+      "offset": 610,
+      "value": 85,
+      "kind": "glyph"
+    },
+    {
+      "offset": 611,
+      "value": 105,
+      "kind": "glyph"
+    },
+    {
+      "offset": 612,
+      "value": 183,
+      "kind": "glyph"
+    },
+    {
+      "offset": 613,
+      "value": 125,
+      "kind": "glyph"
+    },
+    {
+      "offset": 614,
+      "value": 97,
+      "kind": "glyph"
+    },
+    {
+      "offset": 615,
+      "value": 160,
+      "kind": "glyph"
+    },
+    {
+      "offset": 616,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 617,
+      "value": 26,
+      "kind": "glyph"
+    },
+    {
+      "offset": 618,
+      "value": 166,
+      "kind": "glyph"
+    },
+    {
+      "offset": 619,
+      "value": 31,
+      "kind": "glyph"
+    },
+    {
+      "offset": 620,
+      "value": 43,
+      "kind": "glyph"
+    },
+    {
+      "offset": 621,
+      "value": 3,
+      "kind": "glyph"
+    },
+    {
+      "offset": 622,
+      "value": 20,
+      "kind": "glyph"
+    },
+    {
+      "offset": 623,
+      "value": 12,
+      "kind": "glyph"
+    },
+    {
+      "offset": 624,
+      "value": 19,
+      "kind": "glyph"
+    },
+    {
+      "offset": 625,
+      "value": 2,
+      "kind": "glyph"
+    },
+    {
+      "offset": 626,
+      "value": 16,
+      "kind": "glyph"
+    },
+    {
+      "offset": 627,
+      "value": 252,
+      "kind": "control"
+    },
+    {
+      "offset": 628,
+      "value": 233,
+      "kind": "control"
+    },
+    {
+      "offset": 629,
+      "value": 218,
+      "kind": "pause"
+    },
+    {
+      "offset": 630,
+      "value": 223,
+      "kind": "pause"
+    },
+    {
+      "offset": 631,
+      "value": 223,
+      "kind": "pause"
+    },
+    {
+      "offset": 632,
+      "value": 244,
+      "kind": "control"
+    },
+    {
+      "offset": 633,
+      "value": 5,
+      "kind": "glyph"
+    },
+    {
+      "offset": 634,
+      "value": 253,
+      "kind": "control"
+    },
+    {
+      "offset": 635,
+      "value": 248,
+      "kind": "control"
+    },
+    {
+      "offset": 636,
+      "value": 0,
+      "kind": "glyph"
+    },
+    {
+      "offset": 637,
+      "value": 223,
+      "kind": "pause"
+    },
+    {
+      "offset": 638,
+      "value": 254,
+      "kind": "control"
+    },
+    {
+      "offset": 639,
+      "value": 32,
+      "kind": "glyph"
+    },
+    {
+      "offset": 640,
+      "value": 160,
+      "kind": "glyph"
+    }
+  ],
+  "fragments": [
+    {
+      "kind": "control",
+      "offset": 0,
+      "value": 232,
+      "token": "{BYTE:E8}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 1,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "control",
+      "offset": 2,
+      "value": 249,
+      "token": "{BYTE:F9}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 4,
+      "value": 251,
+      "token": "{BYTE:FB}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 5,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 6,
+      "value": 141,
+      "token": "{BYTE:8D}"
+    },
+    {
+      "kind": "control",
+      "offset": 7,
+      "value": 233,
+      "token": "{BYTE:E9}"
+    },
+    {
+      "kind": "control",
+      "offset": 8,
+      "value": 223,
+      "token": "{PAUSE:F0}"
+    },
+    {
+      "kind": "control",
+      "offset": 9,
+      "value": 234,
+      "token": "{BYTE:EA}"
+    },
+    {
+      "kind": "control",
+      "offset": 10,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 11,
+      "value": 88,
+      "token": "{BYTE:58}"
+    },
+    {
+      "kind": "control",
+      "offset": 12,
+      "value": 220,
+      "token": "{PAUSE:3C}"
+    },
+    {
+      "kind": "control",
+      "offset": 13,
+      "value": 241,
+      "token": "{BYTE:F1}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 14,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "control",
+      "offset": 15,
+      "value": 236,
+      "token": "{BYTE:EC}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 17,
+      "value": 249,
+      "token": "{BYTE:F9}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 18,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "control",
+      "offset": 19,
+      "value": 251,
+      "token": "{BYTE:FB}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 20,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "text",
+      "text": "ン"
+    },
+    {
+      "kind": "control",
+      "offset": 22,
+      "value": 248,
+      "token": "{BYTE:F8}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 23,
+      "value": 10,
+      "token": "{BYTE:0A}"
+    },
+    {
+      "kind": "control",
+      "offset": 24,
+      "value": 243,
+      "token": "{BYTE:F3}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 26,
+      "value": 245,
+      "token": "{BYTE:F5}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 28,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "text",
+      "text": "リ"
+    },
+    {
+      "kind": "control",
+      "offset": 30,
+      "value": 242,
+      "token": "{BYTE:F2}"
+    },
+    {
+      "kind": "text",
+      "text": "おはしるっ!"
+    },
+    {
+      "kind": "control",
+      "offset": 37,
+      "value": 220,
+      "token": "{PAUSE:3C}"
+    },
+    {
+      "kind": "text",
+      "text": " ブラジルゴールをめざし"
+    },
+    {
+      "kind": "control",
+      "offset": 50,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "text",
+      "text": "ぜんにほんユース キャプテン"
+    },
+    {
+      "kind": "control",
+      "offset": 65,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "text",
+      "text": "おお"
+    },
+    {
+      "kind": "glyph",
+      "offset": 68,
+      "value": 169,
+      "token": "{BYTE:A9}"
+    },
+    {
+      "kind": "text",
+      "text": "ら つばさくんが"
+    },
+    {
+      "kind": "control",
+      "offset": 77,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "text",
+      "text": "ドリブルで ちゅうおうとっぱだ!"
+    },
+    {
+      "kind": "control",
+      "offset": 94,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 95,
+      "value": 220,
+      "token": "{PAUSE:3C}"
+    },
+    {
+      "kind": "control",
+      "offset": 96,
+      "value": 234,
+      "token": "{BYTE:EA}"
+    },
+    {
+      "kind": "control",
+      "offset": 97,
+      "value": 253,
+      "token": "{BYTE:FD}"
+    },
+    {
+      "kind": "control",
+      "offset": 98,
+      "value": 232,
+      "token": "{BYTE:E8}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 99,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "control",
+      "offset": 100,
+      "value": 236,
+      "token": "{BYTE:EC}"
+    },
+    {
+      "kind": "control",
+      "offset": 101,
+      "value": 255,
+      "token": "{BYTE:FF}"
+    },
+    {
+      "kind": "control",
+      "offset": 102,
+      "value": 238,
+      "token": "{BYTE:EE}"
+    },
+    {
+      "kind": "control",
+      "offset": 103,
+      "value": 250,
+      "token": "{BYTE:FA}"
+    },
+    {
+      "kind": "text",
+      "text": "う"
+    },
+    {
+      "kind": "control",
+      "offset": 105,
+      "value": 251,
+      "token": "{BYTE:FB}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 106,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 107,
+      "value": 117,
+      "token": "{BYTE:75}"
+    },
+    {
+      "kind": "control",
+      "offset": 108,
+      "value": 243,
+      "token": "{BYTE:F3}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 110,
+      "value": 244,
+      "token": "{BYTE:F4}"
+    },
+    {
+      "kind": "text",
+      "text": "お"
+    },
+    {
+      "kind": "control",
+      "offset": 112,
+      "value": 242,
+      "token": "{BYTE:F2}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 113,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "text",
+      "text": "   おお"
+    },
+    {
+      "kind": "glyph",
+      "offset": 119,
+      "value": 169,
+      "token": "{BYTE:A9}"
+    },
+    {
+      "kind": "text",
+      "text": "ら つばさ"
+    },
+    {
+      "kind": "control",
+      "offset": 125,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "text",
+      "text": "     ブラジル"
+    },
+    {
+      "kind": "control",
+      "offset": 135,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "text",
+      "text": "  "
+    },
+    {
+      "kind": "glyph",
+      "offset": 138,
+      "value": 75,
+      "token": "{BYTE:4B}"
+    },
+    {
+      "kind": "text",
+      "text": "ン"
+    },
+    {
+      "kind": "glyph",
+      "offset": 140,
+      "value": 205,
+      "token": "{BYTE:CD}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 141,
+      "value": 67,
+      "token": "{BYTE:43}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 142,
+      "value": 107,
+      "token": "{BYTE:6B}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 143,
+      "value": 134,
+      "token": "{BYTE:86}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 144,
+      "value": 131,
+      "token": "{BYTE:83}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "glyph",
+      "offset": 146,
+      "value": 140,
+      "token": "{BYTE:8C}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 147,
+      "value": 134,
+      "token": "{BYTE:86}"
+    },
+    {
+      "kind": "control",
+      "offset": 148,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 149,
+      "value": 244,
+      "token": "{BYTE:F4}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 150,
+      "value": 4,
+      "token": "{BYTE:04}"
+    },
+    {
+      "kind": "control",
+      "offset": 151,
+      "value": 222,
+      "token": "{PAUSE:78}"
+    },
+    {
+      "kind": "control",
+      "offset": 152,
+      "value": 234,
+      "token": "{BYTE:EA}"
+    },
+    {
+      "kind": "control",
+      "offset": 153,
+      "value": 253,
+      "token": "{BYTE:FD}"
+    },
+    {
+      "kind": "control",
+      "offset": 154,
+      "value": 249,
+      "token": "{BYTE:F9}"
+    },
+    {
+      "kind": "text",
+      "text": "く"
+    },
+    {
+      "kind": "control",
+      "offset": 156,
+      "value": 251,
+      "token": "{BYTE:FB}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 157,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 158,
+      "value": 193,
+      "token": "{BYTE:C1}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 159,
+      "value": 130,
+      "token": "{BYTE:82}"
+    },
+    {
+      "kind": "control",
+      "offset": 160,
+      "value": 243,
+      "token": "{BYTE:F3}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 162,
+      "value": 245,
+      "token": "{BYTE:F5}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 163,
+      "value": 16,
+      "token": "{BYTE:10}"
+    },
+    {
+      "kind": "control",
+      "offset": 164,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 165,
+      "value": 40,
+      "token": "{BYTE:28}"
+    },
+    {
+      "kind": "control",
+      "offset": 166,
+      "value": 218,
+      "token": "{PAUSE:14}"
+    },
+    {
+      "kind": "control",
+      "offset": 167,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 168,
+      "value": 40,
+      "token": "{BYTE:28}"
+    },
+    {
+      "kind": "control",
+      "offset": 169,
+      "value": 218,
+      "token": "{PAUSE:14}"
+    },
+    {
+      "kind": "control",
+      "offset": 170,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 171,
+      "value": 40,
+      "token": "{BYTE:28}"
+    },
+    {
+      "kind": "control",
+      "offset": 172,
+      "value": 218,
+      "token": "{PAUSE:14}"
+    },
+    {
+      "kind": "control",
+      "offset": 173,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 174,
+      "value": 14,
+      "token": "{BYTE:0E}"
+    },
+    {
+      "kind": "control",
+      "offset": 175,
+      "value": 241,
+      "token": "{BYTE:F1}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 176,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "control",
+      "offset": 177,
+      "value": 236,
+      "token": "{BYTE:EC}"
+    },
+    {
+      "kind": "text",
+      "text": "お"
+    },
+    {
+      "kind": "control",
+      "offset": 179,
+      "value": 242,
+      "token": "{BYTE:F2}"
+    },
+    {
+      "kind": "text",
+      "text": "お"
+    },
+    {
+      "kind": "glyph",
+      "offset": 181,
+      "value": 27,
+      "token": "{BYTE:1B}"
+    },
+    {
+      "kind": "text",
+      "text": "ゅうがく"
+    },
+    {
+      "kind": "control",
+      "offset": 186,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 187,
+      "value": 107,
+      "token": "{BYTE:6B}"
+    },
+    {
+      "kind": "text",
+      "text": "ん"
+    },
+    {
+      "kind": "control",
+      "offset": 189,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 190,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 191,
+      "value": 7,
+      "token": "{BYTE:07}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 192,
+      "value": 21,
+      "token": "{BYTE:15}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 193,
+      "value": 40,
+      "token": "{BYTE:28}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "glyph",
+      "offset": 195,
+      "value": 80,
+      "token": "{BYTE:50}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 196,
+      "value": 66,
+      "token": "{BYTE:42}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 197,
+      "value": 180,
+      "token": "{BYTE:B4}"
+    },
+    {
+      "kind": "text",
+      "text": "ー"
+    },
+    {
+      "kind": "glyph",
+      "offset": 199,
+      "value": 80,
+      "token": "{BYTE:50}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 200,
+      "value": 111,
+      "token": "{BYTE:6F}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 201,
+      "value": 72,
+      "token": "{BYTE:48}"
+    },
+    {
+      "kind": "text",
+      "text": "ル!"
+    },
+    {
+      "kind": "control",
+      "offset": 204,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 205,
+      "value": 219,
+      "token": "{PAUSE:28}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 206,
+      "value": 4,
+      "token": "{BYTE:04}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 207,
+      "value": 35,
+      "token": "{BYTE:23}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 208,
+      "value": 25,
+      "token": "{BYTE:19}"
+    },
+    {
+      "kind": "text",
+      "text": "を"
+    },
+    {
+      "kind": "glyph",
+      "offset": 210,
+      "value": 24,
+      "token": "{BYTE:18}"
+    },
+    {
+      "kind": "text",
+      "text": "らう "
+    },
+    {
+      "kind": "glyph",
+      "offset": 214,
+      "value": 84,
+      "token": "{BYTE:54}"
+    },
+    {
+      "kind": "text",
+      "text": "ラ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 216,
+      "value": 25,
+      "token": "{BYTE:19}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 217,
+      "value": 164,
+      "token": "{BYTE:A4}"
+    },
+    {
+      "kind": "text",
+      "text": "とく"
+    },
+    {
+      "kind": "control",
+      "offset": 220,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 221,
+      "value": 199,
+      "token": "{BYTE:C7}"
+    },
+    {
+      "kind": "text",
+      "text": "ールをうば"
+    },
+    {
+      "kind": "glyph",
+      "offset": 227,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "text",
+      "text": "とっ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 230,
+      "value": 16,
+      "token": "{BYTE:10}"
+    },
+    {
+      "kind": "text",
+      "text": "!"
+    },
+    {
+      "kind": "control",
+      "offset": 232,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 233,
+      "value": 220,
+      "token": "{PAUSE:3C}"
+    },
+    {
+      "kind": "control",
+      "offset": 234,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 235,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "control",
+      "offset": 236,
+      "value": 234,
+      "token": "{BYTE:EA}"
+    },
+    {
+      "kind": "control",
+      "offset": 237,
+      "value": 253,
+      "token": "{BYTE:FD}"
+    },
+    {
+      "kind": "control",
+      "offset": 238,
+      "value": 236,
+      "token": "{BYTE:EC}"
+    },
+    {
+      "kind": "control",
+      "offset": 239,
+      "value": 255,
+      "token": "{BYTE:FF}"
+    },
+    {
+      "kind": "control",
+      "offset": 240,
+      "value": 238,
+      "token": "{BYTE:EE}"
+    },
+    {
+      "kind": "control",
+      "offset": 241,
+      "value": 250,
+      "token": "{BYTE:FA}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 242,
+      "value": 7,
+      "token": "{BYTE:07}"
+    },
+    {
+      "kind": "control",
+      "offset": 243,
+      "value": 251,
+      "token": "{BYTE:FB}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 244,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 245,
+      "value": 118,
+      "token": "{BYTE:76}"
+    },
+    {
+      "kind": "control",
+      "offset": 246,
+      "value": 243,
+      "token": "{BYTE:F3}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 248,
+      "value": 244,
+      "token": "{BYTE:F4}"
+    },
+    {
+      "kind": "text",
+      "text": "お"
+    },
+    {
+      "kind": "control",
+      "offset": 250,
+      "value": 242,
+      "token": "{BYTE:F2}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 251,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "text",
+      "text": "  "
+    },
+    {
+      "kind": "glyph",
+      "offset": 254,
+      "value": 27,
+      "token": "{BYTE:1B}"
+    },
+    {
+      "kind": "text",
+      "text": "ゅうが "
+    },
+    {
+      "kind": "glyph",
+      "offset": 259,
+      "value": 10,
+      "token": "{BYTE:0A}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 260,
+      "value": 166,
+      "token": "{BYTE:A6}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 261,
+      "value": 43,
+      "token": "{BYTE:2B}"
+    },
+    {
+      "kind": "text",
+      "text": "う"
+    },
+    {
+      "kind": "control",
+      "offset": 263,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "text",
+      "text": " とうほうがく"
+    },
+    {
+      "kind": "glyph",
+      "offset": 271,
+      "value": 4,
+      "token": "{BYTE:04}"
+    },
+    {
+      "kind": "text",
+      "text": "ん "
+    },
+    {
+      "kind": "glyph",
+      "offset": 274,
+      "value": 131,
+      "token": "{BYTE:83}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 275,
+      "value": 134,
+      "token": "{BYTE:86}"
+    },
+    {
+      "kind": "control",
+      "offset": 276,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 277,
+      "value": 244,
+      "token": "{BYTE:F4}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 278,
+      "value": 4,
+      "token": "{BYTE:04}"
+    },
+    {
+      "kind": "control",
+      "offset": 279,
+      "value": 222,
+      "token": "{PAUSE:78}"
+    },
+    {
+      "kind": "control",
+      "offset": 280,
+      "value": 234,
+      "token": "{BYTE:EA}"
+    },
+    {
+      "kind": "control",
+      "offset": 281,
+      "value": 253,
+      "token": "{BYTE:FD}"
+    },
+    {
+      "kind": "control",
+      "offset": 282,
+      "value": 241,
+      "token": "{BYTE:F1}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 283,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "control",
+      "offset": 284,
+      "value": 236,
+      "token": "{BYTE:EC}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 285,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "control",
+      "offset": 286,
+      "value": 249,
+      "token": "{BYTE:F9}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 287,
+      "value": 9,
+      "token": "{BYTE:09}"
+    },
+    {
+      "kind": "control",
+      "offset": 288,
+      "value": 251,
+      "token": "{BYTE:FB}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 289,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 290,
+      "value": 132,
+      "token": "{BYTE:84}"
+    },
+    {
+      "kind": "control",
+      "offset": 291,
+      "value": 243,
+      "token": "{BYTE:F3}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 293,
+      "value": 245,
+      "token": "{BYTE:F5}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 294,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "control",
+      "offset": 295,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 296,
+      "value": 14,
+      "token": "{BYTE:0E}"
+    },
+    {
+      "kind": "control",
+      "offset": 297,
+      "value": 242,
+      "token": "{BYTE:F2}"
+    },
+    {
+      "kind": "text",
+      "text": "おで"
+    },
+    {
+      "kind": "glyph",
+      "offset": 300,
+      "value": 16,
+      "token": "{BYTE:10}"
+    },
+    {
+      "kind": "text",
+      "text": "!"
+    },
+    {
+      "kind": "control",
+      "offset": 302,
+      "value": 219,
+      "token": "{PAUSE:28}"
+    },
+    {
+      "kind": "control",
+      "offset": 303,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 304,
+      "value": 9,
+      "token": "{BYTE:09}"
+    },
+    {
+      "kind": "text",
+      "text": " ゴール"
+    },
+    {
+      "kind": "glyph",
+      "offset": 309,
+      "value": 193,
+      "token": "{BYTE:C1}"
+    },
+    {
+      "kind": "text",
+      "text": "ン"
+    },
+    {
+      "kind": "glyph",
+      "offset": 311,
+      "value": 74,
+      "token": "{BYTE:4A}"
+    },
+    {
+      "kind": "text",
+      "text": "ン"
+    },
+    {
+      "kind": "glyph",
+      "offset": 313,
+      "value": 196,
+      "token": "{BYTE:C4}"
+    },
+    {
+      "kind": "control",
+      "offset": 314,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 315,
+      "value": 27,
+      "token": "{BYTE:1B}"
+    },
+    {
+      "kind": "text",
+      "text": "っさつ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 319,
+      "value": 25,
+      "token": "{BYTE:19}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "glyph",
+      "offset": 321,
+      "value": 82,
+      "token": "{BYTE:52}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 322,
+      "value": 66,
+      "token": "{BYTE:42}"
+    },
+    {
+      "kind": "text",
+      "text": "ン"
+    },
+    {
+      "kind": "control",
+      "offset": 324,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 325,
+      "value": 48,
+      "token": "{BYTE:30}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 326,
+      "value": 76,
+      "token": "{BYTE:4C}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 327,
+      "value": 113,
+      "token": "{BYTE:71}"
+    },
+    {
+      "kind": "text",
+      "text": "ー"
+    },
+    {
+      "kind": "glyph",
+      "offset": 329,
+      "value": 84,
+      "token": "{BYTE:54}"
+    },
+    {
+      "kind": "text",
+      "text": "!"
+    },
+    {
+      "kind": "control",
+      "offset": 331,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 332,
+      "value": 219,
+      "token": "{PAUSE:28}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 333,
+      "value": 28,
+      "token": "{BYTE:1C}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 334,
+      "value": 16,
+      "token": "{BYTE:10}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 335,
+      "value": 40,
+      "token": "{BYTE:28}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 336,
+      "value": 25,
+      "token": "{BYTE:19}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 337,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 338,
+      "value": 7,
+      "token": "{BYTE:07}"
+    },
+    {
+      "kind": "text",
+      "text": "は "
+    },
+    {
+      "kind": "glyph",
+      "offset": 341,
+      "value": 201,
+      "token": "{BYTE:C9}"
+    },
+    {
+      "kind": "text",
+      "text": "っ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 343,
+      "value": 16,
+      "token": "{BYTE:10}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 344,
+      "value": 40,
+      "token": "{BYTE:28}"
+    },
+    {
+      "kind": "text",
+      "text": "だ!"
+    },
+    {
+      "kind": "control",
+      "offset": 347,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 348,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 349,
+      "value": 9,
+      "token": "{BYTE:09}"
+    },
+    {
+      "kind": "text",
+      "text": "ー!"
+    },
+    {
+      "kind": "control",
+      "offset": 352,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 353,
+      "value": 220,
+      "token": "{PAUSE:3C}"
+    },
+    {
+      "kind": "control",
+      "offset": 354,
+      "value": 234,
+      "token": "{BYTE:EA}"
+    },
+    {
+      "kind": "control",
+      "offset": 355,
+      "value": 253,
+      "token": "{BYTE:FD}"
+    },
+    {
+      "kind": "control",
+      "offset": 356,
+      "value": 236,
+      "token": "{BYTE:EC}"
+    },
+    {
+      "kind": "control",
+      "offset": 357,
+      "value": 255,
+      "token": "{BYTE:FF}"
+    },
+    {
+      "kind": "control",
+      "offset": 358,
+      "value": 238,
+      "token": "{BYTE:EE}"
+    },
+    {
+      "kind": "control",
+      "offset": 359,
+      "value": 250,
+      "token": "{BYTE:FA}"
+    },
+    {
+      "kind": "text",
+      "text": "う"
+    },
+    {
+      "kind": "control",
+      "offset": 361,
+      "value": 251,
+      "token": "{BYTE:FB}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 362,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 363,
+      "value": 119,
+      "token": "{BYTE:77}"
+    },
+    {
+      "kind": "control",
+      "offset": 364,
+      "value": 243,
+      "token": "{BYTE:F3}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 366,
+      "value": 244,
+      "token": "{BYTE:F4}"
+    },
+    {
+      "kind": "text",
+      "text": "お"
+    },
+    {
+      "kind": "control",
+      "offset": 368,
+      "value": 242,
+      "token": "{BYTE:F2}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 369,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "text",
+      "text": "   "
+    },
+    {
+      "kind": "glyph",
+      "offset": 373,
+      "value": 32,
+      "token": "{BYTE:20}"
+    },
+    {
+      "kind": "text",
+      "text": "さ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 375,
+      "value": 7,
+      "token": "{BYTE:07}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "glyph",
+      "offset": 377,
+      "value": 16,
+      "token": "{BYTE:10}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 378,
+      "value": 43,
+      "token": "{BYTE:2B}"
+    },
+    {
+      "kind": "text",
+      "text": "う"
+    },
+    {
+      "kind": "control",
+      "offset": 380,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "glyph",
+      "offset": 382,
+      "value": 21,
+      "token": "{BYTE:15}"
+    },
+    {
+      "kind": "text",
+      "text": "ん"
+    },
+    {
+      "kind": "glyph",
+      "offset": 384,
+      "value": 6,
+      "token": "{BYTE:06}"
+    },
+    {
+      "kind": "text",
+      "text": "つ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 386,
+      "value": 10,
+      "token": "{BYTE:0A}"
+    },
+    {
+      "kind": "text",
+      "text": "う"
+    },
+    {
+      "kind": "glyph",
+      "offset": 388,
+      "value": 10,
+      "token": "{BYTE:0A}"
+    },
+    {
+      "kind": "text",
+      "text": "う "
+    },
+    {
+      "kind": "glyph",
+      "offset": 391,
+      "value": 140,
+      "token": "{BYTE:8C}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 392,
+      "value": 134,
+      "token": "{BYTE:86}"
+    },
+    {
+      "kind": "control",
+      "offset": 393,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 394,
+      "value": 244,
+      "token": "{BYTE:F4}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 395,
+      "value": 4,
+      "token": "{BYTE:04}"
+    },
+    {
+      "kind": "control",
+      "offset": 396,
+      "value": 222,
+      "token": "{PAUSE:78}"
+    },
+    {
+      "kind": "control",
+      "offset": 397,
+      "value": 234,
+      "token": "{BYTE:EA}"
+    },
+    {
+      "kind": "control",
+      "offset": 398,
+      "value": 253,
+      "token": "{BYTE:FD}"
+    },
+    {
+      "kind": "control",
+      "offset": 399,
+      "value": 241,
+      "token": "{BYTE:F1}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 400,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "control",
+      "offset": 401,
+      "value": 236,
+      "token": "{BYTE:EC}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 402,
+      "value": 4,
+      "token": "{BYTE:04}"
+    },
+    {
+      "kind": "control",
+      "offset": 403,
+      "value": 249,
+      "token": "{BYTE:F9}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 404,
+      "value": 10,
+      "token": "{BYTE:0A}"
+    },
+    {
+      "kind": "control",
+      "offset": 405,
+      "value": 251,
+      "token": "{BYTE:FB}"
+    },
+    {
+      "kind": "text",
+      "text": "う"
+    },
+    {
+      "kind": "glyph",
+      "offset": 407,
+      "value": 192,
+      "token": "{BYTE:C0}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 408,
+      "value": 162,
+      "token": "{BYTE:A2}"
+    },
+    {
+      "kind": "text",
+      "text": "ー"
+    },
+    {
+      "kind": "control",
+      "offset": 410,
+      "value": 243,
+      "token": "{BYTE:F3}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 412,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 413,
+      "value": 7,
+      "token": "{BYTE:07}"
+    },
+    {
+      "kind": "control",
+      "offset": 414,
+      "value": 242,
+      "token": "{BYTE:F2}"
+    },
+    {
+      "kind": "text",
+      "text": "お"
+    },
+    {
+      "kind": "glyph",
+      "offset": 416,
+      "value": 44,
+      "token": "{BYTE:2C}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 417,
+      "value": 6,
+      "token": "{BYTE:06}"
+    },
+    {
+      "kind": "text",
+      "text": "ば"
+    },
+    {
+      "kind": "glyph",
+      "offset": 419,
+      "value": 36,
+      "token": "{BYTE:24}"
+    },
+    {
+      "kind": "text",
+      "text": "しくん "
+    },
+    {
+      "kind": "glyph",
+      "offset": 424,
+      "value": 108,
+      "token": "{BYTE:6C}"
+    },
+    {
+      "kind": "text",
+      "text": "ン"
+    },
+    {
+      "kind": "control",
+      "offset": 426,
+      "value": 237,
+      "token": "{BYTE:ED}"
+    },
+    {
+      "kind": "text",
+      "text": "つ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 428,
+      "value": 90,
+      "token": "{BYTE:5A}"
+    },
+    {
+      "kind": "text",
+      "text": "ンドキャ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 433,
+      "value": 111,
+      "token": "{BYTE:6F}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 434,
+      "value": 81,
+      "token": "{BYTE:51}"
+    },
+    {
+      "kind": "text",
+      "text": "!"
+    },
+    {
+      "kind": "control",
+      "offset": 436,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 437,
+      "value": 219,
+      "token": "{PAUSE:28}"
+    },
+    {
+      "kind": "text",
+      "text": "さ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 439,
+      "value": 13,
+      "token": "{BYTE:0D}"
+    },
+    {
+      "kind": "text",
+      "text": "が とう"
+    },
+    {
+      "kind": "glyph",
+      "offset": 444,
+      "value": 38,
+      "token": "{BYTE:26}"
+    },
+    {
+      "kind": "text",
+      "text": "う"
+    },
+    {
+      "kind": "glyph",
+      "offset": 446,
+      "value": 25,
+      "token": "{BYTE:19}"
+    },
+    {
+      "kind": "text",
+      "text": "しゅ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 449,
+      "value": 164,
+      "token": "{BYTE:A4}"
+    },
+    {
+      "kind": "text",
+      "text": "しん"
+    },
+    {
+      "kind": "control",
+      "offset": 452,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 453,
+      "value": 182,
+      "token": "{BYTE:B6}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 454,
+      "value": 106,
+      "token": "{BYTE:6A}"
+    },
+    {
+      "kind": "text",
+      "text": "ー"
+    },
+    {
+      "kind": "glyph",
+      "offset": 456,
+      "value": 84,
+      "token": "{BYTE:54}"
+    },
+    {
+      "kind": "text",
+      "text": "スー"
+    },
+    {
+      "kind": "glyph",
+      "offset": 459,
+      "value": 205,
+      "token": "{BYTE:CD}"
+    },
+    {
+      "kind": "text",
+      "text": "ーゴールキー"
+    },
+    {
+      "kind": "glyph",
+      "offset": 466,
+      "value": 205,
+      "token": "{BYTE:CD}"
+    },
+    {
+      "kind": "text",
+      "text": "ー"
+    },
+    {
+      "kind": "control",
+      "offset": 468,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 469,
+      "value": 44,
+      "token": "{BYTE:2C}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 470,
+      "value": 6,
+      "token": "{BYTE:06}"
+    },
+    {
+      "kind": "text",
+      "text": "ば"
+    },
+    {
+      "kind": "glyph",
+      "offset": 472,
+      "value": 36,
+      "token": "{BYTE:24}"
+    },
+    {
+      "kind": "text",
+      "text": "し "
+    },
+    {
+      "kind": "glyph",
+      "offset": 475,
+      "value": 163,
+      "token": "{BYTE:A3}"
+    },
+    {
+      "kind": "text",
+      "text": "ん"
+    },
+    {
+      "kind": "glyph",
+      "offset": 477,
+      "value": 169,
+      "token": "{BYTE:A9}"
+    },
+    {
+      "kind": "text",
+      "text": "う!"
+    },
+    {
+      "kind": "control",
+      "offset": 480,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 481,
+      "value": 220,
+      "token": "{PAUSE:3C}"
+    },
+    {
+      "kind": "control",
+      "offset": 482,
+      "value": 234,
+      "token": "{BYTE:EA}"
+    },
+    {
+      "kind": "control",
+      "offset": 483,
+      "value": 253,
+      "token": "{BYTE:FD}"
+    },
+    {
+      "kind": "control",
+      "offset": 484,
+      "value": 236,
+      "token": "{BYTE:EC}"
+    },
+    {
+      "kind": "control",
+      "offset": 485,
+      "value": 255,
+      "token": "{BYTE:FF}"
+    },
+    {
+      "kind": "control",
+      "offset": 486,
+      "value": 238,
+      "token": "{BYTE:EE}"
+    },
+    {
+      "kind": "control",
+      "offset": 487,
+      "value": 250,
+      "token": "{BYTE:FA}"
+    },
+    {
+      "kind": "text",
+      "text": "さ"
+    },
+    {
+      "kind": "control",
+      "offset": 489,
+      "value": 251,
+      "token": "{BYTE:FB}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 490,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 491,
+      "value": 124,
+      "token": "{BYTE:7C}"
+    },
+    {
+      "kind": "control",
+      "offset": 492,
+      "value": 243,
+      "token": "{BYTE:F3}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 494,
+      "value": 244,
+      "token": "{BYTE:F4}"
+    },
+    {
+      "kind": "text",
+      "text": "お"
+    },
+    {
+      "kind": "control",
+      "offset": 496,
+      "value": 242,
+      "token": "{BYTE:F2}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 497,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "text",
+      "text": "  "
+    },
+    {
+      "kind": "glyph",
+      "offset": 500,
+      "value": 44,
+      "token": "{BYTE:2C}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 501,
+      "value": 6,
+      "token": "{BYTE:06}"
+    },
+    {
+      "kind": "text",
+      "text": "ば"
+    },
+    {
+      "kind": "glyph",
+      "offset": 503,
+      "value": 36,
+      "token": "{BYTE:24}"
+    },
+    {
+      "kind": "text",
+      "text": "し "
+    },
+    {
+      "kind": "glyph",
+      "offset": 506,
+      "value": 163,
+      "token": "{BYTE:A3}"
+    },
+    {
+      "kind": "text",
+      "text": "ん"
+    },
+    {
+      "kind": "glyph",
+      "offset": 508,
+      "value": 169,
+      "token": "{BYTE:A9}"
+    },
+    {
+      "kind": "text",
+      "text": "う"
+    },
+    {
+      "kind": "control",
+      "offset": 510,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "text",
+      "text": "     "
+    },
+    {
+      "kind": "glyph",
+      "offset": 516,
+      "value": 86,
+      "token": "{BYTE:56}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 517,
+      "value": 76,
+      "token": "{BYTE:4C}"
+    },
+    {
+      "kind": "text",
+      "text": "ド"
+    },
+    {
+      "kind": "glyph",
+      "offset": 519,
+      "value": 66,
+      "token": "{BYTE:42}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 520,
+      "value": 82,
+      "token": "{BYTE:52}"
+    },
+    {
+      "kind": "control",
+      "offset": 521,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "text",
+      "text": "  "
+    },
+    {
+      "kind": "glyph",
+      "offset": 524,
+      "value": 90,
+      "token": "{BYTE:5A}"
+    },
+    {
+      "kind": "text",
+      "text": "ンブル"
+    },
+    {
+      "kind": "glyph",
+      "offset": 528,
+      "value": 180,
+      "token": "{BYTE:B4}"
+    },
+    {
+      "kind": "text",
+      "text": "ー"
+    },
+    {
+      "kind": "glyph",
+      "offset": 530,
+      "value": 143,
+      "token": "{BYTE:8F}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 531,
+      "value": 145,
+      "token": "{BYTE:91}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "glyph",
+      "offset": 533,
+      "value": 135,
+      "token": "{BYTE:87}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 534,
+      "value": 139,
+      "token": "{BYTE:8B}"
+    },
+    {
+      "kind": "control",
+      "offset": 535,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 536,
+      "value": 244,
+      "token": "{BYTE:F4}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 537,
+      "value": 4,
+      "token": "{BYTE:04}"
+    },
+    {
+      "kind": "control",
+      "offset": 538,
+      "value": 222,
+      "token": "{PAUSE:78}"
+    },
+    {
+      "kind": "control",
+      "offset": 539,
+      "value": 234,
+      "token": "{BYTE:EA}"
+    },
+    {
+      "kind": "control",
+      "offset": 540,
+      "value": 253,
+      "token": "{BYTE:FD}"
+    },
+    {
+      "kind": "control",
+      "offset": 541,
+      "value": 236,
+      "token": "{BYTE:EC}"
+    },
+    {
+      "kind": "control",
+      "offset": 542,
+      "value": 255,
+      "token": "{BYTE:FF}"
+    },
+    {
+      "kind": "control",
+      "offset": 543,
+      "value": 238,
+      "token": "{BYTE:EE}"
+    },
+    {
+      "kind": "control",
+      "offset": 544,
+      "value": 251,
+      "token": "{BYTE:FB}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 545,
+      "value": 1,
+      "token": "{BYTE:01}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 546,
+      "value": 13,
+      "token": "{BYTE:0D}"
+    },
+    {
+      "kind": "control",
+      "offset": 547,
+      "value": 242,
+      "token": "{BYTE:F2}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "legacyOffset",
+      "offset": 549,
+      "value": 227,
+      "token": "{BYTE:E3}"
+    },
+    {
+      "kind": "text",
+      "text": "さ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 551,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "text",
+      "text": "だ"
+    },
+    {
+      "kind": "glyph",
+      "offset": 553,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 554,
+      "value": 25,
+      "token": "{BYTE:19}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 555,
+      "value": 19,
+      "token": "{BYTE:13}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 556,
+      "value": 7,
+      "token": "{BYTE:07}"
+    },
+    {
+      "kind": "text",
+      "text": " ブラジルユースを"
+    },
+    {
+      "kind": "glyph",
+      "offset": 566,
+      "value": 31,
+      "token": "{BYTE:1F}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 567,
+      "value": 4,
+      "token": "{BYTE:04}"
+    },
+    {
+      "kind": "text",
+      "text": "にし"
+    },
+    {
+      "kind": "control",
+      "offset": 570,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "legacyOffset",
+      "offset": 571,
+      "value": 226,
+      "token": "{BYTE:E2}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 572,
+      "value": 75,
+      "token": "{BYTE:4B}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 573,
+      "value": 111,
+      "token": "{BYTE:6F}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 574,
+      "value": 70,
+      "token": "{BYTE:46}"
+    },
+    {
+      "kind": "text",
+      "text": "ー"
+    },
+    {
+      "kind": "glyph",
+      "offset": 576,
+      "value": 14,
+      "token": "{BYTE:0E}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 577,
+      "value": 6,
+      "token": "{BYTE:06}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 578,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 579,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "text",
+      "text": "ち"
+    },
+    {
+      "kind": "glyph",
+      "offset": 581,
+      "value": 29,
+      "token": "{BYTE:1D}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 582,
+      "value": 25,
+      "token": "{BYTE:19}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "glyph",
+      "offset": 584,
+      "value": 37,
+      "token": "{BYTE:25}"
+    },
+    {
+      "kind": "text",
+      "text": "めを"
+    },
+    {
+      "kind": "glyph",
+      "offset": 587,
+      "value": 6,
+      "token": "{BYTE:06}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 588,
+      "value": 9,
+      "token": "{BYTE:09}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 589,
+      "value": 16,
+      "token": "{BYTE:10}"
+    },
+    {
+      "kind": "control",
+      "offset": 590,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 591,
+      "value": 44,
+      "token": "{BYTE:2C}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 592,
+      "value": 42,
+      "token": "{BYTE:2A}"
+    },
+    {
+      "kind": "text",
+      "text": "らが ぜんにほんユース"
+    },
+    {
+      "kind": "glyph",
+      "offset": 604,
+      "value": 25,
+      "token": "{BYTE:19}"
+    },
+    {
+      "kind": "control",
+      "offset": 605,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "legacyOffset",
+      "offset": 606,
+      "value": 227,
+      "token": "{BYTE:E3}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 607,
+      "value": 92,
+      "token": "{BYTE:5C}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 608,
+      "value": 115,
+      "token": "{BYTE:73}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 609,
+      "value": 66,
+      "token": "{BYTE:42}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 610,
+      "value": 85,
+      "token": "{BYTE:55}"
+    },
+    {
+      "kind": "text",
+      "text": "ル"
+    },
+    {
+      "kind": "glyph",
+      "offset": 612,
+      "value": 183,
+      "token": "{BYTE:B7}"
+    },
+    {
+      "kind": "text",
+      "text": "ー"
+    },
+    {
+      "kind": "glyph",
+      "offset": 614,
+      "value": 97,
+      "token": "{BYTE:61}"
+    },
+    {
+      "kind": "text",
+      "text": "が は"
+    },
+    {
+      "kind": "glyph",
+      "offset": 618,
+      "value": 166,
+      "token": "{BYTE:A6}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 619,
+      "value": 31,
+      "token": "{BYTE:1F}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 620,
+      "value": 43,
+      "token": "{BYTE:2B}"
+    },
+    {
+      "kind": "text",
+      "text": "うとし"
+    },
+    {
+      "kind": "glyph",
+      "offset": 624,
+      "value": 19,
+      "token": "{BYTE:13}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 625,
+      "value": 2,
+      "token": "{BYTE:02}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 626,
+      "value": 16,
+      "token": "{BYTE:10}"
+    },
+    {
+      "kind": "control",
+      "offset": 627,
+      "value": 252,
+      "token": "{NEW_LINE}"
+    },
+    {
+      "kind": "control",
+      "offset": 628,
+      "value": 233,
+      "token": "{BYTE:E9}"
+    },
+    {
+      "kind": "control",
+      "offset": 629,
+      "value": 218,
+      "token": "{PAUSE:14}"
+    },
+    {
+      "kind": "control",
+      "offset": 630,
+      "value": 223,
+      "token": "{PAUSE:F0}"
+    },
+    {
+      "kind": "control",
+      "offset": 631,
+      "value": 223,
+      "token": "{PAUSE:F0}"
+    },
+    {
+      "kind": "control",
+      "offset": 632,
+      "value": 244,
+      "token": "{BYTE:F4}"
+    },
+    {
+      "kind": "text",
+      "text": "お"
+    },
+    {
+      "kind": "control",
+      "offset": 634,
+      "value": 253,
+      "token": "{BYTE:FD}"
+    },
+    {
+      "kind": "control",
+      "offset": 635,
+      "value": 248,
+      "token": "{BYTE:F8}"
+    },
+    {
+      "kind": "text",
+      "text": " "
+    },
+    {
+      "kind": "control",
+      "offset": 637,
+      "value": 223,
+      "token": "{PAUSE:F0}"
+    },
+    {
+      "kind": "control",
+      "offset": 638,
+      "value": 254,
+      "token": "{BYTE:FE}"
+    },
+    {
+      "kind": "glyph",
+      "offset": 639,
+      "value": 32,
+      "token": "{BYTE:20}"
+    },
+    {
+      "kind": "text",
+      "text": "が"
+    }
+  ],
+  "instructions": [
+    {
+      "kind": "control",
+      "offset": 0,
+      "bytes": [
+        232,
+        1
+      ],
+      "opcode": 232,
+      "name": "setup",
+      "args": [
+        1
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 2,
+      "bytes": [
+        249,
+        0
+      ],
+      "opcode": 249,
+      "name": "background1",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 4,
+      "bytes": [
+        251,
+        1,
+        141
+      ],
+      "opcode": 251,
+      "name": "animation",
+      "args": [
+        1,
+        141
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 7,
+      "bytes": [
+        233
+      ],
+      "opcode": 233,
+      "name": "screenOn",
+      "args": []
+    },
+    {
+      "kind": "pause",
+      "offset": 8,
+      "bytes": [
+        223
+      ],
+      "frames": 240
+    },
+    {
+      "kind": "control",
+      "offset": 9,
+      "bytes": [
+        234
+      ],
+      "opcode": 234,
+      "name": "screenOff",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 10,
+      "bytes": [
+        237,
+        88
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        88
+      ]
+    },
+    {
+      "kind": "pause",
+      "offset": 12,
+      "bytes": [
+        220
+      ],
+      "frames": 60
+    },
+    {
+      "kind": "control",
+      "offset": 13,
+      "bytes": [
+        241,
+        1
+      ],
+      "opcode": 241,
+      "name": "window",
+      "args": [
+        1
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 15,
+      "bytes": [
+        236,
+        0
+      ],
+      "opcode": 236,
+      "name": "charlie",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 17,
+      "bytes": [
+        249,
+        1
+      ],
+      "opcode": 249,
+      "name": "background1",
+      "args": [
+        1
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 19,
+      "bytes": [
+        251,
+        1,
+        110
+      ],
+      "opcode": 251,
+      "name": "animation",
+      "args": [
+        1,
+        110
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 22,
+      "bytes": [
+        248,
+        10
+      ],
+      "opcode": 248,
+      "name": "animationEffect",
+      "args": [
+        10
+      ],
+      "lookahead": 243
+    },
+    {
+      "kind": "control",
+      "offset": 24,
+      "bytes": [
+        243,
+        0
+      ],
+      "opcode": 243,
+      "name": "palette",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 26,
+      "bytes": [
+        245,
+        0
+      ],
+      "opcode": 245,
+      "name": "effect",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 28,
+      "bytes": [
+        237,
+        104
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        104
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 30,
+      "bytes": [
+        242,
+        5
+      ],
+      "opcode": 242,
+      "name": "textSpeed",
+      "args": [
+        5
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 32,
+      "bytes": [
+        26,
+        12,
+        41,
+        47,
+        121
+      ],
+      "text": "はしるっ!"
+    },
+    {
+      "kind": "pause",
+      "offset": 37,
+      "bytes": [
+        220
+      ],
+      "frames": 60
+    },
+    {
+      "kind": "text",
+      "offset": 38,
+      "bytes": [
+        0,
+        197,
+        103,
+        186,
+        105,
+        184,
+        125,
+        105,
+        45,
+        34,
+        165,
+        12
+      ],
+      "text": " ブラジルゴールをめざし"
+    },
+    {
+      "kind": "control",
+      "offset": 50,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 51,
+      "bytes": [
+        168,
+        46,
+        22,
+        30,
+        46,
+        101,
+        125,
+        77,
+        0,
+        71,
+        112,
+        207,
+        83,
+        110
+      ],
+      "text": "ぜんにほんユース キャプテン"
+    },
+    {
+      "kind": "control",
+      "offset": 65,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 66,
+      "bytes": [
+        5,
+        5,
+        169,
+        39,
+        0,
+        18,
+        175,
+        11,
+        8,
+        46,
+        160
+      ],
+      "text": "おお{A9}ら つばさくんが"
+    },
+    {
+      "kind": "control",
+      "offset": 77,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 78,
+      "bytes": [
+        194,
+        104,
+        197,
+        105,
+        173,
+        0,
+        17,
+        49,
+        3,
+        5,
+        3,
+        20,
+        47,
+        200,
+        170,
+        121
+      ],
+      "text": "ドリブルで ちゅうおうとっぱだ!"
+    },
+    {
+      "kind": "control",
+      "offset": 94,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "pause",
+      "offset": 95,
+      "bytes": [
+        220
+      ],
+      "frames": 60
+    },
+    {
+      "kind": "control",
+      "offset": 96,
+      "bytes": [
+        234
+      ],
+      "opcode": 234,
+      "name": "screenOff",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 97,
+      "bytes": [
+        253
+      ],
+      "opcode": 253,
+      "name": "clearText",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 98,
+      "bytes": [
+        232,
+        1
+      ],
+      "opcode": 232,
+      "name": "setup",
+      "args": [
+        1
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 100,
+      "bytes": [
+        236,
+        255
+      ],
+      "opcode": 236,
+      "name": "charlie",
+      "args": [
+        255
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 102,
+      "bytes": [
+        238
+      ],
+      "opcode": 238,
+      "name": "clearAll",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 103,
+      "bytes": [
+        250,
+        3
+      ],
+      "opcode": 250,
+      "name": "background2",
+      "args": [
+        3
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 105,
+      "bytes": [
+        251,
+        1,
+        117
+      ],
+      "opcode": 251,
+      "name": "animation",
+      "args": [
+        1,
+        117
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 108,
+      "bytes": [
+        243,
+        0
+      ],
+      "opcode": 243,
+      "name": "palette",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 110,
+      "bytes": [
+        244,
+        5
+      ],
+      "opcode": 244,
+      "name": "special",
+      "args": [
+        5
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 112,
+      "bytes": [
+        242,
+        1
+      ],
+      "opcode": 242,
+      "name": "textSpeed",
+      "args": [
+        1
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 114,
+      "bytes": [
+        0,
+        0,
+        0,
+        5,
+        5,
+        169,
+        39,
+        0,
+        18,
+        175,
+        11
+      ],
+      "text": "   おお{A9}ら つばさ"
+    },
+    {
+      "kind": "control",
+      "offset": 125,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 126,
+      "bytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        197,
+        103,
+        186,
+        105
+      ],
+      "text": "     ブラジル"
+    },
+    {
+      "kind": "control",
+      "offset": 135,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 136,
+      "bytes": [
+        0,
+        0,
+        75,
+        110,
+        205,
+        67,
+        107,
+        134,
+        131,
+        0,
+        140,
+        134
+      ],
+      "text": "  {4B}ン{CD}{43}{6B}{86}{83} {8C}{86}"
+    },
+    {
+      "kind": "control",
+      "offset": 148,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 149,
+      "bytes": [
+        244,
+        4
+      ],
+      "opcode": 244,
+      "name": "special",
+      "args": [
+        4
+      ]
+    },
+    {
+      "kind": "pause",
+      "offset": 151,
+      "bytes": [
+        222
+      ],
+      "frames": 120
+    },
+    {
+      "kind": "control",
+      "offset": 152,
+      "bytes": [
+        234
+      ],
+      "opcode": 234,
+      "name": "screenOff",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 153,
+      "bytes": [
+        253
+      ],
+      "opcode": 253,
+      "name": "clearText",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 154,
+      "bytes": [
+        249,
+        8
+      ],
+      "opcode": 249,
+      "name": "background1",
+      "args": [
+        8
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 156,
+      "bytes": [
+        251,
+        2,
+        193,
+        130
+      ],
+      "opcode": 251,
+      "name": "animation",
+      "args": [
+        2,
+        193,
+        130
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 160,
+      "bytes": [
+        243,
+        0
+      ],
+      "opcode": 243,
+      "name": "palette",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 162,
+      "bytes": [
+        245,
+        16
+      ],
+      "opcode": 245,
+      "name": "effect",
+      "args": [
+        16
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 164,
+      "bytes": [
+        237,
+        40
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        40
+      ]
+    },
+    {
+      "kind": "pause",
+      "offset": 166,
+      "bytes": [
+        218
+      ],
+      "frames": 20
+    },
+    {
+      "kind": "control",
+      "offset": 167,
+      "bytes": [
+        237,
+        40
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        40
+      ]
+    },
+    {
+      "kind": "pause",
+      "offset": 169,
+      "bytes": [
+        218
+      ],
+      "frames": 20
+    },
+    {
+      "kind": "control",
+      "offset": 170,
+      "bytes": [
+        237,
+        40
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        40
+      ]
+    },
+    {
+      "kind": "pause",
+      "offset": 172,
+      "bytes": [
+        218
+      ],
+      "frames": 20
+    },
+    {
+      "kind": "control",
+      "offset": 173,
+      "bytes": [
+        237,
+        14
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        14
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 175,
+      "bytes": [
+        241,
+        1
+      ],
+      "opcode": 241,
+      "name": "window",
+      "args": [
+        1
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 177,
+      "bytes": [
+        236,
+        5
+      ],
+      "opcode": 236,
+      "name": "charlie",
+      "args": [
+        5
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 179,
+      "bytes": [
+        242,
+        5
+      ],
+      "opcode": 242,
+      "name": "textSpeed",
+      "args": [
+        5
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 181,
+      "bytes": [
+        27,
+        49,
+        3,
+        160,
+        8
+      ],
+      "text": "{1B}ゅうがく"
+    },
+    {
+      "kind": "control",
+      "offset": 186,
+      "bytes": [
+        237,
+        107
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        107
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 188,
+      "bytes": [
+        46
+      ],
+      "text": "ん"
+    },
+    {
+      "kind": "control",
+      "offset": 189,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 190,
+      "bytes": [
+        2,
+        7,
+        21,
+        40,
+        0,
+        80,
+        66,
+        180,
+        125,
+        80,
+        111,
+        72,
+        105,
+        121
+      ],
+      "text": "{02}{07}{15}{28} {50}{42}{B4}ー{50}{6F}{48}ル!"
+    },
+    {
+      "kind": "control",
+      "offset": 204,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "pause",
+      "offset": 205,
+      "bytes": [
+        219
+      ],
+      "frames": 40
+    },
+    {
+      "kind": "text",
+      "offset": 206,
+      "bytes": [
+        4,
+        35,
+        25,
+        45,
+        24,
+        39,
+        3,
+        0,
+        84,
+        103,
+        25,
+        164,
+        20,
+        8
+      ],
+      "text": "{04}{23}{19}を{18}らう {54}ラ{19}{A4}とく"
+    },
+    {
+      "kind": "control",
+      "offset": 220,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 221,
+      "bytes": [
+        199,
+        125,
+        105,
+        45,
+        3,
+        175,
+        2,
+        20,
+        47,
+        16,
+        121
+      ],
+      "text": "{C7}ールをうば{02}とっ{10}!"
+    },
+    {
+      "kind": "control",
+      "offset": 232,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "pause",
+      "offset": 233,
+      "bytes": [
+        220
+      ],
+      "frames": 60
+    },
+    {
+      "kind": "control",
+      "offset": 234,
+      "bytes": [
+        237,
+        2
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        2
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 236,
+      "bytes": [
+        234
+      ],
+      "opcode": 234,
+      "name": "screenOff",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 237,
+      "bytes": [
+        253
+      ],
+      "opcode": 253,
+      "name": "clearText",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 238,
+      "bytes": [
+        236,
+        255
+      ],
+      "opcode": 236,
+      "name": "charlie",
+      "args": [
+        255
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 240,
+      "bytes": [
+        238
+      ],
+      "opcode": 238,
+      "name": "clearAll",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 241,
+      "bytes": [
+        250,
+        7
+      ],
+      "opcode": 250,
+      "name": "background2",
+      "args": [
+        7
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 243,
+      "bytes": [
+        251,
+        1,
+        118
+      ],
+      "opcode": 251,
+      "name": "animation",
+      "args": [
+        1,
+        118
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 246,
+      "bytes": [
+        243,
+        0
+      ],
+      "opcode": 243,
+      "name": "palette",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 248,
+      "bytes": [
+        244,
+        5
+      ],
+      "opcode": 244,
+      "name": "special",
+      "args": [
+        5
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 250,
+      "bytes": [
+        242,
+        2
+      ],
+      "opcode": 242,
+      "name": "textSpeed",
+      "args": [
+        2
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 252,
+      "bytes": [
+        0,
+        0,
+        27,
+        49,
+        3,
+        160,
+        0,
+        10,
+        166,
+        43,
+        3
+      ],
+      "text": "  {1B}ゅうが {0A}{A6}{2B}う"
+    },
+    {
+      "kind": "control",
+      "offset": 263,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 264,
+      "bytes": [
+        0,
+        20,
+        3,
+        30,
+        3,
+        160,
+        8,
+        4,
+        46,
+        0,
+        131,
+        134
+      ],
+      "text": " とうほうがく{04}ん {83}{86}"
+    },
+    {
+      "kind": "control",
+      "offset": 276,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 277,
+      "bytes": [
+        244,
+        4
+      ],
+      "opcode": 244,
+      "name": "special",
+      "args": [
+        4
+      ]
+    },
+    {
+      "kind": "pause",
+      "offset": 279,
+      "bytes": [
+        222
+      ],
+      "frames": 120
+    },
+    {
+      "kind": "control",
+      "offset": 280,
+      "bytes": [
+        234
+      ],
+      "opcode": 234,
+      "name": "screenOff",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 281,
+      "bytes": [
+        253
+      ],
+      "opcode": 253,
+      "name": "clearText",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 282,
+      "bytes": [
+        241,
+        1
+      ],
+      "opcode": 241,
+      "name": "window",
+      "args": [
+        1
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 284,
+      "bytes": [
+        236,
+        2
+      ],
+      "opcode": 236,
+      "name": "charlie",
+      "args": [
+        2
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 286,
+      "bytes": [
+        249,
+        9
+      ],
+      "opcode": 249,
+      "name": "background1",
+      "args": [
+        9
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 288,
+      "bytes": [
+        251,
+        1,
+        132
+      ],
+      "opcode": 251,
+      "name": "animation",
+      "args": [
+        1,
+        132
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 291,
+      "bytes": [
+        243,
+        0
+      ],
+      "opcode": 243,
+      "name": "palette",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 293,
+      "bytes": [
+        245,
+        1
+      ],
+      "opcode": 245,
+      "name": "effect",
+      "args": [
+        1
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 295,
+      "bytes": [
+        237,
+        14
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        14
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 297,
+      "bytes": [
+        242,
+        5
+      ],
+      "opcode": 242,
+      "name": "textSpeed",
+      "args": [
+        5
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 299,
+      "bytes": [
+        173,
+        16,
+        121
+      ],
+      "text": "で{10}!"
+    },
+    {
+      "kind": "pause",
+      "offset": 302,
+      "bytes": [
+        219
+      ],
+      "frames": 40
+    },
+    {
+      "kind": "control",
+      "offset": 303,
+      "bytes": [
+        237,
+        9
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        9
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 305,
+      "bytes": [
+        0,
+        184,
+        125,
+        105,
+        193,
+        110,
+        74,
+        110,
+        196
+      ],
+      "text": " ゴール{C1}ン{4A}ン{C4}"
+    },
+    {
+      "kind": "control",
+      "offset": 314,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 315,
+      "bytes": [
+        27,
+        47,
+        11,
+        18,
+        25,
+        0,
+        82,
+        66,
+        110
+      ],
+      "text": "{1B}っさつ{19} {52}{42}ン"
+    },
+    {
+      "kind": "control",
+      "offset": 324,
+      "bytes": [
+        237,
+        48
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        48
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 326,
+      "bytes": [
+        76,
+        113,
+        125,
+        84,
+        121
+      ],
+      "text": "{4C}{71}ー{54}!"
+    },
+    {
+      "kind": "control",
+      "offset": 331,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "pause",
+      "offset": 332,
+      "bytes": [
+        219
+      ],
+      "frames": 40
+    },
+    {
+      "kind": "text",
+      "offset": 333,
+      "bytes": [
+        28,
+        16,
+        40,
+        25,
+        2,
+        7,
+        26,
+        0,
+        201,
+        47,
+        16,
+        40,
+        170,
+        121
+      ],
+      "text": "{1C}{10}{28}{19}{02}{07}は {C9}っ{10}{28}だ!"
+    },
+    {
+      "kind": "control",
+      "offset": 347,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 348,
+      "bytes": [
+        2,
+        9,
+        125,
+        121
+      ],
+      "text": "{02}{09}ー!"
+    },
+    {
+      "kind": "control",
+      "offset": 352,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "pause",
+      "offset": 353,
+      "bytes": [
+        220
+      ],
+      "frames": 60
+    },
+    {
+      "kind": "control",
+      "offset": 354,
+      "bytes": [
+        234
+      ],
+      "opcode": 234,
+      "name": "screenOff",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 355,
+      "bytes": [
+        253
+      ],
+      "opcode": 253,
+      "name": "clearText",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 356,
+      "bytes": [
+        236,
+        255
+      ],
+      "opcode": 236,
+      "name": "charlie",
+      "args": [
+        255
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 358,
+      "bytes": [
+        238
+      ],
+      "opcode": 238,
+      "name": "clearAll",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 359,
+      "bytes": [
+        250,
+        3
+      ],
+      "opcode": 250,
+      "name": "background2",
+      "args": [
+        3
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 361,
+      "bytes": [
+        251,
+        1,
+        119
+      ],
+      "opcode": 251,
+      "name": "animation",
+      "args": [
+        1,
+        119
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 364,
+      "bytes": [
+        243,
+        0
+      ],
+      "opcode": 243,
+      "name": "palette",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 366,
+      "bytes": [
+        244,
+        5
+      ],
+      "opcode": 244,
+      "name": "special",
+      "args": [
+        5
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 368,
+      "bytes": [
+        242,
+        2
+      ],
+      "opcode": 242,
+      "name": "textSpeed",
+      "args": [
+        2
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 370,
+      "bytes": [
+        0,
+        0,
+        0,
+        32,
+        11,
+        7,
+        0,
+        16,
+        43,
+        3
+      ],
+      "text": "   {20}さ{07} {10}{2B}う"
+    },
+    {
+      "kind": "control",
+      "offset": 380,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 381,
+      "bytes": [
+        0,
+        21,
+        46,
+        6,
+        18,
+        10,
+        3,
+        10,
+        3,
+        0,
+        140,
+        134
+      ],
+      "text": " {15}ん{06}つ{0A}う{0A}う {8C}{86}"
+    },
+    {
+      "kind": "control",
+      "offset": 393,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 394,
+      "bytes": [
+        244,
+        4
+      ],
+      "opcode": 244,
+      "name": "special",
+      "args": [
+        4
+      ]
+    },
+    {
+      "kind": "pause",
+      "offset": 396,
+      "bytes": [
+        222
+      ],
+      "frames": 120
+    },
+    {
+      "kind": "control",
+      "offset": 397,
+      "bytes": [
+        234
+      ],
+      "opcode": 234,
+      "name": "screenOff",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 398,
+      "bytes": [
+        253
+      ],
+      "opcode": 253,
+      "name": "clearText",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 399,
+      "bytes": [
+        241,
+        1
+      ],
+      "opcode": 241,
+      "name": "window",
+      "args": [
+        1
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 401,
+      "bytes": [
+        236,
+        4
+      ],
+      "opcode": 236,
+      "name": "charlie",
+      "args": [
+        4
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 403,
+      "bytes": [
+        249,
+        10
+      ],
+      "opcode": 249,
+      "name": "background1",
+      "args": [
+        10
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 405,
+      "bytes": [
+        251,
+        3,
+        192,
+        162,
+        125
+      ],
+      "opcode": 251,
+      "name": "animation",
+      "args": [
+        3,
+        192,
+        162,
+        125
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 410,
+      "bytes": [
+        243,
+        0
+      ],
+      "opcode": 243,
+      "name": "palette",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 412,
+      "bytes": [
+        237,
+        7
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        7
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 414,
+      "bytes": [
+        242,
+        5
+      ],
+      "opcode": 242,
+      "name": "textSpeed",
+      "args": [
+        5
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 416,
+      "bytes": [
+        44,
+        6,
+        175,
+        36,
+        12,
+        8,
+        46,
+        0,
+        108,
+        110
+      ],
+      "text": "{2C}{06}ば{24}しくん {6C}ン"
+    },
+    {
+      "kind": "control",
+      "offset": 426,
+      "bytes": [
+        237,
+        18
+      ],
+      "opcode": 237,
+      "name": "sound",
+      "args": [
+        18
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 428,
+      "bytes": [
+        90,
+        110,
+        194,
+        71,
+        112,
+        111,
+        81,
+        121
+      ],
+      "text": "{5A}ンドキャ{6F}{51}!"
+    },
+    {
+      "kind": "control",
+      "offset": 436,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "pause",
+      "offset": 437,
+      "bytes": [
+        219
+      ],
+      "frames": 40
+    },
+    {
+      "kind": "text",
+      "offset": 438,
+      "bytes": [
+        11,
+        13,
+        160,
+        0,
+        20,
+        3,
+        38,
+        3,
+        25,
+        12,
+        49,
+        164,
+        12,
+        46
+      ],
+      "text": "さ{0D}が とう{26}う{19}しゅ{A4}しん"
+    },
+    {
+      "kind": "control",
+      "offset": 452,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 453,
+      "bytes": [
+        182,
+        106,
+        125,
+        84,
+        77,
+        125,
+        205,
+        125,
+        184,
+        125,
+        105,
+        71,
+        125,
+        205,
+        125
+      ],
+      "text": "{B6}{6A}ー{54}スー{CD}ーゴールキー{CD}ー"
+    },
+    {
+      "kind": "control",
+      "offset": 468,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 469,
+      "bytes": [
+        44,
+        6,
+        175,
+        36,
+        12,
+        0,
+        163,
+        46,
+        169,
+        3,
+        121
+      ],
+      "text": "{2C}{06}ば{24}し {A3}ん{A9}う!"
+    },
+    {
+      "kind": "control",
+      "offset": 480,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "pause",
+      "offset": 481,
+      "bytes": [
+        220
+      ],
+      "frames": 60
+    },
+    {
+      "kind": "control",
+      "offset": 482,
+      "bytes": [
+        234
+      ],
+      "opcode": 234,
+      "name": "screenOff",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 483,
+      "bytes": [
+        253
+      ],
+      "opcode": 253,
+      "name": "clearText",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 484,
+      "bytes": [
+        236,
+        255
+      ],
+      "opcode": 236,
+      "name": "charlie",
+      "args": [
+        255
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 486,
+      "bytes": [
+        238
+      ],
+      "opcode": 238,
+      "name": "clearAll",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 487,
+      "bytes": [
+        250,
+        11
+      ],
+      "opcode": 250,
+      "name": "background2",
+      "args": [
+        11
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 489,
+      "bytes": [
+        251,
+        1,
+        124
+      ],
+      "opcode": 251,
+      "name": "animation",
+      "args": [
+        1,
+        124
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 492,
+      "bytes": [
+        243,
+        0
+      ],
+      "opcode": 243,
+      "name": "palette",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 494,
+      "bytes": [
+        244,
+        5
+      ],
+      "opcode": 244,
+      "name": "special",
+      "args": [
+        5
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 496,
+      "bytes": [
+        242,
+        1
+      ],
+      "opcode": 242,
+      "name": "textSpeed",
+      "args": [
+        1
+      ]
+    },
+    {
+      "kind": "text",
+      "offset": 498,
+      "bytes": [
+        0,
+        0,
+        44,
+        6,
+        175,
+        36,
+        12,
+        0,
+        163,
+        46,
+        169,
+        3
+      ],
+      "text": "  {2C}{06}ば{24}し {A3}ん{A9}う"
+    },
+    {
+      "kind": "control",
+      "offset": 510,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 511,
+      "bytes": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        86,
+        76,
+        194,
+        66,
+        82
+      ],
+      "text": "     {56}{4C}ド{42}{52}"
+    },
+    {
+      "kind": "control",
+      "offset": 521,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 522,
+      "bytes": [
+        0,
+        0,
+        90,
+        110,
+        197,
+        105,
+        180,
+        125,
+        143,
+        145,
+        0,
+        135,
+        139
+      ],
+      "text": "  {5A}ンブル{B4}ー{8F}{91} {87}{8B}"
+    },
+    {
+      "kind": "control",
+      "offset": 535,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 536,
+      "bytes": [
+        244,
+        4
+      ],
+      "opcode": 244,
+      "name": "special",
+      "args": [
+        4
+      ]
+    },
+    {
+      "kind": "pause",
+      "offset": 538,
+      "bytes": [
+        222
+      ],
+      "frames": 120
+    },
+    {
+      "kind": "control",
+      "offset": 539,
+      "bytes": [
+        234
+      ],
+      "opcode": 234,
+      "name": "screenOff",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 540,
+      "bytes": [
+        253
+      ],
+      "opcode": 253,
+      "name": "clearText",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 541,
+      "bytes": [
+        236,
+        255
+      ],
+      "opcode": 236,
+      "name": "charlie",
+      "args": [
+        255
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 543,
+      "bytes": [
+        238
+      ],
+      "opcode": 238,
+      "name": "clearAll",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 544,
+      "bytes": [
+        251,
+        1,
+        13
+      ],
+      "opcode": 251,
+      "name": "animation",
+      "args": [
+        1,
+        13
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 547,
+      "bytes": [
+        242,
+        0
+      ],
+      "opcode": 242,
+      "name": "textSpeed",
+      "args": [
+        0
+      ]
+    },
+    {
+      "kind": "legacyOffset",
+      "offset": 549,
+      "bytes": [
+        227
+      ],
+      "amount": 4
+    },
+    {
+      "kind": "text",
+      "offset": 550,
+      "bytes": [
+        11,
+        2,
+        170,
+        2,
+        25,
+        19,
+        7,
+        0,
+        197,
+        103,
+        186,
+        105,
+        101,
+        125,
+        77,
+        45,
+        31,
+        4,
+        22,
+        12
+      ],
+      "text": "さ{02}だ{02}{19}{13}{07} ブラジルユースを{1F}{04}にし"
+    },
+    {
+      "kind": "control",
+      "offset": 570,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "legacyOffset",
+      "offset": 571,
+      "bytes": [
+        226
+      ],
+      "amount": 3
+    },
+    {
+      "kind": "text",
+      "offset": 572,
+      "bytes": [
+        75,
+        111,
+        70,
+        125,
+        14,
+        6,
+        2,
+        2,
+        17,
+        29,
+        25,
+        0,
+        37,
+        34,
+        45,
+        6,
+        9,
+        16
+      ],
+      "text": "{4B}{6F}{46}ー{0E}{06}{02}{02}ち{1D}{19} {25}めを{06}{09}{10}"
+    },
+    {
+      "kind": "control",
+      "offset": 590,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "text",
+      "offset": 591,
+      "bytes": [
+        44,
+        42,
+        39,
+        160,
+        0,
+        168,
+        46,
+        22,
+        30,
+        46,
+        101,
+        125,
+        77,
+        25
+      ],
+      "text": "{2C}{2A}らが ぜんにほんユース{19}"
+    },
+    {
+      "kind": "control",
+      "offset": 605,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "legacyOffset",
+      "offset": 606,
+      "bytes": [
+        227
+      ],
+      "amount": 4
+    },
+    {
+      "kind": "text",
+      "offset": 607,
+      "bytes": [
+        92,
+        115,
+        66,
+        85,
+        105,
+        183,
+        125,
+        97,
+        160,
+        0,
+        26,
+        166,
+        31,
+        43,
+        3,
+        20,
+        12,
+        19,
+        2,
+        16
+      ],
+      "text": "{5C}{73}{42}{55}ル{B7}ー{61}が は{A6}{1F}{2B}うとし{13}{02}{10}"
+    },
+    {
+      "kind": "control",
+      "offset": 627,
+      "bytes": [
+        252
+      ],
+      "opcode": 252,
+      "name": "newLine",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 628,
+      "bytes": [
+        233
+      ],
+      "opcode": 233,
+      "name": "screenOn",
+      "args": []
+    },
+    {
+      "kind": "pause",
+      "offset": 629,
+      "bytes": [
+        218
+      ],
+      "frames": 20
+    },
+    {
+      "kind": "pause",
+      "offset": 630,
+      "bytes": [
+        223
+      ],
+      "frames": 240
+    },
+    {
+      "kind": "pause",
+      "offset": 631,
+      "bytes": [
+        223
+      ],
+      "frames": 240
+    },
+    {
+      "kind": "control",
+      "offset": 632,
+      "bytes": [
+        244,
+        5
+      ],
+      "opcode": 244,
+      "name": "special",
+      "args": [
+        5
+      ]
+    },
+    {
+      "kind": "control",
+      "offset": 634,
+      "bytes": [
+        253
+      ],
+      "opcode": 253,
+      "name": "clearText",
+      "args": []
+    },
+    {
+      "kind": "control",
+      "offset": 635,
+      "bytes": [
+        248,
+        0
+      ],
+      "opcode": 248,
+      "name": "animationEffect",
+      "args": [
+        0
+      ],
+      "lookahead": 223
+    },
+    {
+      "kind": "pause",
+      "offset": 637,
+      "bytes": [
+        223
+      ],
+      "frames": 240
+    },
+    {
+      "kind": "control",
+      "offset": 638,
+      "bytes": [
+        254,
+        32,
+        160
+      ],
+      "opcode": 254,
+      "name": "jump",
+      "args": [
+        32,
+        160
+      ]
+    }
+  ]
+}
