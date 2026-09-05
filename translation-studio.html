@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="足球小將 II 本機繁體中文翻譯工作室。逐條校對、儲存草稿與交換翻譯檔，不使用外部 AI 或 API。" />
+    <title>翻譯工作室 · 足球小將 II</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#editor-heading">跳至翻譯編輯區</a>
+    <header class="masthead page-width">
+      <a class="back-link" href="./">← 返回遊戲首頁</a>
+      <span class="privacy-badge"><span aria-hidden="true">●</span> 本機編輯・無外部 AI / API</span>
+    </header>
+
+    <main class="page-width">
+      <section class="intro" aria-labelledby="page-title">
+        <div>
+          <p class="eyebrow">CAPTAIN TSUBASA II / LOCALIZATION STUDIO</p>
+          <h1 id="page-title">讓每一句，都有溫度。</h1>
+          <p class="intro-copy">足球小將 II・繁體中文翻譯工作室</p>
+          <p class="muted">對照原文、慢慢校對。你的文字留在本機，原始 ROM 不會被改寫。</p>
+        </div>
+        <div class="locale-card"><span>翻譯語言</span><strong>繁體中文</strong><small>日本語 → zh-Hant</small></div>
+      </section>
+
+      <section class="progress-card" aria-labelledby="progress-heading">
+        <div class="progress-title"><h2 id="progress-heading">文字在地化進度</h2><strong id="completion">—</strong></div>
+        <progress id="progress" max="1" value="0" aria-label="已填寫譯文比例"></progress>
+        <div class="metrics">
+          <span>全部字串 <strong id="total-count">—</strong></span>
+          <span>已填譯文 <strong id="translated-count">—</strong></span>
+          <span>尚未翻譯 <strong id="empty-count">—</strong></span>
+          <span>本次已校對 <strong id="reviewed-count">—</strong></span>
+        </div>
+        <p class="fine-print">進度只代表目錄內的譯文填寫比例，不代表全遊戲涵蓋、相容性驗證或可正式發行。校對標記只保留於本次開啟頁面，不寫入交換檔或草稿。</p>
+      </section>
+
+      <div class="toolbar" aria-label="草稿與檔案操作">
+        <div class="save-indicator"><span id="save-dot" class="save-dot" aria-hidden="true"></span><span id="save-state">正在載入目錄…</span></div>
+        <div class="toolbar-actions">
+          <button id="import-button" type="button" disabled>匯入 JSON</button>
+          <button id="export-button" type="button" disabled>匯出完整 JSON</button>
+          <button id="save-button" class="primary" type="button" disabled>儲存本機草稿</button>
+        </div>
+        <input id="import-file" type="file" accept=".json,application/json" hidden />
+      </div>
+      <p id="notification" class="notification" role="status" aria-live="polite" aria-atomic="true">正在讀取遊戲字串目錄。</p>
+      <div id="load-error" class="notice danger" hidden>
+        <h2>無法開啟字串目錄</h2>
+        <p id="load-error-text"></p>
+        <p>需要可信任的遊戲目錄才能核對 ROM 身分與原文；不能以匯入檔取代基準目錄。</p>
+        <button id="retry-button" type="button">重新載入目錄</button>
+      </div>
+      <div id="external-draft" class="notice" hidden>
+        <p>其他分頁已變更本機草稿。目前編輯內容未被覆蓋。重新讀取前會再次驗證 ROM 與原文。</p>
+        <button id="reload-draft" type="button">讀取最新本機草稿</button>
+      </div>
+
+      <fieldset id="filters" class="filters" disabled>
+        <legend class="sr-only">搜尋與篩選字串</legend>
+        <div class="search-field"><label for="search">搜尋字串</label><input id="search" type="search" placeholder="搜尋原文、譯文、備註或 ID" maxlength="256" autocomplete="off" /></div>
+        <div><label for="category">分類</label><select id="category"><option value="">所有分類</option></select></div>
+        <div><label for="review-filter">翻譯狀態</label><select id="review-filter"><option value="all">所有狀態</option><option value="empty">尚未翻譯</option><option value="pending">待校對</option><option value="reviewed">本次已校對</option></select></div>
+        <button id="clear-filters" class="quiet" type="button">清除篩選</button>
+      </fieldset>
+
+      <div class="workspace" id="workspace" aria-busy="true">
+        <section class="catalog-panel panel" aria-labelledby="catalog-heading">
+          <div class="panel-heading"><h2 id="catalog-heading">字串目錄</h2><span id="result-count" class="muted">等待載入</span></div>
+          <p class="list-help">每頁最多 40 條・ID 固定，不因排序改變</p>
+          <ul id="entry-list" class="entry-list" aria-label="選擇要編輯的字串"></ul>
+          <p id="empty-results" class="empty-state" hidden>沒有符合條件的字串。試試其他關鍵字，或清除篩選。</p>
+          <nav class="pagination" aria-label="字串分頁">
+            <button id="previous-page" type="button" aria-label="上一頁字串" disabled>← 上一頁</button>
+            <span id="page-label">0 / 0</span>
+            <button id="next-page" type="button" aria-label="下一頁字串" disabled>下一頁 →</button>
+          </nav>
+        </section>
+
+        <section class="editor-panel panel" aria-labelledby="editor-heading">
+          <div class="panel-heading"><h2 id="editor-heading" tabindex="-1">逐句編輯</h2><span id="entry-state" class="state-pill">尚未選取</span></div>
+          <p id="editor-empty" class="empty-state">選擇一條字串，開始對照與翻譯。</p>
+          <div id="editor-content" hidden>
+            <dl class="entry-meta"><div><dt>固定 ID</dt><dd id="entry-id"></dd></div><div><dt>分類</dt><dd id="entry-category"></dd></div></dl>
+            <div class="field-header"><h3 id="source-label">日文原文</h3><span class="muted">唯讀・完整假名</span></div>
+            <div id="source-text" class="source-text" lang="ja" aria-labelledby="source-label" tabindex="0"></div>
+            <div class="field-header"><label for="translation">繁體中文譯文</label><span id="translation-length" class="muted">0 / 16,384</span></div>
+            <textarea id="translation" rows="6" maxlength="16384" lang="zh-Hant" placeholder="在這裡寫下你的翻譯…" aria-describedby="translation-help translation-length" spellcheck="false"></textarea>
+            <p id="translation-help" class="fine-print">保留需要的換行與原文控制標記。空白譯文視為尚未翻譯；預覽不驗證遊戲內排版或控制碼。</p>
+            <label class="notes-label" for="notes">翻譯備註 <span class="muted">（選填）</span></label>
+            <textarea id="notes" class="notes-input" rows="2" maxlength="4096" placeholder="用語、上下文，或需要再確認的地方" aria-describedby="notes-help"></textarea>
+            <p id="notes-help" class="fine-print">最多 4,096 字元；備註會包含於草稿與匯出檔。</p>
+            <label class="review-check"><input id="review-check" type="checkbox" /><span>本次已校對這條譯文</span></label>
+
+            <section class="preview" aria-labelledby="preview-heading">
+              <div class="field-header"><h3 id="preview-heading">高解析文字預覽</h3><span id="preview-kind">原文參考</span></div>
+              <p id="preview-text" class="preview-text" lang="ja"></p>
+              <p class="fine-print">直接使用裝置上的高解析中日文字型，不是 NES 點陣字庫或遊戲畫面擷取；實際字型依裝置而異。</p>
+            </section>
+          </div>
+        </section>
+      </div>
+
+      <section class="information-grid" aria-label="使用說明">
+        <article class="notice"><h2>儲存之後，如何套用？</h2><p>僅按「儲存本機草稿」才會寫入此網站的 localStorage；匯入與匯出不會自動儲存。請定期匯出完整 JSON 備份，瀏覽器清除資料後本機草稿可能消失。</p><p>遊戲端需接上同源 localStorage 同步並核對 ROM 與原文；接入後可在下一次文字事件套用新譯文，不會立即重繪已顯示的對話。本頁只負責編輯，並不保證遊戲端已接入。</p></article>
+        <article class="notice"><h2>能力數值</h2><p class="unavailable">能力數值尚未確認，未提供可寫入欄位</p><p>交換檔保留空的 values 陣列；這裡不推測球員能力、位址或數值。</p></article>
+      </section>
+      <details class="identity-details"><summary>目錄身分與檔案規格</summary><dl><dt>遊戲</dt><dd>captain-tsubasa-2-jp</dd><dt>ROM SHA-256</dt><dd id="source-sha">尚未載入</dd><dt>交換格式</dt><dd>nes-localization · v1 · zh-Hant · 單一完整 JSON · 上限 4 MiB</dd></dl><p>匯入必須包含所有 ID，且 ROM 身分、分類與原文需逐條相符；不接受未知、重複或缺少的 ID。</p></details>
+      <footer>一條一條校對，讓故事更靠近。<span>純本機工作流程 / 翻譯工作室</span></footer>
+    </main>
+    <noscript><p>此編輯器需要啟用 JavaScript 才能載入目錄與保存草稿。</p></noscript>
+    <script type="module" src="/src/game-profiles/translation-editor.ts"></script>
+  </body>
+</html>

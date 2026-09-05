@@ -1,0 +1,41 @@
+{
+  "$schema": "../schema/translation-catalog.schema.json",
+  "schemaVersion": 1,
+  "profileId": "captain-tsubasa-2-jp",
+  "sourceLocale": "ja-JP",
+  "targetLocale": "zh-TW",
+  "analysisStatus": "partial",
+  "categories": [
+    "dialogue",
+    "battleMessage",
+    "interface",
+    "menu",
+    "dictionary"
+  ],
+  "units": [
+    {
+      "id": "opening.narration.0001",
+      "category": "dialogue",
+      "source": "はじまるっ！ ブラジルゴールをめざし\nぜんにほんユース キャプテン\nおおぞら つばさくんが\nドリブルで ちゅうおうへ",
+      "target": "故事開始！目標是巴西的球門\n全日本青年隊隊長\n大空翼正帶球\n向前衝刺！",
+      "context": "開機動畫第一段旁白；球場上大空翼帶球的畫面。",
+      "placeholders": []
+    },
+    {
+      "id": "title.menu.kickOff",
+      "category": "menu",
+      "source": "KICK OFF",
+      "target": "開始遊戲",
+      "context": "標題畫面第一個選項。",
+      "placeholders": []
+    },
+    {
+      "id": "title.menu.continue",
+      "category": "menu",
+      "source": "CONTINUE",
+      "target": "繼續遊戲",
+      "context": "標題畫面第二個選項。",
+      "placeholders": []
+    }
+  ]
+}

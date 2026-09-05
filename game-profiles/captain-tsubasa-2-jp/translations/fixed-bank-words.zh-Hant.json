@@ -1,0 +1,1224 @@
+{
+  "schemaVersion": 2,
+  "adapterId": "captain-tsubasa-2-jp",
+  "sourceSha256": "bf5038afe4c9df1c1c7eff0bc74a12f3cd8ed994b9aab92617d066d9d10ad746",
+  "dictionaryId": "fixed-bank-words",
+  "targetLanguage": "zh-Hant",
+  "metrics": {
+    "entryCount": 240,
+    "fixedRecordCount": 239,
+    "externalEntryCount": 1,
+    "uniqueRecordCount": 239,
+    "aliasCount": 0,
+    "encodedBytes": 1475,
+    "textRuns": 239,
+    "sourceGlyphs": 1236,
+    "uniqueSourceGlyphCodes": 131
+  },
+  "aliases": [],
+  "externalEntries": [
+    {
+      "entryId": "fixed-bank-words.000",
+      "pointerIndex": 0,
+      "pointer": 1515,
+      "kind": "ram"
+    }
+  ],
+  "entries": [
+    {
+      "id": "fixed-bank-words.001",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.002",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.003",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.004",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.005",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.006",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.007",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.008",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.009",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.010",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.011",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.012",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.013",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.014",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.015",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.016",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.017",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.018",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.019",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.020",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.021",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.022",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.023",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.024",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.025",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.026",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.027",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.028",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.029",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.030",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.031",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.032",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.033",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.034",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.035",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.036",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.037",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.038",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.039",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.040",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.041",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.042",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.043",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.044",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.045",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.046",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.047",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.048",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.049",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.050",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.051",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.052",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.053",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.054",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.055",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.056",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.057",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.058",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.059",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.060",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.061",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.062",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.063",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.064",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.065",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.066",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.067",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.068",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.069",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.070",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.071",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.072",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.073",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.074",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.075",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.076",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.077",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.078",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.079",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.080",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.081",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.082",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.083",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.084",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.085",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.086",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.087",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.088",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.089",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.090",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.091",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.092",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.093",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.094",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.095",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.096",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.097",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.098",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.099",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.100",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.101",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.102",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.103",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.104",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.105",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.106",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.107",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.108",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.109",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.110",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.111",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.112",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.113",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.114",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.115",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.116",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.117",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.118",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.119",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.120",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.121",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.122",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.123",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.124",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.125",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.126",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.127",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.128",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.129",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.130",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.131",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.132",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.133",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.134",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.135",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.136",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.137",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.138",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.139",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.140",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.141",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.142",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.143",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.144",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.145",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.146",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.147",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.148",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.149",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.150",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.151",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.152",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.153",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.154",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.155",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.156",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.157",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.158",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.159",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.160",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.161",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.162",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.163",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.164",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.165",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.166",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.167",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.168",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.169",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.170",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.171",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.172",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.173",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.174",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.175",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.176",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.177",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.178",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.179",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.180",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.181",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.182",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.183",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.184",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.185",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.186",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.187",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.188",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.189",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.190",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.191",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.192",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.193",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.194",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.195",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.196",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.197",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.198",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.199",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.200",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.201",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.202",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.203",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.204",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.205",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.206",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.207",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.208",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.209",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.210",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.211",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.212",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.213",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.214",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.215",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.216",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.217",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.218",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.219",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.220",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.221",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.222",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.223",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.224",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.225",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.226",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.227",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.228",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.229",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.230",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.231",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.232",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.233",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.234",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.235",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.236",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.237",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.238",
+      "category": "dictionary",
+      "translation": ""
+    },
+    {
+      "id": "fixed-bank-words.239",
+      "category": "dictionary",
+      "translation": ""
+    }
+  ]
+}

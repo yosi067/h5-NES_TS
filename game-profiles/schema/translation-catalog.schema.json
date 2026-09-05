@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://h5-nes.local/schema/translation-catalog.schema.json",
+  "title": "Game Translation Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "profileId", "sourceLocale", "targetLocale", "categories", "units"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "profileId": { "type": "string", "minLength": 1 },
+    "sourceLocale": { "type": "string", "minLength": 2 },
+    "targetLocale": { "type": "string", "minLength": 2 },
+    "analysisStatus": { "enum": ["pending", "partial", "complete"] },
+    "categories": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["dialogue", "battleMessage", "interface", "menu", "dictionary"] }
+    },
+    "units": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "category", "source", "target", "context", "placeholders"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "category": { "enum": ["dialogue", "battleMessage", "interface", "menu", "dictionary"] },
+          "source": { "type": "string" },
+          "target": { "type": "string" },
+          "context": { "type": "string" },
+          "placeholders": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    }
+  }
+}

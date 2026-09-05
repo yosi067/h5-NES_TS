@@ -1,0 +1,189 @@
+{
+  "schemaVersion": 2,
+  "adapterId": "captain-tsubasa-2-jp",
+  "sourceSha256": "bf5038afe4c9df1c1c7eff0bc74a12f3cd8ed994b9aab92617d066d9d10ad746",
+  "sceneId": "opening.intro.00",
+  "sceneSha256": "4daf9db8f0e9b43a34235a3753174dd69718f27e288aa8f844a5e448188bbbf5",
+  "targetLanguage": "zh-Hant",
+  "layout": {
+    "columns": 20,
+    "alignment": "source"
+  },
+  "entries": [
+    {
+      "id": "opening.intro.00.text.0020",
+      "category": "battleMessage",
+      "translation": "衝啊!"
+    },
+    {
+      "id": "opening.intro.00.text.0026",
+      "category": "dialogue",
+      "translation": " 朝巴西球門前進"
+    },
+    {
+      "id": "opening.intro.00.text.0033",
+      "category": "dialogue",
+      "translation": "全日本青年隊隊長"
+    },
+    {
+      "id": "opening.intro.00.text.0042",
+      "category": "dialogue",
+      "translation": "大空翼"
+    },
+    {
+      "id": "opening.intro.00.text.004e",
+      "category": "battleMessage",
+      "translation": "帶球突破中央!"
+    },
+    {
+      "id": "opening.intro.00.text.0072",
+      "category": "interface",
+      "translation": "   大空翼"
+    },
+    {
+      "id": "opening.intro.00.text.007e",
+      "category": "interface",
+      "translation": "     巴西"
+    },
+    {
+      "id": "opening.intro.00.text.0088",
+      "category": "interface",
+      "translation": "  聖保羅FC 中場"
+    },
+    {
+      "id": "opening.intro.00.text.00b5",
+      "category": "dialogue",
+      "translation": "日向"
+    },
+    {
+      "id": "opening.intro.00.text.00bc",
+      "category": "dialogue",
+      "translation": "君"
+    },
+    {
+      "id": "opening.intro.00.text.00be",
+      "category": "battleMessage",
+      "translation": "突然使出猛虎鏟球!"
+    },
+    {
+      "id": "opening.intro.00.text.00ce",
+      "category": "dialogue",
+      "translation": "如猛虎緊盯獵物"
+    },
+    {
+      "id": "opening.intro.00.text.00dd",
+      "category": "battleMessage",
+      "translation": "把球搶走了!"
+    },
+    {
+      "id": "opening.intro.00.text.00fc",
+      "category": "interface",
+      "translation": "  日向小次郎"
+    },
+    {
+      "id": "opening.intro.00.text.0108",
+      "category": "interface",
+      "translation": " 東邦學園 中鋒"
+    },
+    {
+      "id": "opening.intro.00.text.012b",
+      "category": "battleMessage",
+      "translation": "來了!"
+    },
+    {
+      "id": "opening.intro.00.text.0131",
+      "category": "battleMessage",
+      "translation": " 黃金搭檔"
+    },
+    {
+      "id": "opening.intro.00.text.013b",
+      "category": "battleMessage",
+      "translation": "必殺的 雙人"
+    },
+    {
+      "id": "opening.intro.00.text.0146",
+      "category": "battleMessage",
+      "translation": "射門!"
+    },
+    {
+      "id": "opening.intro.00.text.014d",
+      "category": "battleMessage",
+      "translation": "兩人的默契天衣無縫!"
+    },
+    {
+      "id": "opening.intro.00.text.015c",
+      "category": "battleMessage",
+      "translation": "上吧!"
+    },
+    {
+      "id": "opening.intro.00.text.0172",
+      "category": "interface",
+      "translation": "   岬太郎"
+    },
+    {
+      "id": "opening.intro.00.text.017d",
+      "category": "interface",
+      "translation": " 南葛高中 中場"
+    },
+    {
+      "id": "opening.intro.00.text.01a0",
+      "category": "battleMessage",
+      "translation": "若林同學 單手"
+    },
+    {
+      "id": "opening.intro.00.text.01ac",
+      "category": "battleMessage",
+      "translation": "接球!"
+    },
+    {
+      "id": "opening.intro.00.text.01b6",
+      "category": "battleMessage",
+      "translation": "不愧是東洋守護神"
+    },
+    {
+      "id": "opening.intro.00.text.01c5",
+      "category": "battleMessage",
+      "translation": "偉大的超級守門員"
+    },
+    {
+      "id": "opening.intro.00.text.01d5",
+      "category": "battleMessage",
+      "translation": "若林源三!"
+    },
+    {
+      "id": "opening.intro.00.text.01f2",
+      "category": "interface",
+      "translation": "  若林源三"
+    },
+    {
+      "id": "opening.intro.00.text.01ff",
+      "category": "interface",
+      "translation": "     西德"
+    },
+    {
+      "id": "opening.intro.00.text.020a",
+      "category": "interface",
+      "translation": "  漢堡SV 守門員"
+    },
+    {
+      "id": "opening.intro.00.text.0226",
+      "category": "dialogue",
+      "translation": "面對最強敵人 巴西青年隊"
+    },
+    {
+      "id": "opening.intro.00.text.023c",
+      "category": "dialogue",
+      "translation": "賭上成為世界第一的足球夢"
+    },
+    {
+      "id": "opening.intro.00.text.024f",
+      "category": "dialogue",
+      "translation": "我們全日本青年隊的"
+    },
+    {
+      "id": "opening.intro.00.text.025f",
+      "category": "dialogue",
+      "translation": "決賽即將開始"
+    }
+  ]
+}

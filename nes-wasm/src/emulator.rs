@@ -21,6 +21,11 @@ use crate::apu::Apu;
 use crate::bus::Bus;
 use crate::cartridge::Cartridge;
 use crate::controller::Controller;
+use std::cell::{Cell, RefCell};
+use std::collections::VecDeque;
+use crate::game_profile::{sha256_hex, MemorySpace, NesGameProfile, WriteTiming};
+#[cfg(test)]
+use crate::mappers::Mapper1TraceState;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum DmcDmaPhase {
@@ -29,6 +34,131 @@ enum DmcDmaPhase {
     Dummy,
     Align,
     Read,
+}
+
+// Session-only snapshots, not a portable serialization format. Cloning the
+// hardware includes private mapper/APU/PPU pipeline state and owns all buffers.
+// Never snapshot raw WASM memory: it also contains allocator/JS-owned pointers.
+const TEMP_STATE_PREFIX: &str = "#NES-TEMP-2:";
+const TEMP_STATE_LIMIT: usize = 16;
+
+#[derive(Clone)]
+struct TemporaryState {
+    token: String,
+    cpu: Cpu,
+    ppu: Ppu,
+    apu: Apu,
+    bus: Bus,
+    cartridge: Cartridge,
+    ctrl1: Controller,
+    ctrl2: Controller,
+    system_clock: u64,
+    audio_enabled: bool,
+    dmc_dma_address: Option<u16>,
+    dmc_dma_phase: DmcDmaPhase,
+    #[cfg(test)]
+    current_instruction_pc: u16,
+}
+
+#[cfg(test)]
+#[derive(Debug)]
+pub(crate) struct ZombieTextTraceEvent {
+    pub clock: u64,
+    pub pc: u16,
+    pub physical_prg_offset: u32,
+    pub source_pointer: Option<u16>,
+    pub source_prg_offset: Option<u32>,
+    pub buffer_cursor: u8,
+    pub buffer: Option<Vec<u8>>,
+    pub chr_bank_offsets: [u32; 8],
+    pub ppu_ctrl: u8,
+    pub mapper1_state: Option<Mapper1TraceState>,
+}
+
+#[cfg(test)]
+#[derive(Debug)]
+pub(crate) struct ZombieGenerationTraceEvent {
+    pub clock: u64,
+    pub pc: u16,
+    pub physical_prg_offset: u32,
+    pub a: u8,
+    pub x: u8,
+    pub y: u8,
+    pub source_pointer: u16,
+    pub source_prg_offset: Option<u32>,
+    pub buffer_cursor: u8,
+    pub state_06a0: u8,
+    pub state_06a1: u8,
+    pub state_06a2: u8,
+    pub state_06a3: u8,
+    pub state_06a6: u8,
+    pub state_06a8: u8,
+    pub state_06a9: u8,
+    pub state_06aa: u8,
+    pub chr_bank_offsets: [u32; 8],
+    pub ppu_ctrl: u8,
+    pub mapper1_state: Option<Mapper1TraceState>,
+}
+
+#[cfg(test)]
+#[derive(Debug)]
+pub(crate) struct ZombieInputTraceEvent {
+    pub clock: u64,
+    pub pc: u16,
+    pub physical_prg_offset: u32,
+    pub stack_pointer: u8,
+    pub stack_return: u16,
+    pub edge: u8,
+    pub current: u8,
+    pub cursor: u8,
+    pub count: u8,
+    pub mode: u8,
+    pub state_57: u8,
+    pub state_7e: u8,
+    pub state_c1: u8,
+    pub state_3f: u8,
+    pub state_26: u8,
+    pub state_2a: u8,
+    pub state_28: u8,
+    pub state_17: u8,
+    pub state_16: u8,
+    pub state_29: u8,
+    pub state_2b: u8,
+    pub state_06c3: u8,
+    pub state_06c6: u8,
+    pub state_06c7: u8,
+    pub state_2c: u8,
+    pub state_06c1: u8,
+    pub mapper1_state: Option<Mapper1TraceState>,
+}
+
+#[cfg(test)]
+#[derive(Debug)]
+pub(crate) struct ZombieCandidateReadEvent {
+    pub clock: u64,
+    pub pc: u16,
+    pub cpu_address: u16,
+    pub physical_prg_offset: u32,
+    pub value: u8,
+    pub mapper1_state: Option<Mapper1TraceState>,
+}
+
+#[cfg(test)]
+#[derive(Debug)]
+pub(crate) struct ZombieModeTraceEvent {
+    pub clock: u64,
+    pub pc: u16,
+    pub physical_prg_offset: u32,
+    pub edge: u8,
+    pub current: u8,
+    pub state_f4: u8,
+    pub state_f7: u8,
+    pub state_0610: u8,
+    pub state_3a: u8,
+    pub state_38: u8,
+    pub state_2a: u8,
+    pub state_06c1: u8,
+    pub mapper1_state: Option<Mapper1TraceState>,
 }
 
 /// NES 模擬器
@@ -56,6 +186,12 @@ pub struct Emulator {
 
     dmc_dma_address: Option<u16>,
     dmc_dma_phase: DmcDmaPhase,
+    loaded_rom_sha256: String,
+    game_profile: Option<NesGameProfile>,
+    temporary_states: RefCell<VecDeque<TemporaryState>>,
+    next_temporary_state: Cell<u64>,
+
+    pub text_observer: crate::text_observer::TextObserver,
 
     #[cfg(test)]
     pub(crate) mapper_scanline_events: Vec<(i16, u16)>,
@@ -63,6 +199,24 @@ pub struct Emulator {
     pub(crate) mapper_cpu_writes: Vec<(u64, u16, u8)>,
     #[cfg(test)]
     pub(crate) mapper_scanline_enabled: bool,
+    #[cfg(test)]
+    pub(crate) resolver_calls: Vec<(u64, u16, u8, u8, u8)>,
+    #[cfg(test)]
+    pub(crate) ppu_nametable_write_trace: Vec<(u64, u16, u16, u8, u32)>,
+    #[cfg(test)]
+    pub(crate) cpu_ram_write_trace: Vec<(u64, u16, u16, u8, u32)>,
+    #[cfg(test)]
+    pub(crate) zombie_text_trace: Vec<ZombieTextTraceEvent>,
+    #[cfg(test)]
+    pub(crate) zombie_generation_trace: Vec<ZombieGenerationTraceEvent>,
+    #[cfg(test)]
+    pub(crate) zombie_input_trace: Vec<ZombieInputTraceEvent>,
+    #[cfg(test)]
+    pub(crate) zombie_candidate_read_trace: Vec<ZombieCandidateReadEvent>,
+    #[cfg(test)]
+    pub(crate) zombie_mode_trace: Vec<ZombieModeTraceEvent>,
+    #[cfg(test)]
+    current_instruction_pc: u16,
 }
 
 impl Emulator {
@@ -80,19 +234,46 @@ impl Emulator {
             audio_enabled: true,
             dmc_dma_address: None,
             dmc_dma_phase: DmcDmaPhase::Idle,
+            loaded_rom_sha256: String::new(),
+            game_profile: None,
+            temporary_states: RefCell::new(VecDeque::new()),
+            next_temporary_state: Cell::new(0),
+            text_observer: crate::text_observer::TextObserver::default(),
             #[cfg(test)]
             mapper_scanline_events: Vec::new(),
             #[cfg(test)]
             mapper_cpu_writes: Vec::new(),
             #[cfg(test)]
             mapper_scanline_enabled: true,
+            #[cfg(test)]
+            resolver_calls: Vec::new(),
+            #[cfg(test)]
+            ppu_nametable_write_trace: Vec::new(),
+            #[cfg(test)]
+            cpu_ram_write_trace: Vec::new(),
+            #[cfg(test)]
+            zombie_text_trace: Vec::new(),
+            #[cfg(test)]
+            zombie_generation_trace: Vec::new(),
+            #[cfg(test)]
+            zombie_input_trace: Vec::new(),
+            #[cfg(test)]
+            zombie_candidate_read_trace: Vec::new(),
+            #[cfg(test)]
+            zombie_mode_trace: Vec::new(),
+            #[cfg(test)]
+            current_instruction_pc: 0,
         }
     }
 
     /// 載入 ROM
     pub fn load_rom(&mut self, data: &[u8]) -> bool {
+        self.text_observer.configure(false, "");
+        self.ppu.set_text_provenance(false);
+        self.clear_game_profile();
         let success = self.cartridge.load_rom(data);
         if success {
+            self.loaded_rom_sha256 = sha256_hex(data);
             // 將卡帶的 CHR 資料同步到 PPU
             let chr_data = self.cartridge.chr_data.clone();
             let chr_ram = self.cartridge.chr_ram;
@@ -100,12 +281,113 @@ impl Emulator {
             // 同步 Mapper 的 CHR bank 映射和鏡像模式
             self.sync_mapper_to_ppu();
             self.reset();
+        } else {
+            self.loaded_rom_sha256.clear();
         }
         success
     }
 
+    pub fn load_game_profile(&mut self, json: &str) -> Result<(), String> {
+        let profile = NesGameProfile::parse(json)?;
+        if !self.cartridge.loaded {
+            return Err("load a NES ROM before loading its profile".to_string());
+        }
+        if !profile.matches_sha256(&self.loaded_rom_sha256) {
+            return Err("profile SHA-256 does not match the loaded ROM".to_string());
+        }
+        if profile.game.mapper != self.cartridge.header.mapper_id {
+            return Err(format!(
+                "profile mapper {} does not match ROM mapper {}",
+                profile.game.mapper, self.cartridge.header.mapper_id
+            ));
+        }
+
+        for overlay in &profile.prg_read_overlays {
+            let offset = overlay.offset as usize;
+            let original = self.cartridge.prg_rom.get(offset).ok_or_else(|| {
+                format!("PRG overlay {} offset is outside the ROM", overlay.id)
+            })?;
+            if *original != overlay.expected_original {
+                return Err(format!(
+                    "PRG overlay {} expected {:#04X} at {:#X}, found {:#04X}",
+                    overlay.id, overlay.expected_original, overlay.offset, original
+                ));
+            }
+        }
+        for overlay in &profile.chr_read_overlays {
+            let offset = overlay.offset as usize;
+            let original = self.cartridge.chr_data.get(offset).ok_or_else(|| {
+                format!("CHR overlay {} offset is outside the ROM", overlay.id)
+            })?;
+            if *original != overlay.expected_original {
+                return Err(format!(
+                    "CHR overlay {} expected {:#04X} at {:#X}, found {:#04X}",
+                    overlay.id, overlay.expected_original, overlay.offset, original
+                ));
+            }
+        }
+        for page in &profile.chr_overlay_pages {
+            for overlay in &page.overlays {
+                let offset = overlay.offset as usize;
+                let original = self.cartridge.chr_data.get(offset).ok_or_else(|| {
+                    format!("CHR overlay {} offset is outside the ROM", overlay.id)
+                })?;
+                if *original != overlay.expected_original {
+                    return Err(format!(
+                        "CHR overlay {} expected {:#04X} at {:#X}, found {:#04X}",
+                        overlay.id, overlay.expected_original, overlay.offset, original
+                    ));
+                }
+            }
+        }
+
+        let prg_overlays: Vec<_> = profile.prg_read_overlays.iter()
+            .map(|overlay| (overlay.offset as usize, overlay.value))
+            .collect();
+        let chr_overlays: Vec<_> = profile.chr_read_overlays.iter()
+            .map(|overlay| (overlay.offset as usize, overlay.value))
+            .collect();
+        self.cartridge.install_prg_overlays(&prg_overlays);
+        self.ppu.install_chr_overlays(&chr_overlays);
+        let chr_pages = profile.chr_overlay_pages.iter().map(|page| {
+            let overlays = page.overlays.iter()
+                .map(|overlay| (overlay.offset as usize, overlay.value))
+                .collect();
+            (page.guard.address, page.guard.value, page.guard.require_active_table, overlays)
+        }).collect();
+        self.ppu.install_conditional_chr_overlay_pages(chr_pages);
+        self.temporary_states.get_mut().clear();
+        self.game_profile = Some(profile);
+        self.reset();
+        Ok(())
+    }
+
+    pub fn clear_game_profile(&mut self) {
+        self.temporary_states.get_mut().clear();
+        self.cartridge.clear_prg_overlays();
+        self.ppu.clear_chr_overlays();
+        self.game_profile = None;
+    }
+
+    pub fn active_game_profile_id(&self) -> &str {
+        self.game_profile.as_ref().map_or("", |profile| profile.id.as_str())
+    }
+
+    fn apply_profile_writes(&mut self, timing: WriteTiming) {
+        let Some(profile) = &self.game_profile else { return; };
+        for write in profile.memory_writes.iter().filter(|write| write.apply == timing) {
+            match write.space {
+                MemorySpace::CpuRam => self.bus.ram[write.address as usize] = write.value,
+                MemorySpace::PrgRam => {
+                    self.cartridge.prg_ram[(write.address - 0x6000) as usize] = write.value;
+                }
+            }
+        }
+    }
+
     /// 重置模擬器
     pub fn reset(&mut self) {
+        self.text_observer.reset();
         self.cartridge.reset();
         self.ppu.reset();
         self.apu.reset();
@@ -113,10 +395,20 @@ impl Emulator {
         self.system_clock = 0;
         self.dmc_dma_address = None;
         self.dmc_dma_phase = DmcDmaPhase::Idle;
+        self.apply_profile_writes(WriteTiming::Reset);
         #[cfg(test)]
         {
             self.mapper_scanline_events.clear();
             self.mapper_cpu_writes.clear();
+            self.resolver_calls.clear();
+            self.ppu_nametable_write_trace.clear();
+            self.cpu_ram_write_trace.clear();
+            self.zombie_text_trace.clear();
+            self.zombie_generation_trace.clear();
+            self.zombie_input_trace.clear();
+            self.zombie_candidate_read_trace.clear();
+            self.zombie_mode_trace.clear();
+            self.current_instruction_pc = 0;
         }
 
         // 同步 Mapper 狀態到 PPU（鏡像模式和 CHR bank 映射）
@@ -281,7 +573,149 @@ impl Emulator {
             return;
         }
 
+        // Only two original-bank entry points are observed; checking PC first
+        // avoids mapper work for the overwhelming majority of instructions.
+        if self.text_observer.enabled {
+            if self.cpu.pc == 0xe93d && self.cartridge.mapper.cpu_read(0xe93d) == Some(0x3e93d) {
+                self.text_observer.push(6, self.cpu.a as u32, self.cpu.x as u32, 0);
+            }
+            if matches!(self.cpu.pc, 0x84E9 | 0x84F3 | 0x88B1) { self.observe_ct2_text(); }
+            else if matches!(self.cpu.pc, 0x8017 | 0x8218 | 0x8358 | 0x864B) { self.observe_ct2_cloud(); }
+        }
         // 取指令並執行
+        #[cfg(test)]
+            {
+                self.current_instruction_pc = self.cpu.pc;
+                if matches!(
+                    self.current_instruction_pc,
+                    0x8ABC | 0x8AF2 | 0x8B4F | 0x8B52 | 0x8B56 | 0xB031 | 0xB4B8 | 0xD068
+                        | 0xF49E | 0xF4A6
+                ) {
+                    let source_pointer = match self.current_instruction_pc {
+                        0x8ABC | 0x8B52 | 0x8B56 => Some(u16::from(self.cpu.x) | (u16::from(self.cpu.a) << 8)),
+                        0x8AF2 => Some(u16::from(self.bus.ram[0x34]) | (u16::from(self.bus.ram[0x35]) << 8)),
+                        _ => None,
+                    };
+                    self.zombie_text_trace.push(ZombieTextTraceEvent {
+                        clock: self.system_clock,
+                        pc: self.current_instruction_pc,
+                        physical_prg_offset: self.cartridge.mapper.cpu_read(self.current_instruction_pc).unwrap_or(u32::MAX),
+                        source_prg_offset: source_pointer.and_then(|pointer| self.cartridge.mapper.cpu_read(pointer)),
+                        source_pointer,
+                        buffer_cursor: self.bus.ram[0xA6],
+                        buffer: if matches!(self.current_instruction_pc, 0xB031 | 0xB4B8 | 0xF4A6) {
+                            Some(self.bus.ram[0x0300..0x0400].to_vec())
+                        } else {
+                            None
+                        },
+                        chr_bank_offsets: self.ppu.chr_bank_offsets_for_test(),
+                        ppu_ctrl: self.ppu.ctrl,
+                        mapper1_state: self.cartridge.mapper.trace_mapper1_state(),
+                    });
+                }
+                if matches!(
+                    self.current_instruction_pc,
+                    0x860E | 0x862D | 0x86B0 | 0x86B6 | 0x8D90 | 0x9660 | 0x971A | 0x9728 | 0x947B
+                        | 0xF174
+                ) {
+                    let source_pointer =
+                        u16::from(self.bus.ram[0x34]) | (u16::from(self.bus.ram[0x35]) << 8);
+                    self.zombie_generation_trace.push(ZombieGenerationTraceEvent {
+                        clock: self.system_clock,
+                        pc: self.current_instruction_pc,
+                        physical_prg_offset: self.cartridge.mapper.cpu_read(self.current_instruction_pc).unwrap_or(u32::MAX),
+                        a: self.cpu.a,
+                        x: self.cpu.x,
+                        y: self.cpu.y,
+                        source_pointer,
+                        source_prg_offset: self.cartridge.mapper.cpu_read(source_pointer),
+                        buffer_cursor: self.bus.ram[0xA6],
+                        state_06a0: self.bus.ram[0x06A0],
+                        state_06a1: self.bus.ram[0x06A1],
+                        state_06a2: self.bus.ram[0x06A2],
+                        state_06a3: self.bus.ram[0x06A3],
+                        state_06a6: self.bus.ram[0x06A6],
+                        state_06a8: self.bus.ram[0x06A8],
+                        state_06a9: self.bus.ram[0x06A9],
+                        state_06aa: self.bus.ram[0x06AA],
+                        chr_bank_offsets: self.ppu.chr_bank_offsets_for_test(),
+                        ppu_ctrl: self.ppu.ctrl,
+                        mapper1_state: self.cartridge.mapper.trace_mapper1_state(),
+                    });
+                }
+                if matches!(
+                    self.current_instruction_pc,
+                    0x8000 | 0x80BA | 0x80BD | 0x8103 | 0x811F | 0x8122 | 0x812D | 0x8135
+                        | 0x8138 | 0x81F1 | 0x81FB | 0x81FE | 0x8203 | 0x820C | 0x8219
+                        | 0x83B0 | 0x83FE | 0x8400 | 0x8403 | 0x8406 | 0x840A | 0x8411
+                        | 0x8467 | 0x847B | 0x857D | 0x857F | 0x8585 | 0x8588 | 0x858A
+                        | 0x85AB | 0x85B8 | 0x85DA | 0x866C | 0x8721 | 0x8752 | 0x877C
+                        | 0x87BF | 0x8A38 | 0x8B19 | 0x8BA8 | 0x8C8D | 0x8902 | 0xF153
+                        | 0xF173 | 0x9710
+                )
+                    || (self.current_instruction_pc == 0x8A57 && self.bus.ram[0x3A] != 0)
+                {
+                    self.zombie_input_trace.push(ZombieInputTraceEvent {
+                        clock: self.system_clock,
+                        pc: self.current_instruction_pc,
+                        physical_prg_offset: self.cartridge.mapper.cpu_read(self.current_instruction_pc).unwrap_or(u32::MAX),
+                        stack_pointer: self.cpu.sp,
+                        stack_return: u16::from(self.bus.ram[0x0101 + usize::from(self.cpu.sp)])
+                            | (u16::from(self.bus.ram[0x0102 + usize::from(self.cpu.sp)]) << 8),
+                        edge: self.bus.ram[0x3A],
+                        current: self.bus.ram[0x38],
+                        cursor: self.bus.ram[0xA3],
+                        count: self.bus.ram[0xAB],
+                        mode: self.bus.ram[0xA4],
+                        state_57: self.bus.ram[0x57],
+                        state_7e: self.bus.ram[0x7E],
+                        state_c1: self.bus.ram[0xC1],
+                        state_3f: self.bus.ram[0x3F],
+                        state_26: self.bus.ram[0x26],
+                        state_2a: self.bus.ram[0x2A],
+                        state_28: self.bus.ram[0x28],
+                        state_17: self.bus.ram[0x17],
+                        state_16: self.bus.ram[0x16],
+                        state_29: self.bus.ram[0x29],
+                        state_2b: self.bus.ram[0x2B],
+                        state_06c3: self.bus.ram[0x06C3],
+                        state_06c6: self.bus.ram[0x06C6],
+                        state_06c7: self.bus.ram[0x06C7],
+                        state_2c: self.bus.ram[0x2C],
+                        state_06c1: self.bus.ram[0x06C1],
+                        mapper1_state: self.cartridge.mapper.trace_mapper1_state(),
+                    });
+                }
+                if matches!(
+                    self.current_instruction_pc,
+                    0xE000 | 0xE013 | 0xE03F | 0xE093 | 0xE35B | 0xE3FB | 0xE3EF | 0xE426
+                ) {
+                    self.zombie_mode_trace.push(ZombieModeTraceEvent {
+                        clock: self.system_clock,
+                        pc: self.current_instruction_pc,
+                        physical_prg_offset: self.cartridge.mapper.cpu_read(self.current_instruction_pc).unwrap_or(u32::MAX),
+                        edge: self.bus.ram[0x3A],
+                        current: self.bus.ram[0x38],
+                        state_f4: self.bus.ram[0xF4],
+                        state_f7: self.bus.ram[0xF7],
+                        state_0610: self.bus.ram[0x0610],
+                        state_3a: self.bus.ram[0x3A],
+                        state_38: self.bus.ram[0x38],
+                        state_2a: self.bus.ram[0x2A],
+                        state_06c1: self.bus.ram[0x06C1],
+                        mapper1_state: self.cartridge.mapper.trace_mapper1_state(),
+                    });
+                }
+                if matches!(self.cpu.pc, 0xC53C | 0xF30F) {
+                    self.resolver_calls.push((
+                        self.system_clock,
+                        self.cpu.pc,
+                        self.cpu.a,
+                        self.bus.ram[0x30],
+                        self.bus.ram[0x31],
+                    ));
+                }
+        }
         let opcode = self.bus_read(self.cpu.pc);
         self.cpu.pc = self.cpu.pc.wrapping_add(1);
         self.execute_cpu_instruction(opcode);
@@ -292,18 +726,50 @@ impl Emulator {
 
     /// 匯流排讀取
     fn bus_read(&mut self, addr: u16) -> u8 {
-        self.bus.cpu_read(
+        let value = self.bus.cpu_read(
             addr,
             &mut self.ppu, &mut self.apu, &self.cartridge,
             &mut self.ctrl1, &mut self.ctrl2,
-        )
+        );
+        #[cfg(test)]
+        if matches!(addr, 0x8F0E | 0x9165 | 0xFEFD) {
+            self.zombie_candidate_read_trace.push(ZombieCandidateReadEvent {
+                clock: self.system_clock,
+                pc: self.current_instruction_pc,
+                cpu_address: addr,
+                physical_prg_offset: self.cartridge.mapper.cpu_read(addr).unwrap_or(u32::MAX),
+                value,
+                mapper1_state: self.cartridge.mapper.trace_mapper1_state(),
+            });
+        }
+        value
     }
 
     /// 匯流排寫入
     fn bus_write(&mut self, addr: u16, data: u8) {
         #[cfg(test)]
+        if addr < 0x0100 || (0x0300..0x0400).contains(&addr) {
+            self.cpu_ram_write_trace.push((
+                self.system_clock,
+                self.current_instruction_pc,
+                addr,
+                data,
+                self.cartridge.mapper.cpu_read(self.current_instruction_pc).unwrap_or(u32::MAX),
+            ));
+        }
+        #[cfg(test)]
         if addr >= 0x8000 {
             self.mapper_cpu_writes.push((self.system_clock, addr, data));
+        }
+        #[cfg(test)]
+        if addr & 0x0007 == 0x0007 && (0x2000..0x3F00).contains(&self.ppu.v) {
+            self.ppu_nametable_write_trace.push((
+                self.system_clock,
+                self.current_instruction_pc,
+                self.ppu.v,
+                data,
+                self.cartridge.mapper.cpu_read(self.current_instruction_pc).unwrap_or(u32::MAX),
+            ));
         }
 
         self.bus.cpu_write(
@@ -976,11 +1442,70 @@ impl Emulator {
 
     /// 執行一幀
     pub fn frame(&mut self) {
+        self.apply_profile_writes(WriteTiming::Frame);
         self.ppu.frame_complete = false;
         while !self.ppu.frame_complete {
             self.clock();
         }
         self.apu.end_frame();
+    }
+
+    pub fn enable_text_observer(&mut self, enabled: bool) -> bool {
+        let active = self.text_observer.configure(enabled, &self.loaded_rom_sha256);
+        self.ppu.set_text_provenance(active);
+        active
+    }
+
+    fn observe_ct2_text(&mut self) {
+        let pc = self.cpu.pc;
+        if self.cartridge.mapper.cpu_read(pc) != Some(u32::from(pc - 0x8000)) { return; }
+        if pc == 0x88B1 {
+            // EB waits for input BEFORE calling this clearing routine.
+            // Observing the EB dispatch itself would hide text while reading.
+            self.text_observer.push(5, 0, 0, 0);
+            return;
+        }
+        let pointer = u16::from_le_bytes([self.bus.ram[0x4d], self.bus.ram[0x4e]]);
+        let Some(source) = self.cartridge.mapper.cpu_read(pointer) else { return; };
+        // Verified script banks only; neither lookalike data nor other games.
+        if !(0x6000..0xC000).contains(&source) { return; }
+        let value = self.cartridge.cpu_read(pointer);
+        if pc == 0x84F3 {
+            // Original JSR $88CA: A=glyph, X=PPU address high, Y=low.
+            if value != self.cpu.a || value >= 0xd8 { return; }
+            let address = u16::from_be_bytes([self.cpu.x, self.cpu.y]);
+            if !(0x2000..0x2FC0).contains(&address) || address & 0x3ff >= 0x3c0 { return; }
+            let cell = self.ppu.text_nametable_index(address);
+            self.text_observer.push(1, source, cell as u32, value as u32);
+            self.text_observer.push(4, self.ppu.text_next_write_generation(cell), cell as u32,
+                self.ppu.text_next_write_generation(cell + 32));
+        } else if value >= 0xe8 {
+            self.text_observer.push(2, source, 0, value as u32);
+        }
+    }
+
+    fn observe_ct2_cloud(&mut self) {
+        let pc = self.cpu.pc;
+        if self.cartridge.mapper.cpu_read(pc) != Some(0x30000 + u32::from(pc - 0x8000)) { return; }
+        if matches!(pc, 0x8017 | 0x8218) {
+            self.text_observer.push(5, 0, 0, 0);
+            return;
+        }
+        // $834C reads ($5F),Y after incrementing the cursor; $8645 reads
+        // dictionary ($30),Y. Observe the call AFTER the actual read, not scans.
+        let pointer = if pc == 0x8358 {
+            u16::from_le_bytes([self.bus.ram[0x5f], self.bus.ram[0x60]])
+        } else { u16::from_le_bytes([self.bus.ram[0x30], self.bus.ram[0x31]]) };
+        let address = pointer.wrapping_add(u16::from(self.cpu.y));
+        let Some(source) = self.cartridge.mapper.cpu_read(address) else { return; };
+        let value = self.cpu.a;
+        if value >= 0xe0 || self.cartridge.cpu_read(address) != value { return; }
+        // Two horizontal tile rows are queued at $04A5. $3B is the upper-row
+        // cursor. Unlike cutscenes, the cloud writer renders the whole row.
+        let base = u16::from_le_bytes([self.bus.ram[0x4a6], self.bus.ram[0x4a7]]);
+        let target = base.wrapping_add(u16::from(self.bus.ram[0x3b]));
+        if !(0x2000..0x2fc0).contains(&target) || target & 0x3ff >= 0x3a0 { return; }
+        self.text_observer.push(3, source, self.ppu.text_nametable_index(target) as u32, value as u32);
     }
 
     /// 取得畫面緩衝區指標
@@ -1019,32 +1544,58 @@ impl Emulator {
         )
     }
 
-    /// 匯出存檔（hex 編碼）
+    /// Capture a complete, bounded, session-only snapshot and return its token.
+    /// Tokens must NOT be persisted/downloaded as portable save files.
     pub fn export_save_state(&self) -> String {
-        self.export_state_binary().iter().map(|b| format!("{:02x}", b)).collect()
+        let sequence = self.next_temporary_state.get();
+        let Some(next) = sequence.checked_add(1) else { return String::new(); };
+        self.next_temporary_state.set(next);
+        // Keep the old hex prefix readable by existing read-only ROM diagnostic
+        // tools (Buffer.from(token, 'hex') stops at '#'). It is NOT restorable
+        // state. The non-hex suffix also makes an older WASM decoder reject it.
+        // Deterministic for twin-core diagnostics; lookup is instance-local.
+        let diagnostic = self.export_state_binary().iter()
+            .map(|byte| format!("{byte:02x}")).collect::<String>();
+        let token = format!("{diagnostic}{TEMP_STATE_PREFIX}{}:{sequence}:{}",
+            self.loaded_rom_sha256, self.system_clock);
+        let snapshot = TemporaryState {
+            token: token.clone(), cpu: self.cpu.clone(), ppu: self.ppu.clone(),
+            apu: self.apu.clone(), bus: self.bus.clone(), cartridge: self.cartridge.clone(),
+            ctrl1: self.ctrl1.clone(), ctrl2: self.ctrl2.clone(),
+            system_clock: self.system_clock, audio_enabled: self.audio_enabled,
+            dmc_dma_address: self.dmc_dma_address, dmc_dma_phase: self.dmc_dma_phase,
+            #[cfg(test)]
+            current_instruction_pc: self.current_instruction_pc,
+        };
+        let mut states = self.temporary_states.borrow_mut();
+        if states.len() == TEMP_STATE_LIMIT { states.pop_front(); }
+        states.push_back(snapshot);
+        token
     }
 
-    /// 匯入存檔
-    pub fn import_save_state(&mut self, hex: &str) -> bool {
-        if hex.len() % 2 != 0 { return false; }
-        let mut data = Vec::with_capacity(hex.len() / 2);
-        let bytes = hex.as_bytes();
-        for i in (0..bytes.len()).step_by(2) {
-            let hi = Self::hex_char(bytes[i]);
-            let lo = Self::hex_char(bytes[i + 1]);
-            if hi == 0xFF || lo == 0xFF { return false; }
-            data.push((hi << 4) | lo);
-        }
-        self.import_state_binary(&data)
-    }
-
-    fn hex_char(c: u8) -> u8 {
-        match c {
-            b'0'..=b'9' => c - b'0',
-            b'a'..=b'f' => c - b'a' + 10,
-            b'A'..=b'F' => c - b'A' + 10,
-            _ => 0xFF,
-        }
+    /// Unknown, expired, or legacy partial states fail without ANY mutation.
+    pub fn import_save_state(&mut self, token: &str) -> bool {
+        if token.len() > 26000 || !token.contains(TEMP_STATE_PREFIX) { return false; }
+        let snapshot = self.temporary_states.borrow().iter()
+            .find(|state| state.token == token).cloned();
+        let Some(state) = snapshot else { return false; };
+        self.cpu = state.cpu;
+        self.ppu = state.ppu;
+        self.apu = state.apu;
+        self.bus = state.bus;
+        self.cartridge = state.cartridge;
+        self.ctrl1 = state.ctrl1;
+        self.ctrl2 = state.ctrl2;
+        self.system_clock = state.system_clock;
+        self.audio_enabled = state.audio_enabled;
+        self.dmc_dma_address = state.dmc_dma_address;
+        self.dmc_dma_phase = state.dmc_dma_phase;
+        #[cfg(test)]
+        { self.current_instruction_pc = state.current_instruction_pc; }
+        // Observations belong to the discarded timeline, not to hardware state.
+        self.text_observer.reset();
+        self.ppu.set_text_provenance(self.text_observer.enabled);
+        true
     }
 
     fn export_state_binary(&self) -> Vec<u8> {
@@ -1068,8 +1619,11 @@ impl Emulator {
         d
     }
 
+    // Historical decoder retained ONLY for regression evidence. NESW v1 omitted
+    // mapper/APU/timing; no production path may load it, even when well-formed.
+    #[cfg(test)]
     fn import_state_binary(&mut self, data: &[u8]) -> bool {
-        if data.len() < 9 || &data[0..4] != b"NESW" || data[4] != 1 { return false; }
+        if data.len() != 12599 || &data[0..4] != b"NESW" || data[4] != 1 { return false; }
         let mut p = 5;
         if p + 7 > data.len() { return false; }
         self.cpu.a = data[p]; p += 1;
@@ -1080,7 +1634,7 @@ impl Emulator {
         self.cpu.pc = u16::from_le_bytes([data[p], data[p+1]]); p += 2;
         if p + 2048 > data.len() { return false; }
         self.bus.ram.copy_from_slice(&data[p..p+2048]); p += 2048;
-        if p + 9 > data.len() { return false; }
+        if p + 11 > data.len() { return false; }
         self.ppu.ctrl = data[p]; p += 1;
         self.ppu.mask = data[p]; p += 1;
         self.ppu.status = data[p]; p += 1;
@@ -1104,6 +1658,171 @@ impl Emulator {
 mod tests {
     use super::*;
 
+    fn assert_same_hardware(a: &mut Emulator, b: &mut Emulator) {
+        assert_eq!(a.export_state_binary(), b.export_state_binary(), "CPU/VRAM/RAM");
+        assert_eq!(a.system_clock, b.system_clock, "master clock");
+        assert_eq!((a.cpu.cycles, a.cpu.total_cycles, a.cpu.nmi_pending, a.cpu.irq_pending),
+                   (b.cpu.cycles, b.cpu.total_cycles, b.cpu.nmi_pending, b.cpu.irq_pending));
+        assert_eq!(a.debug_state(), b.debug_state(), "PPU/OAM DMA timing");
+        assert_eq!(a.bus.dma_data_ready, b.bus.dma_data_ready);
+        assert_eq!(a.bus.dma_data, b.bus.dma_data);
+        assert_eq!(a.dmc_dma_phase, b.dmc_dma_phase);
+        assert_eq!(a.dmc_dma_address, b.dmc_dma_address);
+        assert_eq!(a.apu.dmc_read_request, b.apu.dmc_read_request);
+        assert_eq!(a.audio_enabled, b.audio_enabled);
+        assert_eq!(a.cartridge.mapper.trace_state(), b.cartridge.mapper.trace_state(), "MMC3 registers/IRQ");
+        for addr in (0x8000..=0xe000).step_by(0x2000) {
+            assert_eq!(a.cartridge.mapper.cpu_read(addr), b.cartridge.mapper.cpu_read(addr), "PRG mapping");
+        }
+        for addr in (0..0x2000).step_by(0x400) {
+            assert_eq!(a.cartridge.mapper.ppu_read(addr), b.cartridge.mapper.ppu_read(addr), "CHR mapping");
+        }
+        assert_eq!(a.ppu.frame_buffer, b.ppu.frame_buffer, "video continuation");
+        assert_eq!(a.apu.get_available_samples(), b.apu.get_available_samples());
+        assert_eq!(a.apu.audio_buffer, b.apu.audio_buffer, "APU/filter continuation");
+        let mut a1 = a.ctrl1.clone(); let mut b1 = b.ctrl1.clone();
+        let mut a2 = a.ctrl2.clone(); let mut b2 = b.ctrl2.clone();
+        for _ in 0..10 {
+            assert_eq!(a1.read(), b1.read(), "controller 1 latch");
+            assert_eq!(a2.read(), b2.read(), "controller 2 latch");
+        }
+    }
+
+    #[test]
+    fn temporary_state_restores_mmc3_and_mid_dma_timing() {
+        let mut rom = vec![0; 16 + 4 * 16384 + 8192];
+        rom[..4].copy_from_slice(b"NES\x1a");
+        rom[4] = 4; rom[5] = 1; rom[6] = 0x40;
+        // Each 8K PRG page identifies itself; reset enters a fixed-bank loop.
+        for bank in 0..8 { rom[16 + bank * 8192..16 + (bank + 1) * 8192].fill(bank as u8); }
+        rom[16 + 7 * 8192..16 + 7 * 8192 + 3].copy_from_slice(&[0x4c, 0x00, 0xe0]);
+        rom[16 + 65532..16 + 65534].copy_from_slice(&[0, 0xe0]);
+        let mut a = Emulator::new(); let mut b = Emulator::new();
+        for emu in [&mut a, &mut b] {
+            assert!(emu.load_rom(&rom));
+            emu.bus_write(0x8000, 6); emu.bus_write(0x8001, 2);
+            emu.bus_write(0x8000, 0); emu.bus_write(0x8001, 4);
+            emu.bus_write(0xc000, 17); emu.bus_write(0xc001, 0); emu.bus_write(0xe001, 0);
+            emu.cartridge.mapper.scanline();
+            emu.set_button(0, 0, true); emu.set_button(1, 3, true);
+            emu.ctrl1.write(1); emu.ctrl1.write(0); emu.ctrl1.read();
+            emu.ctrl2.write(1); emu.ctrl2.write(0);
+            emu.bus_write(0x4010, 0x8f); emu.bus_write(0x4012, 0);
+            emu.bus_write(0x4013, 1); emu.bus_write(0x4015, 0x10);
+            emu.bus_write(0x4014, 2);
+            for _ in 0..37 { emu.clock(); }
+        }
+        assert!(a.bus.dma_transfer);
+        let token = a.export_save_state();
+        let mapping = a.cartridge.mapper.cpu_read(0x8000);
+        a.bus_write(0x8000, 6); a.bus_write(0x8001, 5);
+        assert_ne!(a.cartridge.mapper.cpu_read(0x8000), mapping);
+        for _ in 0..2 { a.frame(); }
+        assert!(a.import_save_state(&token));
+        assert_same_hardware(&mut a, &mut b);
+        for _ in 0..5 {
+            a.frame(); b.frame();
+            assert_same_hardware(&mut a, &mut b);
+        }
+        // Loading the same token twice must not have mutated the stored clone.
+        assert!(a.import_save_state(&token));
+        assert_eq!(a.cartridge.mapper.cpu_read(0x8000), mapping);
+    }
+
+    #[test]
+    fn temporary_state_rejects_legacy_malformed_expired_and_reloaded_tokens_atomically() {
+        let rom = nrom_with_program(&[0x4c, 0x00, 0x80]);
+        let mut emu = Emulator::new();
+        assert!(emu.load_rom(&rom));
+        let token = emu.export_save_state();
+        let legacy = emu.export_state_binary().iter().map(|v| format!("{v:02x}")).collect::<String>();
+        assert_eq!(token.split('#').next(), Some(legacy.as_str()), "read-only diagnostic prefix remains compatible");
+        let before = emu.export_state_binary();
+        emu.text_observer.enabled = true;
+        emu.text_observer.push(1, 42, 1, 3);
+        for invalid in ["", "z", "NES-TEMP-2:invalid", &legacy, &legacy[..4138], &token[..token.len() - 1]] {
+            assert!(!emu.import_save_state(invalid));
+            assert_eq!(emu.export_state_binary(), before);
+        }
+        assert_eq!(emu.text_observer.take(), vec![1, 42, 1, 3], "failed imports must not reset observers");
+        let mut other = Emulator::new();
+        assert!(other.load_rom(&rom));
+        assert!(!other.import_save_state(&token), "no snapshot in the other instance");
+        for _ in 0..TEMP_STATE_LIMIT { emu.export_save_state(); }
+        assert_eq!(emu.temporary_states.borrow().len(), TEMP_STATE_LIMIT);
+        assert!(!emu.import_save_state(&token), "oldest snapshot evicted");
+        let latest = emu.export_save_state();
+        assert!(emu.import_save_state(&latest));
+        assert!(emu.load_rom(&rom));
+        assert!(!emu.import_save_state(&latest), "same filename/ROM reload still invalidates tokens");
+        assert_ne!(emu.export_save_state(), token, "generation cannot be reused on reload");
+    }
+
+    #[test]
+    #[ignore = "requires local original CT2 ROM"]
+    fn ct2_temporary_state_restores_original_game_exactly() {
+        let rom = std::fs::read("../roms/Captain Tsubasa II - Super Striker (Japan).nes").unwrap();
+        let mut restored = Emulator::new(); let mut control = Emulator::new();
+        assert!(restored.load_rom(&rom)); assert!(control.load_rom(&rom));
+        for _ in 0..300 { restored.frame(); control.frame(); }
+        let saved = restored.export_save_state();
+        let saved_mapper = restored.cartridge.mapper.trace_state();
+        for frame in 300..1800 {
+            restored.set_button(0, 3, (600..604).contains(&frame) || (900..904).contains(&frame));
+            restored.set_button(0, 0, frame >= 1100 && frame % 120 < 4);
+            restored.frame();
+        }
+        assert_ne!(restored.cartridge.mapper.trace_state(), saved_mapper);
+        assert!(restored.import_save_state(&saved));
+        assert_same_hardware(&mut restored, &mut control);
+        for frame in 300..900 {
+            for emu in [&mut restored, &mut control] {
+                emu.set_button(0, 3, (600..604).contains(&frame));
+                emu.frame();
+            }
+            assert_same_hardware(&mut restored, &mut control);
+            restored.consume_audio_samples(); control.consume_audio_samples();
+        }
+        assert!(restored.import_save_state(&saved), "snapshot remains reusable");
+        println!("Original CT2: complete restore and 600 subsequent frames/audio/mapper states match control");
+    }
+
+    #[test]
+    #[ignore = "requires local original CT2 ROM"]
+    fn ct2_save_state_legacy_mapper_evidence() {
+        let rom = std::fs::read("../roms/Captain Tsubasa II - Super Striker (Japan).nes").unwrap();
+        let mut emu = Emulator::new();
+        assert!(emu.load_rom(&rom));
+        for _ in 0..300 { emu.frame(); }
+        let saved = emu.export_state_binary();
+        let mapper = emu.cartridge.mapper.trace_state().unwrap();
+        let clock = emu.system_clock;
+        let pc = emu.cpu.pc;
+        let mapping = emu.cartridge.mapper.cpu_read(pc);
+        for frame in 300..1800 {
+            emu.set_button(0, 3, (600..604).contains(&frame) || (900..904).contains(&frame));
+            emu.set_button(0, 0, frame >= 1100 && frame % 120 < 4);
+            emu.frame();
+        }
+        let later_mapper = emu.cartridge.mapper.trace_state().unwrap();
+        println!("saved PC={pc:04X}, mapping={mapping:?}, mapper={mapper:?}, clock={clock}; later mapper={later_mapper:?}, clock={}", emu.system_clock);
+        assert!(emu.import_state_binary(&saved));
+        println!("legacy restored PC={:04X}, mapping={:?}, mapper={:?}, clock={}", emu.cpu.pc, emu.cartridge.mapper.cpu_read(emu.cpu.pc), emu.cartridge.mapper.trace_state(), emu.system_clock);
+        assert_eq!(emu.cartridge.mapper.trace_state(), Some(later_mapper));
+        assert_ne!(mapper, later_mapper);
+        // This real frame-boundary case retains the same PRG bank; it proves
+        // CHR/IRQ/timing omission, NOT a wrong-PRG-bank CPU crash.
+        assert_eq!(emu.cartridge.mapper.cpu_read(pc), mapping);
+        assert_ne!(emu.system_clock, clock);
+        for _ in 0..120 { emu.frame(); }
+        println!("120 frames after legacy restore: {}", emu.debug_state());
+        emu.reset();
+        assert!(emu.import_state_binary(&saved));
+        assert_ne!(emu.cartridge.mapper.cpu_read(pc), mapping);
+        println!("legacy restore after reset: PC={pc:04X}, expected PRG={mapping:?}, actual PRG={:?}",
+            emu.cartridge.mapper.cpu_read(pc));
+    }
+
     fn nrom_with_program(program: &[u8]) -> Vec<u8> {
         let mut rom = vec![0; 16 + 16 * 1024 + 8 * 1024];
         rom[0..4].copy_from_slice(b"NES\x1A");
@@ -1113,6 +1832,564 @@ mod tests {
         rom[16 + 0x3FFC] = 0x00;
         rom[16 + 0x3FFD] = 0x80;
         rom
+    }
+
+    fn profile_json(rom: &[u8], expected_prg: u8) -> String {
+        format!(r#"{{
+            "schemaVersion": 1,
+            "id": "test-profile",
+            "game": {{"sha256": "{}", "mapper": 0}},
+            "prgReadOverlays": [
+                {{"id": "program-byte", "offset": 0, "expectedOriginal": {}, "value": 169}}
+            ],
+            "chrReadOverlays": [
+                {{"id": "font-byte", "offset": 0, "expectedOriginal": 0, "value": 255}}
+            ],
+            "memoryWrites": [
+                {{"id": "reset-value", "space": "cpuRam", "address": 16, "value": 51, "apply": "reset"}},
+                {{"id": "frame-value", "space": "prgRam", "address": 24576, "value": 68, "apply": "frame"}}
+            ]
+        }}"#, sha256_hex(rom), expected_prg)
+    }
+
+    #[test]
+    fn profile_applies_overlays_and_timed_memory_writes() {
+        let rom = nrom_with_program(&[0xEA]);
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&rom));
+        emulator.load_game_profile(&profile_json(&rom, 0xEA)).unwrap();
+
+        assert_eq!(emulator.active_game_profile_id(), "test-profile");
+        assert_eq!(emulator.cartridge.cpu_read(0x8000), 0xA9);
+        assert_eq!(emulator.cartridge.prg_rom[0], 0xEA);
+        assert_eq!(emulator.bus.ram[0x10], 0x33);
+
+        emulator.apply_profile_writes(WriteTiming::Frame);
+        assert_eq!(emulator.cartridge.prg_ram[0], 0x44);
+    }
+
+    #[test]
+    fn profile_rejection_is_atomic_and_new_rom_clears_active_profile() {
+        let rom = nrom_with_program(&[0xEA]);
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&rom));
+
+        assert!(emulator.load_game_profile(&profile_json(&rom, 0x00)).is_err());
+        assert_eq!(emulator.active_game_profile_id(), "");
+        assert_eq!(emulator.cartridge.cpu_read(0x8000), 0xEA);
+
+        emulator.load_game_profile(&profile_json(&rom, 0xEA)).unwrap();
+        assert!(emulator.load_rom(&rom));
+        assert_eq!(emulator.active_game_profile_id(), "");
+        assert_eq!(emulator.cartridge.cpu_read(0x8000), 0xEA);
+    }
+
+    fn set_zombie_mmc1_register(emulator: &mut Emulator, address: u16, value: u8) {
+        for bit in 0..5 {
+            emulator.cartridge.cpu_write(address, (value >> bit) & 0x01);
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn trace_zombie_hunter_bank6_generation_checkpoint() {
+        let path = "../roms/Zombie Hunter (Japan).nes";
+        let rom = std::fs::read(path).expect("Zombie Hunter ROM must be present");
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&rom), "failed to load {path}");
+
+        set_zombie_mmc1_register(&mut emulator, 0x9FFF, 0x12);
+        set_zombie_mmc1_register(&mut emulator, 0xBFFF, 0x06);
+        set_zombie_mmc1_register(&mut emulator, 0xDFFF, 0x06);
+        set_zombie_mmc1_register(&mut emulator, 0xFFFF, 0x06);
+        emulator.sync_mapper_to_ppu();
+
+        emulator.bus.ram[0x06A0] = 0;
+        emulator.bus.ram[0x06A1] = 1;
+        emulator.bus.ram[0x06A2] = 0;
+        emulator.bus.ram[0x06A3] = 0;
+        emulator.bus.ram[0x06A6] = 0;
+        emulator.bus.ram[0x06A8] = 0;
+        emulator.bus.ram[0x06A9] = 0;
+        emulator.bus.ram[0x06AA] = 0;
+        emulator.bus.ram[0x00AB] = 0;
+        emulator.bus.ram[0x00A6] = 0;
+        emulator.bus.ram[0x0034] = 0;
+        emulator.bus.ram[0x0035] = 0;
+        emulator.bus.ram[0x003A] = 0;
+        emulator.bus.ram[0x0038] = 0;
+        emulator.bus.ram[0x01C0] = 0xC7;
+        emulator.bus.ram[0x0300..0x0400].fill(0);
+
+        emulator.cpu.pc = 0x860E;
+        emulator.cpu.sp = 0xCF;
+        emulator.cpu.status = 0x24;
+        emulator.cpu.a = 0;
+        emulator.cpu.x = 0;
+        emulator.cpu.y = 0;
+        emulator.cpu.cycles = 0;
+        emulator.cpu.nmi_pending = false;
+        emulator.cpu.irq_pending = false;
+
+        let initial_mapper = emulator
+            .cartridge
+            .mapper
+            .trace_mapper1_state()
+            .expect("Zombie Hunter checkpoint must use MMC1");
+        assert_eq!(initial_mapper.control, 0x12);
+        assert_eq!(initial_mapper.prg_bank, 0x06);
+        assert_eq!(
+            emulator.cartridge.mapper.cpu_read(0x860E),
+            Some(0x1860E),
+            "checkpoint must fetch $860E from PRG bank 6"
+        );
+
+        emulator.mapper_cpu_writes.clear();
+        emulator.zombie_candidate_read_trace.clear();
+        for _ in 0..89_342 {
+            emulator.clock();
+            if emulator
+                .zombie_generation_trace
+                .iter()
+                .any(|event| event.pc == 0x86B0)
+                && !emulator.cpu_ram_write_trace.is_empty()
+            {
+                break;
+            }
+        }
+
+        let generated_buffer = emulator.bus.ram[0x0300..0x0400].to_vec();
+        let generated_cursor = emulator.bus.ram[0x00A6];
+
+        let generation_events: Vec<(u16, u32, Option<Mapper1TraceState>)> = emulator
+            .zombie_generation_trace
+            .iter()
+            .map(|event| (event.pc, event.physical_prg_offset, event.mapper1_state))
+            .collect();
+        let buffer_writes: Vec<(u16, u8)> = emulator
+            .cpu_ram_write_trace
+            .iter()
+            .filter_map(|&(_, _, address, data, _)| {
+                (0x0300..0x0400).contains(&address).then_some((address, data))
+            })
+            .collect();
+        let mapper_writes: Vec<(u64, u8)> = emulator
+            .mapper_cpu_writes
+            .iter()
+            .filter_map(|&(clock, address, data)| (address == 0xFFFF).then_some((clock, data)))
+            .collect();
+        let trampoline_reads: Vec<(u64, u32, u8, Option<Mapper1TraceState>)> = emulator
+            .zombie_candidate_read_trace
+            .iter()
+            .filter_map(|event| {
+                (event.cpu_address == 0xFEFD).then_some((event.clock, event.physical_prg_offset, event.value, event.mapper1_state))
+            })
+            .collect();
+
+        println!(
+            "generation_checkpoint mapper={:?} events={generation_events:?} writes={buffer_writes:?} mapper_writes={mapper_writes:?} trampoline_reads={trampoline_reads:?} final_pc=${:04X} final_sp=${:02X}",
+            emulator.cartridge.mapper.trace_mapper1_state(),
+            emulator.cpu.pc,
+            emulator.cpu.sp,
+        );
+        assert!(generation_events.iter().any(|event| event.0 == 0x860E), "checkpoint did not enter $860E");
+        assert!(generation_events.iter().any(|event| event.0 == 0x862D), "checkpoint did not enter $862D");
+        assert!(
+            generation_events.iter().any(|event| event.0 == 0x86B0),
+            "checkpoint did not complete a generation pass"
+        );
+        assert!(!buffer_writes.is_empty(), "checkpoint did not write a $0300 stream");
+
+        emulator.bus.ram[0x0300..0x0400].copy_from_slice(&generated_buffer);
+        emulator.bus.ram[0x00A6] = generated_cursor;
+        emulator.zombie_text_trace.clear();
+        emulator.ppu_nametable_write_trace.clear();
+        emulator.cpu_ram_write_trace.clear();
+        emulator.cpu.pc = 0xF4A6;
+        emulator.cpu.sp = 0xCF;
+        emulator.cpu.cycles = 0;
+        emulator.cpu.nmi_pending = false;
+        emulator.cpu.irq_pending = false;
+        for _ in 0..20_000 {
+            emulator.clock();
+            if emulator.zombie_text_trace.iter().any(|event| event.pc == 0xF4A6)
+                && (emulator.zombie_text_trace.iter().any(|event| event.pc == 0xF49E)
+                    || !emulator.ppu_nametable_write_trace.is_empty())
+            {
+                break;
+            }
+        }
+
+        let renderer_event = emulator
+            .zombie_text_trace
+            .iter()
+            .find(|event| event.pc == 0xF4A6)
+            .expect("renderer checkpoint must enter $F4A6");
+        let renderer_buffer_prefix = renderer_event.buffer.as_ref().map(|buffer| {
+            buffer[..buffer.len().min(96)]
+                .iter()
+                .map(|byte| format!("{byte:02X}"))
+                .collect::<Vec<_>>()
+                .join(" ")
+        });
+        println!(
+            "renderer_checkpoint clock={} physical=${:05X} cursor=${:02X} buffer={renderer_buffer_prefix:?} ppu_writes={:?}",
+            renderer_event.clock,
+            renderer_event.physical_prg_offset,
+            renderer_event.buffer_cursor,
+            emulator.ppu_nametable_write_trace,
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn trace_zombie_hunter_static_source_renderer_checkpoints() {
+        let path = "../roms/Zombie Hunter (Japan).nes";
+        let rom = std::fs::read(path).expect("Zombie Hunter ROM must be present");
+        let candidate_sources = [0x8F74, 0x8F81, 0x91C8, 0x91D5];
+
+        for source_address in candidate_sources {
+            let mut emulator = Emulator::new();
+            assert!(emulator.load_rom(&rom), "failed to load {path}");
+            set_zombie_mmc1_register(&mut emulator, 0x9FFF, 0x0E);
+            set_zombie_mmc1_register(&mut emulator, 0xBFFF, 0x06);
+            set_zombie_mmc1_register(&mut emulator, 0xDFFF, 0x06);
+            set_zombie_mmc1_register(&mut emulator, 0xFFFF, 0x00);
+            emulator.sync_mapper_to_ppu();
+
+            emulator.bus.ram[0x00A6] = 0;
+            emulator.bus.ram[0x002A] = 0;
+            emulator.bus.ram[0x0300..0x0400].fill(0);
+            emulator.cpu.pc = 0x8B56;
+            emulator.cpu.sp = 0xCF;
+            emulator.cpu.status = 0x24;
+            emulator.cpu.a = (source_address >> 8) as u8;
+            emulator.cpu.x = source_address as u8;
+            emulator.cpu.y = 0;
+            emulator.cpu.cycles = 0;
+            emulator.cpu.nmi_pending = false;
+            emulator.cpu.irq_pending = false;
+
+            for _ in 0..20_000 {
+                emulator.clock();
+                if emulator.zombie_text_trace.iter().any(|event| event.pc == 0xF4A6)
+                    && (emulator.zombie_text_trace.iter().any(|event| event.pc == 0xF49E)
+                        || !emulator.ppu_nametable_write_trace.is_empty())
+                {
+                    break;
+                }
+            }
+
+            let source_event = emulator
+                .zombie_text_trace
+                .iter()
+                .find(|event| event.pc == 0x8B56 && event.source_pointer == Some(source_address))
+                .expect("static source checkpoint must enter $8B56 with its candidate pointer");
+            let renderer_event = emulator
+                .zombie_text_trace
+                .iter()
+                .find(|event| event.pc == 0xF4A6)
+                .expect("static source checkpoint must enter $F4A6");
+            let buffer_prefix = renderer_event.buffer.as_ref().map(|buffer| {
+                buffer[..buffer.len().min(64)]
+                    .iter()
+                    .map(|byte| format!("{byte:02X}"))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            });
+            let ppu_writes = emulator
+                .ppu_nametable_write_trace
+                .iter()
+                .map(|&(_, instruction_pc, ppu_address, data, physical_prg_offset)| {
+                    (instruction_pc, ppu_address, data, physical_prg_offset)
+                })
+                .take(16)
+                .collect::<Vec<_>>();
+
+            println!(
+                "static_source_checkpoint source=${source_address:04X} source_prg={:?} renderer_clock={} renderer_physical=${:05X} buffer={buffer_prefix:?} ppu_writes={ppu_writes:?}",
+                source_event.source_prg_offset,
+                renderer_event.clock,
+                renderer_event.physical_prg_offset,
+            );
+            assert_eq!(source_event.source_prg_offset, Some(u32::from(source_address - 0x8000)));
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn trace_zombie_hunter_text_path() {
+        let path = "../roms/Zombie Hunter (Japan).nes";
+        let rom = std::fs::read(path).expect("Zombie Hunter ROM must be present");
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&rom), "failed to load {path}");
+
+        let frame_count = std::env::var("ZOMBIE_TRACE_FRAMES")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .filter(|&value| value > 0)
+            .unwrap_or(120);
+        let input_events: Vec<(usize, u8)> = std::env::var("ZOMBIE_TRACE_INPUT")
+            .unwrap_or_default()
+            .split(',')
+            .filter_map(|event| {
+                let (frame, button) = event.split_once(':')?;
+                let frame = frame.parse::<usize>().ok()?;
+                let button = match button.to_ascii_uppercase().as_str() {
+                    "A" => crate::controller::BTN_A,
+                    "B" => crate::controller::BTN_B,
+                    "SELECT" => crate::controller::BTN_SELECT,
+                    "START" => crate::controller::BTN_START,
+                    "UP" => crate::controller::BTN_UP,
+                    "DOWN" => crate::controller::BTN_DOWN,
+                    "LEFT" => crate::controller::BTN_LEFT,
+                    "RIGHT" => crate::controller::BTN_RIGHT,
+                    _ => return None,
+                };
+                Some((frame, button))
+            })
+            .collect();
+
+        for frame in 0..frame_count {
+            for &(event_frame, button) in &input_events {
+                if event_frame == frame {
+                    emulator.set_button(0, button, true);
+                }
+                if event_frame + 1 == frame {
+                    emulator.set_button(0, button, false);
+                }
+            }
+            emulator.ppu_nametable_write_trace.clear();
+            emulator.cpu_ram_write_trace.clear();
+            emulator.zombie_text_trace.clear();
+            emulator.zombie_input_trace.clear();
+            emulator.zombie_candidate_read_trace.clear();
+            emulator.zombie_mode_trace.clear();
+            emulator.frame();
+
+            if frame == 16 || frame == 48 {
+                let output_name = if frame == 16 {
+                    "zombie-hunter-trace-frame-16.bmp"
+                } else {
+                    "zombie-hunter-trace-frame-48.bmp"
+                };
+                write_frame_bmp(
+                    std::path::Path::new("../artifacts").join(output_name).as_path(),
+                    &emulator.ppu.frame_buffer,
+                );
+            }
+
+            let mut ppu_writers = std::collections::BTreeMap::new();
+            for &(_, instruction_pc, ppu_address, data, physical_prg_offset) in &emulator.ppu_nametable_write_trace {
+                let entry = ppu_writers.entry(instruction_pc).or_insert((0usize, 0usize, 0u16, 0u16, physical_prg_offset));
+                entry.0 += 1;
+                entry.1 += usize::from(data != 0);
+                entry.2 = entry.2.min(ppu_address);
+                entry.3 = entry.3.max(ppu_address);
+            }
+            let mut ram_writers = std::collections::BTreeMap::new();
+            for &(_, instruction_pc, address, data, physical_prg_offset) in &emulator.cpu_ram_write_trace {
+                let entry = ram_writers.entry(instruction_pc).or_insert((0usize, 0xFFFFu16, 0u16, 0u8, physical_prg_offset));
+                entry.0 += 1;
+                entry.1 = entry.1.min(address);
+                entry.2 = entry.2.max(address);
+                entry.3 = data;
+            }
+            let state_writes = emulator
+                .cpu_ram_write_trace
+                .iter()
+                .filter(|&&(_, _, address, _, _)| {
+                    matches!(
+                        address,
+                        0x0028
+                            | 0x0029
+                            | 0x002A
+                            | 0x002B
+                            | 0x0038
+                            | 0x0039
+                            | 0x003A
+                            | 0x003B
+                            | 0x003E
+                            | 0x003F
+                            | 0x00A3
+                            | 0x00A4
+                            | 0x00AB
+                            | 0x00F4
+                            | 0x00F5
+                            | 0x00F7
+                            | 0x0610
+                            | 0x06C1
+                    )
+                })
+                .map(|&(clock, instruction_pc, address, data, physical_prg_offset)| {
+                    (clock, instruction_pc, address, data, physical_prg_offset)
+                })
+                .collect::<Vec<_>>();
+            if !ppu_writers.is_empty() || !ram_writers.is_empty() {
+                println!(
+                    "frame={frame:03} pc={:04X} ppu_writers={ppu_writers:?} ram_writers={ram_writers:?} state_writes={state_writes:?} ram0300={:02X?}",
+                    emulator.cpu.pc,
+                    &emulator.bus.ram[0x0300..0x0340],
+                );
+            }
+            for (event_index, event) in emulator.zombie_text_trace.iter().enumerate() {
+                let buffer_prefix = event.buffer.as_ref().map(|buffer| {
+                    buffer[..buffer.len().min(128)]
+                        .iter()
+                        .map(|byte| format!("{byte:02X}"))
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                });
+                let next_clock = emulator
+                    .zombie_text_trace
+                    .get(event_index + 1)
+                    .map(|next_event| next_event.clock)
+                    .unwrap_or(u64::MAX);
+                let ppu_writes = if event.pc == 0xF4A6 {
+                    emulator
+                        .ppu_nametable_write_trace
+                        .iter()
+                        .filter(|&&(clock, _, _, _, _)| clock >= event.clock && clock < next_clock)
+                        .map(|&(_, instruction_pc, ppu_address, data, _)| {
+                            let pattern_address = (if event.ppu_ctrl & 0x10 != 0 { 0x1000 } else { 0 })
+                                + usize::from(data) * 16;
+                            let bank = pattern_address / 0x0400;
+                            let chr_offset = event.chr_bank_offsets[bank]
+                                + (pattern_address % 0x0400) as u32;
+                            (instruction_pc, ppu_address, data, chr_offset)
+                        })
+                        .take(32)
+                        .collect::<Vec<_>>()
+                } else {
+                    Vec::new()
+                };
+                println!(
+                    "frame={frame:03} text_event clock={} pc=${:04X} physical=${:05X} source={:?} source_prg={:?} cursor=${:02X} ctrl=${:02X} chr={:?} mmc1={:?} ppu={ppu_writes:?} buffer={buffer_prefix:?}",
+                    event.clock,
+                    event.pc,
+                    event.physical_prg_offset,
+                    event.source_pointer.map(|pointer| format!("${pointer:04X}")),
+                    event.source_prg_offset.map(|offset| format!("${offset:05X}")),
+                    event.buffer_cursor,
+                    event.ppu_ctrl,
+                    event.chr_bank_offsets,
+                    event.mapper1_state,
+                );
+            }
+            for (event_index, event) in emulator.zombie_generation_trace.iter().enumerate() {
+                let next_clock = emulator
+                    .zombie_generation_trace
+                    .get(event_index + 1)
+                    .map(|next_event| next_event.clock)
+                    .unwrap_or(u64::MAX);
+                let ram_writes = emulator
+                    .cpu_ram_write_trace
+                    .iter()
+                    .filter(|&&(clock, _, address, _, _)| {
+                        clock >= event.clock
+                            && clock < next_clock
+                            && (0x0300..0x0400).contains(&address)
+                    })
+                    .map(|&(_, instruction_pc, address, data, physical_prg_offset)| {
+                        (instruction_pc, address, data, physical_prg_offset)
+                    })
+                    .collect::<Vec<_>>();
+                let renderer_events = emulator
+                    .zombie_text_trace
+                    .iter()
+                    .filter(|renderer| {
+                        renderer.clock >= event.clock
+                            && renderer.clock < next_clock
+                            && renderer.pc == 0xF4A6
+                    })
+                    .map(|renderer| (renderer.clock, renderer.physical_prg_offset))
+                    .collect::<Vec<_>>();
+                println!(
+                    "frame={frame:03} generation_event clock={} pc=${:04X} physical=${:05X} regs=[A:${:02X} X:${:02X} Y:${:02X}] source=${:04X} source_prg={:?} cursor=${:02X} states=[06A0:${:02X} 06A1:${:02X} 06A2:${:02X} 06A3:${:02X} 06A6:${:02X} 06A8:${:02X} 06A9:${:02X} 06AA:${:02X}] ram_writes={ram_writes:?} renderer={renderer_events:?} chr={:?} ctrl=${:02X} mmc1={:?}",
+                    event.clock,
+                    event.pc,
+                    event.physical_prg_offset,
+                    event.a,
+                    event.x,
+                    event.y,
+                    event.source_pointer,
+                    event.source_prg_offset,
+                    event.buffer_cursor,
+                    event.state_06a0,
+                    event.state_06a1,
+                    event.state_06a2,
+                    event.state_06a3,
+                    event.state_06a6,
+                    event.state_06a8,
+                    event.state_06a9,
+                    event.state_06aa,
+                    event.chr_bank_offsets,
+                    event.ppu_ctrl,
+                    event.mapper1_state,
+                );
+            }
+            for event in &emulator.zombie_input_trace {
+                println!(
+                    "frame={frame:03} input_event clock={} pc=${:04X} physical=${:05X} sp=${:02X} stack_return=${:04X} edge=${:02X} current=${:02X} cursor=${:02X} count=${:02X} mode=${:02X} state57=${:02X} state7e=${:02X} statec1=${:02X} state3f=${:02X} state26=${:02X} state2a=${:02X} state28=${:02X} state17=${:02X} state16=${:02X} state29=${:02X} state2b=${:02X} state06c3=${:02X} state06c6=${:02X} state06c7=${:02X} state2c=${:02X} state06c1=${:02X} mmc1={:?}",
+                    event.clock,
+                    event.pc,
+                    event.physical_prg_offset,
+                    event.stack_pointer,
+                    event.stack_return,
+                    event.edge,
+                    event.current,
+                    event.cursor,
+                    event.count,
+                    event.mode,
+                    event.state_57,
+                    event.state_7e,
+                    event.state_c1,
+                    event.state_3f,
+                    event.state_26,
+                    event.state_2a,
+                    event.state_28,
+                    event.state_17,
+                    event.state_16,
+                    event.state_29,
+                    event.state_2b,
+                    event.state_06c3,
+                    event.state_06c6,
+                    event.state_06c7,
+                    event.state_2c,
+                    event.state_06c1,
+                    event.mapper1_state,
+                );
+            }
+            for event in &emulator.zombie_candidate_read_trace {
+                println!(
+                    "frame={frame:03} candidate_read clock={} pc=${:04X} address=${:04X} physical=${:05X} value=${:02X} mmc1={:?}",
+                    event.clock,
+                    event.pc,
+                    event.cpu_address,
+                    event.physical_prg_offset,
+                    event.value,
+                    event.mapper1_state,
+                );
+            }
+            for event in &emulator.zombie_mode_trace {
+                println!(
+                    "frame={frame:03} mode_event clock={} pc=${:04X} physical=${:05X} edge=${:02X} current=${:02X} f4=${:02X} f7=${:02X} state0610=${:02X} state3a=${:02X} state38=${:02X} state2a=${:02X} state06c1=${:02X} mmc1={:?}",
+                    event.clock,
+                    event.pc,
+                    event.physical_prg_offset,
+                    event.edge,
+                    event.current,
+                    event.state_f4,
+                    event.state_f7,
+                    event.state_0610,
+                    event.state_3a,
+                    event.state_38,
+                    event.state_2a,
+                    event.state_06c1,
+                    event.mapper1_state,
+                );
+            }
+        }
     }
 
     fn framebuffer_summary(frame_buffer: &[u8], previous_frame: Option<&[u8]>) -> (u64, usize, usize) {
@@ -1138,6 +2415,41 @@ mod tests {
             .unwrap_or(0);
 
         (hash, non_black_pixels, changed_pixels)
+    }
+
+    fn write_frame_bmp(path: &std::path::Path, frame_buffer: &[u8]) {
+        let width = 256u32;
+        let height = 240u32;
+        let row_stride = (width * 3).div_ceil(4) * 4;
+        let image_size = row_stride * height;
+        let file_size = 54 + image_size;
+        let mut bmp = Vec::with_capacity(file_size as usize);
+        bmp.extend_from_slice(b"BM");
+        bmp.extend_from_slice(&file_size.to_le_bytes());
+        bmp.extend_from_slice(&[0; 4]);
+        bmp.extend_from_slice(&(54u32).to_le_bytes());
+        bmp.extend_from_slice(&(40u32).to_le_bytes());
+        bmp.extend_from_slice(&(width as i32).to_le_bytes());
+        bmp.extend_from_slice(&(-(height as i32)).to_le_bytes());
+        bmp.extend_from_slice(&(1u16).to_le_bytes());
+        bmp.extend_from_slice(&(24u16).to_le_bytes());
+        bmp.extend_from_slice(&[0; 4]);
+        bmp.extend_from_slice(&image_size.to_le_bytes());
+        bmp.extend_from_slice(&[0; 16]);
+
+        for pixel_y in 0..height {
+            let row_start = pixel_y as usize * width as usize * 4;
+            for pixel_x in 0..width {
+                let pixel_start = row_start + pixel_x as usize * 4;
+                bmp.extend_from_slice(&[
+                    frame_buffer[pixel_start + 2],
+                    frame_buffer[pixel_start + 1],
+                    frame_buffer[pixel_start],
+                ]);
+            }
+            bmp.resize(bmp.len() + (row_stride - width * 3) as usize, 0);
+        }
+        std::fs::write(path, bmp).expect("frame trace image must be writable");
     }
 
     fn audio_summary(samples: &[f32]) -> (f32, f32, f32, usize) {
@@ -1330,6 +2642,208 @@ mod tests {
                 emulator.cartridge.mapper.trace_state(),
             );
         }
+    }
+
+    #[test]
+    #[ignore]
+    fn trace_captain_tsubasa_chr_reads() {
+        let path = "../roms/Captain Tsubasa II - Super Striker (Japan).nes";
+        let rom = std::fs::read(path).expect("priority ROM must be present");
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&rom), "failed to load {path}");
+
+        let mut first_seen = [None; 128];
+        for frame_index in 0..180 {
+            emulator.ppu.clear_chr_read_counts_for_test();
+            emulator.frame();
+
+            let frame_banks: Vec<(usize, u64)> = emulator
+                .ppu
+                .chr_read_counts
+                .iter()
+                .enumerate()
+                .filter_map(|(physical_bank, &read_count)| {
+                    (read_count > 0).then_some((physical_bank, read_count))
+                })
+                .collect();
+            for &(physical_bank, _) in &frame_banks {
+                if first_seen[physical_bank].is_none() {
+                    first_seen[physical_bank] = Some(frame_index);
+                }
+            }
+
+            if frame_index < 12 || frame_index == 30 || frame_index == 60 || frame_index == 120 {
+                println!(
+                    "{path}: frame={frame_index:03} chr={:?} reads={frame_banks:?}",
+                    emulator.ppu.chr_bank_offsets_for_test(),
+                );
+            }
+        }
+
+        let observed_banks: Vec<(usize, usize)> = first_seen
+            .iter()
+            .enumerate()
+            .filter_map(|(physical_bank, first_frame)| {
+                first_frame.map(|frame| (physical_bank, frame))
+            })
+            .collect();
+        println!("{path}: first_seen_physical_chr_banks={observed_banks:?}");
+        assert!(!observed_banks.is_empty(), "canonical ROM did not fetch CHR data");
+        assert!(
+            observed_banks.iter().any(|&(physical_bank, _)| physical_bank >= 2),
+            "canonical runtime never fetched a physical CHR bank beyond the original font area"
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn trace_captain_tsubasa_start_input() {
+        let path = "../roms/Captain Tsubasa II - Super Striker (Japan).nes";
+        let rom = std::fs::read(path).expect("priority ROM must be present");
+        let mut emulator = Emulator::new();
+        assert!(emulator.load_rom(&rom), "failed to load {path}");
+        let output_dir = std::path::Path::new("target/captain-tsubasa-input-trace");
+        std::fs::create_dir_all(output_dir).expect("frame trace directory must be writable");
+        let frame_count = std::env::var("NES_CAPTAIN_TRACE_FRAMES")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .filter(|&value| value > 0)
+            .unwrap_or(5000);
+        let start_frame = std::env::var("NES_CAPTAIN_TRACE_START_FRAME")
+            .ok()
+            .and_then(|value| value.parse::<usize>().ok())
+            .unwrap_or(90);
+
+        let input_frames: Vec<(usize, u8)> = std::iter::once((start_frame, crate::controller::BTN_START))
+            .chain((60usize..=frame_count).step_by(30).map(|frame| (frame, crate::controller::BTN_A)))
+            .collect();
+        let mut first_seen_physical_chr_banks = [None; 128];
+        for frame_index in 0usize..=frame_count {
+            if let Some((_, button)) = input_frames.iter().find(|(frame, _)| *frame == frame_index) {
+                emulator.set_button(1, *button, true);
+            }
+            if frame_index > 0 {
+                if let Some((_, button)) = input_frames.iter().find(|(frame, _)| *frame == frame_index - 1) {
+                    emulator.set_button(1, *button, false);
+                }
+            }
+
+            emulator.ppu.clear_chr_read_counts_for_test();
+            emulator.frame();
+            if frame_index == frame_count || matches!(frame_index, 0 | 30 | 60 | 90 | 120 | 150 | 180 | 240 | 300 | 360 | 390 | 600 | 900 | 1200 | 1500 | 1800 | 2100 | 2400 | 2700 | 3000 | 3030 | 3300 | 3600 | 5000) {
+                write_frame_bmp(
+                    &output_dir.join(format!("frame-{frame_index:03}.bmp")),
+                    &emulator.ppu.frame_buffer,
+                );
+            }
+            let frame_hash = framebuffer_summary(&emulator.ppu.frame_buffer, None).0;
+            let frame_reads: Vec<(usize, u64)> = emulator
+                .ppu
+                .chr_read_counts
+                .iter()
+                .enumerate()
+                .filter_map(|(physical_bank, &read_count)| {
+                    (read_count > 0).then_some((physical_bank, read_count))
+                })
+                .collect();
+            for &(physical_bank, _) in &frame_reads {
+                if first_seen_physical_chr_banks[physical_bank].is_none() {
+                    first_seen_physical_chr_banks[physical_bank] = Some(frame_index);
+                }
+            }
+            let nonzero_tiles = emulator.ppu.nametable.iter().filter(|&&tile| tile != 0).count();
+            let probe_nametable = matches!(frame_index, 60 | 62 | 120);
+            let nonzero_tile_values = if probe_nametable {
+                emulator.ppu.nametable
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(index, &tile)| (tile != 0).then_some((index, tile)))
+                    .collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            };
+            let tile_histogram = if probe_nametable {
+                let mut counts = [0usize; 256];
+                for &tile in &emulator.ppu.nametable {
+                    counts[tile as usize] += 1;
+                }
+                counts
+                    .into_iter()
+                    .enumerate()
+                    .filter_map(|(tile, count)| (count > 0).then_some((tile as u8, count)))
+                    .collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            };
+            let input_frame = input_frames.iter().any(|(frame, _)| *frame == frame_index);
+            if frame_index == frame_count || input_frame || matches!(frame_index, 0 | 30 | 60 | 90 | 120 | 150 | 180 | 240 | 300 | 360 | 390 | 600 | 900 | 1200 | 1500 | 1800 | 2100 | 2400 | 2700 | 3000 | 3030 | 3300 | 3600 | 5000) {
+                println!(
+                    "{path}: frame={frame_index:03} pc={:04X} hash={frame_hash:016X} ppu=({:02X},{:02X}) chr={:?} reads={frame_reads:?} nt_nonzero={nonzero_tiles} nt_head={:02X?} ram={:02X?} nt_values={nonzero_tile_values:?} nt_hist={tile_histogram:?}",
+                    emulator.cpu.pc,
+                    emulator.ppu.ctrl,
+                    emulator.ppu.mask,
+                    emulator.ppu.chr_bank_offsets_for_test(),
+                    &emulator.ppu.nametable[..64],
+                    &emulator.bus.ram[0x0000..0x0040],
+                );
+            }
+        }
+        println!(
+            "{path}: resolver_calls={} first={:?}",
+            emulator.resolver_calls.len(),
+            &emulator.resolver_calls[..emulator.resolver_calls.len().min(64)],
+        );
+        let observed_banks: Vec<(usize, usize)> = first_seen_physical_chr_banks
+            .iter()
+            .enumerate()
+            .filter_map(|(physical_bank, first_frame)| {
+                first_frame.map(|frame| (physical_bank, frame))
+            })
+            .collect();
+        println!("{path}: first_seen_physical_chr_banks={observed_banks:?}");
+        let mut nametable_write_counts = std::collections::BTreeMap::new();
+        let mut nonzero_nametable_write_counts = std::collections::BTreeMap::new();
+        let mut first_nonzero_nametable_writes = Vec::new();
+        for &(_, instruction_pc, _, _, _) in &emulator.ppu_nametable_write_trace {
+            *nametable_write_counts.entry(instruction_pc).or_insert(0usize) += 1;
+        }
+        for &(clock, instruction_pc, ppu_address, data, _) in &emulator.ppu_nametable_write_trace {
+            if data == 0 {
+                continue;
+            }
+            *nonzero_nametable_write_counts.entry(instruction_pc).or_insert(0usize) += 1;
+            if first_nonzero_nametable_writes.len() < 64 {
+                first_nonzero_nametable_writes.push(format!(
+                    "clock={clock} frame={} pc={instruction_pc:04X} v={ppu_address:04X} data={data:02X}",
+                    clock / 89342,
+                ));
+            }
+        }
+        println!(
+            "{path}: nametable_writes={} writers={nametable_write_counts:?} first={:?}",
+            emulator.ppu_nametable_write_trace.len(),
+            &emulator.ppu_nametable_write_trace[..emulator.ppu_nametable_write_trace.len().min(64)],
+        );
+        println!(
+            "{path}: nonzero_nametable_writes={} writers={nonzero_nametable_write_counts:?} first={first_nonzero_nametable_writes:?}",
+            emulator.ppu_nametable_write_trace.iter().filter(|&&(_, _, _, data, _)| data != 0).count(),
+        );
+        let checkpoint_frames = [390usize, 600, 900, 3000, 5000];
+        let mut checkpoint_writers = std::collections::BTreeMap::new();
+        for &(clock, instruction_pc, ppu_address, data, physical_prg_offset) in &emulator.ppu_nametable_write_trace {
+            if data == 0 {
+                continue;
+            }
+            let frame = (clock / 89342) as usize;
+            if checkpoint_frames.contains(&frame) {
+                let writer = checkpoint_writers.entry(frame).or_insert_with(std::collections::BTreeMap::new);
+                let summary = writer.entry(instruction_pc).or_insert((0usize, ppu_address, ppu_address, physical_prg_offset));
+                summary.0 += 1;
+                summary.1 = summary.1.min(ppu_address);
+                summary.2 = summary.2.max(ppu_address);
+            }
+        }
+        println!("{path}: checkpoint_nametable_writers={checkpoint_writers:?}");
     }
 
     #[test]

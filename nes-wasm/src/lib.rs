@@ -44,6 +44,8 @@ pub mod cartridge;
 pub mod mappers;
 pub mod controller;
 pub mod emulator;
+pub mod game_profile;
+pub mod text_observer;
 
 mod fceumm_coeffs; // New module for FCEUmm coefficient
 
@@ -86,6 +88,21 @@ impl NesWasm {
     #[wasm_bindgen(js_name = "loadRom")]
     pub fn load_rom(&mut self, rom_data: &[u8]) -> bool {
         self.emu.load_rom(rom_data)
+    }
+
+    #[wasm_bindgen(js_name = "loadGameProfile")]
+    pub fn load_game_profile(&mut self, json: &str) -> Result<(), JsValue> {
+        self.emu.load_game_profile(json).map_err(|error| JsValue::from_str(&error))
+    }
+
+    #[wasm_bindgen(js_name = "clearGameProfile")]
+    pub fn clear_game_profile(&mut self) {
+        self.emu.clear_game_profile();
+    }
+
+    #[wasm_bindgen(js_name = "getActiveGameProfileId")]
+    pub fn active_game_profile_id(&self) -> String {
+        self.emu.active_game_profile_id().to_string()
     }
 
     /// 重置模擬器
@@ -185,6 +202,70 @@ pub struct EmuWasm {
 
 #[wasm_bindgen]
 impl EmuWasm {
+    #[wasm_bindgen(js_name = "enableTextObserver")]
+    pub fn enable_text_observer(&mut self, enabled: bool) -> bool {
+        match &mut self.core {
+            CoreType::Nes(emu) => emu.enable_text_observer(enabled),
+            _ => false,
+        }
+    }
+
+    #[wasm_bindgen(js_name = "takeTextEvents")]
+    pub fn take_text_events(&mut self) -> Vec<u32> {
+        match &mut self.core {
+            CoreType::Nes(emu) => emu.text_observer.take(),
+            _ => Vec::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "getTextProvenancePtr")]
+    pub fn text_provenance_ptr(&self) -> *const u16 {
+        match &self.core {
+            CoreType::Nes(emu) => emu.ppu.text_provenance.as_ptr(),
+            _ => std::ptr::null(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "getTextNametable")]
+    pub fn text_nametable(&self) -> Vec<u8> {
+        match &self.core {
+            CoreType::Nes(emu) => emu.ppu.nametable.to_vec(),
+            _ => Vec::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "getTextFetchedCells")]
+    pub fn text_fetched_cells(&self) -> Vec<u32> {
+        match &self.core {
+            CoreType::Nes(emu) => emu.ppu.text_fetched_cells.clone(),
+            _ => Vec::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "getTextBackdrop")]
+    pub fn text_backdrop(&self) -> u32 {
+        match &self.core {
+            CoreType::Nes(emu) => emu.ppu.text_backdrop(),
+            _ => 0,
+        }
+    }
+
+    #[wasm_bindgen(js_name = "getTextFrameMetadata")]
+    pub fn text_frame_metadata(&self) -> Vec<u32> {
+        match &self.core {
+            CoreType::Nes(emu) => emu.ppu.text_frame_metadata.clone(),
+            _ => Vec::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "getTextBackgroundProvenancePtr")]
+    pub fn text_background_provenance_ptr(&self) -> *const u16 {
+        match &self.core {
+            CoreType::Nes(emu) => emu.ppu.text_background_provenance.as_ptr(),
+            _ => std::ptr::null(),
+        }
+    }
+
     #[wasm_bindgen(constructor)]
     pub fn new() -> EmuWasm {
         EmuWasm { core: CoreType::None }
@@ -222,6 +303,30 @@ impl EmuWasm {
         }
 
         false
+    }
+
+    #[wasm_bindgen(js_name = "loadGameProfile")]
+    pub fn load_game_profile(&mut self, json: &str) -> Result<(), JsValue> {
+        match &mut self.core {
+            CoreType::Nes(emu) => emu.load_game_profile(json)
+                .map_err(|error| JsValue::from_str(&error)),
+            _ => Err(JsValue::from_str("game profiles currently require the NES core")),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "clearGameProfile")]
+    pub fn clear_game_profile(&mut self) {
+        if let CoreType::Nes(emu) = &mut self.core {
+            emu.clear_game_profile();
+        }
+    }
+
+    #[wasm_bindgen(js_name = "getActiveGameProfileId")]
+    pub fn active_game_profile_id(&self) -> String {
+        match &self.core {
+            CoreType::Nes(emu) => emu.active_game_profile_id().to_string(),
+            _ => String::new(),
+        }
     }
 
     /// 載入 Game Gear ROM

@@ -1,0 +1,2392 @@
+{
+  "schemaVersion": 2,
+  "adapterId": "captain-tsubasa-2-jp",
+  "sourceSha256": "bf5038afe4c9df1c1c7eff0bc74a12f3cd8ed994b9aab92617d066d9d10ad746",
+  "pointerTableId": "cutscenes-bank-04",
+  "targetLanguage": "zh-Hant",
+  "metrics": {
+    "sceneCount": 16,
+    "uniqueSceneCount": 16,
+    "aliasCount": 0,
+    "encodedBytes": 8127,
+    "textRuns": 455,
+    "sourceGlyphs": 4965,
+    "uniqueSourceGlyphCodes": 165,
+    "controls": 1556,
+    "pauses": 404
+  },
+  "aliases": [],
+  "scripts": [
+    {
+      "sceneId": "cutscenes-bank-04.00",
+      "sceneSha256": "dce6b980e983c7385ed989c0fe60db3d8b001f02ccce6e646637b7e556385bfd",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.00.text.0010",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.00.text.0020",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.00.text.0025",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.00.text.0034",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.00.text.0052",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.00.text.005c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.00.text.0066",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.01",
+      "sceneSha256": "a45d8f57c5c178a1a6f5fb0df19126a469f26d149051a199cefde76c59ff3920",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.01.text.000f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.01.text.0015",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.01.text.002a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.01.text.0036",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.01.text.0044",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.01.text.005d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.01.text.0062",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.01.text.006c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.01.text.0084",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.02",
+      "sceneSha256": "951a72b80dda29130c288eb7efe52d4ecf1da5ccc9647ee2dcfab9c605a32d20",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.02.text.0013",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.02.text.001b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.02.text.0023",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.02.text.003c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.02.text.0044",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.02.text.0049",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.03",
+      "sceneSha256": "122b58287bf04510209155efccba59b67515fe4064a252ffa90dc4f102b0c472",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.03.text.0011",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0025",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0046",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.004c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.005a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0077",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.008b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.00a0",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.00b4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.00c6",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.00d4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.00ea",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.00fd",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0105",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.010f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.011a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0126",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0137",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.013d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.014d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0150",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.016b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.017b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.019f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.01a7",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.01ac",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.01be",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.01d1",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.01e3",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.01f8",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0200",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.020e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0225",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0233",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0242",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0250",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0266",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.026e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0277",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0291",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.02a8",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.02b8",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.02be",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.02c9",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.02cd",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.02de",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.02e4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.02ea",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0309",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0326",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0332",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0340",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.034f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0356",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0368",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.036f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0371",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0374",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0378",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0385",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0389",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.039f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.03b1",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.03da",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.03e2",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.03e4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.03eb",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0408",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.0419",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.03.text.042b",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.04",
+      "sceneSha256": "97acd45cc5ce4ab7c302bad8e87c0fc81d4dce2a6807958b4bce59722b164187",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.04.text.0010",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.0016",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.0025",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.0036",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.004b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.0051",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.006b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.0072",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.0085",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.0092",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.00aa",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.00af",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.00ba",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.00d6",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.00dc",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.00ef",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.00fa",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.0113",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.04.text.0120",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.05",
+      "sceneSha256": "ca877eff79976409aec0be0b6a0cf79d6a95a2a5647225e1c2635fcb44df8d16",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.05.text.0011",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.001e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0031",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0048",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0050",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.006b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0076",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0086",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0096",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.00af",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.00be",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.00e3",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.00ef",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.013e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0159",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0167",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0176",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.018e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.019a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.01a8",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.01cf",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.01e1",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.01f0",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0211",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.021e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.023a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0256",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.025d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0267",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.027a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.027f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0285",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.02a7",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.02b5",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.02c6",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.02e1",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.02f0",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0315",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0328",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0331",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0356",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.03ab",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.03c6",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.03d4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.03e4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0403",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0416",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0436",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.043d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0449",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.045f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.046c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.047c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0498",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.049c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.04c0",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.04ca",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.04db",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.04eb",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.04f9",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0508",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0516",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.051a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.052e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0544",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0553",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0564",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.056b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.0572",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.05.text.057a",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.06",
+      "sceneSha256": "26ddc2704009cc5cb14584c90ca9b643a45cf54ff473f4afae0895bbbc580c2b",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.06.text.000d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0023",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.002b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.003e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0042",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0050",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0058",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0065",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.006d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0078",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.008a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.009e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.00b2",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.00bd",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.00c7",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.00d7",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.00e9",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.00fc",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0106",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0118",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0127",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0147",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.015a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0164",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.016d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.017f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0192",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.01a2",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.01b0",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.01c2",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.01ca",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.01d5",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.01ef",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0203",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0211",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0225",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0237",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0248",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.025c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0263",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0270",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.027b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.0287",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.06.text.028d",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.07",
+      "sceneSha256": "8e0bf7a225bc96779c21d0016064e61f0f0c1a832d92d3f8594719b0206df9e7",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.07.text.001a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0021",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0033",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.003e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0046",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.005e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0065",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.006e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0080",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.008d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0094",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.00ae",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.00c2",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.00c6",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.00d7",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.00dc",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.00ea",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.010a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0110",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0118",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.012c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.013e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.014e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0160",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0172",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0184",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0190",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.01a4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.01c2",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.01cf",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.01d8",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.01fb",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.020b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.07.text.0210",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.08",
+      "sceneSha256": "bfb3540b01a0303840a1a5ac96f94b801fe7ee7765460d6bd4f56963d904a530",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.08.text.0013",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.08.text.0019",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.08.text.0029",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.08.text.0039",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.08.text.004d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.08.text.0054",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.08.text.0058",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.08.text.005d",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.09",
+      "sceneSha256": "48dbcc828253850a22653b2d451c0e4574b9f7eb8671abab56135248c45b2e8f",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.09.text.0013",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0018",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0027",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0036",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0054",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0060",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0069",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.006e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0095",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.00ad",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.00ba",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.00d4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.00ed",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.00fd",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.010e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0129",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.013a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.014b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0165",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0175",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0184",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0192",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.0197",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.01a1",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.09.text.01bc",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.10",
+      "sceneSha256": "a7c3f53d1702a7fcba5036e8f40c63b910bb98c40151e319384f19dd4bb39315",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.10.text.000f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.0025",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.0039",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.004b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.0068",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.0078",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.0087",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.009a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.00ad",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.00c1",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.00d5",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.00e4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.00f5",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.0107",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.0120",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.012f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.10.text.0143",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.11",
+      "sceneSha256": "4cacaa3d6bec9eb8e8d7d8fcea316cf65ab7ae5e3a33465eec5fe5ebab81c80b",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.11.text.000d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.001b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.002c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0037",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.004b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0058",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.007a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0085",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0098",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.00ab",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.00bb",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.00cb",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.00d9",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.00e5",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.00ea",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.00f4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0120",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0126",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0132",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0143",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0157",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0168",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.017a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0189",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.019a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.01a6",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.01b8",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.01c8",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.01d9",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.01df",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.01ea",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.01fb",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0210",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0216",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.11.text.0223",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.12",
+      "sceneSha256": "0ebc59587826fbd71268c50173add99852054e2c35a3287c1acf5e4ebe4ee446",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.12.text.0072",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.007b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.0086",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.009b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.00ae",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.00bd",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.00cc",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.00e0",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.00f1",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.013c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.014d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.015e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.016d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.018e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.0199",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.01a4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.01b4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.01c0",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.01cc",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.01e0",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.01f1",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.020c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.0215",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.0231",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.0236",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.0241",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.0250",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.028f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.0296",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.02ba",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.030e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.0316",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.033c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.12.text.0344",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.13",
+      "sceneSha256": "363d8dd5002efe90992e128800a4859bb5bbe8655df825029bc59c213876f28c",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.13.text.0016",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.001c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0024",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.003f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0051",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0063",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0072",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0080",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0093",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.00a1",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.00bf",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.00ce",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.00dd",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.00f4",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0111",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0118",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0129",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0131",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0155",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0165",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0171",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.017d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.01a1",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.01b6",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.01cf",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.01ef",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.01f3",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0213",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0220",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0228",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0246",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0253",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.025d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.027f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0296",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.029a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.02ae",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.02c0",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.02c7",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.02d3",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.02e6",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.02fa",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0315",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0321",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0328",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0338",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0345",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.13.text.0353",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.14",
+      "sceneSha256": "020eb101098fcb49edf3c22609a2c60dde0be9e590025329ac4b933a835fa048",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.14.text.0014",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.14.text.001a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.14.text.0024",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.14.text.003d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.14.text.0041",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.14.text.0051",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.14.text.0058",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.14.text.0062",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    },
+    {
+      "sceneId": "cutscenes-bank-04.15",
+      "sceneSha256": "1c325d8160d93c26ec3efb10240813acb3a99c2ddf5e4cd02931b0ec1b1fe86d",
+      "entries": [
+        {
+          "id": "cutscenes-bank-04.15.text.0012",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.001a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.002d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.0047",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.004e",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.0056",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.0072",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.009c",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.00a7",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.00bb",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.00cc",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.00ea",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.00fa",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.010a",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.011b",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.012d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.013d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.014d",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.0160",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.016f",
+          "category": "dialogue",
+          "translation": ""
+        },
+        {
+          "id": "cutscenes-bank-04.15.text.017d",
+          "category": "dialogue",
+          "translation": ""
+        }
+      ]
+    }
+  ]
+}

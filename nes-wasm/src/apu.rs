@@ -58,6 +58,7 @@ const LENGTH_TABLE: [u8; 32] = [
 // ===== 脈衝波聲道 =====
 
 /// 脈衝波聲道（Pulse）
+#[derive(Clone)]
 struct PulseChannel {
     /// 是否啟用
     enabled: bool,
@@ -289,6 +290,7 @@ impl PulseChannel {
 // ===== 三角波聲道 =====
 
 /// 三角波聲道（Triangle）
+#[derive(Clone)]
 struct TriangleChannel {
     /// 是否啟用
     enabled: bool,
@@ -392,6 +394,7 @@ impl TriangleChannel {
 // ===== 雜訊聲道 =====
 
 /// 雜訊聲道（Noise）
+#[derive(Clone)]
 struct NoiseChannel {
     /// 是否啟用
     enabled: bool,
@@ -527,6 +530,7 @@ impl NoiseChannel {
 // ===== DMC 聲道 =====
 
 /// DMC 聲道（Delta Modulation Channel）
+#[derive(Clone)]
 struct DmcChannel {
     /// 是否啟用
     enabled: bool,
@@ -628,6 +632,7 @@ impl DmcChannel {
 // ===== APU 主結構 =====
 
 /// APU 結構體
+#[derive(Clone)]
 pub struct Apu {
     /// 脈衝波聲道 1
     pulse1: PulseChannel,

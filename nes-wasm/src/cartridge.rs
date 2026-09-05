@@ -21,6 +21,7 @@ fn is_supported_mapper(mapper_id: u8) -> bool {
 }
 
 /// iNES 標頭結構
+#[derive(Clone)]
 pub struct CartridgeHeader {
     /// PRG ROM 大小（16KB 為單位）
     pub prg_rom_banks: u8,
@@ -37,6 +38,7 @@ pub struct CartridgeHeader {
 }
 
 /// NES 卡帶
+#[derive(Clone)]
 pub struct Cartridge {
     /// 卡帶標頭資訊
     pub header: CartridgeHeader,
@@ -52,6 +54,8 @@ pub struct Cartridge {
     pub mapper: Box<dyn MapperTrait>,
     /// 是否已載入 ROM
     pub loaded: bool,
+    prg_overlay_values: Vec<u8>,
+    prg_overlay_mask: Vec<bool>,
 }
 
 impl Cartridge {
@@ -72,6 +76,8 @@ impl Cartridge {
             chr_ram: false,
             mapper: Box::new(Mapper0::new(1, 1)),
             loaded: false,
+            prg_overlay_values: Vec::new(),
+            prg_overlay_mask: Vec::new(),
         }
     }
 
@@ -141,6 +147,8 @@ impl Cartridge {
             return false;
         }
         self.prg_rom = data[offset..offset + prg_size].to_vec();
+        self.prg_overlay_values = vec![0; prg_size];
+        self.prg_overlay_mask = vec![false; prg_size];
         offset += prg_size;
 
         // 讀取 CHR ROM/RAM
@@ -198,6 +206,9 @@ impl Cartridge {
             if addr >= 0x8000 {
                 // PRG ROM
                 let index = mapped as usize % self.prg_rom.len().max(1);
+                if self.prg_overlay_mask.get(index).copied().unwrap_or(false) {
+                    return self.prg_overlay_values[index];
+                }
                 self.prg_rom.get(index).copied().unwrap_or(0)
             } else {
                 0
@@ -266,6 +277,20 @@ impl Cartridge {
     pub fn mirror_mode(&self) -> MirrorMode {
         self.header.mirror_mode
     }
+
+    pub fn install_prg_overlays(&mut self, overlays: &[(usize, u8)]) {
+        self.clear_prg_overlays();
+        for &(offset, value) in overlays {
+            if offset < self.prg_overlay_values.len() {
+                self.prg_overlay_values[offset] = value;
+                self.prg_overlay_mask[offset] = true;
+            }
+        }
+    }
+
+    pub fn clear_prg_overlays(&mut self) {
+        self.prg_overlay_mask.fill(false);
+    }
 }
 
 #[cfg(test)]
@@ -310,5 +335,20 @@ mod tests {
         nes2[8] = 0;
         nes2[9] = 1;
         assert!(!Cartridge::new().load_rom(&nes2));
+    }
+
+    #[test]
+    fn prg_overlay_changes_reads_without_mutating_rom() {
+        let mut rom = ines_rom(0);
+        rom[16] = 0x11;
+        let mut cartridge = Cartridge::new();
+        assert!(cartridge.load_rom(&rom));
+
+        cartridge.install_prg_overlays(&[(0, 0x22)]);
+        assert_eq!(cartridge.cpu_read(0x8000), 0x22);
+        assert_eq!(cartridge.prg_rom[0], 0x11);
+
+        cartridge.clear_prg_overlays();
+        assert_eq!(cartridge.cpu_read(0x8000), 0x11);
     }
 }
