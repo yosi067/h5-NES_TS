@@ -79,7 +79,19 @@ impl MapperWriteResult {
 
 /// Mapper 特性（介面）
 /// 所有 Mapper 都必須實作此特性
-pub trait MapperTrait {
+pub trait MapperClone {
+    fn clone_mapper(&self) -> Box<dyn MapperTrait>;
+}
+
+impl<T: MapperTrait + Clone + 'static> MapperClone for T {
+    fn clone_mapper(&self) -> Box<dyn MapperTrait> { Box::new(self.clone()) }
+}
+
+impl Clone for Box<dyn MapperTrait> {
+    fn clone(&self) -> Self { self.clone_mapper() }
+}
+
+pub trait MapperTrait: MapperClone {
     /// CPU 讀取映射
     /// 傳入 CPU 位址，回傳映射後的 ROM/RAM 偏移量
     fn cpu_read(&self, addr: u16) -> Option<u32>;
@@ -126,6 +138,7 @@ pub trait MapperTrait {
 // CHR ROM: 8KB
 // 用於：超級瑪利歐兄弟、打磚塊等早期遊戲
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper0 {
     prg_banks: u8,
     chr_banks: u8,
@@ -179,6 +192,7 @@ impl MapperTrait for Mapper0 {
 // 支援 PRG/CHR bank 切換與鏡像控制
 // 用於：塞爾達傳說、洛克人2、最終幻想 等
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper1 {
     prg_banks: u8,
     chr_banks: u8,
@@ -335,6 +349,7 @@ impl MapperTrait for Mapper1 {
 // 可切換的 bank 在 $8000-$BFFF
 // 用於：洛克人、魂斗羅、惡魔城 等
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper2 {
     prg_banks: u8,
     selected_bank: u8,
@@ -387,6 +402,7 @@ impl MapperTrait for Mapper2 {
 // 可切換 8KB CHR ROM bank
 // 用於：所羅門之鑰、暴力拆除 等
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper3 {
     prg_banks: u8,
     _chr_banks: u8,
@@ -447,6 +463,7 @@ impl MapperTrait for Mapper3 {
 // - 可控的鏡像模式
 // 用於：超級瑪利歐兄弟3、忍者龍劍傳、大金剛3 等
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper4 {
     prg_banks: u8,
     chr_banks: u8,
@@ -671,6 +688,7 @@ impl MapperTrait for Mapper4 {
 // 鏡像: 單屏
 // 用於：雙截龍、戰斧 等
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper7 {
     _prg_banks: u8,
     selected_bank: u8,
@@ -726,6 +744,7 @@ impl MapperTrait for Mapper7 {
 // ============================================================
 // Mapper 11 (Color Dreams) - 簡單 PRG/CHR 切換
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper11 {
     prg_banks: u8,
     chr_banks: u8,
@@ -775,6 +794,7 @@ impl MapperTrait for Mapper11 {
 // ============================================================
 // 用於 100 合 1 多遊戲卡帶
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper15 {
     prg_banks: u8,
     /// 記錄地址鎖存器 (用於模式選擇)
@@ -870,6 +890,7 @@ impl MapperTrait for Mapper15 {
 // 支援 PRG/CHR bank 切換和 CPU 週期 IRQ
 // 用於：龍珠Z 系列等
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper16 {
     prg_banks: u8,
     chr_banks: u8,
@@ -988,6 +1009,7 @@ impl MapperTrait for Mapper16 {
 // 支援精細的 PRG/CHR bank 切換和 IRQ
 // 用於：魂斗羅 Force 等 Konami 遊戲
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper23 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1143,6 +1165,7 @@ impl MapperTrait for Mapper23 {
 // ============================================================
 // Mapper 66 (GxROM) - 簡單 PRG/CHR 切換
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper66 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1183,6 +1206,7 @@ impl MapperTrait for Mapper66 {
 // ============================================================
 // Mapper 71 (Camerica/Codemasters)
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper71 {
     prg_banks: u8,
     selected_bank: u8,
@@ -1230,6 +1254,7 @@ impl MapperTrait for Mapper71 {
 // ============================================================
 // 用於台灣麻將等遊戲
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper113 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1281,6 +1306,7 @@ impl MapperTrait for Mapper113 {
 // ============================================================
 // Mapper 202 - 150合1 等合集卡帶
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper202 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1360,6 +1386,7 @@ impl MapperTrait for Mapper202 {
 // ============================================================
 // 支援高達 2MB PRG ROM 和 1MB CHR ROM
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper225 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1457,6 +1484,7 @@ impl MapperTrait for Mapper225 {
 //
 // Power-on: All bits clear → S=0,O=0 → UNROM-like, bank 0 at both halves
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper227 {
     prg_banks: u8,
     _chr_banks: u8,
@@ -1564,6 +1592,7 @@ impl MapperTrait for Mapper227 {
 // 類似 MMC3 但有額外的 CHR RAM 控制和 PRG 高位元
 // 用於一些中文版遊戲
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper245 {
     prg_banks: u8,
     _chr_banks: u8,
@@ -1699,6 +1728,7 @@ impl MapperTrait for Mapper245 {
 //
 // 參考：FCEUX 253.cpp
 // ============================================================
+#[derive(Clone)]
 pub struct Mapper253 {
     prg_banks: u8,
     chr_banks: u8,

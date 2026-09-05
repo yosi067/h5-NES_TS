@@ -12,6 +12,8 @@
 import init, { EmuWasm } from './wasm/nes_wasm.js';
 import JSZip from 'jszip';
 import { applyBpsPatch } from './game-profiles/bps';
+import { CT2_SOURCE_HASHES, validateLocalizationAssets, type LocalizationAssets } from './game-profiles/localization';
+import { NesTextOverlay } from './game-profiles/text-overlay';
 import { getRomMagazineMeta } from './data/rom-metadata';
 import type { EmulatorControls } from 'mupen64plus-web';
 import {
@@ -335,6 +337,7 @@ let gameProfileIndexPromise: Promise<GameProfileIndex> | null = null;
 let activeGamePresentation: GamePresentation | null = null;
 let activeGamePresentationFrame = 0;
 let activeGamePresentationInputFrame: number | null = null;
+let textOverlay: NesTextOverlay | null = null;
 
 async function loadGameProfileIndex(signal?: AbortSignal): Promise<GameProfileIndex> {
   if (!gameProfileIndexPromise) {
@@ -637,6 +640,8 @@ function stopFbNeoBackend(): void {
 }
 
 function resetWasmCore(): void {
+  textOverlay?.dispose();
+  textOverlay = null;
   if (!nes) return;
   nes.free();
   nes = new EmuWasm();
@@ -2083,6 +2088,9 @@ async function startGame(
   signal?: AbortSignal,
 ): Promise<void> {
   throwIfSignalAborted(signal);
+  textOverlay?.dispose();
+  textOverlay = null;
+  activeGamePresentation = null;
   const romBytes = new Uint8Array(romData);
   
   // 根據副檔名選擇對應的載入方法
@@ -2115,15 +2123,31 @@ async function startGame(
   activeBackend = 'wasm';
   let preparedProfile: PreparedGameProfile | null = null;
   let preparedRomBytes: Uint8Array = romBytes;
+  let localizationAssets: LocalizationAssets | null = null;
   if (lower.endsWith('.nes')) {
     try {
-      preparedProfile = await prepareGameProfileForRom(romBytes, signal);
-      if (preparedProfile) preparedRomBytes = preparedProfile.romBytes;
+      if (CT2_SOURCE_HASHES.includes(await sha256Hex(romBytes))) {
+        // This route deliberately runs the ORIGINAL ROM. No BPS or font patch.
+        const base = 'game-profiles/captain-tsubasa-2-jp/';
+        const [catalog, runtime, menus] = await Promise.all(['localization.json', 'text-runtime.json', 'menus.json'].map(async name => {
+          const response = await fetch(new URL(base + name, window.location.href), { signal });
+          if (!response.ok) throw new Error(`localization HTTP ${response.status}`);
+          return response.json();
+        }));
+        if (menus.sourceSha256 !== CT2_SOURCE_HASHES[0] || menus.format !== 'ct2-original-menu-definitions'
+          || !Array.isArray(menus.entries) || menus.entries.length > 1000) throw new Error('選單來源不符');
+        localizationAssets = { catalog, runtime, menus };
+        validateLocalizationAssets(localizationAssets);
+      } else {
+        preparedProfile = await prepareGameProfileForRom(romBytes, signal);
+        if (preparedProfile) preparedRomBytes = preparedProfile.romBytes;
+      }
     } catch (error) {
       if (isAbortError(error)) throw error;
       console.warn('[NES] 遊戲設定檔準備失敗，將使用原始 ROM 執行', error);
       preparedProfile = null;
       preparedRomBytes = romBytes;
+      localizationAssets = null;
     }
   }
   let loaded = false;
@@ -2189,6 +2213,10 @@ async function startGame(
       ctx.imageSmoothingEnabled = false;
       imageData = ctx.createImageData(screenW, displayH);
       canvas.style.aspectRatio = coreType === 'nes' ? '4 / 3' : `${screenW} / ${displayH}`;
+    }
+
+    if (coreType === 'nes' && localizationAssets && canvas && nes.enableTextObserver(true)) {
+      textOverlay = new NesTextOverlay(canvas, localizationAssets);
     }
     
     // 隱藏選擇器，顯示遊戲畫面
@@ -3477,6 +3505,14 @@ function renderFrame(): void {
   }
   ctx.putImageData(imageData, 0, 0);
   renderGamePresentation();
+  if (textOverlay && nes) {
+    try { textOverlay.render(nes, NES_OVERSCAN_TOP); }
+    catch (error) {
+      console.error('[中文化] 顯示失敗，保留原遊戲繼續執行', error);
+      textOverlay.dispose(); textOverlay = null;
+      nes.enableTextObserver(false);
+    }
+  }
 }
 
 function renderGamePresentation(): void {
@@ -3731,6 +3767,12 @@ function toggleMute(): void {
 
 const SAVE_STATE_PREFIX = 'emu_savestate_';
 
+// Native NES snapshots own complete hardware inside the current Rust instance.
+// A token is NOT a portable save file: never put it in localStorage. WeakMap
+// also prevents a replacement/freed EmuWasm from inheriting another core's slots.
+const nesTemporaryStates = new WeakMap<EmuWasm, Map<string, string>>();
+const NES_TEMP_STATE_PREFIX = '#NES-TEMP-2:';
+
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   const chunkSize = 0x8000;
@@ -3863,6 +3905,21 @@ function saveState(slot: number = 0): boolean {
   try {
     const saveData = nes.exportSaveState();
     const key = getSaveKey(slot);
+    if (nes.getCoreType() === 'nes') {
+      // Fail closed with an older WASM build; its NESW v1 export is incomplete.
+      if (!saveData.includes(NES_TEMP_STATE_PREFIX)) {
+        console.warn('[NES] 核心尚未支援安全暫存，請更新 WASM；未寫入不完整存檔');
+        return false;
+      }
+      let slots = nesTemporaryStates.get(nes);
+      if (!slots) { slots = new Map(); nesTemporaryStates.set(nes, slots); }
+      slots.delete(key);
+      slots.set(key, saveData);
+      // Match the Rust registry bound, including callers using arbitrary slots.
+      while (slots.size > 16) slots.delete(slots.keys().next().value!);
+      console.log(`[NES] 暫存成功（限本次遊戲執行）ROM="${currentRomFilename}" slot=${slot}`);
+      return true;
+    }
     localStorage.setItem(key, saveData);
     console.log(`[SaveState] 存檔成功 ROM="${currentRomFilename}" key="${key}" slot=${slot} size=${saveData.length}`);
     return true;
@@ -3910,7 +3967,10 @@ function loadState(slot: number = 0): boolean {
   
   try {
     const key = getSaveKey(slot);
-    const saveData = localStorage.getItem(key);
+    const nativeNes = nes.getCoreType() === 'nes';
+    const saveData = nativeNes
+      ? nesTemporaryStates.get(nes)?.get(key)
+      : localStorage.getItem(key);
     
     if (!saveData) {
       console.log(`[SaveState] ROM="${currentRomFilename}" key="${key}" slot=${slot} 沒有存檔`);
@@ -3919,6 +3979,13 @@ function loadState(slot: number = 0): boolean {
     
     const success = nes.importSaveState(saveData);
     if (success) {
+      if (nativeNes) {
+        clearAudioQueue();
+        // Keep the user's current mute preference; discard queued future audio.
+        nes.consumeAudioSamples();
+        nes.setAudioEnabled(!audioMuted);
+        renderFrame();
+      }
       console.log(`[SaveState] 讀取成功 ROM="${currentRomFilename}" key="${key}" slot=${slot}`);
       // Diagnostic: dump PPU state after loading save state (for transparency diagnosis)
       try {
@@ -3928,6 +3995,7 @@ function loadState(slot: number = 0): boolean {
         console.log(`[LOAD STATE DIAG] PPU Color:\n${colorState}\nDSP:\n${dspInfo}\nCGRAM[0-31]:\n${cgram}`);
       } catch(e) { /* ignore */ }
     } else {
+      if (nativeNes) nesTemporaryStates.get(nes)?.delete(key);
       console.warn(`[SaveState] 讀取失敗（資料不相容）ROM="${currentRomFilename}" key="${key}"`);
     }
     return success;
@@ -4014,7 +4082,9 @@ function saveStateForUser(slot: number = 0, showResult = false): Promise<boolean
     ? queueSnes9xStateOperation(() => saveSnes9xStateWithPersistence(slot))
     : Promise.resolve(saveState(slot));
   return operation.then(success => {
-    if (showResult) showToast(success ? '✅ 存檔成功' : '❌ 存檔失敗');
+    if (showResult) showToast(success
+      ? (activeBackend === 'wasm' && nes?.getCoreType() === 'nes' ? '✅ 暫存成功（限本次執行，保留最近 16 次）' : '✅ 存檔成功')
+      : '❌ 存檔失敗');
     return success;
   });
 }
@@ -4024,12 +4094,18 @@ function loadStateForUser(slot: number = 0, showResult = false): Promise<boolean
     ? queueSnes9xStateOperation(() => loadSnes9xStateWithPersistence(slot))
     : Promise.resolve(loadState(slot));
   return operation.then(success => {
-    if (showResult) showToast(success ? '✅ 讀取成功' : '❌ 沒有存檔');
+    if (showResult) showToast(success ? '✅ 讀取成功'
+      : (activeBackend === 'wasm' && nes?.getCoreType() === 'nes'
+        ? '❌ 沒有有效暫存（舊檔、重新載入或過期暫存不支援）' : '❌ 沒有存檔'));
     return success;
   });
 }
 
 function exportSaveToFile(): void {
+  if (activeBackend === 'wasm' && nes?.getCoreType() === 'nes') {
+    showToast('NES 目前僅支援本次執行暫存，不能匯出為檔案');
+    return;
+  }
   if (isFbNeoActive()) {
     showToast('FBNeo 即時存檔尚未支援');
     return;

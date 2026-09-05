@@ -390,6 +390,10 @@ export default defineConfig({
     emptyOutDir: true,
     sourcemap: true,
     rollupOptions: {
+      input: {
+        main: resolve(__dirname, 'index.html'),
+        translationStudio: resolve(__dirname, 'translation-studio.html'),
+      },
       output: {
         manualChunks: undefined,
       },

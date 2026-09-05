@@ -49,6 +49,7 @@ pub(crate) struct A12TraceEvent {
 }
 
 /// PPU 結構體
+#[derive(Clone)]
 pub struct Ppu {
     // ===== PPU 暫存器 =====
     /// PPUCTRL ($2000) - 控制暫存器
@@ -145,6 +146,27 @@ pub struct Ppu {
     /// 幀緩衝區（RGBA 格式，256x240 像素）
     pub frame_buffer: Vec<u8>,
 
+    /// Optional display provenance, NOT image recognition. Each pixel records
+    /// its fetched mirrored nametable cell (+1) and fine Y (bits 12..14).
+    /// Zero means background hidden or a sprite occupies this pixel.
+    pub text_provenance: Vec<u16>,
+    pub text_background_provenance: Vec<u16>,
+    text_provenance_enabled: bool,
+    text_next_source: u16,
+    text_source_high: u16,
+    text_source_low: u16,
+    text_source_shift: u8,
+    text_write_generation: [u32; 2048],
+    pub text_fetched_cells: Vec<u32>,
+    text_next_cell: u32,
+    text_cell_high: u32,
+    text_cell_low: u32,
+    pub text_frame_metadata: Vec<u32>,
+    text_next_chr: u32,
+    text_chr_high: u32,
+    text_chr_low: u32,
+    text_frame_backdrop: Option<u32>,
+
     // ===== 外部連接 =====
     /// CHR ROM/RAM 資料（由卡帶提供）
     chr_data: Vec<u8>,
@@ -185,6 +207,7 @@ pub struct Ppu {
     pub(crate) a12_trace: Vec<A12TraceEvent>,
 }
 
+#[derive(Clone)]
 struct ConditionalChrOverlayPage {
     guard_address: u16,
     guard_value: u8,
@@ -239,6 +262,23 @@ impl Ppu {
             nmi_occurred: false,
             scanline_irq: false,
             frame_buffer: vec![0; 256 * 240 * 4],
+            text_provenance: Vec::new(),
+            text_background_provenance: Vec::new(),
+            text_provenance_enabled: false,
+            text_next_source: 0,
+            text_source_high: 0,
+            text_source_low: 0,
+            text_source_shift: 0,
+            text_write_generation: [0; 2048],
+            text_fetched_cells: Vec::new(),
+            text_next_cell: 0,
+            text_cell_high: 0,
+            text_cell_low: 0,
+            text_frame_metadata: Vec::new(),
+            text_next_chr: 0,
+            text_chr_high: 0,
+            text_chr_low: 0,
+            text_frame_backdrop: None,
             chr_data: Vec::new(),
             chr_ram: false,
             chr_overlay_values: Vec::new(),
@@ -269,6 +309,7 @@ impl Ppu {
 
     /// 重置 PPU
     pub fn reset(&mut self) {
+        self.clear_text_provenance();
         self.ctrl = 0;
         self.mask = 0;
         self.status = 0;
@@ -622,6 +663,9 @@ impl Ppu {
             // 名稱表
             let mirrored = self.mirror_nametable_addr(addr);
             self.nametable[mirrored] = data;
+            if self.text_provenance_enabled {
+                self.text_write_generation[mirrored] = (self.text_write_generation[mirrored] + 1) & 0x007fffff;
+            }
             if self.conditional_chr_overlay_pages.iter().any(|page| {
                 self.mirror_nametable_addr(page.guard_address) == mirrored
             }) {
@@ -717,6 +761,11 @@ impl Ppu {
 
             // 預渲染掃描線 (-1) 的特殊處理
             if self.scanline == -1 && self.cycle == 1 {
+                if self.text_provenance_enabled {
+                    self.text_fetched_cells.fill(0);
+                    self.text_frame_metadata.fill(0);
+                    self.text_frame_backdrop = None;
+                }
                 // 清除 VBlank、Sprite 0 Hit、Sprite Overflow 旗標
                 self.status &= !0xE0;
                 // 清除精靈移位暫存器
@@ -740,6 +789,12 @@ impl Ppu {
                         self.load_bg_shifters();
                         // 從名稱表讀取圖磚 ID
                         self.bg_next_tile_id = self.ppu_fetch(0x2000 | (self.v & 0x0FFF));
+                        if self.text_provenance_enabled {
+                            let cell = self.mirror_nametable_addr(0x2000 | (self.v & 0x0fff));
+                            self.text_next_source = (cell as u16 + 1)
+                                | (self.v & 0x7000);
+                            self.text_next_cell = ((self.text_write_generation[cell] + 1) << 8) | self.bg_next_tile_id as u32;
+                        }
                     }
                     2 => {
                         // 讀取屬性表
@@ -764,6 +819,7 @@ impl Ppu {
                             + (self.bg_next_tile_id as u16 * 16)
                             + ((self.v >> 12) & 0x07);
                         self.bg_next_tile_lsb = self.ppu_fetch(bg_pattern_addr);
+                        self.check_text_pattern_source(bg_pattern_addr);
                     }
                     6 => {
                         // 讀取圖案表高位元組（偏移 8 位元組）
@@ -772,6 +828,7 @@ impl Ppu {
                             + ((self.v >> 12) & 0x07)
                             + 8;
                         self.bg_next_tile_msb = self.ppu_fetch(bg_pattern_addr);
+                        self.check_text_pattern_source(bg_pattern_addr);
                     }
                     7 => {
                         // 水平位置遞增
@@ -903,6 +960,7 @@ impl Ppu {
     /// 更新背景移位暫存器（每個週期左移一位）
     fn update_shifters(&mut self) {
         if self.bg_enabled() {
+            if self.text_provenance_enabled { self.text_source_shift = self.text_source_shift.saturating_add(1); }
             self.bg_shifter_pattern_lo <<= 1;
             self.bg_shifter_pattern_hi <<= 1;
             self.bg_shifter_attr_lo <<= 1;
@@ -927,6 +985,15 @@ impl Ppu {
 
     /// 將新的圖磚資料載入背景移位暫存器的低 8 位元
     fn load_bg_shifters(&mut self) {
+        if self.text_provenance_enabled {
+            self.text_source_high = self.text_source_low;
+            self.text_source_low = self.text_next_source;
+            self.text_cell_high = self.text_cell_low;
+            self.text_cell_low = self.text_next_cell;
+            self.text_chr_high = self.text_chr_low;
+            self.text_chr_low = self.text_next_chr;
+            self.text_source_shift = 0;
+        }
         self.bg_shifter_pattern_lo = (self.bg_shifter_pattern_lo & 0xFF00)
             | self.bg_next_tile_lsb as u16;
         self.bg_shifter_pattern_hi = (self.bg_shifter_pattern_hi & 0xFF00)
@@ -1114,9 +1181,53 @@ impl Ppu {
             }
         };
 
+        if self.text_provenance_enabled {
+            let tag = if self.bg_enabled()
+                && (self.bg_left_enabled() || x >= 8) {
+                if self.text_source_shift + self.fine_x < 8 { self.text_source_high }
+                else { self.text_source_low }
+            } else { 0 };
+            self.text_background_provenance[y * 256 + x] = tag;
+            self.text_provenance[y * 256 + x] = if spr_pixel != 0 && (bg_pixel == 0 || !spr_priority) { 0 } else { tag };
+            let (r, g, b) = PALETTE[(self.palette[0] & 0x3f) as usize];
+            let backdrop = ((r as u32) << 16) | ((g as u32) << 8) | b as u32;
+            self.text_frame_backdrop = Some(match self.text_frame_backdrop {
+                None => backdrop,
+                Some(previous) if previous == backdrop => backdrop,
+                _ => u32::MAX,
+            });
+            if tag & 0x0fff != 0 {
+                let cell = (tag & 0x0fff) as usize - 1;
+                let fetched = if self.text_source_shift + self.fine_x < 8 { self.text_cell_high } else { self.text_cell_low };
+                let previous = self.text_fetched_cells[cell];
+                // A cell changed during the visible frame is not a safe overlay target.
+                self.text_fetched_cells[cell] = if previous == 0 || previous == fetched { fetched } else { u32::MAX };
+                let chr = if self.text_source_shift + self.fine_x < 8 { self.text_chr_high } else { self.text_chr_low };
+                let slot = cell * 4;
+                let old = self.text_frame_metadata[slot];
+                self.text_frame_metadata[slot] = if old == 0 || old == fetched { fetched } else { u32::MAX };
+                let old_chr = self.text_frame_metadata[slot + 1];
+                self.text_frame_metadata[slot + 1] = if old_chr == 0 || old_chr == chr { chr } else { u32::MAX };
+                let old_bg = self.text_frame_metadata[slot + 2];
+                let encoded_bg = backdrop + 1;
+                self.text_frame_metadata[slot + 2] = if old_bg == 0 || old_bg == encoded_bg { encoded_bg } else { u32::MAX };
+            }
+        }
+
         // 從調色盤讀取顏色並寫入幀緩衝區
         let color_index = self.ppu_read(0x3F00 + (final_palette as u16 * 4) + final_pixel as u16);
         let (r, g, b) = PALETTE[(color_index & 0x3F) as usize];
+
+        if self.text_provenance_enabled {
+            let tag = self.text_background_provenance[y * 256 + x] & 0x0fff;
+            if tag != 0 && bg_pixel != 0 {
+                let slot = (tag as usize - 1) * 4 + 3;
+                let palette_index = self.mirror_palette_addr(0x3f00 + bg_palette as u16 * 4 + bg_pixel as u16);
+                let (br, bg, bb) = PALETTE[(self.palette[palette_index] & 0x3f) as usize];
+                let ink = ((br as u32) << 16) | ((bg as u32) << 8) | bb as u32;
+                self.text_frame_metadata[slot] = self.text_frame_metadata[slot].max(ink + 1);
+            }
+        }
 
         let pixel_offset = (y * 256 + x) * 4;
         if pixel_offset + 3 < self.frame_buffer.len() {
@@ -1125,6 +1236,68 @@ impl Ppu {
             self.frame_buffer[pixel_offset + 2] = b;
             self.frame_buffer[pixel_offset + 3] = 255; // Alpha
         }
+    }
+
+    pub fn set_text_provenance(&mut self, enabled: bool) {
+        self.text_provenance_enabled = enabled;
+        if enabled {
+            self.text_provenance.resize(256 * 240, 0);
+            self.text_background_provenance.resize(256 * 240, 0);
+            self.text_fetched_cells.resize(2048, 0);
+            self.text_frame_metadata.resize(2048 * 4, 0);
+        } else {
+            self.text_provenance.clear();
+            self.text_background_provenance.clear();
+            self.text_fetched_cells.clear();
+            self.text_frame_metadata.clear();
+        }
+        self.clear_text_provenance();
+    }
+
+    // CT2's verified original font occupies CHR bytes $0000-$0FFF.
+    // Identical tile numbers from a different font/art bank are not text proof.
+    fn check_text_pattern_source(&mut self, address: u16) {
+        if !self.text_provenance_enabled { return; }
+        let physical = if self.chr_use_bank_mapping {
+            self.chr_bank_offsets[(address >> 10) as usize] as usize + (address & 0x3ff) as usize
+        } else { address as usize };
+        // Keep raw tile/generation for other explicitly verified menu fonts.
+        // Metadata carries the physical CHR tile identity (offset + 1).
+        let chr = if self.chr_ram || self.chr_writable_mask != 0 { u32::MAX } else { (physical & !15) as u32 + 1 };
+        if address & 8 == 0 { self.text_next_chr = chr; }
+        else if self.text_next_chr != chr { self.text_next_chr = u32::MAX; }
+    }
+
+    pub fn text_next_write_generation(&self, cell: usize) -> u32 {
+        // Packed fetched cells reserve zero; target is one actual write later.
+        ((self.text_write_generation[cell] + 1) & 0x007fffff) + 1
+    }
+
+    pub fn clear_text_provenance(&mut self) {
+        self.text_provenance.fill(0);
+        self.text_background_provenance.fill(0);
+        self.text_fetched_cells.fill(0);
+        self.text_frame_metadata.fill(0);
+        self.text_next_chr = 0;
+        self.text_chr_high = 0;
+        self.text_chr_low = 0;
+        self.text_frame_backdrop = None;
+        self.text_write_generation.fill(0);
+        self.text_next_cell = 0;
+        self.text_cell_high = 0;
+        self.text_cell_low = 0;
+        self.text_next_source = 0;
+        self.text_source_high = 0;
+        self.text_source_low = 0;
+        self.text_source_shift = 0;
+    }
+
+    pub fn text_nametable_index(&self, address: u16) -> usize {
+        self.mirror_nametable_addr(address)
+    }
+
+    pub fn text_backdrop(&self) -> u32 {
+        self.text_frame_backdrop.unwrap_or(u32::MAX)
     }
 
     /// 檢查並清除 NMI 旗標
@@ -1151,6 +1324,34 @@ impl Ppu {
 #[cfg(test)]
 mod tests {
     use super::Ppu;
+
+    #[test]
+    fn text_observer_write_generations_track_same_tile_rewrites() {
+        let mut ppu = Ppu::new();
+        ppu.set_text_provenance(true);
+        let cell = ppu.text_nametable_index(0x2040);
+        let target = ppu.text_next_write_generation(cell);
+        ppu.ppu_write(0x2040, 26);
+        assert_eq!(ppu.text_write_generation[cell] + 1, target);
+        ppu.ppu_write(0x2040, 26);
+        assert_ne!(ppu.text_write_generation[cell] + 1, target);
+        ppu.clear_text_provenance();
+        assert!(ppu.text_fetched_cells.iter().all(|v| *v == 0));
+    }
+
+    #[test]
+    fn text_observer_rejects_identical_tile_number_in_art_bank() {
+        let mut ppu = Ppu::new();
+        ppu.set_text_provenance(true);
+        ppu.bg_next_tile_id = 26;
+        ppu.text_next_cell = 0x21a;
+        ppu.check_text_pattern_source(26 * 16);
+        assert_eq!(ppu.text_next_cell, 0x21a);
+        ppu.chr_use_bank_mapping = true;
+        ppu.chr_bank_offsets[0] = 0x2000;
+        ppu.check_text_pattern_source(26 * 16);
+        assert_eq!(ppu.text_next_chr, 0x2000 + 26 * 16 + 1);
+    }
 
     #[test]
     fn chr_ram_reads_follow_mapper_bank_offsets() {

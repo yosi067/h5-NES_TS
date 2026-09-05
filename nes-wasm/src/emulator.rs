@@ -21,6 +21,8 @@ use crate::apu::Apu;
 use crate::bus::Bus;
 use crate::cartridge::Cartridge;
 use crate::controller::Controller;
+use std::cell::{Cell, RefCell};
+use std::collections::VecDeque;
 use crate::game_profile::{sha256_hex, MemorySpace, NesGameProfile, WriteTiming};
 #[cfg(test)]
 use crate::mappers::Mapper1TraceState;
@@ -32,6 +34,30 @@ enum DmcDmaPhase {
     Dummy,
     Align,
     Read,
+}
+
+// Session-only snapshots, not a portable serialization format. Cloning the
+// hardware includes private mapper/APU/PPU pipeline state and owns all buffers.
+// Never snapshot raw WASM memory: it also contains allocator/JS-owned pointers.
+const TEMP_STATE_PREFIX: &str = "#NES-TEMP-2:";
+const TEMP_STATE_LIMIT: usize = 16;
+
+#[derive(Clone)]
+struct TemporaryState {
+    token: String,
+    cpu: Cpu,
+    ppu: Ppu,
+    apu: Apu,
+    bus: Bus,
+    cartridge: Cartridge,
+    ctrl1: Controller,
+    ctrl2: Controller,
+    system_clock: u64,
+    audio_enabled: bool,
+    dmc_dma_address: Option<u16>,
+    dmc_dma_phase: DmcDmaPhase,
+    #[cfg(test)]
+    current_instruction_pc: u16,
 }
 
 #[cfg(test)]
@@ -162,6 +188,10 @@ pub struct Emulator {
     dmc_dma_phase: DmcDmaPhase,
     loaded_rom_sha256: String,
     game_profile: Option<NesGameProfile>,
+    temporary_states: RefCell<VecDeque<TemporaryState>>,
+    next_temporary_state: Cell<u64>,
+
+    pub text_observer: crate::text_observer::TextObserver,
 
     #[cfg(test)]
     pub(crate) mapper_scanline_events: Vec<(i16, u16)>,
@@ -206,6 +236,9 @@ impl Emulator {
             dmc_dma_phase: DmcDmaPhase::Idle,
             loaded_rom_sha256: String::new(),
             game_profile: None,
+            temporary_states: RefCell::new(VecDeque::new()),
+            next_temporary_state: Cell::new(0),
+            text_observer: crate::text_observer::TextObserver::default(),
             #[cfg(test)]
             mapper_scanline_events: Vec::new(),
             #[cfg(test)]
@@ -235,6 +268,8 @@ impl Emulator {
 
     /// 載入 ROM
     pub fn load_rom(&mut self, data: &[u8]) -> bool {
+        self.text_observer.configure(false, "");
+        self.ppu.set_text_provenance(false);
         self.clear_game_profile();
         let success = self.cartridge.load_rom(data);
         if success {
@@ -321,12 +356,14 @@ impl Emulator {
             (page.guard.address, page.guard.value, page.guard.require_active_table, overlays)
         }).collect();
         self.ppu.install_conditional_chr_overlay_pages(chr_pages);
+        self.temporary_states.get_mut().clear();
         self.game_profile = Some(profile);
         self.reset();
         Ok(())
     }
 
     pub fn clear_game_profile(&mut self) {
+        self.temporary_states.get_mut().clear();
         self.cartridge.clear_prg_overlays();
         self.ppu.clear_chr_overlays();
         self.game_profile = None;
@@ -350,6 +387,7 @@ impl Emulator {
 
     /// 重置模擬器
     pub fn reset(&mut self) {
+        self.text_observer.reset();
         self.cartridge.reset();
         self.ppu.reset();
         self.apu.reset();
@@ -535,6 +573,15 @@ impl Emulator {
             return;
         }
 
+        // Only two original-bank entry points are observed; checking PC first
+        // avoids mapper work for the overwhelming majority of instructions.
+        if self.text_observer.enabled {
+            if self.cpu.pc == 0xe93d && self.cartridge.mapper.cpu_read(0xe93d) == Some(0x3e93d) {
+                self.text_observer.push(6, self.cpu.a as u32, self.cpu.x as u32, 0);
+            }
+            if matches!(self.cpu.pc, 0x84E9 | 0x84F3 | 0x88B1) { self.observe_ct2_text(); }
+            else if matches!(self.cpu.pc, 0x8017 | 0x8218 | 0x8358 | 0x864B) { self.observe_ct2_cloud(); }
+        }
         // 取指令並執行
         #[cfg(test)]
             {
@@ -1403,6 +1450,64 @@ impl Emulator {
         self.apu.end_frame();
     }
 
+    pub fn enable_text_observer(&mut self, enabled: bool) -> bool {
+        let active = self.text_observer.configure(enabled, &self.loaded_rom_sha256);
+        self.ppu.set_text_provenance(active);
+        active
+    }
+
+    fn observe_ct2_text(&mut self) {
+        let pc = self.cpu.pc;
+        if self.cartridge.mapper.cpu_read(pc) != Some(u32::from(pc - 0x8000)) { return; }
+        if pc == 0x88B1 {
+            // EB waits for input BEFORE calling this clearing routine.
+            // Observing the EB dispatch itself would hide text while reading.
+            self.text_observer.push(5, 0, 0, 0);
+            return;
+        }
+        let pointer = u16::from_le_bytes([self.bus.ram[0x4d], self.bus.ram[0x4e]]);
+        let Some(source) = self.cartridge.mapper.cpu_read(pointer) else { return; };
+        // Verified script banks only; neither lookalike data nor other games.
+        if !(0x6000..0xC000).contains(&source) { return; }
+        let value = self.cartridge.cpu_read(pointer);
+        if pc == 0x84F3 {
+            // Original JSR $88CA: A=glyph, X=PPU address high, Y=low.
+            if value != self.cpu.a || value >= 0xd8 { return; }
+            let address = u16::from_be_bytes([self.cpu.x, self.cpu.y]);
+            if !(0x2000..0x2FC0).contains(&address) || address & 0x3ff >= 0x3c0 { return; }
+            let cell = self.ppu.text_nametable_index(address);
+            self.text_observer.push(1, source, cell as u32, value as u32);
+            self.text_observer.push(4, self.ppu.text_next_write_generation(cell), cell as u32,
+                self.ppu.text_next_write_generation(cell + 32));
+        } else if value >= 0xe8 {
+            self.text_observer.push(2, source, 0, value as u32);
+        }
+    }
+
+    fn observe_ct2_cloud(&mut self) {
+        let pc = self.cpu.pc;
+        if self.cartridge.mapper.cpu_read(pc) != Some(0x30000 + u32::from(pc - 0x8000)) { return; }
+        if matches!(pc, 0x8017 | 0x8218) {
+            self.text_observer.push(5, 0, 0, 0);
+            return;
+        }
+        // $834C reads ($5F),Y after incrementing the cursor; $8645 reads
+        // dictionary ($30),Y. Observe the call AFTER the actual read, not scans.
+        let pointer = if pc == 0x8358 {
+            u16::from_le_bytes([self.bus.ram[0x5f], self.bus.ram[0x60]])
+        } else { u16::from_le_bytes([self.bus.ram[0x30], self.bus.ram[0x31]]) };
+        let address = pointer.wrapping_add(u16::from(self.cpu.y));
+        let Some(source) = self.cartridge.mapper.cpu_read(address) else { return; };
+        let value = self.cpu.a;
+        if value >= 0xe0 || self.cartridge.cpu_read(address) != value { return; }
+        // Two horizontal tile rows are queued at $04A5. $3B is the upper-row
+        // cursor. Unlike cutscenes, the cloud writer renders the whole row.
+        let base = u16::from_le_bytes([self.bus.ram[0x4a6], self.bus.ram[0x4a7]]);
+        let target = base.wrapping_add(u16::from(self.bus.ram[0x3b]));
+        if !(0x2000..0x2fc0).contains(&target) || target & 0x3ff >= 0x3a0 { return; }
+        self.text_observer.push(3, source, self.ppu.text_nametable_index(target) as u32, value as u32);
+    }
+
     /// 取得畫面緩衝區指標
     pub fn get_frame_buffer_ptr(&self) -> *const u8 { self.ppu.frame_buffer.as_ptr() }
 
@@ -1439,32 +1544,58 @@ impl Emulator {
         )
     }
 
-    /// 匯出存檔（hex 編碼）
+    /// Capture a complete, bounded, session-only snapshot and return its token.
+    /// Tokens must NOT be persisted/downloaded as portable save files.
     pub fn export_save_state(&self) -> String {
-        self.export_state_binary().iter().map(|b| format!("{:02x}", b)).collect()
+        let sequence = self.next_temporary_state.get();
+        let Some(next) = sequence.checked_add(1) else { return String::new(); };
+        self.next_temporary_state.set(next);
+        // Keep the old hex prefix readable by existing read-only ROM diagnostic
+        // tools (Buffer.from(token, 'hex') stops at '#'). It is NOT restorable
+        // state. The non-hex suffix also makes an older WASM decoder reject it.
+        // Deterministic for twin-core diagnostics; lookup is instance-local.
+        let diagnostic = self.export_state_binary().iter()
+            .map(|byte| format!("{byte:02x}")).collect::<String>();
+        let token = format!("{diagnostic}{TEMP_STATE_PREFIX}{}:{sequence}:{}",
+            self.loaded_rom_sha256, self.system_clock);
+        let snapshot = TemporaryState {
+            token: token.clone(), cpu: self.cpu.clone(), ppu: self.ppu.clone(),
+            apu: self.apu.clone(), bus: self.bus.clone(), cartridge: self.cartridge.clone(),
+            ctrl1: self.ctrl1.clone(), ctrl2: self.ctrl2.clone(),
+            system_clock: self.system_clock, audio_enabled: self.audio_enabled,
+            dmc_dma_address: self.dmc_dma_address, dmc_dma_phase: self.dmc_dma_phase,
+            #[cfg(test)]
+            current_instruction_pc: self.current_instruction_pc,
+        };
+        let mut states = self.temporary_states.borrow_mut();
+        if states.len() == TEMP_STATE_LIMIT { states.pop_front(); }
+        states.push_back(snapshot);
+        token
     }
 
-    /// 匯入存檔
-    pub fn import_save_state(&mut self, hex: &str) -> bool {
-        if hex.len() % 2 != 0 { return false; }
-        let mut data = Vec::with_capacity(hex.len() / 2);
-        let bytes = hex.as_bytes();
-        for i in (0..bytes.len()).step_by(2) {
-            let hi = Self::hex_char(bytes[i]);
-            let lo = Self::hex_char(bytes[i + 1]);
-            if hi == 0xFF || lo == 0xFF { return false; }
-            data.push((hi << 4) | lo);
-        }
-        self.import_state_binary(&data)
-    }
-
-    fn hex_char(c: u8) -> u8 {
-        match c {
-            b'0'..=b'9' => c - b'0',
-            b'a'..=b'f' => c - b'a' + 10,
-            b'A'..=b'F' => c - b'A' + 10,
-            _ => 0xFF,
-        }
+    /// Unknown, expired, or legacy partial states fail without ANY mutation.
+    pub fn import_save_state(&mut self, token: &str) -> bool {
+        if token.len() > 26000 || !token.contains(TEMP_STATE_PREFIX) { return false; }
+        let snapshot = self.temporary_states.borrow().iter()
+            .find(|state| state.token == token).cloned();
+        let Some(state) = snapshot else { return false; };
+        self.cpu = state.cpu;
+        self.ppu = state.ppu;
+        self.apu = state.apu;
+        self.bus = state.bus;
+        self.cartridge = state.cartridge;
+        self.ctrl1 = state.ctrl1;
+        self.ctrl2 = state.ctrl2;
+        self.system_clock = state.system_clock;
+        self.audio_enabled = state.audio_enabled;
+        self.dmc_dma_address = state.dmc_dma_address;
+        self.dmc_dma_phase = state.dmc_dma_phase;
+        #[cfg(test)]
+        { self.current_instruction_pc = state.current_instruction_pc; }
+        // Observations belong to the discarded timeline, not to hardware state.
+        self.text_observer.reset();
+        self.ppu.set_text_provenance(self.text_observer.enabled);
+        true
     }
 
     fn export_state_binary(&self) -> Vec<u8> {
@@ -1488,8 +1619,11 @@ impl Emulator {
         d
     }
 
+    // Historical decoder retained ONLY for regression evidence. NESW v1 omitted
+    // mapper/APU/timing; no production path may load it, even when well-formed.
+    #[cfg(test)]
     fn import_state_binary(&mut self, data: &[u8]) -> bool {
-        if data.len() < 9 || &data[0..4] != b"NESW" || data[4] != 1 { return false; }
+        if data.len() != 12599 || &data[0..4] != b"NESW" || data[4] != 1 { return false; }
         let mut p = 5;
         if p + 7 > data.len() { return false; }
         self.cpu.a = data[p]; p += 1;
@@ -1500,7 +1634,7 @@ impl Emulator {
         self.cpu.pc = u16::from_le_bytes([data[p], data[p+1]]); p += 2;
         if p + 2048 > data.len() { return false; }
         self.bus.ram.copy_from_slice(&data[p..p+2048]); p += 2048;
-        if p + 9 > data.len() { return false; }
+        if p + 11 > data.len() { return false; }
         self.ppu.ctrl = data[p]; p += 1;
         self.ppu.mask = data[p]; p += 1;
         self.ppu.status = data[p]; p += 1;
@@ -1523,6 +1657,171 @@ impl Emulator {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn assert_same_hardware(a: &mut Emulator, b: &mut Emulator) {
+        assert_eq!(a.export_state_binary(), b.export_state_binary(), "CPU/VRAM/RAM");
+        assert_eq!(a.system_clock, b.system_clock, "master clock");
+        assert_eq!((a.cpu.cycles, a.cpu.total_cycles, a.cpu.nmi_pending, a.cpu.irq_pending),
+                   (b.cpu.cycles, b.cpu.total_cycles, b.cpu.nmi_pending, b.cpu.irq_pending));
+        assert_eq!(a.debug_state(), b.debug_state(), "PPU/OAM DMA timing");
+        assert_eq!(a.bus.dma_data_ready, b.bus.dma_data_ready);
+        assert_eq!(a.bus.dma_data, b.bus.dma_data);
+        assert_eq!(a.dmc_dma_phase, b.dmc_dma_phase);
+        assert_eq!(a.dmc_dma_address, b.dmc_dma_address);
+        assert_eq!(a.apu.dmc_read_request, b.apu.dmc_read_request);
+        assert_eq!(a.audio_enabled, b.audio_enabled);
+        assert_eq!(a.cartridge.mapper.trace_state(), b.cartridge.mapper.trace_state(), "MMC3 registers/IRQ");
+        for addr in (0x8000..=0xe000).step_by(0x2000) {
+            assert_eq!(a.cartridge.mapper.cpu_read(addr), b.cartridge.mapper.cpu_read(addr), "PRG mapping");
+        }
+        for addr in (0..0x2000).step_by(0x400) {
+            assert_eq!(a.cartridge.mapper.ppu_read(addr), b.cartridge.mapper.ppu_read(addr), "CHR mapping");
+        }
+        assert_eq!(a.ppu.frame_buffer, b.ppu.frame_buffer, "video continuation");
+        assert_eq!(a.apu.get_available_samples(), b.apu.get_available_samples());
+        assert_eq!(a.apu.audio_buffer, b.apu.audio_buffer, "APU/filter continuation");
+        let mut a1 = a.ctrl1.clone(); let mut b1 = b.ctrl1.clone();
+        let mut a2 = a.ctrl2.clone(); let mut b2 = b.ctrl2.clone();
+        for _ in 0..10 {
+            assert_eq!(a1.read(), b1.read(), "controller 1 latch");
+            assert_eq!(a2.read(), b2.read(), "controller 2 latch");
+        }
+    }
+
+    #[test]
+    fn temporary_state_restores_mmc3_and_mid_dma_timing() {
+        let mut rom = vec![0; 16 + 4 * 16384 + 8192];
+        rom[..4].copy_from_slice(b"NES\x1a");
+        rom[4] = 4; rom[5] = 1; rom[6] = 0x40;
+        // Each 8K PRG page identifies itself; reset enters a fixed-bank loop.
+        for bank in 0..8 { rom[16 + bank * 8192..16 + (bank + 1) * 8192].fill(bank as u8); }
+        rom[16 + 7 * 8192..16 + 7 * 8192 + 3].copy_from_slice(&[0x4c, 0x00, 0xe0]);
+        rom[16 + 65532..16 + 65534].copy_from_slice(&[0, 0xe0]);
+        let mut a = Emulator::new(); let mut b = Emulator::new();
+        for emu in [&mut a, &mut b] {
+            assert!(emu.load_rom(&rom));
+            emu.bus_write(0x8000, 6); emu.bus_write(0x8001, 2);
+            emu.bus_write(0x8000, 0); emu.bus_write(0x8001, 4);
+            emu.bus_write(0xc000, 17); emu.bus_write(0xc001, 0); emu.bus_write(0xe001, 0);
+            emu.cartridge.mapper.scanline();
+            emu.set_button(0, 0, true); emu.set_button(1, 3, true);
+            emu.ctrl1.write(1); emu.ctrl1.write(0); emu.ctrl1.read();
+            emu.ctrl2.write(1); emu.ctrl2.write(0);
+            emu.bus_write(0x4010, 0x8f); emu.bus_write(0x4012, 0);
+            emu.bus_write(0x4013, 1); emu.bus_write(0x4015, 0x10);
+            emu.bus_write(0x4014, 2);
+            for _ in 0..37 { emu.clock(); }
+        }
+        assert!(a.bus.dma_transfer);
+        let token = a.export_save_state();
+        let mapping = a.cartridge.mapper.cpu_read(0x8000);
+        a.bus_write(0x8000, 6); a.bus_write(0x8001, 5);
+        assert_ne!(a.cartridge.mapper.cpu_read(0x8000), mapping);
+        for _ in 0..2 { a.frame(); }
+        assert!(a.import_save_state(&token));
+        assert_same_hardware(&mut a, &mut b);
+        for _ in 0..5 {
+            a.frame(); b.frame();
+            assert_same_hardware(&mut a, &mut b);
+        }
+        // Loading the same token twice must not have mutated the stored clone.
+        assert!(a.import_save_state(&token));
+        assert_eq!(a.cartridge.mapper.cpu_read(0x8000), mapping);
+    }
+
+    #[test]
+    fn temporary_state_rejects_legacy_malformed_expired_and_reloaded_tokens_atomically() {
+        let rom = nrom_with_program(&[0x4c, 0x00, 0x80]);
+        let mut emu = Emulator::new();
+        assert!(emu.load_rom(&rom));
+        let token = emu.export_save_state();
+        let legacy = emu.export_state_binary().iter().map(|v| format!("{v:02x}")).collect::<String>();
+        assert_eq!(token.split('#').next(), Some(legacy.as_str()), "read-only diagnostic prefix remains compatible");
+        let before = emu.export_state_binary();
+        emu.text_observer.enabled = true;
+        emu.text_observer.push(1, 42, 1, 3);
+        for invalid in ["", "z", "NES-TEMP-2:invalid", &legacy, &legacy[..4138], &token[..token.len() - 1]] {
+            assert!(!emu.import_save_state(invalid));
+            assert_eq!(emu.export_state_binary(), before);
+        }
+        assert_eq!(emu.text_observer.take(), vec![1, 42, 1, 3], "failed imports must not reset observers");
+        let mut other = Emulator::new();
+        assert!(other.load_rom(&rom));
+        assert!(!other.import_save_state(&token), "no snapshot in the other instance");
+        for _ in 0..TEMP_STATE_LIMIT { emu.export_save_state(); }
+        assert_eq!(emu.temporary_states.borrow().len(), TEMP_STATE_LIMIT);
+        assert!(!emu.import_save_state(&token), "oldest snapshot evicted");
+        let latest = emu.export_save_state();
+        assert!(emu.import_save_state(&latest));
+        assert!(emu.load_rom(&rom));
+        assert!(!emu.import_save_state(&latest), "same filename/ROM reload still invalidates tokens");
+        assert_ne!(emu.export_save_state(), token, "generation cannot be reused on reload");
+    }
+
+    #[test]
+    #[ignore = "requires local original CT2 ROM"]
+    fn ct2_temporary_state_restores_original_game_exactly() {
+        let rom = std::fs::read("../roms/Captain Tsubasa II - Super Striker (Japan).nes").unwrap();
+        let mut restored = Emulator::new(); let mut control = Emulator::new();
+        assert!(restored.load_rom(&rom)); assert!(control.load_rom(&rom));
+        for _ in 0..300 { restored.frame(); control.frame(); }
+        let saved = restored.export_save_state();
+        let saved_mapper = restored.cartridge.mapper.trace_state();
+        for frame in 300..1800 {
+            restored.set_button(0, 3, (600..604).contains(&frame) || (900..904).contains(&frame));
+            restored.set_button(0, 0, frame >= 1100 && frame % 120 < 4);
+            restored.frame();
+        }
+        assert_ne!(restored.cartridge.mapper.trace_state(), saved_mapper);
+        assert!(restored.import_save_state(&saved));
+        assert_same_hardware(&mut restored, &mut control);
+        for frame in 300..900 {
+            for emu in [&mut restored, &mut control] {
+                emu.set_button(0, 3, (600..604).contains(&frame));
+                emu.frame();
+            }
+            assert_same_hardware(&mut restored, &mut control);
+            restored.consume_audio_samples(); control.consume_audio_samples();
+        }
+        assert!(restored.import_save_state(&saved), "snapshot remains reusable");
+        println!("Original CT2: complete restore and 600 subsequent frames/audio/mapper states match control");
+    }
+
+    #[test]
+    #[ignore = "requires local original CT2 ROM"]
+    fn ct2_save_state_legacy_mapper_evidence() {
+        let rom = std::fs::read("../roms/Captain Tsubasa II - Super Striker (Japan).nes").unwrap();
+        let mut emu = Emulator::new();
+        assert!(emu.load_rom(&rom));
+        for _ in 0..300 { emu.frame(); }
+        let saved = emu.export_state_binary();
+        let mapper = emu.cartridge.mapper.trace_state().unwrap();
+        let clock = emu.system_clock;
+        let pc = emu.cpu.pc;
+        let mapping = emu.cartridge.mapper.cpu_read(pc);
+        for frame in 300..1800 {
+            emu.set_button(0, 3, (600..604).contains(&frame) || (900..904).contains(&frame));
+            emu.set_button(0, 0, frame >= 1100 && frame % 120 < 4);
+            emu.frame();
+        }
+        let later_mapper = emu.cartridge.mapper.trace_state().unwrap();
+        println!("saved PC={pc:04X}, mapping={mapping:?}, mapper={mapper:?}, clock={clock}; later mapper={later_mapper:?}, clock={}", emu.system_clock);
+        assert!(emu.import_state_binary(&saved));
+        println!("legacy restored PC={:04X}, mapping={:?}, mapper={:?}, clock={}", emu.cpu.pc, emu.cartridge.mapper.cpu_read(emu.cpu.pc), emu.cartridge.mapper.trace_state(), emu.system_clock);
+        assert_eq!(emu.cartridge.mapper.trace_state(), Some(later_mapper));
+        assert_ne!(mapper, later_mapper);
+        // This real frame-boundary case retains the same PRG bank; it proves
+        // CHR/IRQ/timing omission, NOT a wrong-PRG-bank CPU crash.
+        assert_eq!(emu.cartridge.mapper.cpu_read(pc), mapping);
+        assert_ne!(emu.system_clock, clock);
+        for _ in 0..120 { emu.frame(); }
+        println!("120 frames after legacy restore: {}", emu.debug_state());
+        emu.reset();
+        assert!(emu.import_state_binary(&saved));
+        assert_ne!(emu.cartridge.mapper.cpu_read(pc), mapping);
+        println!("legacy restore after reset: PC={pc:04X}, expected PRG={mapping:?}, actual PRG={:?}",
+            emu.cartridge.mapper.cpu_read(pc));
+    }
 
     fn nrom_with_program(program: &[u8]) -> Vec<u8> {
         let mut rom = vec![0; 16 + 16 * 1024 + 8 * 1024];

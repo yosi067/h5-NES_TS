@@ -58,6 +58,7 @@ pub enum AddressingMode {
 }
 
 /// 6502 CPU 結構體
+#[derive(Clone)]
 pub struct Cpu {
     // ===== 暫存器 =====
     /// 累加器（Accumulator）

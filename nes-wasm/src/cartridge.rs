@@ -21,6 +21,7 @@ fn is_supported_mapper(mapper_id: u8) -> bool {
 }
 
 /// iNES 標頭結構
+#[derive(Clone)]
 pub struct CartridgeHeader {
     /// PRG ROM 大小（16KB 為單位）
     pub prg_rom_banks: u8,
@@ -37,6 +38,7 @@ pub struct CartridgeHeader {
 }
 
 /// NES 卡帶
+#[derive(Clone)]
 pub struct Cartridge {
     /// 卡帶標頭資訊
     pub header: CartridgeHeader,

@@ -74,6 +74,7 @@ pub(crate) enum FceummChannelState {
     },
 }
 
+#[derive(Clone)]
 pub(crate) struct FceummRenderTimeline {
     timestamp: u64,
     channel_positions: [u64; 5],
@@ -278,6 +279,7 @@ fn triangle_amplitude(step: u8, volume: u32) -> i32 {
     ((output / 256 * volume) & !0xFFFF) as i32
 }
 
+#[derive(Clone)]
 pub(crate) struct FceummFirResampler {
     coefficients: Vec<i32>,
     ratio: u64,
@@ -352,6 +354,7 @@ impl FceummFirResampler {
     }
 }
 
+#[derive(Clone)]
 struct FceummPostFilter {
     mul1: i64,
     mul2: i64,
@@ -396,6 +399,7 @@ impl FceummPostFilter {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct FceummAudioPipeline {
     resampler: FceummFirResampler,
     post_filter: FceummPostFilter,

@@ -25,6 +25,7 @@ use crate::cartridge::Cartridge;
 use crate::controller::Controller;
 
 /// NES 記憶體匯流排
+#[derive(Clone)]
 pub struct Bus {
     /// 2KB 內部 RAM
     pub ram: [u8; 2048],

@@ -36,6 +36,16 @@ H5-EMU 是一個在瀏覽器中運行的多平台模擬器研究專案，將 **N
 
 ## 技術價值
 
+### 足球小將 II 中文化實驗
+
+已加入 [翻譯工作室](translation-studio.html) 與原 ROM 的高解析度劇情中文圖層。
+目前有 2,199 筆可編輯草稿（其中 102 筆獨立假名保留原文），支援本機儲存與完整 JSON 匯入／匯出。
+已接入賽前、比賽指令、球隊資料與密碼提示的來源驗證中文選單；標題保留原文。劇情採固定字級、原位縮句與原生像素遮罩，中文逐字加快但不加速遊戲。編輯控制僅限本機開發環境。
+**尚非完整中文化：比賽動態解說／人名、全部分支驗收與能力數值編輯仍待完成。**
+使用方式、測試與限制請見 [CT2 中文化工作室說明](docs/CT2_LOCALIZATION_STUDIO.md)。
+
+後續遊戲參考：[FC 中文化最短可靠流程](docs/FC_LOCALIZATION_PLAYBOOK.md)、[Zombie Hunter 工時與成本估算](docs/ZOMBIE_HUNTER_LOCALIZATION_ESTIMATE.md)、[模擬器優化優先序](docs/LOCALIZATION_RETROSPECTIVE_OPTIMIZATION.md)。
+
 模擬器會迫使開發者同時面對電腦架構、即時系統與產品整合問題。H5-EMU 的技術價值不只在於「遊戲能啟動」，還包含：
 
 - 重現不同 CPU、記憶體映射、圖形管線、音頻合成與卡帶控制器的硬體行為。

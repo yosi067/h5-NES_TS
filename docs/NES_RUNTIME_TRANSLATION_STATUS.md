@@ -1,5 +1,22 @@
 # NES Runtime Translation Development Status
 
+## New display-only experiment
+
+CT2 now has a high-resolution, source-observed Chinese overlay and a standalone
+translation editor. The two recognized original ROM hashes use the original ROM
+rather than the earlier compact BPS font path. See
+[current implementation, coverage and limitations](CT2_LOCALIZATION_STUDIO.md).
+Its 2,199 filled catalog entries are drafts, not full-game localization coverage;
+102 isolated kana entries remain unchanged. Verified pregame/action/data/password
+menus are now translated; title labels, password symbols and values remain native. Dynamic battle
+commentary and ability editing are not enabled. The historical extraction/compiler
+inventory below remains valid. Current display uses fixed-size Chinese and native-pixel
+masking, with winning sprite pixels composited back above translated menus. Prose is
+shortened in place (no external subtitle panel); per-fragment reveal is 2× without
+accelerating emulation. Editing controls/drafts are enabled only in loopback Vite DEV.
+Native NES quick saves now use complete session-only snapshots, not the unsafe legacy
+partial format; page reloads invalidate them and portable export is disabled.
+
 ## Scope and Rules
 
 This branch develops a source-verified translation and runtime overlay framework for NES games. The workflow keeps dialogue, menu text, interface labels, credits, dictionaries, and renderer-specific data in separate domains.
