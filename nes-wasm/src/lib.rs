@@ -545,6 +545,14 @@ impl EmuWasm {
         }
     }
 
+    #[wasm_bindgen(js_name = "exportSaveStateForSlot")]
+    pub fn export_save_state_for_slot(&self, slot: u32) -> String {
+        match &self.core {
+            CoreType::Nes(emu) => emu.export_save_state_for_slot(slot),
+            _ => String::new(),
+        }
+    }
+
     #[wasm_bindgen(js_name = "importSaveState")]
     pub fn import_save_state(&mut self, json: &str) -> bool {
         match &mut self.core {

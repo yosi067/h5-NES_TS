@@ -189,6 +189,8 @@ pub struct Emulator {
     loaded_rom_sha256: String,
     game_profile: Option<NesGameProfile>,
     temporary_states: RefCell<VecDeque<TemporaryState>>,
+    // User slots must not be evicted by quick-save overwrites or diagnostic exports.
+    temporary_slots: RefCell<Vec<(u32, TemporaryState)>>,
     next_temporary_state: Cell<u64>,
 
     pub text_observer: crate::text_observer::TextObserver,
@@ -237,6 +239,7 @@ impl Emulator {
             loaded_rom_sha256: String::new(),
             game_profile: None,
             temporary_states: RefCell::new(VecDeque::new()),
+            temporary_slots: RefCell::new(Vec::new()),
             next_temporary_state: Cell::new(0),
             text_observer: crate::text_observer::TextObserver::default(),
             #[cfg(test)]
@@ -358,12 +361,14 @@ impl Emulator {
         self.ppu.install_conditional_chr_overlay_pages(chr_pages);
         self.temporary_states.get_mut().clear();
         self.game_profile = Some(profile);
+        self.temporary_slots.get_mut().clear();
         self.reset();
         Ok(())
     }
 
     pub fn clear_game_profile(&mut self) {
         self.temporary_states.get_mut().clear();
+        self.temporary_slots.get_mut().clear();
         self.cartridge.clear_prg_overlays();
         self.ppu.clear_chr_overlays();
         self.game_profile = None;
@@ -1547,8 +1552,31 @@ impl Emulator {
     /// Capture a complete, bounded, session-only snapshot and return its token.
     /// Tokens must NOT be persisted/downloaded as portable save files.
     pub fn export_save_state(&self) -> String {
+        let Some(snapshot) = self.capture_temporary_state() else { return String::new(); };
+        let token = snapshot.token.clone();
+        let mut states = self.temporary_states.borrow_mut();
+        if states.len() == TEMP_STATE_LIMIT { states.pop_front(); }
+        states.push_back(snapshot);
+        token
+    }
+
+    /// Stable session-only user slots. Overwriting a slot releases its old snapshot.
+    pub fn export_save_state_for_slot(&self, slot: u32) -> String {
+        if slot >= TEMP_STATE_LIMIT as u32 || !self.cartridge.loaded { return String::new(); }
+        let Some(snapshot) = self.capture_temporary_state() else { return String::new(); };
+        let token = snapshot.token.clone();
+        let mut slots = self.temporary_slots.borrow_mut();
+        if let Some(entry) = slots.iter_mut().find(|(id, _)| *id == slot) {
+            entry.1 = snapshot;
+        } else {
+            slots.push((slot, snapshot));
+        }
+        token
+    }
+
+    fn capture_temporary_state(&self) -> Option<TemporaryState> {
         let sequence = self.next_temporary_state.get();
-        let Some(next) = sequence.checked_add(1) else { return String::new(); };
+        let next = sequence.checked_add(1)?;
         self.next_temporary_state.set(next);
         // Keep the old hex prefix readable by existing read-only ROM diagnostic
         // tools (Buffer.from(token, 'hex') stops at '#'). It is NOT restorable
@@ -1558,7 +1586,7 @@ impl Emulator {
             .map(|byte| format!("{byte:02x}")).collect::<String>();
         let token = format!("{diagnostic}{TEMP_STATE_PREFIX}{}:{sequence}:{}",
             self.loaded_rom_sha256, self.system_clock);
-        let snapshot = TemporaryState {
+        Some(TemporaryState {
             token: token.clone(), cpu: self.cpu.clone(), ppu: self.ppu.clone(),
             apu: self.apu.clone(), bus: self.bus.clone(), cartridge: self.cartridge.clone(),
             ctrl1: self.ctrl1.clone(), ctrl2: self.ctrl2.clone(),
@@ -1566,18 +1594,16 @@ impl Emulator {
             dmc_dma_address: self.dmc_dma_address, dmc_dma_phase: self.dmc_dma_phase,
             #[cfg(test)]
             current_instruction_pc: self.current_instruction_pc,
-        };
-        let mut states = self.temporary_states.borrow_mut();
-        if states.len() == TEMP_STATE_LIMIT { states.pop_front(); }
-        states.push_back(snapshot);
-        token
+        })
     }
 
     /// Unknown, expired, or legacy partial states fail without ANY mutation.
     pub fn import_save_state(&mut self, token: &str) -> bool {
         if token.len() > 26000 || !token.contains(TEMP_STATE_PREFIX) { return false; }
         let snapshot = self.temporary_states.borrow().iter()
-            .find(|state| state.token == token).cloned();
+            .find(|state| state.token == token).cloned()
+            .or_else(|| self.temporary_slots.borrow().iter()
+                .find(|(_, state)| state.token == token).map(|(_, state)| state.clone()));
         let Some(state) = snapshot else { return false; };
         self.cpu = state.cpu;
         self.ppu = state.ppu;
@@ -1756,6 +1782,40 @@ mod tests {
         assert!(emu.load_rom(&rom));
         assert!(!emu.import_save_state(&latest), "same filename/ROM reload still invalidates tokens");
         assert_ne!(emu.export_save_state(), token, "generation cannot be reused on reload");
+    }
+
+    #[test]
+    fn temporary_state_user_slots_survive_overwrites_and_diagnostics() {
+        let rom = nrom_with_program(&[0xe6, 0, 0x4c, 0, 0x80]);
+        let mut emu = Emulator::new();
+        let mut control = Emulator::new();
+        assert!(emu.export_save_state_for_slot(0).is_empty());
+        assert!(emu.load_rom(&rom));
+        assert!(control.load_rom(&rom));
+        let saved = emu.export_save_state_for_slot(1);
+        let replaced = emu.export_save_state_for_slot(0);
+        for _ in 0..40 {
+            emu.frame();
+            emu.export_save_state_for_slot(0);
+            emu.export_save_state();
+        }
+        assert_eq!(emu.temporary_slots.borrow().len(), 2);
+        assert_eq!(emu.temporary_states.borrow().len(), TEMP_STATE_LIMIT);
+        assert!(!emu.import_save_state(&replaced));
+        assert!(emu.export_save_state_for_slot(16).is_empty());
+        assert!(emu.import_save_state(&saved));
+        assert_same_hardware(&mut emu, &mut control);
+        for _ in 0..5 {
+            emu.frame(); control.frame();
+            assert_same_hardware(&mut emu, &mut control);
+        }
+        emu.reset();
+        assert!(emu.import_save_state(&saved));
+        emu.clear_game_profile();
+        assert!(!emu.import_save_state(&saved));
+        let saved = emu.export_save_state_for_slot(1);
+        assert!(emu.load_rom(&rom));
+        assert!(!emu.import_save_state(&saved));
     }
 
     #[test]

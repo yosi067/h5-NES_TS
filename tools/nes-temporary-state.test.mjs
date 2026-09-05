@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
+import { initSync, EmuWasm } from '../src/wasm/nes_wasm.js';
 
 // Execute the actual main.ts save/load functions without booting the UI or WASM.
 const source = fs.readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
@@ -23,12 +24,14 @@ function fixture(type = 'nes') {
   const core = {
     getCoreType: () => type,
     exportSaveState: () => type === 'nes' ? `4e45535701#NES-TEMP-2:test:${next++}` : 'unchanged-platform-state',
+    exportSaveStateForSlot: () => core.exportSaveState(),
     importSaveState: state => { calls.push(['import', state]); return true; },
     consumeAudioSamples: () => calls.push(['consume']),
     setAudioEnabled: enabled => calls.push(['audio', enabled]),
   };
   const context = vm.createContext({
     nes: core, activeBackend: 'wasm', currentRomFilename: 'CT2.nes', audioMuted: false,
+    gameLoadAbortController: null,
     isSnes9xActive: () => false, isFbNeoActive: () => false, isMupenN64Active: () => false,
     localStorage: {
       setItem: (k, v) => { calls.push(['persist', k]); persistent.set(k, v); },
@@ -108,4 +111,57 @@ test('Snes9x and FBNeo retain binary/base64 persistence', () => {
     assert.equal(context.loadState(1), true);
     assert.deepEqual(loaded, [[1, 2, 255]]);
   }
+});
+
+test('native slots reject invalid indices before calling WASM', () => {
+  const { context, core } = fixture();
+  core.exportSaveStateForSlot = () => { throw Error('invalid slot reached WASM'); };
+  for (const slot of [-1, 16, 1.5, NaN, Infinity, 2 ** 32]) {
+    assert.equal(context.saveState(slot), false);
+  }
+});
+
+test('actual WASM + frontend: quick-save and diagnostic exports cannot evict another user slot', () => {
+  initSync({ module: fs.readFileSync(new URL('../src/wasm/nes_wasm_bg.wasm', import.meta.url)) });
+  // Original synthetic NROM: INC $00; JMP $8000, with a valid reset vector.
+  const rom = new Uint8Array(16 + 16384 + 8192);
+  rom.set([0x4e, 0x45, 0x53, 0x1a, 1, 1]);
+  rom.set([0xe6, 0, 0x4c, 0, 0x80], 16);
+  rom.set([0, 0x80], 16 + 16380);
+  const core = new EmuWasm();
+  const { context } = fixture();
+  context.nes = core;
+  try {
+    assert.equal(context.saveState(0), false, 'no loaded ROM');
+    assert.equal(core.loadRom(rom), true);
+    core.frame();
+    const before = core.debugState();
+    assert.equal(context.saveState(1), true);
+    for (let i = 0; i < 40; i++) {
+      core.frame();
+      assert.equal(context.saveState(0), true);
+      core.exportSaveState();
+    }
+    assert.equal(context.loadState(1), true);
+    assert.equal(core.debugState(), before);
+    core.reset();
+    assert.equal(context.loadState(1), true, 'reset retains same-ROM slots');
+    assert.equal(core.debugState(), before);
+    assert.equal(core.loadRom(rom), true);
+    assert.equal(context.loadState(1), false, 'ROM reload invalidates even same JS wrapper');
+  } finally {
+    core.free();
+  }
+});
+
+test('native state operations are blocked during ROM loading, not while paused', () => {
+  const { context, calls } = fixture();
+  assert.equal(context.saveState(0), true);
+  context.gameLoadAbortController = {};
+  assert.equal(context.saveState(0), false);
+  assert.equal(context.loadState(0), false);
+  assert.ok(!calls.some(c => c[0] === 'import'));
+  context.gameLoadAbortController = null;
+  context.isRunning = false;
+  assert.equal(context.loadState(0), true);
 });

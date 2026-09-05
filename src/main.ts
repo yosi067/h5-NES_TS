@@ -3903,7 +3903,13 @@ function saveState(slot: number = 0): boolean {
   if (!nes) return false;
   
   try {
-    const saveData = nes.exportSaveState();
+    const nativeNes = nes.getCoreType() === 'nes';
+    if (nativeNes && (!currentRomFilename || gameLoadAbortController
+      || !Number.isInteger(slot) || slot < 0 || slot >= 16)) return false;
+    const saveData = nativeNes
+      ? nes.exportSaveStateForSlot(slot)
+      : nes.exportSaveState();
+    if (!saveData) return false;
     const key = getSaveKey(slot);
     if (nes.getCoreType() === 'nes') {
       // Fail closed with an older WASM build; its NESW v1 export is incomplete.
@@ -3915,7 +3921,7 @@ function saveState(slot: number = 0): boolean {
       if (!slots) { slots = new Map(); nesTemporaryStates.set(nes, slots); }
       slots.delete(key);
       slots.set(key, saveData);
-      // Match the Rust registry bound, including callers using arbitrary slots.
+      // User slots are stable in Rust; diagnostic exports use a separate registry.
       while (slots.size > 16) slots.delete(slots.keys().next().value!);
       console.log(`[NES] 暫存成功（限本次遊戲執行）ROM="${currentRomFilename}" slot=${slot}`);
       return true;
@@ -3968,6 +3974,8 @@ function loadState(slot: number = 0): boolean {
   try {
     const key = getSaveKey(slot);
     const nativeNes = nes.getCoreType() === 'nes';
+    if (nativeNes && (!currentRomFilename || gameLoadAbortController
+      || !Number.isInteger(slot) || slot < 0 || slot >= 16)) return false;
     const saveData = nativeNes
       ? nesTemporaryStates.get(nes)?.get(key)
       : localStorage.getItem(key);
@@ -4083,7 +4091,7 @@ function saveStateForUser(slot: number = 0, showResult = false): Promise<boolean
     : Promise.resolve(saveState(slot));
   return operation.then(success => {
     if (showResult) showToast(success
-      ? (activeBackend === 'wasm' && nes?.getCoreType() === 'nes' ? '✅ 暫存成功（限本次執行，保留最近 16 次）' : '✅ 存檔成功')
+      ? (activeBackend === 'wasm' && nes?.getCoreType() === 'nes' ? '✅ 暫存成功（限本次執行，16 個獨立欄位）' : '✅ 存檔成功')
       : '❌ 存檔失敗');
     return success;
   });
