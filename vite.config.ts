@@ -64,6 +64,25 @@ function assertRebuiltMupenAssets(sourceDir: string): void {
   }
 }
 
+function preserveLegacyMainEntryAliases() {
+  const legacyAliases = ['main-B7UcPLyS.js', 'main-C1H5E3qI.js'];
+  return {
+    name: 'preserve-legacy-main-entry-aliases',
+    writeBundle() {
+      const assetsDir = resolve(__dirname, 'dist/assets');
+      const indexHtmlPath = resolve(__dirname, 'dist/index.html');
+      const indexHtml = existsSync(indexHtmlPath) ? readFileSync(indexHtmlPath, 'utf8') : '';
+      const currentEntry = /assets\/(main-[^/]+\.js)/.exec(indexHtml)?.[1];
+      if (!currentEntry) return;
+      for (const alias of legacyAliases) {
+        if (alias !== currentEntry) {
+          copyFileSync(resolve(assetsDir, currentEntry), resolve(assetsDir, alias));
+        }
+      }
+    },
+  };
+}
+
 // 複製 roms 目錄的 plugin
 function copyRomsPlugin() {
   return {
@@ -399,7 +418,7 @@ export default defineConfig({
       },
     },
   },
-  plugins: [copyRomsPlugin(), serveRomBinaryPlugin(), mupen64AssetsPlugin(), emulatorJsAssetsPlugin(), romPatcherAssetsPlugin()],
+  plugins: [preserveLegacyMainEntryAliases(), copyRomsPlugin(), serveRomBinaryPlugin(), mupen64AssetsPlugin(), emulatorJsAssetsPlugin(), romPatcherAssetsPlugin()],
   test: {
     globals: true,
     environment: 'jsdom',
