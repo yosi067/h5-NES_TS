@@ -6518,13 +6518,15 @@
       display: flex !important;
       width: 100%;
       justify-content: center;
-      pointer-events: none;
+      pointer-events: auto;
       transform: none;
+      touch-action: none;
     }
 
     body.touch-device-mode:not(.mobile-landscape-mode):not(.snes-mode):not(.arcade-mode):not(.n64-mode) #nes-controller-area .center-btns .func-btn {
       position: static;
       pointer-events: auto;
+      touch-action: none;
     }
 
     /* Keep arcade controls outside the game image on every mobile landscape viewport. */
