@@ -866,6 +866,21 @@
       align-items: flex-start !important;
     }
 
+    #nes-controller-area .nes-utility-row {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      justify-content: center;
+      margin-bottom: 0;
+      pointer-events: auto;
+    }
+
+    #nes-controller-area .nes-utility-row .snes-func-row {
+      justify-content: center;
+    }
+
     .center-btns {
       display: flex;
       flex-direction: row;
@@ -6760,11 +6775,13 @@
       </div>
       
       <!-- 中間 存檔/讀取/Select/Start -->
-      <div class="center-btns">
-        <button class="func-btn save-state-btn" id="mobile-save-state">💾SAVE</button>
-        <button class="func-btn load-state-btn" id="mobile-load-state">📂LOAD</button>
-        <button class="func-btn select-btn" data-btn="select">SELECT</button>
-        <button class="func-btn start-btn" data-btn="start">START</button>
+      <div class="snes-top-row nes-utility-row">
+        <div class="snes-func-row">
+          <button type="button" class="snes-mini-btn snes-save-btn" id="mobile-save-state" aria-label="存檔">💾</button>
+          <button type="button" class="snes-mini-btn snes-load-btn" id="mobile-load-state" aria-label="讀取">📂</button>
+          <button type="button" class="snes-mini-btn" data-btn="select">SEL</button>
+          <button type="button" class="snes-mini-btn" data-btn="start">STA</button>
+        </div>
       </div>
       
       <!-- 右側 A/B 按鈕 (支援同時按) -->

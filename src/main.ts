@@ -2967,102 +2967,64 @@ function setupABButtons(): void {
  * 設定功能按鈕 (Select/Start)
  */
 function setupFunctionButtons(): void {
-  const container = document.querySelector<HTMLElement>('#nes-controller-area .center-btns');
+  const container = document.querySelector<HTMLElement>('#nes-controller-area .nes-utility-row .snes-func-row');
   if (!container || container.dataset.nesUtilityWired) return;
   container.dataset.nesUtilityWired = '1';
 
-  const buttons = Array.from(container.querySelectorAll<HTMLElement>('.func-btn'));
-
-  const isStateButton = (button: HTMLElement): boolean =>
-    button.id === 'mobile-save-state' || button.id === 'mobile-load-state';
-
-  const runStateAction = (button: HTMLElement): void => {
-    if (button.id === 'mobile-save-state') {
+  const saveButton = document.getElementById('mobile-save-state');
+  if (saveButton && !saveButton.dataset.stateWired) {
+    saveButton.dataset.stateWired = '1';
+    saveButton.addEventListener('click', () => {
       void saveStateForUser(0, true);
-    } else if (button.id === 'mobile-load-state') {
+    });
+  }
+
+  const loadButton = document.getElementById('mobile-load-state');
+  if (loadButton && !loadButton.dataset.stateWired) {
+    loadButton.dataset.stateWired = '1';
+    loadButton.addEventListener('click', () => {
       void loadStateForUser(0, true);
-    }
-  };
+    });
+  }
 
-  const setControllerButton = (button: HTMLElement, pressed: boolean): void => {
+  const controllerButtons = container.querySelectorAll<HTMLElement>('[data-btn]');
+  controllerButtons.forEach(button => {
+    if (button.dataset.nesWired) return;
+    button.dataset.nesWired = '1';
     const btnType = button.dataset.btn;
-    if (!btnType) return;
+    if (btnType !== 'select' && btnType !== 'start') return;
     const buttonEnum = btnType === 'start' ? ControllerButton.Start : ControllerButton.Select;
-    if (isFbNeoActive()) {
-      setArcadeInputBit(btnType === 'start' ? ArcadeInputBit.Start : ArcadeInputBit.Coin, pressed);
-    } else {
-      setNesButton(buttonEnum, pressed);
-    }
-  };
-
-  for (const button of buttons) {
-    const activeTouchIds = new Set<number>();
-    let suppressClickUntil = 0;
-
     const setPressed = (pressed: boolean): void => {
-      button.classList.toggle('pressed', pressed);
-      if (!isStateButton(button)) setControllerButton(button, pressed);
-    };
-
-    const releaseTouch = (event: TouchEvent, runAction: boolean): void => {
-      let released = false;
-      for (const touch of Array.from(event.changedTouches)) {
-        if (!activeTouchIds.delete(touch.identifier)) continue;
-        released = true;
+      if (isFbNeoActive()) {
+        setArcadeInputBit(btnType === 'start' ? ArcadeInputBit.Start : ArcadeInputBit.Coin, pressed);
+      } else {
+        setNesButton(buttonEnum, pressed);
       }
-      if (!released) return;
-
-      event.preventDefault();
-      event.stopPropagation();
-      if (activeTouchIds.size > 0) return;
-
-      setPressed(false);
-      suppressClickUntil = performance.now() + 500;
-      if (runAction && isStateButton(button)) runStateAction(button);
+      button.classList.toggle('pressed', pressed);
     };
 
     button.addEventListener('touchstart', (event) => {
       event.preventDefault();
-      event.stopPropagation();
-      for (const touch of Array.from(event.changedTouches)) activeTouchIds.add(touch.identifier);
       setPressed(true);
     }, { passive: false });
-
-    button.addEventListener('touchmove', (event) => {
-      if (!Array.from(event.changedTouches).some(touch => activeTouchIds.has(touch.identifier))) return;
+    button.addEventListener('touchend', (event) => {
       event.preventDefault();
-      event.stopPropagation();
+      setPressed(false);
     }, { passive: false });
-
-    button.addEventListener('touchend', event => releaseTouch(event, true), { passive: false });
-    button.addEventListener('touchcancel', event => releaseTouch(event, false), { passive: false });
-
-    if (isStateButton(button)) {
-      button.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (performance.now() >= suppressClickUntil) runStateAction(button);
-      });
-      continue;
-    }
-
+    button.addEventListener('touchcancel', (event) => {
+      event.preventDefault();
+      setPressed(false);
+    }, { passive: false });
     button.addEventListener('mousedown', (event) => {
       event.preventDefault();
-      event.stopPropagation();
-      setControllerButton(button, true);
-      button.classList.add('pressed');
+      setPressed(true);
     });
     button.addEventListener('mouseup', (event) => {
       event.preventDefault();
-      event.stopPropagation();
-      setControllerButton(button, false);
-      button.classList.remove('pressed');
+      setPressed(false);
     });
-    button.addEventListener('mouseleave', () => {
-      setControllerButton(button, false);
-      button.classList.remove('pressed');
-    });
-  }
+    button.addEventListener('mouseleave', () => setPressed(false));
+  });
 }
 
 /**
