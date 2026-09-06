@@ -3174,11 +3174,45 @@ function setupDesktopControls(): void {
     void loadStateForUser(0, true);
   });
   
-  // 存檔/讀取按鈕 (手機版)
-  document.getElementById('mobile-save-state')?.addEventListener('click', () => {
+  const bindMobileStateButton = (id: string, action: () => void): void => {
+    const button = document.getElementById(id);
+    if (!button || button.dataset.stateWired) return;
+    button.dataset.stateWired = '1';
+
+    let activeTouch = false;
+    let suppressClickUntil = 0;
+    const releaseTouch = (event: TouchEvent, runAction: boolean): void => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.classList.remove('pressed');
+      if (!activeTouch) return;
+      activeTouch = false;
+      suppressClickUntil = performance.now() + 500;
+      if (runAction) action();
+    };
+
+    button.addEventListener('touchstart', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      activeTouch = true;
+      button.classList.add('pressed');
+    }, { passive: false });
+    button.addEventListener('touchend', event => releaseTouch(event, true), { passive: false });
+    button.addEventListener('touchcancel', event => releaseTouch(event, false), { passive: false });
+    button.addEventListener('click', (event) => {
+      if (performance.now() < suppressClickUntil) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      action();
+    });
+  };
+
+  bindMobileStateButton('mobile-save-state', () => {
     void saveStateForUser(0, true);
   });
-  document.getElementById('mobile-load-state')?.addEventListener('click', () => {
+  bindMobileStateButton('mobile-load-state', () => {
     void loadStateForUser(0, true);
   });
 }
