@@ -2967,55 +2967,125 @@ function setupABButtons(): void {
  * 設定功能按鈕 (Select/Start)
  */
 function setupFunctionButtons(): void {
-  const buttons = document.querySelectorAll('[data-btn="select"], [data-btn="start"]');
-  
-  buttons.forEach(btn => {
-    const button = btn as HTMLElement;
+  const container = document.querySelector<HTMLElement>('#nes-controller-area .center-btns');
+  if (!container || container.dataset.nesUtilityWired) return;
+  container.dataset.nesUtilityWired = '1';
+
+  const buttons = Array.from(container.querySelectorAll<HTMLElement>('.func-btn'));
+  const touchTargets = new Map<number, HTMLElement>();
+  const suppressClickUntil = new Map<HTMLElement, number>();
+
+  const getButtonFromTarget = (target: EventTarget | null): HTMLElement | null => {
+    if (!(target instanceof Element)) return null;
+    const button = target.closest<HTMLElement>('.func-btn');
+    return button && container.contains(button) ? button : null;
+  };
+
+  const isStateButton = (button: HTMLElement): boolean =>
+    button.id === 'mobile-save-state' || button.id === 'mobile-load-state';
+
+  const runStateAction = (button: HTMLElement): void => {
+    if (button.id === 'mobile-save-state') {
+      void saveStateForUser(0, true);
+    } else if (button.id === 'mobile-load-state') {
+      void loadStateForUser(0, true);
+    }
+  };
+
+  const setControllerButton = (button: HTMLElement, pressed: boolean): void => {
     const btnType = button.dataset.btn;
+    if (!btnType) return;
     const buttonEnum = btnType === 'start' ? ControllerButton.Start : ControllerButton.Select;
-    const setPressed = (pressed: boolean) => {
-      if (isFbNeoActive()) {
-        setArcadeInputBit(btnType === 'start' ? ArcadeInputBit.Start : ArcadeInputBit.Coin, pressed);
-      } else {
-        setNesButton(buttonEnum, pressed);
-      }
-    };
+    if (isFbNeoActive()) {
+      setArcadeInputBit(btnType === 'start' ? ArcadeInputBit.Start : ArcadeInputBit.Coin, pressed);
+    } else {
+      setNesButton(buttonEnum, pressed);
+    }
+  };
 
-    button.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      setPressed(true);
-      button.classList.add('pressed');
-    }, { passive: false });
+  const syncButton = (button: HTMLElement): void => {
+    const pressed = Array.from(touchTargets.values()).some(target => target === button);
+    button.classList.toggle('pressed', pressed);
+    if (!isStateButton(button)) setControllerButton(button, pressed);
+  };
 
-    button.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      setPressed(false);
-      button.classList.remove('pressed');
-    }, { passive: false });
+  const releaseTouches = (event: TouchEvent, runActions: boolean): boolean => {
+    const releasedButtons = new Set<HTMLElement>();
+    for (const touch of Array.from(event.changedTouches)) {
+      const button = touchTargets.get(touch.identifier);
+      if (!button) continue;
+      touchTargets.delete(touch.identifier);
+      releasedButtons.add(button);
+    }
+    if (releasedButtons.size === 0) return false;
 
-    button.addEventListener('touchcancel', (e) => {
-      e.preventDefault();
-      setPressed(false);
-      button.classList.remove('pressed');
-    }, { passive: false });
+    event.preventDefault();
+    event.stopPropagation();
+    const suppressUntil = performance.now() + 500;
+    for (const button of releasedButtons) {
+      syncButton(button);
+      suppressClickUntil.set(button, suppressUntil);
+      const stillPressed = Array.from(touchTargets.values()).some(target => target === button);
+      if (runActions && !stillPressed && isStateButton(button)) runStateAction(button);
+    }
+    return true;
+  };
 
-    button.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      setPressed(true);
-      button.classList.add('pressed');
-    });
+  container.addEventListener('touchstart', (event) => {
+    let handled = false;
+    for (const touch of Array.from(event.changedTouches)) {
+      const button = getButtonFromTarget(touch.target);
+      if (!button) continue;
+      handled = true;
+      touchTargets.set(touch.identifier, button);
+      syncButton(button);
+    }
+    if (handled) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, { passive: false });
 
-    button.addEventListener('mouseup', (e) => {
-      e.preventDefault();
-      setPressed(false);
-      button.classList.remove('pressed');
-    });
+  document.addEventListener('touchmove', (event) => {
+    if (!Array.from(event.changedTouches).some(touch => touchTargets.has(touch.identifier))) return;
+    event.preventDefault();
+    event.stopPropagation();
+  }, { passive: false, capture: true });
 
-    button.addEventListener('mouseleave', () => {
-      setPressed(false);
-      button.classList.remove('pressed');
-    });
+  document.addEventListener('touchend', event => {
+    releaseTouches(event, true);
+  }, { passive: false, capture: true });
+
+  document.addEventListener('touchcancel', event => {
+    releaseTouches(event, false);
+  }, { passive: false, capture: true });
+
+  container.addEventListener('click', (event) => {
+    const button = getButtonFromTarget(event.target);
+    if (!button || !isStateButton(button)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (performance.now() >= (suppressClickUntil.get(button) ?? 0)) runStateAction(button);
   });
+
+  for (const button of buttons.filter(button => !isStateButton(button))) {
+    button.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setControllerButton(button, true);
+      button.classList.add('pressed');
+    });
+    button.addEventListener('mouseup', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setControllerButton(button, false);
+      button.classList.remove('pressed');
+    });
+    button.addEventListener('mouseleave', () => {
+      setControllerButton(button, false);
+      button.classList.remove('pressed');
+    });
+  }
 }
 
 /**
@@ -3174,47 +3244,6 @@ function setupDesktopControls(): void {
     void loadStateForUser(0, true);
   });
   
-  const bindMobileStateButton = (id: string, action: () => void): void => {
-    const button = document.getElementById(id);
-    if (!button || button.dataset.stateWired) return;
-    button.dataset.stateWired = '1';
-
-    let activeTouch = false;
-    let suppressClickUntil = 0;
-    const releaseTouch = (event: TouchEvent, runAction: boolean): void => {
-      event.preventDefault();
-      event.stopPropagation();
-      button.classList.remove('pressed');
-      if (!activeTouch) return;
-      activeTouch = false;
-      suppressClickUntil = performance.now() + 500;
-      if (runAction) action();
-    };
-
-    button.addEventListener('touchstart', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      activeTouch = true;
-      button.classList.add('pressed');
-    }, { passive: false });
-    button.addEventListener('touchend', event => releaseTouch(event, true), { passive: false });
-    button.addEventListener('touchcancel', event => releaseTouch(event, false), { passive: false });
-    button.addEventListener('click', (event) => {
-      if (performance.now() < suppressClickUntil) {
-        event.preventDefault();
-        event.stopPropagation();
-        return;
-      }
-      action();
-    });
-  };
-
-  bindMobileStateButton('mobile-save-state', () => {
-    void saveStateForUser(0, true);
-  });
-  bindMobileStateButton('mobile-load-state', () => {
-    void loadStateForUser(0, true);
-  });
 }
 
 /**
