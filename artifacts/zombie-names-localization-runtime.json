@@ -1,0 +1,2979 @@
+{
+  "sourceSha256": "91dfb1a0c29f78c5d5b0a582c737c62103c4009ad5e2c20fdecd0c22a8648a48",
+  "mode": "TEST-ONLY seeded $D8; original use/discard rendering, NOT natural acquisition; no text/ROM injection",
+  "framesChecked": 20480,
+  "partialFrames": 40,
+  "checkedPixels": 43569408,
+  "report": [
+    {
+      "selector": 0,
+      "source": "つるぎ",
+      "translation": "劍",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.0.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 1,
+      "source": "たて",
+      "translation": "盾",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "items.shield",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "items.shield-scroll",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "items.shield-end",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 2,
+      "source": "ヘルメット",
+      "translation": "頭盔",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "items.helmet",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "items.helmet-scroll",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "items.helmet-end",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 3,
+      "source": "ガントレット",
+      "translation": "護手",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "name.3.23",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.3.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "name.3.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 4,
+      "source": "たんけん",
+      "translation": "短劍",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.4.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 5,
+      "source": "ゆびわ",
+      "translation": "戒指",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "name.5.23",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.5.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "name.5.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 6,
+      "source": "メイス",
+      "translation": "釘錘",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.6.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 7,
+      "source": "すいしょう",
+      "translation": "水晶",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 759,
+          "matches": [
+            {
+              "id": "name.7.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 767,
+          "matches": [
+            {
+              "id": "name.7.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 8,
+      "source": "かたな",
+      "translation": "刀",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.8.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 9,
+      "source": "くすりの びん",
+      "translation": "藥瓶",
+      "action": "use",
+      "level": 1,
+      "frames": [],
+      "partial": []
+    },
+    {
+      "selector": 10,
+      "source": "まほうの ほん",
+      "translation": "魔法書",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 759,
+          "matches": [
+            {
+              "id": "name.10.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 11,
+      "source": "どくやく",
+      "translation": "毒藥",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 817,
+          "matches": [
+            {
+              "id": "name.11.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 12,
+      "source": "かぎ",
+      "translation": "鑰",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.12.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 13,
+      "source": "たべもの",
+      "translation": "食物",
+      "action": "use",
+      "level": 1,
+      "frames": [],
+      "partial": []
+    },
+    {
+      "selector": 14,
+      "source": "まほうのつえ",
+      "translation": "魔杖",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.14.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 15,
+      "source": "すいしょうのつえ",
+      "translation": "水晶杖",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.15.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": [
+        858,
+        859,
+        860,
+        861
+      ]
+    },
+    {
+      "selector": 16,
+      "source": "いかずち",
+      "translation": "雷電",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.16.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": [
+        858,
+        859,
+        860,
+        861
+      ]
+    },
+    {
+      "selector": 17,
+      "source": "おおいかずち",
+      "translation": "大雷電",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 759,
+          "matches": [
+            {
+              "id": "name.17.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 767,
+          "matches": [
+            {
+              "id": "name.17.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 18,
+      "source": "ほのおの まほう",
+      "translation": "火焰魔法",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.18.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 19,
+      "source": "さくれつだん",
+      "translation": "爆裂彈",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.19.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 20,
+      "source": "まほうの うでわ",
+      "translation": "魔法手環",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.20.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 21,
+      "source": "くびかざり",
+      "translation": "項鍊",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "name.21.23",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.21.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "name.21.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 22,
+      "source": "まほうの とけい",
+      "translation": "魔法時鐘",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 817,
+          "matches": [
+            {
+              "id": "name.22.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 23,
+      "source": "よろい",
+      "translation": "鎧甲",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "name.23.23",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.23.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "name.23.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 24,
+      "source": "つぼ",
+      "translation": "壺",
+      "action": "use",
+      "level": 1,
+      "frames": [],
+      "partial": []
+    },
+    {
+      "selector": 25,
+      "source": "いのちのみず",
+      "translation": "生命之水",
+      "action": "use",
+      "level": 1,
+      "frames": [],
+      "partial": []
+    },
+    {
+      "selector": 26,
+      "source": "はがねのつるぎ",
+      "translation": "鋼劍",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.26.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 27,
+      "source": "ブーツ",
+      "translation": "靴子",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "name.27.23",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.27.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "name.27.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 28,
+      "source": "しゅりけん",
+      "translation": "手裏劍",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.28.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 29,
+      "source": "ばくだん",
+      "translation": "炸彈",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.29.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 30,
+      "source": "ロウソク",
+      "translation": "蠟燭",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.30.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 31,
+      "source": "ふくろ",
+      "translation": "袋子",
+      "action": "use",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.31.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 0,
+      "source": "つるぎ",
+      "translation": "劍",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.0.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 1,
+      "source": "たて",
+      "translation": "盾",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "items.shield",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "items.shield-scroll",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "items.shield-end",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 2,
+      "source": "ヘルメット",
+      "translation": "頭盔",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "items.helmet",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "items.helmet-scroll",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "items.helmet-end",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 3,
+      "source": "ガントレット",
+      "translation": "護手",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "name.3.23",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.3.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "name.3.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 4,
+      "source": "たんけん",
+      "translation": "短劍",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.4.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 5,
+      "source": "ゆびわ",
+      "translation": "戒指",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "name.5.23",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.5.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "name.5.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 6,
+      "source": "メイス",
+      "translation": "釘錘",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.6.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 7,
+      "source": "すいしょう",
+      "translation": "水晶",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 759,
+          "matches": [
+            {
+              "id": "name.7.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 767,
+          "matches": [
+            {
+              "id": "name.7.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 8,
+      "source": "かたな",
+      "translation": "刀",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.8.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 9,
+      "source": "くすりの びん",
+      "translation": "藥瓶",
+      "action": "use",
+      "level": 8,
+      "frames": [],
+      "partial": []
+    },
+    {
+      "selector": 10,
+      "source": "まほうの ほん",
+      "translation": "魔法書",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 759,
+          "matches": [
+            {
+              "id": "name.10.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 11,
+      "source": "どくやく",
+      "translation": "毒藥",
+      "action": "use",
+      "level": 8,
+      "frames": [],
+      "partial": []
+    },
+    {
+      "selector": 12,
+      "source": "かぎ",
+      "translation": "鑰",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.12.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 13,
+      "source": "たべもの",
+      "translation": "食物",
+      "action": "use",
+      "level": 8,
+      "frames": [],
+      "partial": []
+    },
+    {
+      "selector": 14,
+      "source": "まほうのつえ",
+      "translation": "魔杖",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.14.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 15,
+      "source": "すいしょうのつえ",
+      "translation": "水晶杖",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.15.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": [
+        858,
+        859,
+        860,
+        861
+      ]
+    },
+    {
+      "selector": 16,
+      "source": "いかずち",
+      "translation": "雷電",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.16.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": [
+        858,
+        859,
+        860,
+        861
+      ]
+    },
+    {
+      "selector": 17,
+      "source": "おおいかずち",
+      "translation": "大雷電",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 759,
+          "matches": [
+            {
+              "id": "name.17.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 767,
+          "matches": [
+            {
+              "id": "name.17.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 18,
+      "source": "ほのおの まほう",
+      "translation": "火焰魔法",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.18.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 19,
+      "source": "さくれつだん",
+      "translation": "爆裂彈",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.19.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 20,
+      "source": "まほうの うでわ",
+      "translation": "魔法手環",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.20.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 21,
+      "source": "くびかざり",
+      "translation": "項鍊",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "name.21.23",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.21.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "name.21.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 22,
+      "source": "まほうの とけい",
+      "translation": "魔法時鐘",
+      "action": "use",
+      "level": 8,
+      "frames": [],
+      "partial": []
+    },
+    {
+      "selector": 23,
+      "source": "よろい",
+      "translation": "鎧甲",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "name.23.23",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.23.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "name.23.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 24,
+      "source": "つぼ",
+      "translation": "壺",
+      "action": "use",
+      "level": 8,
+      "frames": [],
+      "partial": []
+    },
+    {
+      "selector": 25,
+      "source": "いのちのみず",
+      "translation": "生命之水",
+      "action": "use",
+      "level": 8,
+      "frames": [],
+      "partial": []
+    },
+    {
+      "selector": 26,
+      "source": "はがねのつるぎ",
+      "translation": "鋼劍",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.26.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 27,
+      "source": "ブーツ",
+      "translation": "靴子",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 761,
+          "matches": [
+            {
+              "id": "name.27.23",
+              "x": 112,
+              "y": 187,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 796,
+          "matches": [
+            {
+              "id": "name.27.22",
+              "x": 112,
+              "y": 179,
+              "partial": false
+            }
+          ]
+        },
+        {
+          "frame": 804,
+          "matches": [
+            {
+              "id": "name.27.21",
+              "x": 112,
+              "y": 171,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 28,
+      "source": "しゅりけん",
+      "translation": "手裏劍",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.28.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 29,
+      "source": "ばくだん",
+      "translation": "炸彈",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.29.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 30,
+      "source": "ロウソク",
+      "translation": "蠟燭",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.30.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 31,
+      "source": "ふくろ",
+      "translation": "袋子",
+      "action": "use",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.31.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 0,
+      "source": "つるぎ",
+      "translation": "劍",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.0.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 1,
+      "source": "たて",
+      "translation": "盾",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.1.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 2,
+      "source": "ヘルメット",
+      "translation": "頭盔",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.2.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 3,
+      "source": "ガントレット",
+      "translation": "護手",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.3.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 4,
+      "source": "たんけん",
+      "translation": "短劍",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.4.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 5,
+      "source": "ゆびわ",
+      "translation": "戒指",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.5.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 6,
+      "source": "メイス",
+      "translation": "釘錘",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.6.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 7,
+      "source": "すいしょう",
+      "translation": "水晶",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.7.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 8,
+      "source": "かたな",
+      "translation": "刀",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.8.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 9,
+      "source": "くすりの びん",
+      "translation": "藥瓶",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.9.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 10,
+      "source": "まほうの ほん",
+      "translation": "魔法書",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.10.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 11,
+      "source": "どくやく",
+      "translation": "毒藥",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.11.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 12,
+      "source": "かぎ",
+      "translation": "鑰",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.12.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 13,
+      "source": "たべもの",
+      "translation": "食物",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.13.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": [
+        793,
+        794,
+        795,
+        796
+      ]
+    },
+    {
+      "selector": 14,
+      "source": "まほうのつえ",
+      "translation": "魔杖",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.14.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 15,
+      "source": "すいしょうのつえ",
+      "translation": "水晶杖",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.15.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": [
+        793,
+        794,
+        795,
+        796
+      ]
+    },
+    {
+      "selector": 16,
+      "source": "いかずち",
+      "translation": "雷電",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.16.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": [
+        793,
+        794,
+        795,
+        796
+      ]
+    },
+    {
+      "selector": 17,
+      "source": "おおいかずち",
+      "translation": "大雷電",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.17.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 18,
+      "source": "ほのおの まほう",
+      "translation": "火焰魔法",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.18.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 19,
+      "source": "さくれつだん",
+      "translation": "爆裂彈",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.19.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 20,
+      "source": "まほうの うでわ",
+      "translation": "魔法手環",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.20.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 21,
+      "source": "くびかざり",
+      "translation": "項鍊",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.21.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 22,
+      "source": "まほうの とけい",
+      "translation": "魔法時鐘",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.22.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 23,
+      "source": "よろい",
+      "translation": "鎧甲",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.23.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 24,
+      "source": "つぼ",
+      "translation": "壺",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.24.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 25,
+      "source": "いのちのみず",
+      "translation": "生命之水",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.25.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 26,
+      "source": "はがねのつるぎ",
+      "translation": "鋼劍",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.26.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 27,
+      "source": "ブーツ",
+      "translation": "靴子",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.27.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 28,
+      "source": "しゅりけん",
+      "translation": "手裏劍",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.28.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 29,
+      "source": "ばくだん",
+      "translation": "炸彈",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.29.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 30,
+      "source": "ロウソク",
+      "translation": "蠟燭",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.30.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 31,
+      "source": "ふくろ",
+      "translation": "袋子",
+      "action": "discard",
+      "level": 1,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.31.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 0,
+      "source": "つるぎ",
+      "translation": "劍",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.0.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 1,
+      "source": "たて",
+      "translation": "盾",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.1.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 2,
+      "source": "ヘルメット",
+      "translation": "頭盔",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.2.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 3,
+      "source": "ガントレット",
+      "translation": "護手",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.3.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 4,
+      "source": "たんけん",
+      "translation": "短劍",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.4.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 5,
+      "source": "ゆびわ",
+      "translation": "戒指",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.5.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 6,
+      "source": "メイス",
+      "translation": "釘錘",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.6.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 7,
+      "source": "すいしょう",
+      "translation": "水晶",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.7.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 8,
+      "source": "かたな",
+      "translation": "刀",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.8.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 9,
+      "source": "くすりの びん",
+      "translation": "藥瓶",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.9.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 10,
+      "source": "まほうの ほん",
+      "translation": "魔法書",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.10.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 11,
+      "source": "どくやく",
+      "translation": "毒藥",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.11.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 12,
+      "source": "かぎ",
+      "translation": "鑰",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.12.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 13,
+      "source": "たべもの",
+      "translation": "食物",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.13.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": [
+        793,
+        794,
+        795,
+        796
+      ]
+    },
+    {
+      "selector": 14,
+      "source": "まほうのつえ",
+      "translation": "魔杖",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.14.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 15,
+      "source": "すいしょうのつえ",
+      "translation": "水晶杖",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.15.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": [
+        793,
+        794,
+        795,
+        796
+      ]
+    },
+    {
+      "selector": 16,
+      "source": "いかずち",
+      "translation": "雷電",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.16.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": [
+        793,
+        794,
+        795,
+        796
+      ]
+    },
+    {
+      "selector": 17,
+      "source": "おおいかずち",
+      "translation": "大雷電",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.17.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 18,
+      "source": "ほのおの まほう",
+      "translation": "火焰魔法",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.18.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 19,
+      "source": "さくれつだん",
+      "translation": "爆裂彈",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.19.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 20,
+      "source": "まほうの うでわ",
+      "translation": "魔法手環",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.20.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 21,
+      "source": "くびかざり",
+      "translation": "項鍊",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.21.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 22,
+      "source": "まほうの とけい",
+      "translation": "魔法時鐘",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.22.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 23,
+      "source": "よろい",
+      "translation": "鎧甲",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.23.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 24,
+      "source": "つぼ",
+      "translation": "壺",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.24.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 25,
+      "source": "いのちのみず",
+      "translation": "生命之水",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.25.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 26,
+      "source": "はがねのつるぎ",
+      "translation": "鋼劍",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.26.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 27,
+      "source": "ブーツ",
+      "translation": "靴子",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.27.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 28,
+      "source": "しゅりけん",
+      "translation": "手裏劍",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.28.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 29,
+      "source": "ばくだん",
+      "translation": "炸彈",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.29.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 30,
+      "source": "ロウソク",
+      "translation": "蠟燭",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.30.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    },
+    {
+      "selector": 31,
+      "source": "ふくろ",
+      "translation": "袋子",
+      "action": "discard",
+      "level": 8,
+      "frames": [
+        {
+          "frame": 756,
+          "matches": [
+            {
+              "id": "name.31.19",
+              "x": 112,
+              "y": 155,
+              "partial": false
+            }
+          ]
+        }
+      ],
+      "partial": []
+    }
+  ]
+}

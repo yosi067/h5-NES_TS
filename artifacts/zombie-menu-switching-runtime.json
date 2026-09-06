@@ -1,0 +1,573 @@
+{
+  "sourceSha256": "91dfb1a0c29f78c5d5b0a582c737c62103c4009ad5e2c20fdecd0c22a8648a48",
+  "report": [
+    {
+      "route": "items",
+      "events": [
+        [
+          120,
+          3
+        ],
+        [
+          240,
+          3
+        ],
+        [
+          420,
+          3
+        ],
+        [
+          600,
+          0
+        ],
+        [
+          630,
+          5
+        ],
+        [
+          650,
+          4
+        ],
+        [
+          670,
+          0
+        ],
+        [
+          700,
+          7
+        ],
+        [
+          730,
+          1
+        ],
+        [
+          860,
+          3
+        ]
+      ],
+      "framesChecked": 541,
+      "independentFrames": 31,
+      "checkedPixels": 1116864,
+      "transitions": [
+        {
+          "frame": 410,
+          "ids": "hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 427,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 429,
+          "ids": "menu.items,menu.weapons,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 431,
+          "ids": "menu.items,menu.weapons,menu.equipment,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 433,
+          "ids": "menu.items,menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 607,
+          "ids": "menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold,items.use"
+        },
+        {
+          "frame": 608,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold,items.use"
+        },
+        {
+          "frame": 609,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold,items.use,items.discard"
+        },
+        {
+          "frame": 610,
+          "ids": "menu.status,hud.power,hud.experience,hud.gold,items.use,items.discard"
+        },
+        {
+          "frame": 613,
+          "ids": "hud.power,hud.experience,hud.gold,items.use,items.discard"
+        },
+        {
+          "frame": 675,
+          "ids": "hud.power,hud.experience,hud.gold,items.discard"
+        },
+        {
+          "frame": 680,
+          "ids": "hud.power,hud.experience,hud.gold,items.select"
+        },
+        {
+          "frame": 737,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold,items.select"
+        },
+        {
+          "frame": 738,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 739,
+          "ids": "menu.items,menu.weapons,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 741,
+          "ids": "menu.items,menu.weapons,menu.equipment,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 743,
+          "ids": "menu.items,menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 878,
+          "ids": "menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 879,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 881,
+          "ids": "menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 884,
+          "ids": "hud.power,hud.experience,hud.gold"
+        }
+      ]
+    },
+    {
+      "route": "weapons",
+      "events": [
+        [
+          120,
+          3
+        ],
+        [
+          240,
+          3
+        ],
+        [
+          420,
+          3
+        ],
+        [
+          470,
+          5
+        ],
+        [
+          600,
+          0
+        ],
+        [
+          670,
+          0
+        ],
+        [
+          700,
+          7
+        ],
+        [
+          730,
+          1
+        ],
+        [
+          860,
+          3
+        ]
+      ],
+      "framesChecked": 541,
+      "independentFrames": 30,
+      "checkedPixels": 1228864,
+      "transitions": [
+        {
+          "frame": 410,
+          "ids": "hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 427,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 429,
+          "ids": "menu.items,menu.weapons,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 431,
+          "ids": "menu.items,menu.weapons,menu.equipment,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 433,
+          "ids": "menu.items,menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 607,
+          "ids": "menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold,weapons.prompt"
+        },
+        {
+          "frame": 608,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold,weapons.prompt"
+        },
+        {
+          "frame": 609,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold,weapons.prompt,weapons.choose"
+        },
+        {
+          "frame": 610,
+          "ids": "menu.status,hud.power,hud.experience,hud.gold,weapons.prompt,weapons.choose"
+        },
+        {
+          "frame": 613,
+          "ids": "hud.power,hud.experience,hud.gold,weapons.prompt,weapons.choose"
+        },
+        {
+          "frame": 734,
+          "ids": "hud.power,hud.experience,hud.gold,weapons.choose"
+        },
+        {
+          "frame": 737,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold,weapons.choose"
+        },
+        {
+          "frame": 738,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 739,
+          "ids": "menu.items,menu.weapons,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 741,
+          "ids": "menu.items,menu.weapons,menu.equipment,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 743,
+          "ids": "menu.items,menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 878,
+          "ids": "menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 879,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 881,
+          "ids": "menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 884,
+          "ids": "hud.power,hud.experience,hud.gold"
+        }
+      ]
+    },
+    {
+      "route": "equipment",
+      "events": [
+        [
+          120,
+          3
+        ],
+        [
+          240,
+          3
+        ],
+        [
+          420,
+          3
+        ],
+        [
+          470,
+          5
+        ],
+        [
+          500,
+          5
+        ],
+        [
+          600,
+          0
+        ],
+        [
+          670,
+          0
+        ],
+        [
+          700,
+          7
+        ],
+        [
+          730,
+          4
+        ],
+        [
+          860,
+          3
+        ]
+      ],
+      "framesChecked": 541,
+      "independentFrames": 42,
+      "checkedPixels": 1182656,
+      "transitions": [
+        {
+          "frame": 410,
+          "ids": "hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 427,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 429,
+          "ids": "menu.items,menu.weapons,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 431,
+          "ids": "menu.items,menu.weapons,menu.equipment,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 433,
+          "ids": "menu.items,menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 606,
+          "ids": "menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 607,
+          "ids": "menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold,equipment.heading"
+        },
+        {
+          "frame": 608,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold,equipment.heading"
+        },
+        {
+          "frame": 610,
+          "ids": "menu.status,hud.power,hud.experience,hud.gold,equipment.heading"
+        },
+        {
+          "frame": 612,
+          "ids": "hud.power,hud.experience,hud.gold,equipment.heading"
+        },
+        {
+          "frame": 613,
+          "ids": "hud.power,hud.experience,hud.gold,equipment.heading,equipment.defense,equipment.spirit"
+        },
+        {
+          "frame": 674,
+          "ids": "hud.power,hud.experience,hud.gold,equipment.defense,equipment.spirit"
+        },
+        {
+          "frame": 680,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold,equipment.defense,equipment.spirit"
+        },
+        {
+          "frame": 682,
+          "ids": "menu.items,menu.weapons,hud.power,hud.experience,hud.gold,equipment.defense,equipment.spirit"
+        },
+        {
+          "frame": 684,
+          "ids": "menu.items,menu.weapons,menu.equipment,hud.power,hud.experience,hud.gold,equipment.defense,equipment.spirit"
+        },
+        {
+          "frame": 685,
+          "ids": "menu.items,menu.weapons,menu.equipment,hud.power,hud.experience,hud.gold,equipment.spirit"
+        },
+        {
+          "frame": 686,
+          "ids": "menu.items,menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 878,
+          "ids": "menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 879,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 881,
+          "ids": "menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 884,
+          "ids": "hud.power,hud.experience,hud.gold"
+        }
+      ]
+    },
+    {
+      "route": "status",
+      "events": [
+        [
+          120,
+          3
+        ],
+        [
+          240,
+          3
+        ],
+        [
+          420,
+          3
+        ],
+        [
+          470,
+          5
+        ],
+        [
+          500,
+          5
+        ],
+        [
+          530,
+          5
+        ],
+        [
+          600,
+          0
+        ],
+        [
+          670,
+          0
+        ],
+        [
+          700,
+          7
+        ],
+        [
+          730,
+          1
+        ],
+        [
+          860,
+          3
+        ]
+      ],
+      "framesChecked": 541,
+      "independentFrames": 37,
+      "checkedPixels": 1294912,
+      "transitions": [
+        {
+          "frame": 410,
+          "ids": "hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 427,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 429,
+          "ids": "menu.items,menu.weapons,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 431,
+          "ids": "menu.items,menu.weapons,menu.equipment,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 433,
+          "ids": "menu.items,menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 607,
+          "ids": "menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold,status.level"
+        },
+        {
+          "frame": 608,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold,status.level"
+        },
+        {
+          "frame": 609,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold,status.level,status.strength,status.defense"
+        },
+        {
+          "frame": 610,
+          "ids": "menu.status,hud.power,hud.experience,hud.gold,status.level,status.strength,status.defense"
+        },
+        {
+          "frame": 611,
+          "ids": "menu.status,hud.power,hud.experience,hud.gold,status.level,status.strength,status.magic,status.defense,status.spirit"
+        },
+        {
+          "frame": 613,
+          "ids": "hud.power,hud.experience,hud.gold,status.level,status.strength,status.magic,status.defense,status.spirit,status.max-power"
+        },
+        {
+          "frame": 674,
+          "ids": "hud.power,hud.experience,hud.gold,status.strength,status.magic,status.defense,status.spirit,status.max-power"
+        },
+        {
+          "frame": 676,
+          "ids": "hud.power,hud.experience,hud.gold,status.magic,status.spirit,status.max-power"
+        },
+        {
+          "frame": 678,
+          "ids": "hud.power,hud.experience,hud.gold,status.max-power"
+        },
+        {
+          "frame": 681,
+          "ids": "hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 684,
+          "ids": "hud.power,hud.experience,hud.gold,status.next-strength,status.next-defense"
+        },
+        {
+          "frame": 686,
+          "ids": "hud.power,hud.experience,hud.gold,status.next-strength,status.next-magic,status.next-defense,status.next-spirit"
+        },
+        {
+          "frame": 688,
+          "ids": "hud.power,hud.experience,hud.gold,status.next-strength,status.next-magic,status.next-defense,status.next-spirit,status.next-max-power"
+        },
+        {
+          "frame": 699,
+          "ids": "hud.power,hud.experience,hud.gold,status.next-strength,status.next-magic,status.next-defense,status.next-spirit,status.next-max-power,status.next-level"
+        },
+        {
+          "frame": 736,
+          "ids": "hud.power,hud.experience,hud.gold,status.next-strength,status.next-magic,status.next-spirit,status.next-max-power,status.next-level"
+        },
+        {
+          "frame": 739,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold,status.next-magic,status.next-spirit,status.next-max-power,status.next-level"
+        },
+        {
+          "frame": 740,
+          "ids": "menu.items,hud.power,hud.experience,hud.gold,status.next-spirit,status.next-max-power,status.next-level"
+        },
+        {
+          "frame": 741,
+          "ids": "menu.items,menu.weapons,hud.power,hud.experience,hud.gold,status.next-max-power,status.next-level"
+        },
+        {
+          "frame": 743,
+          "ids": "menu.items,menu.weapons,menu.equipment,hud.power,hud.experience,hud.gold,status.next-level"
+        },
+        {
+          "frame": 744,
+          "ids": "menu.items,menu.weapons,menu.equipment,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 745,
+          "ids": "menu.items,menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 879,
+          "ids": "menu.weapons,menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 880,
+          "ids": "menu.equipment,menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 882,
+          "ids": "menu.status,hud.power,hud.experience,hud.gold"
+        },
+        {
+          "frame": 885,
+          "ids": "hud.power,hud.experience,hud.gold"
+        }
+      ]
+    }
+  ]
+}

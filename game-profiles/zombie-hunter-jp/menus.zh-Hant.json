@@ -1,0 +1,5829 @@
+{
+  "schemaVersion": 1,
+  "format": "nes-verified-cell-menus",
+  "id": "zombie-hunter-jp",
+  "sourceSha256": "91dfb1a0c29f78c5d5b0a582c737c62103c4009ad5e2c20fdecd0c22a8648a48",
+  "locale": "zh-Hant",
+  "status": "partial-menu-localization",
+  "entries": [
+    {
+      "id": "title.start",
+      "source": "PUSH START BOTTON",
+      "translation": "按 START 開始",
+      "group": "title",
+      "width": 17,
+      "height": 1,
+      "cells": [
+        {
+          "cell": 679,
+          "tile": 25,
+          "chr": 24976
+        },
+        {
+          "cell": 680,
+          "tile": 30,
+          "chr": 25056
+        },
+        {
+          "cell": 681,
+          "tile": 28,
+          "chr": 25024
+        },
+        {
+          "cell": 682,
+          "tile": 17,
+          "chr": 24848
+        },
+        {
+          "cell": 683,
+          "tile": 36,
+          "chr": 25152
+        },
+        {
+          "cell": 684,
+          "tile": 28,
+          "chr": 25024
+        },
+        {
+          "cell": 685,
+          "tile": 29,
+          "chr": 25040
+        },
+        {
+          "cell": 686,
+          "tile": 10,
+          "chr": 24736
+        },
+        {
+          "cell": 687,
+          "tile": 27,
+          "chr": 25008
+        },
+        {
+          "cell": 688,
+          "tile": 29,
+          "chr": 25040
+        },
+        {
+          "cell": 689,
+          "tile": 36,
+          "chr": 25152
+        },
+        {
+          "cell": 690,
+          "tile": 11,
+          "chr": 24752
+        },
+        {
+          "cell": 691,
+          "tile": 24,
+          "chr": 24960
+        },
+        {
+          "cell": 692,
+          "tile": 29,
+          "chr": 25040
+        },
+        {
+          "cell": 693,
+          "tile": 29,
+          "chr": 25040
+        },
+        {
+          "cell": 694,
+          "tile": 24,
+          "chr": 24960
+        },
+        {
+          "cell": 695,
+          "tile": 23,
+          "chr": 24944
+        }
+      ],
+      "evidence": {
+        "frame": 200,
+        "route": "Start@120, Start@240, Start@420 (2 frames each)",
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          3528
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "menu.items",
+      "source": "もちもの",
+      "translation": "道具",
+      "group": "pause",
+      "width": 4,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 624,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 625,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 626,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 627,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 656,
+          "tile": 98,
+          "chr": 30240
+        },
+        {
+          "cell": 657,
+          "tile": 80,
+          "chr": 29952
+        },
+        {
+          "cell": 658,
+          "tile": 98,
+          "chr": 30240
+        },
+        {
+          "cell": 659,
+          "tile": 88,
+          "chr": 30080
+        }
+      ],
+      "evidence": {
+        "frame": 450,
+        "route": "Start@120, Start@240, Start@420 (2 frames each)",
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102101,
+          102378,
+          102519
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "menu.weapons",
+      "source": "ぶき",
+      "translation": "武器",
+      "group": "pause",
+      "width": 4,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 688,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 689,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 690,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 691,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 720,
+          "tile": 91,
+          "chr": 30128
+        },
+        {
+          "cell": 721,
+          "tile": 70,
+          "chr": 29792
+        },
+        {
+          "cell": 722,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 723,
+          "tile": 36,
+          "chr": 29248
+        }
+      ],
+      "evidence": {
+        "frame": 450,
+        "route": "Start@120, Start@240, Start@420 (2 frames each)",
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "menu.equipment",
+      "source": "そうび",
+      "translation": "裝備",
+      "group": "pause",
+      "width": 4,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 752,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 753,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 754,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 755,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 784,
+          "tile": 78,
+          "chr": 29920
+        },
+        {
+          "cell": 785,
+          "tile": 66,
+          "chr": 29728
+        },
+        {
+          "cell": 786,
+          "tile": 90,
+          "chr": 30112
+        },
+        {
+          "cell": 787,
+          "tile": 36,
+          "chr": 29248
+        }
+      ],
+      "evidence": {
+        "frame": 450,
+        "route": "Start@120, Start@240, Start@420 (2 frames each)",
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "menu.status",
+      "source": "つよさ",
+      "translation": "能力",
+      "group": "pause",
+      "width": 4,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 816,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 817,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 818,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 819,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 848,
+          "tile": 81,
+          "chr": 29968
+        },
+        {
+          "cell": 849,
+          "tile": 101,
+          "chr": 30288
+        },
+        {
+          "cell": 850,
+          "tile": 74,
+          "chr": 29856
+        },
+        {
+          "cell": 851,
+          "tile": 36,
+          "chr": 29248
+        }
+      ],
+      "evidence": {
+        "frame": 450,
+        "route": "Start@120, Start@240, Start@420 (2 frames each)",
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "hud.power",
+      "source": "POW",
+      "translation": "體力",
+      "group": "hud",
+      "width": 3,
+      "height": 1,
+      "cells": [
+        {
+          "cell": 546,
+          "tile": 25,
+          "chr": 29072
+        },
+        {
+          "cell": 547,
+          "tile": 24,
+          "chr": 29056
+        },
+        {
+          "cell": 548,
+          "tile": 32,
+          "chr": 29184
+        }
+      ],
+      "evidence": {
+        "frame": 450,
+        "route": "Start@120, Start@240, Start@420 (2 frames each)",
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          17026,
+          102346
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "hud.experience",
+      "source": "EXP",
+      "translation": "經驗",
+      "group": "hud",
+      "width": 3,
+      "height": 1,
+      "cells": [
+        {
+          "cell": 610,
+          "tile": 14,
+          "chr": 28896
+        },
+        {
+          "cell": 611,
+          "tile": 33,
+          "chr": 29200
+        },
+        {
+          "cell": 612,
+          "tile": 25,
+          "chr": 29072
+        }
+      ],
+      "evidence": {
+        "frame": 450,
+        "route": "Start@120, Start@240, Start@420 (2 frames each)",
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          17032
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "hud.gold",
+      "source": "GLD",
+      "translation": "金錢",
+      "group": "hud",
+      "width": 3,
+      "height": 1,
+      "cells": [
+        {
+          "cell": 674,
+          "tile": 16,
+          "chr": 28928
+        },
+        {
+          "cell": 675,
+          "tile": 21,
+          "chr": 29008
+        },
+        {
+          "cell": 676,
+          "tile": 13,
+          "chr": 28880
+        }
+      ],
+      "evidence": {
+        "frame": 450,
+        "route": "Start@120, Start@240, Start@420 (2 frames each)",
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          17038
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.use",
+      "source": "つかう",
+      "translation": "使用",
+      "group": "items",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 624,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 625,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 626,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 656,
+          "tile": 81,
+          "chr": 29968
+        },
+        {
+          "cell": 657,
+          "tile": 69,
+          "chr": 29776
+        },
+        {
+          "cell": 658,
+          "tile": 66,
+          "chr": 29728
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-items.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102062
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.discard",
+      "source": "すてる",
+      "translation": "丟棄",
+      "group": "items",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 688,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 689,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 690,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 720,
+          "tile": 76,
+          "chr": 29888
+        },
+        {
+          "cell": 721,
+          "tile": 82,
+          "chr": 29984
+        },
+        {
+          "cell": 722,
+          "tile": 104,
+          "chr": 30336
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-items.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102068
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "weapons.prompt",
+      "source": "てに もつ ぶきを",
+      "translation": "手持武器",
+      "group": "weapons",
+      "width": 9,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 622,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 623,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 624,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 625,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 626,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 627,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 628,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 629,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 630,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 654,
+          "tile": 82,
+          "chr": 29984
+        },
+        {
+          "cell": 655,
+          "tile": 85,
+          "chr": 30032
+        },
+        {
+          "cell": 656,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 657,
+          "tile": 98,
+          "chr": 30240
+        },
+        {
+          "cell": 658,
+          "tile": 81,
+          "chr": 29968
+        },
+        {
+          "cell": 659,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 660,
+          "tile": 91,
+          "chr": 30128
+        },
+        {
+          "cell": 661,
+          "tile": 70,
+          "chr": 29792
+        },
+        {
+          "cell": 662,
+          "tile": 108,
+          "chr": 30400
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-weapons.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "weapons.choose",
+      "source": "えらびなさい。",
+      "translation": "請選擇",
+      "group": "weapons",
+      "width": 7,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 688,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 689,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 690,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 691,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 692,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 693,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 694,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 720,
+          "tile": 67,
+          "chr": 29744
+        },
+        {
+          "cell": 721,
+          "tile": 102,
+          "chr": 30304
+        },
+        {
+          "cell": 722,
+          "tile": 90,
+          "chr": 30112
+        },
+        {
+          "cell": 723,
+          "tile": 84,
+          "chr": 30016
+        },
+        {
+          "cell": 724,
+          "tile": 74,
+          "chr": 29856
+        },
+        {
+          "cell": 725,
+          "tile": 65,
+          "chr": 29712
+        },
+        {
+          "cell": 726,
+          "tile": 179,
+          "chr": 31536
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-weapons.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "equipment.heading",
+      "source": "そうび",
+      "translation": "裝備",
+      "group": "equipment",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 622,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 623,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 624,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 654,
+          "tile": 78,
+          "chr": 29920
+        },
+        {
+          "cell": 655,
+          "tile": 66,
+          "chr": 29728
+        },
+        {
+          "cell": 656,
+          "tile": 90,
+          "chr": 30112
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-equipment.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "equipment.defense",
+      "source": "ぼうぎょ",
+      "translation": "防禦",
+      "group": "equipment",
+      "width": 4,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 814,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 815,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 816,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 817,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 846,
+          "tile": 93,
+          "chr": 30160
+        },
+        {
+          "cell": 847,
+          "tile": 66,
+          "chr": 29728
+        },
+        {
+          "cell": 848,
+          "tile": 70,
+          "chr": 29792
+        },
+        {
+          "cell": 849,
+          "tile": 112,
+          "chr": 30464
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-equipment.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "equipment.spirit",
+      "source": "きりょく",
+      "translation": "氣力",
+      "group": "equipment",
+      "width": 4,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 822,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 823,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 824,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 825,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 854,
+          "tile": 70,
+          "chr": 29792
+        },
+        {
+          "cell": 855,
+          "tile": 103,
+          "chr": 30320
+        },
+        {
+          "cell": 856,
+          "tile": 112,
+          "chr": 30464
+        },
+        {
+          "cell": 857,
+          "tile": 71,
+          "chr": 29808
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-equipment.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102335,
+          102471
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.level",
+      "source": "レベル",
+      "translation": "等級",
+      "group": "status",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 622,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 623,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 624,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 654,
+          "tile": 169,
+          "chr": 31376
+        },
+        {
+          "cell": 655,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 656,
+          "tile": 168,
+          "chr": 31360
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-status.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.strength",
+      "source": "つよさ",
+      "translation": "力量",
+      "group": "status",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 686,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 687,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 688,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 718,
+          "tile": 81,
+          "chr": 29968
+        },
+        {
+          "cell": 719,
+          "tile": 101,
+          "chr": 30288
+        },
+        {
+          "cell": 720,
+          "tile": 74,
+          "chr": 29856
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-status.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102311,
+          102398
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.magic",
+      "source": "まほう",
+      "translation": "魔法",
+      "group": "status",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 750,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 751,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 752,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 782,
+          "tile": 94,
+          "chr": 30176
+        },
+        {
+          "cell": 783,
+          "tile": 93,
+          "chr": 30160
+        },
+        {
+          "cell": 784,
+          "tile": 66,
+          "chr": 29728
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-status.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102328,
+          103338,
+          103362,
+          103391,
+          103403,
+          103421
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.defense",
+      "source": "ぼうぎょ",
+      "translation": "防禦",
+      "group": "status",
+      "width": 4,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 694,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 695,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 696,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 697,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 726,
+          "tile": 93,
+          "chr": 30160
+        },
+        {
+          "cell": 727,
+          "tile": 66,
+          "chr": 29728
+        },
+        {
+          "cell": 728,
+          "tile": 70,
+          "chr": 29792
+        },
+        {
+          "cell": 729,
+          "tile": 112,
+          "chr": 30464
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-status.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.spirit",
+      "source": "きりょく",
+      "translation": "氣力",
+      "group": "status",
+      "width": 4,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 758,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 759,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 760,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 761,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 790,
+          "tile": 70,
+          "chr": 29792
+        },
+        {
+          "cell": 791,
+          "tile": 103,
+          "chr": 30320
+        },
+        {
+          "cell": 792,
+          "tile": 112,
+          "chr": 30464
+        },
+        {
+          "cell": 793,
+          "tile": 71,
+          "chr": 29808
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-status.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102335,
+          102471
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.max-power",
+      "source": "MAXPOW",
+      "translation": "最大體力",
+      "group": "status",
+      "width": 6,
+      "height": 1,
+      "cells": [
+        {
+          "cell": 846,
+          "tile": 22,
+          "chr": 29024
+        },
+        {
+          "cell": 847,
+          "tile": 10,
+          "chr": 28832
+        },
+        {
+          "cell": 848,
+          "tile": 33,
+          "chr": 29200
+        },
+        {
+          "cell": 849,
+          "tile": 25,
+          "chr": 29072
+        },
+        {
+          "cell": 850,
+          "tile": 24,
+          "chr": 29056
+        },
+        {
+          "cell": 851,
+          "tile": 32,
+          "chr": 29184
+        }
+      ],
+      "evidence": {
+        "frame": 650,
+        "artifact": "artifacts/zombie-submenu-status.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102343
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.select",
+      "source": "もちものを えらびなさい。",
+      "translation": "請選擇道具",
+      "group": "items-select",
+      "width": 13,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 686,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 687,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 688,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 689,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 690,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 691,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 692,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 693,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 694,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 695,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 696,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 697,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 698,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 718,
+          "tile": 98,
+          "chr": 30240
+        },
+        {
+          "cell": 719,
+          "tile": 80,
+          "chr": 29952
+        },
+        {
+          "cell": 720,
+          "tile": 98,
+          "chr": 30240
+        },
+        {
+          "cell": 721,
+          "tile": 88,
+          "chr": 30080
+        },
+        {
+          "cell": 722,
+          "tile": 108,
+          "chr": 30400
+        },
+        {
+          "cell": 723,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 724,
+          "tile": 67,
+          "chr": 29744
+        },
+        {
+          "cell": 725,
+          "tile": 102,
+          "chr": 30304
+        },
+        {
+          "cell": 726,
+          "tile": 90,
+          "chr": 30112
+        },
+        {
+          "cell": 727,
+          "tile": 84,
+          "chr": 30016
+        },
+        {
+          "cell": 728,
+          "tile": 74,
+          "chr": 29856
+        },
+        {
+          "cell": 729,
+          "tile": 65,
+          "chr": 29712
+        },
+        {
+          "cell": 730,
+          "tile": 179,
+          "chr": 31536
+        }
+      ],
+      "evidence": {
+        "frame": 710,
+        "artifact": "artifacts/zombie-submenu-items-select.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.helmet",
+      "source": "ヘルメット",
+      "translation": "頭盔",
+      "group": "items-helmet",
+      "width": 5,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 750,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 751,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 752,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 753,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 754,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 782,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 783,
+          "tile": 168,
+          "chr": 31360
+        },
+        {
+          "cell": 784,
+          "tile": 161,
+          "chr": 31248
+        },
+        {
+          "cell": 785,
+          "tile": 177,
+          "chr": 31504
+        },
+        {
+          "cell": 786,
+          "tile": 147,
+          "chr": 31024
+        }
+      ],
+      "evidence": {
+        "frame": 780,
+        "artifact": "artifacts/zombie-submenu-items-helmet.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          103291
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.helmet-level",
+      "source": "レベル",
+      "translation": "等級",
+      "group": "items-helmet",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 756,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 757,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 758,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 788,
+          "tile": 169,
+          "chr": 31376
+        },
+        {
+          "cell": 789,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 790,
+          "tile": 168,
+          "chr": 31360
+        }
+      ],
+      "evidence": {
+        "frame": 780,
+        "artifact": "artifacts/zombie-submenu-items-helmet.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.equipped",
+      "source": "みにつけた。",
+      "translation": "已裝備",
+      "group": "items-helmet",
+      "width": 6,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 820,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 821,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 822,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 823,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 824,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 825,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 852,
+          "tile": 95,
+          "chr": 30192
+        },
+        {
+          "cell": 853,
+          "tile": 85,
+          "chr": 30032
+        },
+        {
+          "cell": 854,
+          "tile": 81,
+          "chr": 29968
+        },
+        {
+          "cell": 855,
+          "tile": 72,
+          "chr": 29824
+        },
+        {
+          "cell": 856,
+          "tile": 79,
+          "chr": 29936
+        },
+        {
+          "cell": 857,
+          "tile": 179,
+          "chr": 31536
+        }
+      ],
+      "evidence": {
+        "frame": 780,
+        "artifact": "artifacts/zombie-submenu-items-helmet.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102445
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.shield",
+      "source": "たて",
+      "translation": "盾",
+      "group": "items-shield",
+      "width": 2,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 750,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 751,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 782,
+          "tile": 79,
+          "chr": 29936
+        },
+        {
+          "cell": 783,
+          "tile": 82,
+          "chr": 29984
+        }
+      ],
+      "evidence": {
+        "frame": 780,
+        "artifact": "artifacts/zombie-submenu-items-shield.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            700,
+            7
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          11756,
+          15076,
+          15588,
+          98325,
+          98336,
+          98388,
+          103288
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.shield-level",
+      "source": "レベル",
+      "translation": "等級",
+      "group": "items-shield",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 753,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 754,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 755,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 785,
+          "tile": 169,
+          "chr": 31376
+        },
+        {
+          "cell": 786,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 787,
+          "tile": 168,
+          "chr": 31360
+        }
+      ],
+      "evidence": {
+        "frame": 780,
+        "artifact": "artifacts/zombie-submenu-items-shield.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            700,
+            7
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.next-strength",
+      "source": "つよさ",
+      "translation": "力量",
+      "group": "status-next",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 622,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 623,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 624,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 654,
+          "tile": 81,
+          "chr": 29968
+        },
+        {
+          "cell": 655,
+          "tile": 101,
+          "chr": 30288
+        },
+        {
+          "cell": 656,
+          "tile": 74,
+          "chr": 29856
+        }
+      ],
+      "evidence": {
+        "frame": 710,
+        "artifact": "artifacts/zombie-submenu-status-next.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102311,
+          102398
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.next-magic",
+      "source": "まほう",
+      "translation": "魔法",
+      "group": "status-next",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 686,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 687,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 688,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 718,
+          "tile": 94,
+          "chr": 30176
+        },
+        {
+          "cell": 719,
+          "tile": 93,
+          "chr": 30160
+        },
+        {
+          "cell": 720,
+          "tile": 66,
+          "chr": 29728
+        }
+      ],
+      "evidence": {
+        "frame": 710,
+        "artifact": "artifacts/zombie-submenu-status-next.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102328,
+          103338,
+          103362,
+          103391,
+          103403,
+          103421
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.next-defense",
+      "source": "ぼうぎょ",
+      "translation": "防禦",
+      "group": "status-next",
+      "width": 4,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 630,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 631,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 632,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 633,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 662,
+          "tile": 93,
+          "chr": 30160
+        },
+        {
+          "cell": 663,
+          "tile": 66,
+          "chr": 29728
+        },
+        {
+          "cell": 664,
+          "tile": 70,
+          "chr": 29792
+        },
+        {
+          "cell": 665,
+          "tile": 112,
+          "chr": 30464
+        }
+      ],
+      "evidence": {
+        "frame": 710,
+        "artifact": "artifacts/zombie-submenu-status-next.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.next-spirit",
+      "source": "きりょく",
+      "translation": "氣力",
+      "group": "status-next",
+      "width": 4,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 694,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 695,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 696,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 697,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 726,
+          "tile": 70,
+          "chr": 29792
+        },
+        {
+          "cell": 727,
+          "tile": 103,
+          "chr": 30320
+        },
+        {
+          "cell": 728,
+          "tile": 112,
+          "chr": 30464
+        },
+        {
+          "cell": 729,
+          "tile": 71,
+          "chr": 29808
+        }
+      ],
+      "evidence": {
+        "frame": 710,
+        "artifact": "artifacts/zombie-submenu-status-next.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102335,
+          102471
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.next-max-power",
+      "source": "MAXPOW",
+      "translation": "最大體力",
+      "group": "status-next",
+      "width": 6,
+      "height": 1,
+      "cells": [
+        {
+          "cell": 782,
+          "tile": 22,
+          "chr": 29024
+        },
+        {
+          "cell": 783,
+          "tile": 10,
+          "chr": 28832
+        },
+        {
+          "cell": 784,
+          "tile": 33,
+          "chr": 29200
+        },
+        {
+          "cell": 785,
+          "tile": 25,
+          "chr": 29072
+        },
+        {
+          "cell": 786,
+          "tile": 24,
+          "chr": 29056
+        },
+        {
+          "cell": 787,
+          "tile": 32,
+          "chr": 29184
+        }
+      ],
+      "evidence": {
+        "frame": 710,
+        "artifact": "artifacts/zombie-submenu-status-next.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102343
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "status.next-level",
+      "source": "つぎのレベルは",
+      "translation": "下級所需",
+      "group": "status-next",
+      "width": 7,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 814,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 815,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 816,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 817,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 818,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 819,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 820,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 846,
+          "tile": 81,
+          "chr": 29968
+        },
+        {
+          "cell": 847,
+          "tile": 70,
+          "chr": 29792
+        },
+        {
+          "cell": 848,
+          "tile": 88,
+          "chr": 30080
+        },
+        {
+          "cell": 849,
+          "tile": 169,
+          "chr": 31376
+        },
+        {
+          "cell": 850,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 851,
+          "tile": 168,
+          "chr": 31360
+        },
+        {
+          "cell": 852,
+          "tile": 89,
+          "chr": 30096
+        }
+      ],
+      "evidence": {
+        "frame": 710,
+        "artifact": "artifacts/zombie-submenu-status-next.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.select-scroll",
+      "source": "もちものを えらびなさい。",
+      "translation": "請選擇道具",
+      "group": "items-helmet-scroll",
+      "width": 13,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 654,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 655,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 656,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 657,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 658,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 659,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 660,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 661,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 662,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 663,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 664,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 665,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 666,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 686,
+          "tile": 98,
+          "chr": 30240
+        },
+        {
+          "cell": 687,
+          "tile": 80,
+          "chr": 29952
+        },
+        {
+          "cell": 688,
+          "tile": 98,
+          "chr": 30240
+        },
+        {
+          "cell": 689,
+          "tile": 88,
+          "chr": 30080
+        },
+        {
+          "cell": 690,
+          "tile": 108,
+          "chr": 30400
+        },
+        {
+          "cell": 691,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 692,
+          "tile": 67,
+          "chr": 29744
+        },
+        {
+          "cell": 693,
+          "tile": 102,
+          "chr": 30304
+        },
+        {
+          "cell": 694,
+          "tile": 90,
+          "chr": 30112
+        },
+        {
+          "cell": 695,
+          "tile": 84,
+          "chr": 30016
+        },
+        {
+          "cell": 696,
+          "tile": 74,
+          "chr": 29856
+        },
+        {
+          "cell": 697,
+          "tile": 65,
+          "chr": 29712
+        },
+        {
+          "cell": 698,
+          "tile": 179,
+          "chr": 31536
+        }
+      ],
+      "evidence": {
+        "frame": 800,
+        "artifact": "artifacts/zombie-submenu-items-helmet-scroll.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.select-end",
+      "source": "もちものを えらびなさい。",
+      "translation": "請選擇道具",
+      "group": "items-helmet-end",
+      "width": 13,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 622,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 623,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 624,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 625,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 626,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 627,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 628,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 629,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 630,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 631,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 632,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 633,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 634,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 654,
+          "tile": 98,
+          "chr": 30240
+        },
+        {
+          "cell": 655,
+          "tile": 80,
+          "chr": 29952
+        },
+        {
+          "cell": 656,
+          "tile": 98,
+          "chr": 30240
+        },
+        {
+          "cell": 657,
+          "tile": 88,
+          "chr": 30080
+        },
+        {
+          "cell": 658,
+          "tile": 108,
+          "chr": 30400
+        },
+        {
+          "cell": 659,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 660,
+          "tile": 67,
+          "chr": 29744
+        },
+        {
+          "cell": 661,
+          "tile": 102,
+          "chr": 30304
+        },
+        {
+          "cell": 662,
+          "tile": 90,
+          "chr": 30112
+        },
+        {
+          "cell": 663,
+          "tile": 84,
+          "chr": 30016
+        },
+        {
+          "cell": 664,
+          "tile": 74,
+          "chr": 29856
+        },
+        {
+          "cell": 665,
+          "tile": 65,
+          "chr": 29712
+        },
+        {
+          "cell": 666,
+          "tile": 179,
+          "chr": 31536
+        }
+      ],
+      "evidence": {
+        "frame": 810,
+        "artifact": "artifacts/zombie-submenu-items-helmet-end.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.helmet-scroll",
+      "source": "ヘルメット",
+      "translation": "頭盔",
+      "group": "items-helmet-scroll",
+      "width": 5,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 718,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 719,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 720,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 721,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 722,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 750,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 751,
+          "tile": 168,
+          "chr": 31360
+        },
+        {
+          "cell": 752,
+          "tile": 161,
+          "chr": 31248
+        },
+        {
+          "cell": 753,
+          "tile": 177,
+          "chr": 31504
+        },
+        {
+          "cell": 754,
+          "tile": 147,
+          "chr": 31024
+        }
+      ],
+      "evidence": {
+        "frame": 800,
+        "artifact": "artifacts/zombie-submenu-items-helmet-scroll.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          103291
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.helmet-end",
+      "source": "ヘルメット",
+      "translation": "頭盔",
+      "group": "items-helmet-end",
+      "width": 5,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 686,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 687,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 688,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 689,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 690,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 718,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 719,
+          "tile": 168,
+          "chr": 31360
+        },
+        {
+          "cell": 720,
+          "tile": 161,
+          "chr": 31248
+        },
+        {
+          "cell": 721,
+          "tile": 177,
+          "chr": 31504
+        },
+        {
+          "cell": 722,
+          "tile": 147,
+          "chr": 31024
+        }
+      ],
+      "evidence": {
+        "frame": 810,
+        "artifact": "artifacts/zombie-submenu-items-helmet-end.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          103291
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.helmet-level-scroll",
+      "source": "レベル",
+      "translation": "等級",
+      "group": "items-helmet-scroll",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 724,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 725,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 726,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 756,
+          "tile": 169,
+          "chr": 31376
+        },
+        {
+          "cell": 757,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 758,
+          "tile": 168,
+          "chr": 31360
+        }
+      ],
+      "evidence": {
+        "frame": 800,
+        "artifact": "artifacts/zombie-submenu-items-helmet-scroll.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.helmet-level-end",
+      "source": "レベル",
+      "translation": "等級",
+      "group": "items-helmet-end",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 692,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 693,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 694,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 724,
+          "tile": 169,
+          "chr": 31376
+        },
+        {
+          "cell": 725,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 726,
+          "tile": 168,
+          "chr": 31360
+        }
+      ],
+      "evidence": {
+        "frame": 810,
+        "artifact": "artifacts/zombie-submenu-items-helmet-end.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.equipped-scroll",
+      "source": "みにつけた。",
+      "translation": "已裝備",
+      "group": "items-helmet-scroll",
+      "width": 6,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 788,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 789,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 790,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 791,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 792,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 793,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 820,
+          "tile": 95,
+          "chr": 30192
+        },
+        {
+          "cell": 821,
+          "tile": 85,
+          "chr": 30032
+        },
+        {
+          "cell": 822,
+          "tile": 81,
+          "chr": 29968
+        },
+        {
+          "cell": 823,
+          "tile": 72,
+          "chr": 29824
+        },
+        {
+          "cell": 824,
+          "tile": 79,
+          "chr": 29936
+        },
+        {
+          "cell": 825,
+          "tile": 179,
+          "chr": 31536
+        }
+      ],
+      "evidence": {
+        "frame": 800,
+        "artifact": "artifacts/zombie-submenu-items-helmet-scroll.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102445
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.equipped-end",
+      "source": "みにつけた。",
+      "translation": "已裝備",
+      "group": "items-helmet-end",
+      "width": 6,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 756,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 757,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 758,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 759,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 760,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 761,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 788,
+          "tile": 95,
+          "chr": 30192
+        },
+        {
+          "cell": 789,
+          "tile": 85,
+          "chr": 30032
+        },
+        {
+          "cell": 790,
+          "tile": 81,
+          "chr": 29968
+        },
+        {
+          "cell": 791,
+          "tile": 72,
+          "chr": 29824
+        },
+        {
+          "cell": 792,
+          "tile": 79,
+          "chr": 29936
+        },
+        {
+          "cell": 793,
+          "tile": 179,
+          "chr": 31536
+        }
+      ],
+      "evidence": {
+        "frame": 810,
+        "artifact": "artifacts/zombie-submenu-items-helmet-end.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          102445
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.shield-scroll",
+      "source": "たて",
+      "translation": "盾",
+      "group": "items-shield-scroll",
+      "width": 2,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 718,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 719,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 750,
+          "tile": 79,
+          "chr": 29936
+        },
+        {
+          "cell": 751,
+          "tile": 82,
+          "chr": 29984
+        }
+      ],
+      "evidence": {
+        "frame": 800,
+        "artifact": "artifacts/zombie-submenu-items-shield-scroll.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            700,
+            7
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          11756,
+          15076,
+          15588,
+          98325,
+          98336,
+          98388,
+          103288
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.shield-end",
+      "source": "たて",
+      "translation": "盾",
+      "group": "items-shield-end",
+      "width": 2,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 686,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 687,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 718,
+          "tile": 79,
+          "chr": 29936
+        },
+        {
+          "cell": 719,
+          "tile": 82,
+          "chr": 29984
+        }
+      ],
+      "evidence": {
+        "frame": 810,
+        "artifact": "artifacts/zombie-submenu-items-shield-end.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            700,
+            7
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [
+          11756,
+          15076,
+          15588,
+          98325,
+          98336,
+          98388,
+          103288
+        ],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.shield-level-scroll",
+      "source": "レベル",
+      "translation": "等級",
+      "group": "items-shield-scroll",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 721,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 722,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 723,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 753,
+          "tile": 169,
+          "chr": 31376
+        },
+        {
+          "cell": 754,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 755,
+          "tile": 168,
+          "chr": 31360
+        }
+      ],
+      "evidence": {
+        "frame": 800,
+        "artifact": "artifacts/zombie-submenu-items-shield-scroll.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            700,
+            7
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    },
+    {
+      "id": "items.shield-level-end",
+      "source": "レベル",
+      "translation": "等級",
+      "group": "items-shield-end",
+      "width": 3,
+      "height": 2,
+      "cells": [
+        {
+          "cell": 689,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 690,
+          "tile": 115,
+          "chr": 30512
+        },
+        {
+          "cell": 691,
+          "tile": 36,
+          "chr": 29248
+        },
+        {
+          "cell": 721,
+          "tile": 169,
+          "chr": 31376
+        },
+        {
+          "cell": 722,
+          "tile": 156,
+          "chr": 31168
+        },
+        {
+          "cell": 723,
+          "tile": 168,
+          "chr": 31360
+        }
+      ],
+      "evidence": {
+        "frame": 810,
+        "artifact": "artifacts/zombie-submenu-items-shield-end.json",
+        "route": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            700,
+            7
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "status": "original-frame-chr-verified",
+        "prgCandidates": [],
+        "note": "PRG byte matches are candidates, not proven writer provenance; matching uses physical fetched CHR."
+      }
+    }
+  ],
+  "names": [
+    {
+      "selector": 0,
+      "source": "つるぎ",
+      "translation": "劍",
+      "tiles": [
+        [
+          36,
+          36,
+          115
+        ],
+        [
+          81,
+          104,
+          70
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103283,
+        "raw": [
+          81,
+          104,
+          252,
+          70,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 1,
+      "source": "たて",
+      "translation": "盾",
+      "tiles": [
+        [
+          36,
+          36
+        ],
+        [
+          79,
+          82
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103288,
+        "raw": [
+          79,
+          82,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 761,
+            "row": 23,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 796,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 804,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 2,
+      "source": "ヘルメット",
+      "translation": "頭盔",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          156,
+          168,
+          161,
+          177,
+          147
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103291,
+        "raw": [
+          156,
+          168,
+          161,
+          177,
+          147,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 761,
+            "row": 23,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 796,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 804,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 3,
+      "source": "ガントレット",
+      "translation": "護手",
+      "tiles": [
+        [
+          115,
+          36,
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          133,
+          173,
+          147,
+          169,
+          177,
+          147
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103297,
+        "raw": [
+          252,
+          133,
+          173,
+          147,
+          169,
+          177,
+          147,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 761,
+            "row": 23,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 796,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 804,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 4,
+      "source": "たんけん",
+      "translation": "短劍",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          79,
+          109,
+          72,
+          109
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103305,
+        "raw": [
+          79,
+          109,
+          72,
+          109,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 5,
+      "source": "ゆびわ",
+      "translation": "戒指",
+      "tiles": [
+        [
+          36,
+          115,
+          36
+        ],
+        [
+          100,
+          90,
+          107
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103310,
+        "raw": [
+          100,
+          252,
+          90,
+          107,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 761,
+            "row": 23,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 796,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 804,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 6,
+      "source": "メイス",
+      "translation": "釘錘",
+      "tiles": [
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          161,
+          129,
+          140
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103315,
+        "raw": [
+          161,
+          129,
+          140,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 7,
+      "source": "すいしょう",
+      "translation": "水晶",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          76,
+          65,
+          75,
+          112,
+          66
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103319,
+        "raw": [
+          76,
+          65,
+          75,
+          112,
+          66,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 759,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 767,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 8,
+      "source": "かたな",
+      "translation": "刀",
+      "tiles": [
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          69,
+          79,
+          84
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103325,
+        "raw": [
+          69,
+          79,
+          84,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 9,
+      "source": "くすりの びん",
+      "translation": "藥瓶",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36,
+          115,
+          36
+        ],
+        [
+          71,
+          76,
+          103,
+          88,
+          36,
+          90,
+          109
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103329,
+        "raw": [
+          71,
+          76,
+          103,
+          88,
+          36,
+          252,
+          90,
+          109,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 10,
+      "source": "まほうの ほん",
+      "translation": "魔法書",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          94,
+          93,
+          66,
+          88,
+          36,
+          93,
+          109
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103338,
+        "raw": [
+          94,
+          93,
+          66,
+          88,
+          36,
+          93,
+          109,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 759,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 767,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 11,
+      "source": "どくやく",
+      "translation": "毒藥",
+      "tiles": [
+        [
+          115,
+          36,
+          36,
+          36
+        ],
+        [
+          83,
+          71,
+          99,
+          71
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103346,
+        "raw": [
+          252,
+          83,
+          71,
+          99,
+          71,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 817,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 12,
+      "source": "かぎ",
+      "translation": "鑰",
+      "tiles": [
+        [
+          36,
+          115
+        ],
+        [
+          69,
+          70
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103352,
+        "raw": [
+          69,
+          252,
+          70,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 13,
+      "source": "たべもの",
+      "translation": "食物",
+      "tiles": [
+        [
+          36,
+          115,
+          36,
+          36
+        ],
+        [
+          79,
+          92,
+          98,
+          88
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103356,
+        "raw": [
+          79,
+          252,
+          92,
+          98,
+          88,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 14,
+      "source": "まほうのつえ",
+      "translation": "魔杖",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          94,
+          93,
+          66,
+          88,
+          81,
+          67
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103362,
+        "raw": [
+          94,
+          93,
+          66,
+          88,
+          81,
+          67,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 15,
+      "source": "すいしょうのつえ",
+      "translation": "水晶杖",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          76,
+          65,
+          75,
+          112,
+          66,
+          88,
+          81,
+          67
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103369,
+        "raw": [
+          76,
+          65,
+          75,
+          112,
+          66,
+          88,
+          81,
+          67,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 16,
+      "source": "いかずち",
+      "translation": "雷電",
+      "tiles": [
+        [
+          36,
+          36,
+          115,
+          36
+        ],
+        [
+          65,
+          69,
+          76,
+          80
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103380,
+        "raw": [
+          65,
+          69,
+          252,
+          76,
+          80,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 17,
+      "source": "おおいかずち",
+      "translation": "大雷電",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          115,
+          36
+        ],
+        [
+          68,
+          68,
+          65,
+          69,
+          76,
+          80
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103378,
+        "raw": [
+          68,
+          68,
+          65,
+          69,
+          252,
+          76,
+          80,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 759,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 767,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 18,
+      "source": "ほのおの まほう",
+      "translation": "火焰魔法",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          93,
+          88,
+          68,
+          88,
+          36,
+          94,
+          93,
+          66
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103386,
+        "raw": [
+          93,
+          88,
+          68,
+          88,
+          36,
+          94,
+          93,
+          66,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 19,
+      "source": "さくれつだん",
+      "translation": "爆裂彈",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          115,
+          36
+        ],
+        [
+          74,
+          71,
+          105,
+          81,
+          79,
+          109
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103395,
+        "raw": [
+          74,
+          71,
+          105,
+          81,
+          252,
+          79,
+          109,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 20,
+      "source": "まほうの うでわ",
+      "translation": "魔法手環",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          115,
+          36
+        ],
+        [
+          94,
+          93,
+          66,
+          88,
+          36,
+          66,
+          82,
+          107
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103403,
+        "raw": [
+          94,
+          93,
+          66,
+          88,
+          36,
+          66,
+          252,
+          82,
+          107,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 761,
+            "row": 23,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 796,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 804,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 21,
+      "source": "くびかざり",
+      "translation": "項鍊",
+      "tiles": [
+        [
+          36,
+          115,
+          36,
+          115,
+          36
+        ],
+        [
+          71,
+          90,
+          69,
+          74,
+          103
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103413,
+        "raw": [
+          71,
+          252,
+          90,
+          69,
+          252,
+          74,
+          103,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 761,
+            "row": 23,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 796,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 804,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 22,
+      "source": "まほうの とけい",
+      "translation": "魔法時鐘",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          94,
+          93,
+          66,
+          88,
+          36,
+          83,
+          72,
+          65
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103421,
+        "raw": [
+          94,
+          93,
+          66,
+          88,
+          36,
+          83,
+          72,
+          65,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 817,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 23,
+      "source": "よろい",
+      "translation": "鎧甲",
+      "tiles": [
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          101,
+          106,
+          65
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103430,
+        "raw": [
+          101,
+          106,
+          65,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 761,
+            "row": 23,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 796,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 804,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 24,
+      "source": "つぼ",
+      "translation": "壺",
+      "tiles": [
+        [
+          36,
+          115
+        ],
+        [
+          81,
+          93
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103434,
+        "raw": [
+          81,
+          252,
+          93,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 25,
+      "source": "いのちのみず",
+      "translation": "生命之水",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36,
+          115
+        ],
+        [
+          65,
+          88,
+          80,
+          88,
+          95,
+          76
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103438,
+        "raw": [
+          65,
+          88,
+          80,
+          88,
+          95,
+          252,
+          76,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 26,
+      "source": "はがねのつるぎ",
+      "translation": "鋼劍",
+      "tiles": [
+        [
+          36,
+          115,
+          36,
+          36,
+          36,
+          36,
+          115
+        ],
+        [
+          89,
+          69,
+          87,
+          88,
+          81,
+          104,
+          70
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103446,
+        "raw": [
+          89,
+          252,
+          69,
+          87,
+          88,
+          81,
+          104,
+          252,
+          70,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 27,
+      "source": "ブーツ",
+      "translation": "靴子",
+      "tiles": [
+        [
+          115,
+          36,
+          36
+        ],
+        [
+          155,
+          178,
+          145
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103456,
+        "raw": [
+          252,
+          155,
+          178,
+          145,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 761,
+            "row": 23,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 796,
+            "row": 22,
+            "col": 14
+          },
+          {
+            "action": "use",
+            "frame": 804,
+            "row": 21,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 28,
+      "source": "しゅりけん",
+      "translation": "手裏劍",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          75,
+          111,
+          103,
+          72,
+          109
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103461,
+        "raw": [
+          75,
+          111,
+          103,
+          72,
+          109,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 29,
+      "source": "ばくだん",
+      "translation": "炸彈",
+      "tiles": [
+        [
+          115,
+          36,
+          115,
+          36
+        ],
+        [
+          89,
+          71,
+          79,
+          109
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103467,
+        "raw": [
+          252,
+          89,
+          71,
+          252,
+          79,
+          109,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 30,
+      "source": "ロウソク",
+      "translation": "蠟燭",
+      "tiles": [
+        [
+          36,
+          36,
+          36,
+          36
+        ],
+        [
+          170,
+          130,
+          142,
+          135
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103474,
+        "raw": [
+          170,
+          130,
+          142,
+          135,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    },
+    {
+      "selector": 31,
+      "source": "ふくろ",
+      "translation": "袋子",
+      "tiles": [
+        [
+          36,
+          36,
+          36
+        ],
+        [
+          91,
+          71,
+          106
+        ]
+      ],
+      "evidence": {
+        "kind": "original-prg-selector-table",
+        "bank": 6,
+        "pointerTable": 103251,
+        "dataBase": 103283,
+        "prgOffset": 103479,
+        "raw": [
+          91,
+          71,
+          106,
+          255
+        ],
+        "writer": 101496,
+        "controls": {
+          "252": "dakuten for next glyph",
+          "255": "end; append level"
+        },
+        "runtimeArtifact": "artifacts/zombie-name-source-runtime.json",
+        "runtimeKind": "TEST-ONLY seeded inventory $D8; original native use/discard handlers; not natural acquisition",
+        "verifiedPositions": [
+          {
+            "action": "use",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          },
+          {
+            "action": "discard",
+            "frame": 756,
+            "row": 19,
+            "col": 14
+          }
+        ]
+      }
+    }
+  ]
+}

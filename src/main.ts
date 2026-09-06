@@ -14,7 +14,10 @@ import JSZip from 'jszip';
 import { applyBpsPatch } from './game-profiles/bps';
 import { CT2_SOURCE_HASHES, validateLocalizationAssets, type LocalizationAssets } from './game-profiles/localization';
 import { NesTextOverlay } from './game-profiles/text-overlay';
+import { ZOMBIE_HUNTER_HASH, validateCellMenus, type CellMenuCatalog } from './game-profiles/verified-cell-menus';
+import { VerifiedMenuOverlay } from './game-profiles/verified-menu-overlay';
 import { mountCt2RuntimeTuning } from './game-profiles/ct2-runtime-tuning';
+import { mountZombieRuntimeTuning } from './game-profiles/zombie-runtime-tuning';
 import { getRomMagazineMeta } from './data/rom-metadata';
 import type { EmulatorControls } from 'mupen64plus-web';
 import {
@@ -340,7 +343,7 @@ let gameProfileIndexPromise: Promise<GameProfileIndex> | null = null;
 let activeGamePresentation: GamePresentation | null = null;
 let activeGamePresentationFrame = 0;
 let activeGamePresentationInputFrame: number | null = null;
-let textOverlay: NesTextOverlay | null = null;
+let textOverlay: NesTextOverlay | VerifiedMenuOverlay | null = null;
 let gameProfileTuningControls: { dispose(): void } | null = null;
 
 async function loadGameProfileIndex(signal?: AbortSignal): Promise<GameProfileIndex> {
@@ -2132,9 +2135,16 @@ async function startGame(
   let preparedProfile: PreparedGameProfile | null = null;
   let preparedRomBytes: Uint8Array = romBytes;
   let localizationAssets: LocalizationAssets | null = null;
+  let cellMenus: CellMenuCatalog | null = null;
   if (lower.endsWith('.nes')) {
     try {
-      if (CT2_SOURCE_HASHES.includes(await sha256Hex(romBytes))) {
+      const sourceHash = await sha256Hex(romBytes);
+      if (sourceHash === ZOMBIE_HUNTER_HASH) {
+        const response = await fetch(new URL('game-profiles/zombie-hunter-jp/menus.json', window.location.href), { signal });
+        if (!response.ok) throw new Error(`menus HTTP ${response.status}`);
+        cellMenus = await response.json();
+        validateCellMenus(cellMenus!);
+      } else if (CT2_SOURCE_HASHES.includes(sourceHash)) {
         // This route deliberately runs the ORIGINAL ROM. No BPS or font patch.
         const base = 'game-profiles/captain-tsubasa-2-jp/';
         const [catalog, runtime, menus] = await Promise.all(['localization.json', 'text-runtime.json', 'menus.json'].map(async name => {
@@ -2156,6 +2166,7 @@ async function startGame(
       preparedProfile = null;
       preparedRomBytes = romBytes;
       localizationAssets = null;
+      cellMenus = null;
     }
   }
   let loaded = false;
@@ -2226,8 +2237,12 @@ async function startGame(
     if (coreType === 'nes' && localizationAssets && canvas && nes.enableTextObserver(true)) {
       textOverlay = new NesTextOverlay(canvas, localizationAssets);
     }
+    if (coreType === 'nes' && cellMenus && canvas && nes.enableTextObserver(true)) {
+      textOverlay = new VerifiedMenuOverlay(canvas, cellMenus);
+    }
     if (coreType === 'nes' && canvas) {
-      gameProfileTuningControls = mountCt2RuntimeTuning(nes, canvas.closest('.screen-bezel') ?? canvas);
+      const tuningAnchor = canvas.closest('.screen-bezel') ?? canvas;
+      gameProfileTuningControls = mountZombieRuntimeTuning(nes, tuningAnchor) ?? mountCt2RuntimeTuning(nes, tuningAnchor);
     }
     
     // 隱藏選擇器，顯示遊戲畫面
