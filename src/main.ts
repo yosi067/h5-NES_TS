@@ -3791,31 +3791,49 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
+const NES_PERSISTENT_STATE_PREFIX = 'NES-SAVE-1:';
+
+function isNesPersistentState(state: string | null): state is string {
+  return Boolean(state?.startsWith(NES_PERSISTENT_STATE_PREFIX));
+}
+
 async function writeNesPersistentState(key: string, state: string): Promise<void> {
-  const encoded = new TextEncoder().encode(state);
   try {
-    await writeBinaryState(key, encoded);
+    localStorage.setItem(key, state);
+    console.log(`[NES] localStorage 持久存檔成功 key="${key}" size=${state.length}`);
+    return;
+  } catch (error) {
+    console.warn('[NES] localStorage 持久存檔失敗，改用 IndexedDB:', error);
+  }
+  try {
+    await writeBinaryState(key, new TextEncoder().encode(state));
     try { localStorage.removeItem(key); } catch {
     }
   } catch (error) {
-    console.warn('[NES] IndexedDB 持久存檔失敗，改用 localStorage:', error);
-    localStorage.setItem(key, state);
+    console.error('[NES] IndexedDB 持久存檔也失敗:', error);
+    throw error;
   }
 }
 
 async function readNesPersistentState(key: string): Promise<string | null> {
   try {
-    const encoded = await readBinaryState(key);
-    if (encoded && encoded.length > 0) return new TextDecoder().decode(encoded);
+    const state = localStorage.getItem(key);
+    if (isNesPersistentState(state)) return state;
+    if (state) console.warn('[NES] 忽略舊版或非持久存檔資料，改查 IndexedDB');
   } catch (error) {
-    console.warn('[NES] IndexedDB 持久存檔讀取失敗，改用 localStorage:', error);
+    console.warn('[NES] localStorage 持久存檔讀取失敗，改查 IndexedDB:', error);
   }
   try {
-    return localStorage.getItem(key);
+    const encoded = await readBinaryState(key);
+    if (encoded && encoded.length > 0) {
+      const state = new TextDecoder().decode(encoded);
+      if (isNesPersistentState(state)) return state;
+      console.warn('[NES] 忽略 IndexedDB 中的舊版或非持久存檔資料');
+    }
   } catch (error) {
-    console.warn('[NES] localStorage 持久存檔讀取失敗:', error);
-    return null;
+    console.warn('[NES] IndexedDB 持久存檔讀取失敗:', error);
   }
+  return null;
 }
 
 /**

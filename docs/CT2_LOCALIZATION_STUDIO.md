@@ -97,7 +97,7 @@
 目前原生 NES 有兩條明確路徑：
 
 - 快速欄位使用完整硬體深拷貝（CPU、PPU、APU、匯流排、mapper／卡帶、手把、時鐘與 DMC DMA）的**同核心暫存 token**。使用者有 16 個獨立欄位（0–15），覆寫一欄只替換該欄快照；診斷用 `exportSaveState()` 另保留最近 16 次，不再淘汰使用者欄位。這些 token 綁定目前 WASM 實例，返回選單、重建核心或重新整理後不能使用。
-- 使用者的「儲存／讀取」按鈕另使用完整硬體快照 `NES-SAVE-1`。快照以版本前綴加 Base64／bincode 封裝，包含 ROM SHA-256、mapper／卡帶、CPU、PPU、APU、匯流排、手把、時鐘與 DMA 狀態；前端優先寫入 IndexedDB，失敗才用 `localStorage` 備援。讀取會檢查格式、大小、硬體資料範圍與目前 ROM 雜湊，錯誤或不同 ROM 會拒絕且不部分套用。
+- 使用者的「儲存／讀取」按鈕另使用完整硬體快照 `NES-SAVE-1`。快照以版本前綴加 Base64／bincode 封裝，包含 ROM SHA-256、mapper／卡帶、CPU、PPU、APU、匯流排、手把、時鐘與 DMA 狀態；前端優先寫入 `localStorage`，遇到容量或權限錯誤才改用 IndexedDB 備援。讀取會檢查格式、大小、硬體資料範圍與目前 ROM 雜湊，錯誤或不同 ROM 會拒絕且不部分套用。
 
 未知、舊格式、過期或重新載入前的 token 會先拒絕，不修改執行中狀態。讀取成功後清空未播放的未來音訊並更新畫面。原生 NES 匯出檔是文字形式的 `.nes-save` 容器，不是舊 NESW v1，也不是 JSON；可用來手動備份，但仍只能匯入相同 ROM 身分及相容格式。
 
@@ -105,7 +105,7 @@
 
 瀏覽器使用原版 CT2 可重現：儲存欄位 1，再覆寫欄位 0 共 16 次，欄位 1 讀取失敗。原因是 Rust 以「每次匯出」FIFO 淘汰，而前端 WeakMap 以「不同欄位」計數；兩者並不同步。既有 mock 每次 import 都回傳成功，未覆蓋此錯誤。現在前端走 `exportSaveStateForSlot()`，重複快存及診斷匯出不會影響其他欄位。暫停／重置後仍能讀取；ROM 載入中拒絕操作，空核心匯出也不再回報儲存成功。
 
-- `NES-SAVE-1` 會以 `emu_savestate_nes_<ROM名稱>_<slot>` 為 key，主寫入 IndexedDB；若瀏覽器不允許 IndexedDB，才回退到同一 key 的 `localStorage`。因此重新整理、返回選單後重建核心，再載入相同 ROM，仍可讀取使用者存檔。換 ROM、改 ROM 位元組、格式損壞或超過大小限制時會拒絕。
+- `NES-SAVE-1` 會以 `emu_savestate_nes_<ROM名稱>_<slot>` 為 key，主寫入 `localStorage`；若瀏覽器不允許或無法寫入 `localStorage`，才回退到同一 key 的 IndexedDB。因此重新整理、返回選單後重建核心，再載入相同 ROM，仍可讀取使用者存檔。換 ROM、改 ROM 位元組、格式損壞或超過大小限制時會拒絕。
 - 舊暫存不會嘗試不安全遷移，也不刪除使用者原有 localStorage 檔案。其他主機的既有保存路徑不變；Snes9x 也沿用其既有的 IndexedDB／localStorage 路徑。
 - 文字觀察證據在讀檔時清除；已經顯示的日文需等新來源事件才能重新翻譯，仍是已知限制。
 - `node --test tools/nes-temporary-state.test.mjs`：十項回歸，含實際生成 WASM + 前端函式、40 次覆寫／診斷匯出、持久快照跨核心讀取、ROM 不相容拒絕、重置／重載、空核心與載入中 gate，以及其他平台既有格式。

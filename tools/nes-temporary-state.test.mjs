@@ -10,18 +10,19 @@ const source = fs.readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8
 const ast = ts.createSourceFile('main.ts', source, ts.ScriptTarget.Latest, true);
 const names = new Set([
   'getSaveKey', 'saveState', 'loadState', 'exportSaveToFile', 'bytesToBase64', 'base64ToBytes',
+  'isNesPersistentState',
   'writeNesPersistentState', 'readNesPersistentState', 'saveNesStateWithPersistence',
   'loadNesStateWithPersistence', 'saveStateForUser', 'loadStateForUser',
 ]);
 const declarations = ast.statements.filter(node =>
   ts.isFunctionDeclaration(node) && names.has(node.name?.text)
   || ts.isVariableStatement(node) && node.declarationList.declarations.some(d =>
-    ['SAVE_STATE_PREFIX', 'nesTemporaryStates', 'NES_TEMP_STATE_PREFIX'].includes(d.name.getText(ast))));
+    ['SAVE_STATE_PREFIX', 'nesTemporaryStates', 'NES_TEMP_STATE_PREFIX', 'NES_PERSISTENT_STATE_PREFIX'].includes(d.name.getText(ast))));
 const code = ts.transpileModule(declarations.map(n => n.getText(ast)).join('\n'), {
   compilerOptions: { target: ts.ScriptTarget.ES2022 },
 }).outputText;
 
-function fixture(type = 'nes') {
+function fixture(type = 'nes', { failLocalStorage = false } = {}) {
   const persistent = new Map();
   const binaryPersistent = new Map();
   const calls = [];
@@ -41,8 +42,13 @@ function fixture(type = 'nes') {
     gameLoadAbortController: null,
     isSnes9xActive: () => false, isFbNeoActive: () => false, isMupenN64Active: () => false,
     localStorage: {
-      setItem: (k, v) => { calls.push(['persist', k]); persistent.set(k, v); },
+      setItem: (k, v) => {
+        if (failLocalStorage) throw Error('localStorage unavailable');
+        calls.push(['persist', k]);
+        persistent.set(k, v);
+      },
       getItem: k => { calls.push(['read', k]); return persistent.get(k) ?? null; },
+      removeItem: k => { calls.push(['remove', k]); persistent.delete(k); },
     },
     readBinaryState: async k => binaryPersistent.get(k) ?? null,
     writeBinaryState: async (k, value) => { calls.push(['binary-persist', k]); binaryPersistent.set(k, value); },
@@ -191,11 +197,29 @@ test('native state operations are blocked during ROM loading, not while paused',
   assert.equal(context.loadState(0), true);
 });
 
-test('native user saves persist through IndexedDB and restore into a replacement core', async () => {
-  const { context, calls, binaryPersistent } = fixture();
+test('native user saves persist through localStorage and restore into a replacement core', async () => {
+  const { context, calls, persistent, binaryPersistent } = fixture();
   assert.equal(await context.saveStateForUser(0), true);
+  assert.equal(persistent.size, 1);
+  assert.equal(binaryPersistent.size, 0);
+  assert.ok(calls.some(call => call[0] === 'persist'));
+
+  const restoredCalls = [];
+  context.nes = {
+    getCoreType: () => 'nes',
+    importPersistentSaveState: state => { restoredCalls.push(state); return true; },
+    consumeAudioSamples: () => {},
+    setAudioEnabled: () => {},
+  };
+  assert.equal(await context.loadStateForUser(0), true);
+  assert.deepEqual(restoredCalls, ['NES-SAVE-1:test']);
+});
+
+test('native user saves fall back to IndexedDB when localStorage is unavailable', async () => {
+  const { context, persistent, binaryPersistent } = fixture('nes', { failLocalStorage: true });
+  assert.equal(await context.saveStateForUser(0), true);
+  assert.equal(persistent.size, 0);
   assert.equal(binaryPersistent.size, 1);
-  assert.ok(calls.some(call => call[0] === 'binary-persist'));
 
   const restoredCalls = [];
   context.nes = {
