@@ -1,0 +1,33 @@
+{
+  "mode": "natural input-only; no inventory injection",
+  "report": [
+    {
+      "route": "items",
+      "framesChecked": 541,
+      "partialFrames": 0,
+      "checkedPixels": 1116864,
+      "samples": []
+    },
+    {
+      "route": "weapons",
+      "framesChecked": 541,
+      "partialFrames": 0,
+      "checkedPixels": 1228864,
+      "samples": []
+    },
+    {
+      "route": "equipment",
+      "framesChecked": 541,
+      "partialFrames": 0,
+      "checkedPixels": 1182656,
+      "samples": []
+    },
+    {
+      "route": "status",
+      "framesChecked": 541,
+      "partialFrames": 0,
+      "checkedPixels": 1294912,
+      "samples": []
+    }
+  ]
+}

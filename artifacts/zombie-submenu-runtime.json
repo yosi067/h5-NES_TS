@@ -1,0 +1,3196 @@
+{
+  "sourceSha256": "91dfb1a0c29f78c5d5b0a582c737c62103c4009ad5e2c20fdecd0c22a8648a48",
+  "mode": "input-only original ROM, both tuning settings",
+  "report": [
+    {
+      "route": {
+        "id": "items",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "frame": 650
+      },
+      "maximum": false,
+      "matches": [
+        {
+          "id": "items.use",
+          "source": "つかう",
+          "translation": "使用",
+          "x": 128,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 624,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 625,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 626,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 656,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 657,
+              "tile": 69,
+              "chr": 29776
+            },
+            {
+              "cell": 658,
+              "tile": 66,
+              "chr": 29728
+            }
+          ]
+        },
+        {
+          "id": "items.discard",
+          "source": "すてる",
+          "translation": "丟棄",
+          "x": 128,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 688,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 689,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 690,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 720,
+              "tile": 76,
+              "chr": 29888
+            },
+            {
+              "cell": 721,
+              "tile": 82,
+              "chr": 29984
+            },
+            {
+              "cell": 722,
+              "tile": 104,
+              "chr": 30336
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "weapons",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "frame": 650
+      },
+      "maximum": false,
+      "matches": [
+        {
+          "id": "weapons.prompt",
+          "source": "てに もつ ぶきを",
+          "translation": "手持武器",
+          "x": 112,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 622,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 623,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 624,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 625,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 626,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 627,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 628,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 629,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 630,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 654,
+              "tile": 82,
+              "chr": 29984
+            },
+            {
+              "cell": 655,
+              "tile": 85,
+              "chr": 30032
+            },
+            {
+              "cell": 656,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 657,
+              "tile": 98,
+              "chr": 30240
+            },
+            {
+              "cell": 658,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 659,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 660,
+              "tile": 91,
+              "chr": 30128
+            },
+            {
+              "cell": 661,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 662,
+              "tile": 108,
+              "chr": 30400
+            }
+          ]
+        },
+        {
+          "id": "weapons.choose",
+          "source": "えらびなさい。",
+          "translation": "請選擇",
+          "x": 128,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 688,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 689,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 690,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 691,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 692,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 693,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 694,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 720,
+              "tile": 67,
+              "chr": 29744
+            },
+            {
+              "cell": 721,
+              "tile": 102,
+              "chr": 30304
+            },
+            {
+              "cell": 722,
+              "tile": 90,
+              "chr": 30112
+            },
+            {
+              "cell": 723,
+              "tile": 84,
+              "chr": 30016
+            },
+            {
+              "cell": 724,
+              "tile": 74,
+              "chr": 29856
+            },
+            {
+              "cell": 725,
+              "tile": 65,
+              "chr": 29712
+            },
+            {
+              "cell": 726,
+              "tile": 179,
+              "chr": 31536
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "equipment",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "frame": 650
+      },
+      "maximum": false,
+      "matches": [
+        {
+          "id": "equipment.heading",
+          "source": "そうび",
+          "translation": "裝備",
+          "x": 112,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 622,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 623,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 624,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 654,
+              "tile": 78,
+              "chr": 29920
+            },
+            {
+              "cell": 655,
+              "tile": 66,
+              "chr": 29728
+            },
+            {
+              "cell": 656,
+              "tile": 90,
+              "chr": 30112
+            }
+          ]
+        },
+        {
+          "id": "equipment.defense",
+          "source": "ぼうぎょ",
+          "translation": "防禦",
+          "x": 112,
+          "y": 203,
+          "cells": [
+            {
+              "cell": 814,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 815,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 816,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 817,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 846,
+              "tile": 93,
+              "chr": 30160
+            },
+            {
+              "cell": 847,
+              "tile": 66,
+              "chr": 29728
+            },
+            {
+              "cell": 848,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 849,
+              "tile": 112,
+              "chr": 30464
+            }
+          ]
+        },
+        {
+          "id": "equipment.spirit",
+          "source": "きりょく",
+          "translation": "氣力",
+          "x": 176,
+          "y": 203,
+          "cells": [
+            {
+              "cell": 822,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 823,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 824,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 825,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 854,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 855,
+              "tile": 103,
+              "chr": 30320
+            },
+            {
+              "cell": 856,
+              "tile": 112,
+              "chr": 30464
+            },
+            {
+              "cell": 857,
+              "tile": 71,
+              "chr": 29808
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "status",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "frame": 650
+      },
+      "maximum": false,
+      "matches": [
+        {
+          "id": "status.level",
+          "source": "レベル",
+          "translation": "等級",
+          "x": 112,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 622,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 623,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 624,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 654,
+              "tile": 169,
+              "chr": 31376
+            },
+            {
+              "cell": 655,
+              "tile": 156,
+              "chr": 31168
+            },
+            {
+              "cell": 656,
+              "tile": 168,
+              "chr": 31360
+            }
+          ]
+        },
+        {
+          "id": "status.strength",
+          "source": "つよさ",
+          "translation": "力量",
+          "x": 112,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 686,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 687,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 688,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 718,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 719,
+              "tile": 101,
+              "chr": 30288
+            },
+            {
+              "cell": 720,
+              "tile": 74,
+              "chr": 29856
+            }
+          ]
+        },
+        {
+          "id": "status.magic",
+          "source": "まほう",
+          "translation": "魔法",
+          "x": 112,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 750,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 751,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 752,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 782,
+              "tile": 94,
+              "chr": 30176
+            },
+            {
+              "cell": 783,
+              "tile": 93,
+              "chr": 30160
+            },
+            {
+              "cell": 784,
+              "tile": 66,
+              "chr": 29728
+            }
+          ]
+        },
+        {
+          "id": "status.defense",
+          "source": "ぼうぎょ",
+          "translation": "防禦",
+          "x": 176,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 694,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 695,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 696,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 697,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 726,
+              "tile": 93,
+              "chr": 30160
+            },
+            {
+              "cell": 727,
+              "tile": 66,
+              "chr": 29728
+            },
+            {
+              "cell": 728,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 729,
+              "tile": 112,
+              "chr": 30464
+            }
+          ]
+        },
+        {
+          "id": "status.spirit",
+          "source": "きりょく",
+          "translation": "氣力",
+          "x": 176,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 758,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 759,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 760,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 761,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 790,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 791,
+              "tile": 103,
+              "chr": 30320
+            },
+            {
+              "cell": 792,
+              "tile": 112,
+              "chr": 30464
+            },
+            {
+              "cell": 793,
+              "tile": 71,
+              "chr": 29808
+            }
+          ]
+        },
+        {
+          "id": "status.max-power",
+          "source": "MAXPOW",
+          "translation": "最大體力",
+          "x": 112,
+          "y": 211,
+          "cells": [
+            {
+              "cell": 846,
+              "tile": 22,
+              "chr": 29024
+            },
+            {
+              "cell": 847,
+              "tile": 10,
+              "chr": 28832
+            },
+            {
+              "cell": 848,
+              "tile": 33,
+              "chr": 29200
+            },
+            {
+              "cell": 849,
+              "tile": 25,
+              "chr": 29072
+            },
+            {
+              "cell": 850,
+              "tile": 24,
+              "chr": 29056
+            },
+            {
+              "cell": 851,
+              "tile": 32,
+              "chr": 29184
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "items-select",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "frame": 710
+      },
+      "maximum": false,
+      "matches": [
+        {
+          "id": "items.select",
+          "source": "もちものを えらびなさい。",
+          "translation": "請選擇道具",
+          "x": 112,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 686,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 687,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 688,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 689,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 690,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 691,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 692,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 693,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 694,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 695,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 696,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 697,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 698,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 718,
+              "tile": 98,
+              "chr": 30240
+            },
+            {
+              "cell": 719,
+              "tile": 80,
+              "chr": 29952
+            },
+            {
+              "cell": 720,
+              "tile": 98,
+              "chr": 30240
+            },
+            {
+              "cell": 721,
+              "tile": 88,
+              "chr": 30080
+            },
+            {
+              "cell": 722,
+              "tile": 108,
+              "chr": 30400
+            },
+            {
+              "cell": 723,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 724,
+              "tile": 67,
+              "chr": 29744
+            },
+            {
+              "cell": 725,
+              "tile": 102,
+              "chr": 30304
+            },
+            {
+              "cell": 726,
+              "tile": 90,
+              "chr": 30112
+            },
+            {
+              "cell": 727,
+              "tile": 84,
+              "chr": 30016
+            },
+            {
+              "cell": 728,
+              "tile": 74,
+              "chr": 29856
+            },
+            {
+              "cell": 729,
+              "tile": 65,
+              "chr": 29712
+            },
+            {
+              "cell": 730,
+              "tile": 179,
+              "chr": 31536
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "items-helmet",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "frame": 780
+      },
+      "maximum": false,
+      "matches": [
+        {
+          "id": "items.helmet",
+          "source": "ヘルメット",
+          "translation": "頭盔",
+          "x": 112,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 750,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 751,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 752,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 753,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 754,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 782,
+              "tile": 156,
+              "chr": 31168
+            },
+            {
+              "cell": 783,
+              "tile": 168,
+              "chr": 31360
+            },
+            {
+              "cell": 784,
+              "tile": 161,
+              "chr": 31248
+            },
+            {
+              "cell": 785,
+              "tile": 177,
+              "chr": 31504
+            },
+            {
+              "cell": 786,
+              "tile": 147,
+              "chr": 31024
+            }
+          ]
+        },
+        {
+          "id": "items.helmet-level",
+          "source": "レベル",
+          "translation": "等級",
+          "x": 160,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 756,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 757,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 758,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 788,
+              "tile": 169,
+              "chr": 31376
+            },
+            {
+              "cell": 789,
+              "tile": 156,
+              "chr": 31168
+            },
+            {
+              "cell": 790,
+              "tile": 168,
+              "chr": 31360
+            }
+          ]
+        },
+        {
+          "id": "items.equipped",
+          "source": "みにつけた。",
+          "translation": "已裝備",
+          "x": 160,
+          "y": 203,
+          "cells": [
+            {
+              "cell": 820,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 821,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 822,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 823,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 824,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 825,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 852,
+              "tile": 95,
+              "chr": 30192
+            },
+            {
+              "cell": 853,
+              "tile": 85,
+              "chr": 30032
+            },
+            {
+              "cell": 854,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 855,
+              "tile": 72,
+              "chr": 29824
+            },
+            {
+              "cell": 856,
+              "tile": 79,
+              "chr": 29936
+            },
+            {
+              "cell": 857,
+              "tile": 179,
+              "chr": 31536
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "items-shield",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            700,
+            7
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "frame": 780
+      },
+      "maximum": false,
+      "matches": [
+        {
+          "id": "items.shield",
+          "source": "たて",
+          "translation": "盾",
+          "x": 112,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 750,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 751,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 782,
+              "tile": 79,
+              "chr": 29936
+            },
+            {
+              "cell": 783,
+              "tile": 82,
+              "chr": 29984
+            }
+          ]
+        },
+        {
+          "id": "items.shield-level",
+          "source": "レベル",
+          "translation": "等級",
+          "x": 136,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 753,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 754,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 755,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 785,
+              "tile": 169,
+              "chr": 31376
+            },
+            {
+              "cell": 786,
+              "tile": 156,
+              "chr": 31168
+            },
+            {
+              "cell": 787,
+              "tile": 168,
+              "chr": 31360
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "status-next",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "frame": 710
+      },
+      "maximum": false,
+      "matches": [
+        {
+          "id": "status.next-strength",
+          "source": "つよさ",
+          "translation": "力量",
+          "x": 112,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 622,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 623,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 624,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 654,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 655,
+              "tile": 101,
+              "chr": 30288
+            },
+            {
+              "cell": 656,
+              "tile": 74,
+              "chr": 29856
+            }
+          ]
+        },
+        {
+          "id": "status.next-magic",
+          "source": "まほう",
+          "translation": "魔法",
+          "x": 112,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 686,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 687,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 688,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 718,
+              "tile": 94,
+              "chr": 30176
+            },
+            {
+              "cell": 719,
+              "tile": 93,
+              "chr": 30160
+            },
+            {
+              "cell": 720,
+              "tile": 66,
+              "chr": 29728
+            }
+          ]
+        },
+        {
+          "id": "status.next-defense",
+          "source": "ぼうぎょ",
+          "translation": "防禦",
+          "x": 176,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 630,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 631,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 632,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 633,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 662,
+              "tile": 93,
+              "chr": 30160
+            },
+            {
+              "cell": 663,
+              "tile": 66,
+              "chr": 29728
+            },
+            {
+              "cell": 664,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 665,
+              "tile": 112,
+              "chr": 30464
+            }
+          ]
+        },
+        {
+          "id": "status.next-spirit",
+          "source": "きりょく",
+          "translation": "氣力",
+          "x": 176,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 694,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 695,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 696,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 697,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 726,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 727,
+              "tile": 103,
+              "chr": 30320
+            },
+            {
+              "cell": 728,
+              "tile": 112,
+              "chr": 30464
+            },
+            {
+              "cell": 729,
+              "tile": 71,
+              "chr": 29808
+            }
+          ]
+        },
+        {
+          "id": "status.next-max-power",
+          "source": "MAXPOW",
+          "translation": "最大體力",
+          "x": 112,
+          "y": 195,
+          "cells": [
+            {
+              "cell": 782,
+              "tile": 22,
+              "chr": 29024
+            },
+            {
+              "cell": 783,
+              "tile": 10,
+              "chr": 28832
+            },
+            {
+              "cell": 784,
+              "tile": 33,
+              "chr": 29200
+            },
+            {
+              "cell": 785,
+              "tile": 25,
+              "chr": 29072
+            },
+            {
+              "cell": 786,
+              "tile": 24,
+              "chr": 29056
+            },
+            {
+              "cell": 787,
+              "tile": 32,
+              "chr": 29184
+            }
+          ]
+        },
+        {
+          "id": "status.next-level",
+          "source": "つぎのレベルは",
+          "translation": "下級所需",
+          "x": 112,
+          "y": 203,
+          "cells": [
+            {
+              "cell": 814,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 815,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 816,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 817,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 818,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 819,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 820,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 846,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 847,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 848,
+              "tile": 88,
+              "chr": 30080
+            },
+            {
+              "cell": 849,
+              "tile": 169,
+              "chr": 31376
+            },
+            {
+              "cell": 850,
+              "tile": 156,
+              "chr": 31168
+            },
+            {
+              "cell": 851,
+              "tile": 168,
+              "chr": 31360
+            },
+            {
+              "cell": 852,
+              "tile": 89,
+              "chr": 30096
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "items",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "frame": 650
+      },
+      "maximum": true,
+      "matches": [
+        {
+          "id": "items.use",
+          "source": "つかう",
+          "translation": "使用",
+          "x": 128,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 624,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 625,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 626,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 656,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 657,
+              "tile": 69,
+              "chr": 29776
+            },
+            {
+              "cell": 658,
+              "tile": 66,
+              "chr": 29728
+            }
+          ]
+        },
+        {
+          "id": "items.discard",
+          "source": "すてる",
+          "translation": "丟棄",
+          "x": 128,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 688,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 689,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 690,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 720,
+              "tile": 76,
+              "chr": 29888
+            },
+            {
+              "cell": 721,
+              "tile": 82,
+              "chr": 29984
+            },
+            {
+              "cell": 722,
+              "tile": 104,
+              "chr": 30336
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "weapons",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "frame": 650
+      },
+      "maximum": true,
+      "matches": [
+        {
+          "id": "weapons.prompt",
+          "source": "てに もつ ぶきを",
+          "translation": "手持武器",
+          "x": 112,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 622,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 623,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 624,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 625,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 626,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 627,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 628,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 629,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 630,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 654,
+              "tile": 82,
+              "chr": 29984
+            },
+            {
+              "cell": 655,
+              "tile": 85,
+              "chr": 30032
+            },
+            {
+              "cell": 656,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 657,
+              "tile": 98,
+              "chr": 30240
+            },
+            {
+              "cell": 658,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 659,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 660,
+              "tile": 91,
+              "chr": 30128
+            },
+            {
+              "cell": 661,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 662,
+              "tile": 108,
+              "chr": 30400
+            }
+          ]
+        },
+        {
+          "id": "weapons.choose",
+          "source": "えらびなさい。",
+          "translation": "請選擇",
+          "x": 128,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 688,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 689,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 690,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 691,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 692,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 693,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 694,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 720,
+              "tile": 67,
+              "chr": 29744
+            },
+            {
+              "cell": 721,
+              "tile": 102,
+              "chr": 30304
+            },
+            {
+              "cell": 722,
+              "tile": 90,
+              "chr": 30112
+            },
+            {
+              "cell": 723,
+              "tile": 84,
+              "chr": 30016
+            },
+            {
+              "cell": 724,
+              "tile": 74,
+              "chr": 29856
+            },
+            {
+              "cell": 725,
+              "tile": 65,
+              "chr": 29712
+            },
+            {
+              "cell": 726,
+              "tile": 179,
+              "chr": 31536
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "equipment",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "frame": 650
+      },
+      "maximum": true,
+      "matches": [
+        {
+          "id": "equipment.heading",
+          "source": "そうび",
+          "translation": "裝備",
+          "x": 112,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 622,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 623,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 624,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 654,
+              "tile": 78,
+              "chr": 29920
+            },
+            {
+              "cell": 655,
+              "tile": 66,
+              "chr": 29728
+            },
+            {
+              "cell": 656,
+              "tile": 90,
+              "chr": 30112
+            }
+          ]
+        },
+        {
+          "id": "equipment.defense",
+          "source": "ぼうぎょ",
+          "translation": "防禦",
+          "x": 112,
+          "y": 203,
+          "cells": [
+            {
+              "cell": 814,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 815,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 816,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 817,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 846,
+              "tile": 93,
+              "chr": 30160
+            },
+            {
+              "cell": 847,
+              "tile": 66,
+              "chr": 29728
+            },
+            {
+              "cell": 848,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 849,
+              "tile": 112,
+              "chr": 30464
+            }
+          ]
+        },
+        {
+          "id": "equipment.spirit",
+          "source": "きりょく",
+          "translation": "氣力",
+          "x": 176,
+          "y": 203,
+          "cells": [
+            {
+              "cell": 822,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 823,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 824,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 825,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 854,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 855,
+              "tile": 103,
+              "chr": 30320
+            },
+            {
+              "cell": 856,
+              "tile": 112,
+              "chr": 30464
+            },
+            {
+              "cell": 857,
+              "tile": 71,
+              "chr": 29808
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "status",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ]
+        ],
+        "frame": 650
+      },
+      "maximum": true,
+      "matches": [
+        {
+          "id": "status.level",
+          "source": "レベル",
+          "translation": "等級",
+          "x": 112,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 622,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 623,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 624,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 654,
+              "tile": 169,
+              "chr": 31376
+            },
+            {
+              "cell": 655,
+              "tile": 156,
+              "chr": 31168
+            },
+            {
+              "cell": 656,
+              "tile": 168,
+              "chr": 31360
+            }
+          ]
+        },
+        {
+          "id": "status.strength",
+          "source": "つよさ",
+          "translation": "力量",
+          "x": 112,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 686,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 687,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 688,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 718,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 719,
+              "tile": 101,
+              "chr": 30288
+            },
+            {
+              "cell": 720,
+              "tile": 74,
+              "chr": 29856
+            }
+          ]
+        },
+        {
+          "id": "status.magic",
+          "source": "まほう",
+          "translation": "魔法",
+          "x": 112,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 750,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 751,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 752,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 782,
+              "tile": 94,
+              "chr": 30176
+            },
+            {
+              "cell": 783,
+              "tile": 93,
+              "chr": 30160
+            },
+            {
+              "cell": 784,
+              "tile": 66,
+              "chr": 29728
+            }
+          ]
+        },
+        {
+          "id": "status.defense",
+          "source": "ぼうぎょ",
+          "translation": "防禦",
+          "x": 176,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 694,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 695,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 696,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 697,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 726,
+              "tile": 93,
+              "chr": 30160
+            },
+            {
+              "cell": 727,
+              "tile": 66,
+              "chr": 29728
+            },
+            {
+              "cell": 728,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 729,
+              "tile": 112,
+              "chr": 30464
+            }
+          ]
+        },
+        {
+          "id": "status.spirit",
+          "source": "きりょく",
+          "translation": "氣力",
+          "x": 176,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 758,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 759,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 760,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 761,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 790,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 791,
+              "tile": 103,
+              "chr": 30320
+            },
+            {
+              "cell": 792,
+              "tile": 112,
+              "chr": 30464
+            },
+            {
+              "cell": 793,
+              "tile": 71,
+              "chr": 29808
+            }
+          ]
+        },
+        {
+          "id": "status.max-power",
+          "source": "MAXPOW",
+          "translation": "最大體力",
+          "x": 112,
+          "y": 211,
+          "cells": [
+            {
+              "cell": 846,
+              "tile": 22,
+              "chr": 29024
+            },
+            {
+              "cell": 847,
+              "tile": 10,
+              "chr": 28832
+            },
+            {
+              "cell": 848,
+              "tile": 33,
+              "chr": 29200
+            },
+            {
+              "cell": 849,
+              "tile": 25,
+              "chr": 29072
+            },
+            {
+              "cell": 850,
+              "tile": 24,
+              "chr": 29056
+            },
+            {
+              "cell": 851,
+              "tile": 32,
+              "chr": 29184
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "items-select",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "frame": 710
+      },
+      "maximum": true,
+      "matches": [
+        {
+          "id": "items.select",
+          "source": "もちものを えらびなさい。",
+          "translation": "請選擇道具",
+          "x": 112,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 686,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 687,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 688,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 689,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 690,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 691,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 692,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 693,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 694,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 695,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 696,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 697,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 698,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 718,
+              "tile": 98,
+              "chr": 30240
+            },
+            {
+              "cell": 719,
+              "tile": 80,
+              "chr": 29952
+            },
+            {
+              "cell": 720,
+              "tile": 98,
+              "chr": 30240
+            },
+            {
+              "cell": 721,
+              "tile": 88,
+              "chr": 30080
+            },
+            {
+              "cell": 722,
+              "tile": 108,
+              "chr": 30400
+            },
+            {
+              "cell": 723,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 724,
+              "tile": 67,
+              "chr": 29744
+            },
+            {
+              "cell": 725,
+              "tile": 102,
+              "chr": 30304
+            },
+            {
+              "cell": 726,
+              "tile": 90,
+              "chr": 30112
+            },
+            {
+              "cell": 727,
+              "tile": 84,
+              "chr": 30016
+            },
+            {
+              "cell": 728,
+              "tile": 74,
+              "chr": 29856
+            },
+            {
+              "cell": 729,
+              "tile": 65,
+              "chr": 29712
+            },
+            {
+              "cell": 730,
+              "tile": 179,
+              "chr": 31536
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "items-helmet",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "frame": 780
+      },
+      "maximum": true,
+      "matches": [
+        {
+          "id": "items.helmet",
+          "source": "ヘルメット",
+          "translation": "頭盔",
+          "x": 112,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 750,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 751,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 752,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 753,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 754,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 782,
+              "tile": 156,
+              "chr": 31168
+            },
+            {
+              "cell": 783,
+              "tile": 168,
+              "chr": 31360
+            },
+            {
+              "cell": 784,
+              "tile": 161,
+              "chr": 31248
+            },
+            {
+              "cell": 785,
+              "tile": 177,
+              "chr": 31504
+            },
+            {
+              "cell": 786,
+              "tile": 147,
+              "chr": 31024
+            }
+          ]
+        },
+        {
+          "id": "items.helmet-level",
+          "source": "レベル",
+          "translation": "等級",
+          "x": 160,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 756,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 757,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 758,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 788,
+              "tile": 169,
+              "chr": 31376
+            },
+            {
+              "cell": 789,
+              "tile": 156,
+              "chr": 31168
+            },
+            {
+              "cell": 790,
+              "tile": 168,
+              "chr": 31360
+            }
+          ]
+        },
+        {
+          "id": "items.equipped",
+          "source": "みにつけた。",
+          "translation": "已裝備",
+          "x": 160,
+          "y": 203,
+          "cells": [
+            {
+              "cell": 820,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 821,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 822,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 823,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 824,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 825,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 852,
+              "tile": 95,
+              "chr": 30192
+            },
+            {
+              "cell": 853,
+              "tile": 85,
+              "chr": 30032
+            },
+            {
+              "cell": 854,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 855,
+              "tile": 72,
+              "chr": 29824
+            },
+            {
+              "cell": 856,
+              "tile": 79,
+              "chr": 29936
+            },
+            {
+              "cell": 857,
+              "tile": 179,
+              "chr": 31536
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "items-shield",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ],
+          [
+            700,
+            7
+          ],
+          [
+            750,
+            0
+          ]
+        ],
+        "frame": 780
+      },
+      "maximum": true,
+      "matches": [
+        {
+          "id": "items.shield",
+          "source": "たて",
+          "translation": "盾",
+          "x": 112,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 750,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 751,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 782,
+              "tile": 79,
+              "chr": 29936
+            },
+            {
+              "cell": 783,
+              "tile": 82,
+              "chr": 29984
+            }
+          ]
+        },
+        {
+          "id": "items.shield-level",
+          "source": "レベル",
+          "translation": "等級",
+          "x": 136,
+          "y": 187,
+          "cells": [
+            {
+              "cell": 753,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 754,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 755,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 785,
+              "tile": 169,
+              "chr": 31376
+            },
+            {
+              "cell": 786,
+              "tile": 156,
+              "chr": 31168
+            },
+            {
+              "cell": 787,
+              "tile": 168,
+              "chr": 31360
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "route": {
+        "id": "status-next",
+        "events": [
+          [
+            120,
+            3
+          ],
+          [
+            240,
+            3
+          ],
+          [
+            420,
+            3
+          ],
+          [
+            470,
+            5
+          ],
+          [
+            500,
+            5
+          ],
+          [
+            530,
+            5
+          ],
+          [
+            600,
+            0
+          ],
+          [
+            670,
+            0
+          ]
+        ],
+        "frame": 710
+      },
+      "maximum": true,
+      "matches": [
+        {
+          "id": "status.next-strength",
+          "source": "つよさ",
+          "translation": "力量",
+          "x": 112,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 622,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 623,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 624,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 654,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 655,
+              "tile": 101,
+              "chr": 30288
+            },
+            {
+              "cell": 656,
+              "tile": 74,
+              "chr": 29856
+            }
+          ]
+        },
+        {
+          "id": "status.next-magic",
+          "source": "まほう",
+          "translation": "魔法",
+          "x": 112,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 686,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 687,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 688,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 718,
+              "tile": 94,
+              "chr": 30176
+            },
+            {
+              "cell": 719,
+              "tile": 93,
+              "chr": 30160
+            },
+            {
+              "cell": 720,
+              "tile": 66,
+              "chr": 29728
+            }
+          ]
+        },
+        {
+          "id": "status.next-defense",
+          "source": "ぼうぎょ",
+          "translation": "防禦",
+          "x": 176,
+          "y": 155,
+          "cells": [
+            {
+              "cell": 630,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 631,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 632,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 633,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 662,
+              "tile": 93,
+              "chr": 30160
+            },
+            {
+              "cell": 663,
+              "tile": 66,
+              "chr": 29728
+            },
+            {
+              "cell": 664,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 665,
+              "tile": 112,
+              "chr": 30464
+            }
+          ]
+        },
+        {
+          "id": "status.next-spirit",
+          "source": "きりょく",
+          "translation": "氣力",
+          "x": 176,
+          "y": 171,
+          "cells": [
+            {
+              "cell": 694,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 695,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 696,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 697,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 726,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 727,
+              "tile": 103,
+              "chr": 30320
+            },
+            {
+              "cell": 728,
+              "tile": 112,
+              "chr": 30464
+            },
+            {
+              "cell": 729,
+              "tile": 71,
+              "chr": 29808
+            }
+          ]
+        },
+        {
+          "id": "status.next-max-power",
+          "source": "MAXPOW",
+          "translation": "最大體力",
+          "x": 112,
+          "y": 195,
+          "cells": [
+            {
+              "cell": 782,
+              "tile": 22,
+              "chr": 29024
+            },
+            {
+              "cell": 783,
+              "tile": 10,
+              "chr": 28832
+            },
+            {
+              "cell": 784,
+              "tile": 33,
+              "chr": 29200
+            },
+            {
+              "cell": 785,
+              "tile": 25,
+              "chr": 29072
+            },
+            {
+              "cell": 786,
+              "tile": 24,
+              "chr": 29056
+            },
+            {
+              "cell": 787,
+              "tile": 32,
+              "chr": 29184
+            }
+          ]
+        },
+        {
+          "id": "status.next-level",
+          "source": "つぎのレベルは",
+          "translation": "下級所需",
+          "x": 112,
+          "y": 203,
+          "cells": [
+            {
+              "cell": 814,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 815,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 816,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 817,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 818,
+              "tile": 115,
+              "chr": 30512
+            },
+            {
+              "cell": 819,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 820,
+              "tile": 36,
+              "chr": 29248
+            },
+            {
+              "cell": 846,
+              "tile": 81,
+              "chr": 29968
+            },
+            {
+              "cell": 847,
+              "tile": 70,
+              "chr": 29792
+            },
+            {
+              "cell": 848,
+              "tile": 88,
+              "chr": 30080
+            },
+            {
+              "cell": 849,
+              "tile": 169,
+              "chr": 31376
+            },
+            {
+              "cell": 850,
+              "tile": 156,
+              "chr": 31168
+            },
+            {
+              "cell": 851,
+              "tile": 168,
+              "chr": 31360
+            },
+            {
+              "cell": 852,
+              "tile": 89,
+              "chr": 30096
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

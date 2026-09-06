@@ -278,6 +278,14 @@ impl EmuWasm {
         }
     }
 
+    #[wasm_bindgen(js_name = "getZombieMenuSource")]
+    pub fn zombie_menu_source(&self) -> Vec<u8> {
+        match &self.core {
+            CoreType::Nes(emu) => emu.zombie_menu_source(),
+            _ => Vec::new(),
+        }
+    }
+
     #[wasm_bindgen(js_name = "getTextBackgroundProvenancePtr")]
     pub fn text_background_provenance_ptr(&self) -> *const u16 {
         match &self.core {

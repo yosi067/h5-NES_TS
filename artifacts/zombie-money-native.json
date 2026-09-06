@@ -1,0 +1,182 @@
+{
+  "displayPrg1971A": [
+    169,
+    34,
+    162,
+    167,
+    32,
+    147,
+    151,
+    162,
+    202,
+    169,
+    3,
+    76,
+    54,
+    151
+  ],
+  "earnPrg23A0": [
+    24,
+    160,
+    3,
+    162,
+    0,
+    181,
+    155,
+    117,
+    200,
+    201,
+    100,
+    144,
+    2,
+    233,
+    100,
+    149,
+    200,
+    232,
+    136,
+    208,
+    240,
+    144,
+    2,
+    230,
+    203,
+    96
+  ],
+  "earningTrials": 3,
+  "initializationPrg1469": [
+    169,
+    0,
+    133,
+    18
+  ],
+  "maxDisplayedMoney": 999999,
+  "moneyRepresentation": "C8 + 100*C9 + 10000*CA + 1000000*CB; HUD omits CB",
+  "nativeEarnSaturates": false,
+  "samples": [
+    {
+      "levelEnabled": false,
+      "moneyEnabled": false,
+      "moneyTiles": [
+        36,
+        36,
+        36,
+        36,
+        3,
+        0
+      ],
+      "ramC8toCB": [
+        30,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "levelEnabled": false,
+      "moneyEnabled": true,
+      "moneyTiles": [
+        9,
+        9,
+        9,
+        9,
+        9,
+        9
+      ],
+      "ramC8toCB": [
+        99,
+        99,
+        99,
+        0
+      ]
+    },
+    {
+      "levelEnabled": true,
+      "moneyEnabled": false,
+      "moneyTiles": [
+        36,
+        36,
+        36,
+        36,
+        3,
+        0
+      ],
+      "ramC8toCB": [
+        30,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "levelEnabled": true,
+      "moneyEnabled": true,
+      "moneyTiles": [
+        9,
+        9,
+        9,
+        9,
+        9,
+        9
+      ],
+      "ramC8toCB": [
+        99,
+        99,
+        99,
+        0
+      ]
+    }
+  ],
+  "sourceSha256": "91dfb1a0c29f78c5d5b0a582c737c62103c4009ad5e2c20fdecd0c22a8648a48",
+  "spendPrg23BA": [
+    56,
+    160,
+    3,
+    162,
+    0,
+    181,
+    200,
+    245,
+    155,
+    176,
+    3,
+    105,
+    100,
+    24,
+    149,
+    0,
+    232,
+    136,
+    208,
+    241,
+    181,
+    200,
+    233,
+    0,
+    149,
+    0,
+    144,
+    9,
+    162,
+    3,
+    181,
+    0,
+    149,
+    200,
+    202,
+    16,
+    249,
+    96
+  ],
+  "spendingTrials": 5,
+  "verified": [
+    "four independent settings combinations",
+    "reset on/off",
+    "spent save temp/persistent plus frames",
+    "profile clear",
+    "reload defaults",
+    "wrong hash boot",
+    "failed load",
+    "ROM unchanged"
+  ]
+}

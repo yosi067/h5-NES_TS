@@ -1270,6 +1270,8 @@ impl Ppu {
         }
     }
 
+    pub fn text_provenance_enabled(&self) -> bool { self.text_provenance_enabled }
+
     pub fn set_text_provenance(&mut self, enabled: bool) {
         self.text_provenance_enabled = enabled;
         if enabled {

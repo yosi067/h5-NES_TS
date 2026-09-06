@@ -33,6 +33,13 @@ use crate::mappers::Mapper1TraceState;
 #[path = "ct2_stats_diagnostic.rs"]
 mod ct2_stats_diagnostic;
 
+#[cfg(test)]
+#[path = "zombie_stats_diagnostic.rs"]
+mod zombie_stats_diagnostic;
+
+#[path = "zombie_tuning.rs"]
+mod zombie_tuning;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 enum DmcDmaPhase {
     Idle,
@@ -216,6 +223,8 @@ pub struct Emulator {
     game_profile: Option<NesGameProfile>,
     ct2_tuning: crate::game_profile::ct2_tuning::Ct2Tuning,
     ct2_level_read_instruction: bool,
+    zombie_tuning: zombie_tuning::ZombieTuning,
+    zombie_initial_level_instruction: bool,
     temporary_states: RefCell<VecDeque<TemporaryState>>,
     // User slots must not be evicted by quick-save overwrites or diagnostic exports.
     temporary_slots: RefCell<Vec<(u32, TemporaryState)>>,
@@ -268,6 +277,8 @@ impl Emulator {
             game_profile: None,
             ct2_tuning: Default::default(),
             ct2_level_read_instruction: false,
+            zombie_tuning: Default::default(),
+            zombie_initial_level_instruction: false,
             temporary_states: RefCell::new(VecDeque::new()),
             temporary_slots: RefCell::new(Vec::new()),
             next_temporary_state: Cell::new(0),
@@ -302,12 +313,15 @@ impl Emulator {
     /// 載入 ROM
     pub fn load_rom(&mut self, data: &[u8]) -> bool {
         self.ct2_tuning = Default::default();
+        self.zombie_tuning = Default::default();
         self.text_observer.configure(false, "");
         self.ppu.set_text_provenance(false);
         self.clear_game_profile();
         let success = self.cartridge.load_rom(data);
         if success {
             self.loaded_rom_sha256 = sha256_hex(data);
+            self.zombie_tuning = zombie_tuning::ZombieTuning::for_rom(
+                &self.loaded_rom_sha256, self.cartridge.header.mapper_id);
             self.ct2_tuning = crate::game_profile::ct2_tuning::Ct2Tuning::for_rom(
                 &self.loaded_rom_sha256, self.cartridge.header.mapper_id);
             // 將卡帶的 CHR 資料同步到 PPU
@@ -326,10 +340,12 @@ impl Emulator {
     /// Hot update only: never reset hardware, reload overlays or invalidate saves.
     /// Session preference survives reset/restore; a new ROM load restores defaults.
     pub fn set_game_profile_tuning(&mut self, json: &str) -> Result<(), String> {
+        if self.zombie_tuning.supported { return self.zombie_tuning.update(json); }
         self.ct2_tuning.update(json)
     }
 
     pub fn game_profile_tuning(&self) -> String {
+        if self.zombie_tuning.supported { return self.zombie_tuning.status(); }
         self.ct2_tuning.status()
     }
 
@@ -775,10 +791,25 @@ impl Emulator {
             && self.cpu.y == 3
             && self.cartridge.cpu_read(self.cpu.pc) == 0xb1
             && self.cartridge.cpu_read(self.cpu.pc + 1) == 0x34;
+        // New-game LDA #0 only. The original STA and stat initialization follow;
+        // no frame-level RAM locks, HP refill, experience or save-state rewrite.
+        self.zombie_initial_level_instruction = self.zombie_tuning.enabled && self.cpu.pc == 0x9462
+            && self.zombie_tuning.initial_instruction(
+            self.cpu.pc, self.cartridge.mapper.cpu_read(self.cpu.pc),
+            self.cartridge.cpu_read(self.cpu.pc), self.cartridge.cpu_read(self.cpu.pc.wrapping_add(1)));
+        // Seed only at the verified return from new-game initialization. Native
+        // earnings/subtraction (including the undisplayed overflow byte) remain intact.
+        if self.zombie_tuning.money_enabled && self.cpu.pc == 0x9469
+            && self.zombie_tuning.initial_money_instruction(
+                self.cpu.pc, self.cartridge.mapper.cpu_read(self.cpu.pc),
+                self.cartridge.cpu_read(self.cpu.pc), self.cartridge.cpu_read(self.cpu.pc + 1)) {
+            self.bus.ram[0xc8..0xcc].copy_from_slice(&[99, 99, 99, 0]);
+        }
         let opcode = self.bus_read(self.cpu.pc);
         self.cpu.pc = self.cpu.pc.wrapping_add(1);
         self.execute_cpu_instruction(opcode);
         self.ct2_level_read_instruction = false;
+        self.zombie_initial_level_instruction = false;
 
         // 扣除本次時鐘週期（fetch + execute 本身消耗 1 cycle）
         self.cpu.cycles = self.cpu.cycles.saturating_sub(1);
@@ -786,6 +817,9 @@ impl Emulator {
 
     /// 匯流排讀取
     fn bus_read(&mut self, addr: u16) -> u8 {
+        if self.zombie_initial_level_instruction && addr == 0x9463 {
+            return zombie_tuning::MAX_LEVEL;
+        }
         if self.ct2_level_read_instruction {
             if let Some(level) = self.ct2_tuning.level_read(&self.bus.ram, addr) {
                 return level;
@@ -1517,8 +1551,12 @@ impl Emulator {
 
     pub fn enable_text_observer(&mut self, enabled: bool) -> bool {
         let active = self.text_observer.configure(enabled, &self.loaded_rom_sha256);
-        self.ppu.set_text_provenance(active);
-        active
+        // Zombie Hunter uses only completed-frame CHR provenance. Never enable
+        // CT2's instruction observers for its unrelated mapper/routines.
+        let provenance = active || (enabled && self.loaded_rom_sha256 ==
+            "91dfb1a0c29f78c5d5b0a582c737c62103c4009ad5e2c20fdecd0c22a8648a48");
+        self.ppu.set_text_provenance(provenance);
+        provenance
     }
 
     fn observe_ct2_text(&mut self) {
@@ -1605,6 +1643,13 @@ impl Emulator {
     }
 
     /// 取得畫面緩衝區指標
+    /// Original bank-6 $862d writer's staging rows, not a writable RAM API.
+    /// Only this verified ROM may authorize partial menu glyphs.
+    pub fn zombie_menu_source(&self) -> Vec<u8> {
+        if !self.zombie_tuning.supported { return Vec::new(); }
+        self.bus.ram[0x600..0x680].to_vec()
+    }
+
     pub fn get_frame_buffer_ptr(&self) -> *const u8 { self.ppu.frame_buffer.as_ptr() }
 
     /// 取得畫面緩衝區長度
@@ -1710,6 +1755,7 @@ impl Emulator {
         }
 
         self.cpu = state.cpu;
+        let provenance_enabled = self.ppu.text_provenance_enabled();
         self.ppu = state.ppu;
         self.apu = state.apu;
         self.bus = state.bus;
@@ -1721,7 +1767,7 @@ impl Emulator {
         self.dmc_dma_address = state.dmc_dma_address;
         self.dmc_dma_phase = state.dmc_dma_phase;
         self.text_observer.reset();
-        self.ppu.set_text_provenance(self.text_observer.enabled);
+        self.ppu.set_text_provenance(provenance_enabled);
         true
     }
 
@@ -1757,6 +1803,7 @@ impl Emulator {
                 .find(|(_, state)| state.token == token).map(|(_, state)| state.clone()));
         let Some(state) = snapshot else { return false; };
         self.cpu = state.cpu;
+        let provenance_enabled = self.ppu.text_provenance_enabled();
         self.ppu = state.ppu;
         self.apu = state.apu;
         self.bus = state.bus;
@@ -1771,7 +1818,7 @@ impl Emulator {
         { self.current_instruction_pc = state.current_instruction_pc; }
         // Observations belong to the discarded timeline, not to hardware state.
         self.text_observer.reset();
-        self.ppu.set_text_provenance(self.text_observer.enabled);
+        self.ppu.set_text_provenance(provenance_enabled);
         true
     }
 

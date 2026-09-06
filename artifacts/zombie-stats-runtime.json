@@ -1,0 +1,52 @@
+{
+  "sourceSha256": "91dfb1a0c29f78c5d5b0a582c737c62103c4009ad5e2c20fdecd0c22a8648a48",
+  "mode": "production WASM, original-ROM input-only boot",
+  "samples": [
+    {
+      "maximum": false,
+      "displayedLevel": 0,
+      "displayedPower": 37,
+      "levelTiles": [
+        21,
+        0
+      ],
+      "powerTiles": [
+        36,
+        3,
+        7
+      ],
+      "displayedMoney": 30,
+      "moneyTiles": [
+        36,
+        36,
+        36,
+        36,
+        3,
+        0
+      ]
+    },
+    {
+      "maximum": true,
+      "displayedLevel": 31,
+      "displayedPower": 223,
+      "levelTiles": [
+        3,
+        1
+      ],
+      "powerTiles": [
+        2,
+        2,
+        3
+      ],
+      "displayedMoney": 999999,
+      "moneyTiles": [
+        9,
+        9,
+        9,
+        9,
+        9,
+        9
+      ]
+    }
+  ]
+}

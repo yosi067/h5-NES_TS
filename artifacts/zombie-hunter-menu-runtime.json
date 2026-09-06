@@ -1,0 +1,279 @@
+{
+  "sourceSha256": "91dfb1a0c29f78c5d5b0a582c737c62103c4009ad5e2c20fdecd0c22a8648a48",
+  "framesCompared": 901,
+  "originalRomUnchanged": true,
+  "report": [
+    {
+      "frame": 200,
+      "ids": [
+        "title.start"
+      ],
+      "rectangles": [
+        {
+          "id": "title.start",
+          "x": 56,
+          "y": 184
+        }
+      ]
+    },
+    {
+      "frame": 300,
+      "ids": [
+        "hud.power",
+        "hud.experience",
+        "hud.gold"
+      ],
+      "rectangles": [
+        {
+          "id": "hud.power",
+          "x": 16,
+          "y": 139
+        },
+        {
+          "id": "hud.experience",
+          "x": 16,
+          "y": 155
+        },
+        {
+          "id": "hud.gold",
+          "x": 16,
+          "y": 171
+        }
+      ]
+    },
+    {
+      "frame": 450,
+      "ids": [
+        "menu.items",
+        "menu.weapons",
+        "menu.equipment",
+        "menu.status",
+        "hud.power",
+        "hud.experience",
+        "hud.gold"
+      ],
+      "rectangles": [
+        {
+          "id": "menu.items",
+          "x": 128,
+          "y": 155
+        },
+        {
+          "id": "menu.weapons",
+          "x": 128,
+          "y": 171
+        },
+        {
+          "id": "menu.equipment",
+          "x": 128,
+          "y": 187
+        },
+        {
+          "id": "menu.status",
+          "x": 128,
+          "y": 203
+        },
+        {
+          "id": "hud.power",
+          "x": 16,
+          "y": 139
+        },
+        {
+          "id": "hud.experience",
+          "x": 16,
+          "y": 155
+        },
+        {
+          "id": "hud.gold",
+          "x": 16,
+          "y": 171
+        }
+      ]
+    },
+    {
+      "frame": 550,
+      "ids": [
+        "menu.items",
+        "menu.weapons",
+        "menu.equipment",
+        "menu.status",
+        "hud.power",
+        "hud.experience",
+        "hud.gold"
+      ],
+      "rectangles": [
+        {
+          "id": "menu.items",
+          "x": 128,
+          "y": 155
+        },
+        {
+          "id": "menu.weapons",
+          "x": 128,
+          "y": 171
+        },
+        {
+          "id": "menu.equipment",
+          "x": 128,
+          "y": 187
+        },
+        {
+          "id": "menu.status",
+          "x": 128,
+          "y": 203
+        },
+        {
+          "id": "hud.power",
+          "x": 16,
+          "y": 139
+        },
+        {
+          "id": "hud.experience",
+          "x": 16,
+          "y": 155
+        },
+        {
+          "id": "hud.gold",
+          "x": 16,
+          "y": 171
+        }
+      ]
+    },
+    {
+      "frame": 650,
+      "ids": [
+        "hud.power",
+        "hud.experience",
+        "hud.gold",
+        "weapons.prompt",
+        "weapons.choose"
+      ],
+      "rectangles": [
+        {
+          "id": "hud.power",
+          "x": 16,
+          "y": 139
+        },
+        {
+          "id": "hud.experience",
+          "x": 16,
+          "y": 155
+        },
+        {
+          "id": "hud.gold",
+          "x": 16,
+          "y": 171
+        },
+        {
+          "id": "weapons.prompt",
+          "x": 112,
+          "y": 155
+        },
+        {
+          "id": "weapons.choose",
+          "x": 128,
+          "y": 171
+        }
+      ]
+    },
+    {
+      "frame": 750,
+      "ids": [
+        "menu.items",
+        "menu.weapons",
+        "menu.equipment",
+        "menu.status",
+        "hud.power",
+        "hud.experience",
+        "hud.gold"
+      ],
+      "rectangles": [
+        {
+          "id": "menu.items",
+          "x": 128,
+          "y": 155
+        },
+        {
+          "id": "menu.weapons",
+          "x": 128,
+          "y": 171
+        },
+        {
+          "id": "menu.equipment",
+          "x": 128,
+          "y": 187
+        },
+        {
+          "id": "menu.status",
+          "x": 128,
+          "y": 203
+        },
+        {
+          "id": "hud.power",
+          "x": 16,
+          "y": 139
+        },
+        {
+          "id": "hud.experience",
+          "x": 16,
+          "y": 155
+        },
+        {
+          "id": "hud.gold",
+          "x": 16,
+          "y": 171
+        }
+      ]
+    },
+    {
+      "frame": 850,
+      "ids": [
+        "hud.power",
+        "hud.experience",
+        "hud.gold"
+      ],
+      "rectangles": [
+        {
+          "id": "hud.power",
+          "x": 16,
+          "y": 139
+        },
+        {
+          "id": "hud.experience",
+          "x": 16,
+          "y": 155
+        },
+        {
+          "id": "hud.gold",
+          "x": 16,
+          "y": 171
+        }
+      ]
+    },
+    {
+      "frame": 900,
+      "ids": [
+        "hud.power",
+        "hud.experience",
+        "hud.gold"
+      ],
+      "rectangles": [
+        {
+          "id": "hud.power",
+          "x": 16,
+          "y": 139
+        },
+        {
+          "id": "hud.experience",
+          "x": 16,
+          "y": 155
+        },
+        {
+          "id": "hud.gold",
+          "x": 16,
+          "y": 171
+        }
+      ]
+    }
+  ]
+}
