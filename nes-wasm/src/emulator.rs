@@ -19,15 +19,17 @@ use crate::cpu::Cpu;
 use crate::ppu::Ppu;
 use crate::apu::Apu;
 use crate::bus::Bus;
-use crate::cartridge::Cartridge;
+use crate::cartridge::{Cartridge, PortableCartridgeState};
 use crate::controller::Controller;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+use serde::{Deserialize, Serialize};
 use std::cell::{Cell, RefCell};
 use std::collections::VecDeque;
 use crate::game_profile::{sha256_hex, MemorySpace, NesGameProfile, WriteTiming};
 #[cfg(test)]
 use crate::mappers::Mapper1TraceState;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 enum DmcDmaPhase {
     Idle,
     Halt,
@@ -41,6 +43,9 @@ enum DmcDmaPhase {
 // Never snapshot raw WASM memory: it also contains allocator/JS-owned pointers.
 const TEMP_STATE_PREFIX: &str = "#NES-TEMP-2:";
 const TEMP_STATE_LIMIT: usize = 16;
+const PERSISTENT_STATE_PREFIX: &str = "NES-SAVE-1:";
+const PERSISTENT_STATE_FORMAT: &str = "NES-SAVE-1";
+const PERSISTENT_STATE_LIMIT: usize = 8_000_000;
 
 #[derive(Clone)]
 struct TemporaryState {
@@ -58,6 +63,23 @@ struct TemporaryState {
     dmc_dma_phase: DmcDmaPhase,
     #[cfg(test)]
     current_instruction_pc: u16,
+}
+
+#[derive(Serialize, Deserialize)]
+struct PersistentState {
+    format: String,
+    rom_sha256: String,
+    cpu: Cpu,
+    ppu: Ppu,
+    apu: Apu,
+    bus: Bus,
+    cartridge: PortableCartridgeState,
+    ctrl1: Controller,
+    ctrl2: Controller,
+    system_clock: u64,
+    audio_enabled: bool,
+    dmc_dma_address: Option<u16>,
+    dmc_dma_phase: DmcDmaPhase,
 }
 
 #[cfg(test)]
@@ -1572,6 +1594,66 @@ impl Emulator {
             slots.push((slot, snapshot));
         }
         token
+    }
+
+    pub fn export_persistent_save_state(&self) -> String {
+        if !self.cartridge.loaded || self.loaded_rom_sha256.is_empty() {
+            return String::new();
+        }
+        let state = PersistentState {
+            format: PERSISTENT_STATE_FORMAT.to_string(),
+            rom_sha256: self.loaded_rom_sha256.clone(),
+            cpu: self.cpu.clone(),
+            ppu: self.ppu.clone(),
+            apu: self.apu.clone(),
+            bus: self.bus.clone(),
+            cartridge: self.cartridge.export_portable_state(),
+            ctrl1: self.ctrl1.clone(),
+            ctrl2: self.ctrl2.clone(),
+            system_clock: self.system_clock,
+            audio_enabled: self.audio_enabled,
+            dmc_dma_address: self.dmc_dma_address,
+            dmc_dma_phase: self.dmc_dma_phase,
+        };
+        let Ok(payload) = bincode::serialize(&state) else { return String::new(); };
+        format!("{PERSISTENT_STATE_PREFIX}{}", BASE64.encode(payload))
+    }
+
+    pub fn import_persistent_save_state(&mut self, json: &str) -> bool {
+        if json.is_empty() || json.len() > PERSISTENT_STATE_LIMIT
+            || !json.starts_with(PERSISTENT_STATE_PREFIX)
+            || !self.cartridge.loaded || self.loaded_rom_sha256.is_empty() {
+            return false;
+        }
+        let encoded = &json[PERSISTENT_STATE_PREFIX.len()..];
+        let Ok(payload) = BASE64.decode(encoded) else { return false; };
+        let Ok(state) = bincode::deserialize::<PersistentState>(&payload) else { return false; };
+        if state.format != PERSISTENT_STATE_FORMAT
+            || state.rom_sha256 != self.loaded_rom_sha256
+            || !self.ppu.portable_state_compatible(&state.ppu)
+            || !self.apu.portable_state_compatible(&state.apu) {
+            return false;
+        }
+
+        let mut cartridge = self.cartridge.clone();
+        if !cartridge.import_portable_state(state.cartridge) {
+            return false;
+        }
+
+        self.cpu = state.cpu;
+        self.ppu = state.ppu;
+        self.apu = state.apu;
+        self.bus = state.bus;
+        self.cartridge = cartridge;
+        self.ctrl1 = state.ctrl1;
+        self.ctrl2 = state.ctrl2;
+        self.system_clock = state.system_clock;
+        self.audio_enabled = state.audio_enabled;
+        self.dmc_dma_address = state.dmc_dma_address;
+        self.dmc_dma_phase = state.dmc_dma_phase;
+        self.text_observer.reset();
+        self.ppu.set_text_provenance(self.text_observer.enabled);
+        true
     }
 
     fn capture_temporary_state(&self) -> Option<TemporaryState> {

@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 // ============================================================
 // NES 控制器模擬
 // ============================================================
@@ -19,7 +21,7 @@ pub const BTN_LEFT: u8 = 6;
 pub const BTN_RIGHT: u8 = 7;
 
 /// NES 控制器
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Controller {
     /// 按鈕狀態（8 位元，每位元代表一個按鈕）
     button_state: u8,

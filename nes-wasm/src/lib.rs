@@ -173,6 +173,16 @@ impl NesWasm {
         self.emu.import_save_state(json)
     }
 
+    #[wasm_bindgen(js_name = "exportPersistentSaveState")]
+    pub fn export_persistent_save_state(&self) -> String {
+        self.emu.export_persistent_save_state()
+    }
+
+    #[wasm_bindgen(js_name = "importPersistentSaveState")]
+    pub fn import_persistent_save_state(&mut self, json: &str) -> bool {
+        self.emu.import_persistent_save_state(json)
+    }
+
     /// 取得 WASM 記憶體（供 JavaScript 直接存取畫面/音頻緩衝區）
     #[wasm_bindgen(js_name = "getWasmMemory")]
     pub fn get_wasm_memory(&self) -> JsValue {
@@ -562,6 +572,22 @@ impl EmuWasm {
             CoreType::Snes(emu) => emu.import_save_state(json),
             CoreType::N64(emu) => emu.import_save_state(json),
             CoreType::None => false,
+        }
+    }
+
+    #[wasm_bindgen(js_name = "exportPersistentSaveState")]
+    pub fn export_persistent_save_state(&self) -> String {
+        match &self.core {
+            CoreType::Nes(emu) => emu.export_persistent_save_state(),
+            _ => String::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "importPersistentSaveState")]
+    pub fn import_persistent_save_state(&mut self, json: &str) -> bool {
+        match &mut self.core {
+            CoreType::Nes(emu) => emu.import_persistent_save_state(json),
+            _ => false,
         }
     }
 

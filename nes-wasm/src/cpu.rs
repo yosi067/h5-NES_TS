@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 // ============================================================
 // NES CPU 模擬 - MOS 6502 處理器
 // ============================================================
@@ -58,7 +60,7 @@ pub enum AddressingMode {
 }
 
 /// 6502 CPU 結構體
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Cpu {
     // ===== 暫存器 =====
     /// 累加器（Accumulator）

@@ -3791,6 +3791,33 @@ function base64ToBytes(base64: string): Uint8Array {
   return bytes;
 }
 
+async function writeNesPersistentState(key: string, state: string): Promise<void> {
+  const encoded = new TextEncoder().encode(state);
+  try {
+    await writeBinaryState(key, encoded);
+    try { localStorage.removeItem(key); } catch {
+    }
+  } catch (error) {
+    console.warn('[NES] IndexedDB 持久存檔失敗，改用 localStorage:', error);
+    localStorage.setItem(key, state);
+  }
+}
+
+async function readNesPersistentState(key: string): Promise<string | null> {
+  try {
+    const encoded = await readBinaryState(key);
+    if (encoded && encoded.length > 0) return new TextDecoder().decode(encoded);
+  } catch (error) {
+    console.warn('[NES] IndexedDB 持久存檔讀取失敗，改用 localStorage:', error);
+  }
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    console.warn('[NES] localStorage 持久存檔讀取失敗:', error);
+    return null;
+  }
+}
+
 /**
  * 取得帶有核心類型 + ROM 名稱的存檔 key（每個遊戲獨立存檔）
  */
@@ -3923,7 +3950,7 @@ function saveState(slot: number = 0): boolean {
       slots.set(key, saveData);
       // User slots are stable in Rust; diagnostic exports use a separate registry.
       while (slots.size > 16) slots.delete(slots.keys().next().value!);
-      console.log(`[NES] 暫存成功（限本次遊戲執行）ROM="${currentRomFilename}" slot=${slot}`);
+      console.log(`[NES] 快速暫存成功（同核心）ROM="${currentRomFilename}" slot=${slot}`);
       return true;
     }
     localStorage.setItem(key, saveData);
@@ -4085,14 +4112,67 @@ async function loadSnes9xStateWithPersistence(slot: number): Promise<boolean> {
   }
 }
 
+async function saveNesStateWithPersistence(slot: number): Promise<boolean> {
+  const core = nes;
+  if (!core || core.getCoreType() !== 'nes' || !currentRomFilename || gameLoadAbortController
+      || !Number.isInteger(slot) || slot < 0 || slot >= 16) return false;
+
+  try {
+    const token = core.exportSaveStateForSlot(slot);
+    const persistentState = core.exportPersistentSaveState();
+    if (!token || !persistentState) return false;
+    await writeNesPersistentState(getSaveKey(slot), persistentState);
+    let slots = nesTemporaryStates.get(core);
+    if (!slots) { slots = new Map(); nesTemporaryStates.set(core, slots); }
+    const key = getSaveKey(slot);
+    slots.delete(key);
+    slots.set(key, token);
+    while (slots.size > 16) slots.delete(slots.keys().next().value!);
+    console.log(`[NES] 持久存檔成功 ROM="${currentRomFilename}" slot=${slot} size=${persistentState.length}`);
+    return true;
+  } catch (error) {
+    console.error('[NES] 持久存檔失敗:', error);
+    return false;
+  }
+}
+
+async function loadNesStateWithPersistence(slot: number): Promise<boolean> {
+  const core = nes;
+  if (!core || core.getCoreType() !== 'nes' || !currentRomFilename || gameLoadAbortController
+      || !Number.isInteger(slot) || slot < 0 || slot >= 16) return false;
+
+  const key = getSaveKey(slot);
+  const sessionToken = nesTemporaryStates.get(core)?.get(key);
+  if (sessionToken) return loadState(slot);
+
+  const persistentState = await readNesPersistentState(key);
+  if (!persistentState) return false;
+  try {
+    const success = core.importPersistentSaveState(persistentState);
+    if (!success) {
+      console.warn(`[NES] 持久存檔不相容或已損壞 ROM="${currentRomFilename}" slot=${slot}`);
+      return false;
+    }
+    clearAudioQueue();
+    core.consumeAudioSamples();
+    core.setAudioEnabled(!audioMuted);
+    renderFrame();
+    console.log(`[NES] 持久讀檔成功 ROM="${currentRomFilename}" slot=${slot}`);
+    return true;
+  } catch (error) {
+    console.error('[NES] 持久讀檔失敗:', error);
+    return false;
+  }
+}
+
 function saveStateForUser(slot: number = 0, showResult = false): Promise<boolean> {
   const operation = isSnes9xActive()
     ? queueSnes9xStateOperation(() => saveSnes9xStateWithPersistence(slot))
+    : activeBackend === 'wasm' && nes?.getCoreType() === 'nes'
+      ? saveNesStateWithPersistence(slot)
     : Promise.resolve(saveState(slot));
   return operation.then(success => {
-    if (showResult) showToast(success
-      ? (activeBackend === 'wasm' && nes?.getCoreType() === 'nes' ? '✅ 暫存成功（限本次執行，16 個獨立欄位）' : '✅ 存檔成功')
-      : '❌ 存檔失敗');
+    if (showResult) showToast(success ? '✅ 存檔成功（可跨重新整理）' : '❌ 存檔失敗');
     return success;
   });
 }
@@ -4100,18 +4180,30 @@ function saveStateForUser(slot: number = 0, showResult = false): Promise<boolean
 function loadStateForUser(slot: number = 0, showResult = false): Promise<boolean> {
   const operation = isSnes9xActive()
     ? queueSnes9xStateOperation(() => loadSnes9xStateWithPersistence(slot))
+    : activeBackend === 'wasm' && nes?.getCoreType() === 'nes'
+      ? loadNesStateWithPersistence(slot)
     : Promise.resolve(loadState(slot));
   return operation.then(success => {
-    if (showResult) showToast(success ? '✅ 讀取成功'
-      : (activeBackend === 'wasm' && nes?.getCoreType() === 'nes'
-        ? '❌ 沒有有效暫存（舊檔、重新載入或過期暫存不支援）' : '❌ 沒有存檔'));
+    if (showResult) showToast(success ? '✅ 讀取成功' : '❌ 沒有有效存檔');
     return success;
   });
 }
 
 function exportSaveToFile(): void {
   if (activeBackend === 'wasm' && nes?.getCoreType() === 'nes') {
-    showToast('NES 目前僅支援本次執行暫存，不能匯出為檔案');
+    const saveData = nes.exportPersistentSaveState();
+    if (!saveData) {
+      showToast('NES 尚未準備好，不能匯出存檔');
+      return;
+    }
+    const blob = new Blob([saveData], { type: 'application/x-nes-save' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nes_savestate_${Date.now()}.nes-save`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ 存檔已匯出');
     return;
   }
   if (isFbNeoActive()) {

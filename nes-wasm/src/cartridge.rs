@@ -15,13 +15,14 @@
 
 use crate::ppu::MirrorMode;
 use crate::mappers::*;
+use serde::{Deserialize, Serialize};
 
 fn is_supported_mapper(mapper_id: u8) -> bool {
     matches!(mapper_id, 0 | 1 | 2 | 3 | 4 | 7 | 11 | 15 | 16 | 23 | 66 | 71 | 113 | 202 | 225 | 227 | 245 | 253)
 }
 
 /// iNES 標頭結構
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct CartridgeHeader {
     /// PRG ROM 大小（16KB 為單位）
     pub prg_rom_banks: u8,
@@ -54,6 +55,17 @@ pub struct Cartridge {
     pub mapper: Box<dyn MapperTrait>,
     /// 是否已載入 ROM
     pub loaded: bool,
+    prg_overlay_values: Vec<u8>,
+    prg_overlay_mask: Vec<bool>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct PortableCartridgeState {
+    header: CartridgeHeader,
+    prg_ram: Vec<u8>,
+    chr_ram: bool,
+    mapper: MapperState,
+    loaded: bool,
     prg_overlay_values: Vec<u8>,
     prg_overlay_mask: Vec<bool>,
 }
@@ -192,6 +204,45 @@ impl Cartridge {
     /// 重置卡帶
     pub fn reset(&mut self) {
         self.mapper.reset();
+    }
+
+    pub fn export_portable_state(&self) -> PortableCartridgeState {
+        PortableCartridgeState {
+            header: self.header.clone(),
+            prg_ram: self.prg_ram.clone(),
+            chr_ram: self.chr_ram,
+            mapper: self.mapper.save_state(),
+            loaded: self.loaded,
+            prg_overlay_values: self.prg_overlay_values.clone(),
+            prg_overlay_mask: self.prg_overlay_mask.clone(),
+        }
+    }
+
+    pub fn import_portable_state(&mut self, state: PortableCartridgeState) -> bool {
+        if !self.loaded || !state.loaded
+            || state.header.prg_rom_banks != self.header.prg_rom_banks
+            || state.header.chr_rom_banks != self.header.chr_rom_banks
+            || state.header.mapper_id != self.header.mapper_id
+            || state.header.has_battery != self.header.has_battery
+            || state.header.has_trainer != self.header.has_trainer
+            || state.chr_ram != self.chr_ram
+            || state.prg_ram.len() != self.prg_ram.len()
+            || state.prg_overlay_values.len() != self.prg_overlay_values.len()
+            || state.prg_overlay_mask.len() != self.prg_overlay_mask.len() {
+            return false;
+        }
+
+        let mut mapper = self.mapper.clone();
+        if !mapper.restore_state(&state.mapper) {
+            return false;
+        }
+
+        self.header = state.header;
+        self.prg_ram = state.prg_ram;
+        self.mapper = mapper;
+        self.prg_overlay_values = state.prg_overlay_values;
+        self.prg_overlay_mask = state.prg_overlay_mask;
+        true
     }
 
     /// CPU 讀取

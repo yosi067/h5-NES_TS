@@ -8,7 +8,11 @@ import { initSync, EmuWasm } from '../src/wasm/nes_wasm.js';
 // Execute the actual main.ts save/load functions without booting the UI or WASM.
 const source = fs.readFileSync(new URL('../src/main.ts', import.meta.url), 'utf8');
 const ast = ts.createSourceFile('main.ts', source, ts.ScriptTarget.Latest, true);
-const names = new Set(['getSaveKey', 'saveState', 'loadState', 'exportSaveToFile', 'bytesToBase64', 'base64ToBytes']);
+const names = new Set([
+  'getSaveKey', 'saveState', 'loadState', 'exportSaveToFile', 'bytesToBase64', 'base64ToBytes',
+  'writeNesPersistentState', 'readNesPersistentState', 'saveNesStateWithPersistence',
+  'loadNesStateWithPersistence', 'saveStateForUser', 'loadStateForUser',
+]);
 const declarations = ast.statements.filter(node =>
   ts.isFunctionDeclaration(node) && names.has(node.name?.text)
   || ts.isVariableStatement(node) && node.declarationList.declarations.some(d =>
@@ -19,13 +23,16 @@ const code = ts.transpileModule(declarations.map(n => n.getText(ast)).join('\n')
 
 function fixture(type = 'nes') {
   const persistent = new Map();
+  const binaryPersistent = new Map();
   const calls = [];
   let next = 0;
   const core = {
     getCoreType: () => type,
     exportSaveState: () => type === 'nes' ? `4e45535701#NES-TEMP-2:test:${next++}` : 'unchanged-platform-state',
     exportSaveStateForSlot: () => core.exportSaveState(),
+    exportPersistentSaveState: () => type === 'nes' ? 'NES-SAVE-1:test' : '',
     importSaveState: state => { calls.push(['import', state]); return true; },
+    importPersistentSaveState: state => { calls.push(['import-persistent', state]); return true; },
     consumeAudioSamples: () => calls.push(['consume']),
     setAudioEnabled: enabled => calls.push(['audio', enabled]),
   };
@@ -37,15 +44,19 @@ function fixture(type = 'nes') {
       setItem: (k, v) => { calls.push(['persist', k]); persistent.set(k, v); },
       getItem: k => { calls.push(['read', k]); return persistent.get(k) ?? null; },
     },
+    readBinaryState: async k => binaryPersistent.get(k) ?? null,
+    writeBinaryState: async (k, value) => { calls.push(['binary-persist', k]); binaryPersistent.set(k, value); },
     clearAudioQueue: () => calls.push(['clearAudio']),
     renderFrame: () => calls.push(['render']),
     showToast: message => calls.push(['toast', message]),
     console: { log() {}, warn() {}, error() {} },
     btoa: s => Buffer.from(s, 'binary').toString('base64'),
     atob: s => Buffer.from(s, 'base64').toString('binary'),
+    TextEncoder,
+    TextDecoder,
   });
   vm.runInContext(code, context);
-  return { context, core, calls, persistent };
+  return { context, core, calls, persistent, binaryPersistent };
 }
 
 test('native NES uses only same-instance temporary slots and refreshes audio/video', () => {
@@ -83,8 +94,9 @@ test('expired native token is removed and cannot report a successful restore', (
   assert.equal(calls.filter(c => c[0] === 'expired').length, 1);
 });
 
-test('native export never downloads a session-only token', () => {
-  const { context, calls } = fixture();
+test('native export rejects an empty persistent save', () => {
+  const { context, core, calls } = fixture();
+  core.exportPersistentSaveState = () => '';
   context.exportSaveToFile();
   assert.ok(calls.some(c => c[0] === 'toast'));
 });
@@ -136,6 +148,19 @@ test('actual WASM + frontend: quick-save and diagnostic exports cannot evict ano
     assert.equal(core.loadRom(rom), true);
     core.frame();
     const before = core.debugState();
+    const persistentState = core.exportPersistentSaveState();
+    assert.match(persistentState, /^NES-SAVE-1:/);
+    const restoredCore = new EmuWasm();
+    assert.equal(restoredCore.loadRom(rom), true);
+    assert.equal(restoredCore.importPersistentSaveState(persistentState), true);
+    assert.equal(restoredCore.debugState(), before);
+    const wrongRom = rom.slice();
+    wrongRom[wrongRom.length - 1] ^= 1;
+    const wrongRomCore = new EmuWasm();
+    assert.equal(wrongRomCore.loadRom(wrongRom), true);
+    assert.equal(wrongRomCore.importPersistentSaveState(persistentState), false);
+    wrongRomCore.free();
+    restoredCore.free();
     assert.equal(context.saveState(1), true);
     for (let i = 0; i < 40; i++) {
       core.frame();
@@ -164,4 +189,21 @@ test('native state operations are blocked during ROM loading, not while paused',
   context.gameLoadAbortController = null;
   context.isRunning = false;
   assert.equal(context.loadState(0), true);
+});
+
+test('native user saves persist through IndexedDB and restore into a replacement core', async () => {
+  const { context, calls, binaryPersistent } = fixture();
+  assert.equal(await context.saveStateForUser(0), true);
+  assert.equal(binaryPersistent.size, 1);
+  assert.ok(calls.some(call => call[0] === 'binary-persist'));
+
+  const restoredCalls = [];
+  context.nes = {
+    getCoreType: () => 'nes',
+    importPersistentSaveState: state => { restoredCalls.push(state); return true; },
+    consumeAudioSamples: () => {},
+    setAudioEnabled: () => {},
+  };
+  assert.equal(await context.loadStateForUser(0), true);
+  assert.deepEqual(restoredCalls, ['NES-SAVE-1:test']);
 });

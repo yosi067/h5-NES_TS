@@ -1,3 +1,6 @@
+use serde::{Deserialize, Serialize};
+use serde_big_array::BigArray;
+
 // ============================================================
 // NES 記憶體匯流排 - CPU/PPU 位址空間映射
 // ============================================================
@@ -25,9 +28,10 @@ use crate::cartridge::Cartridge;
 use crate::controller::Controller;
 
 /// NES 記憶體匯流排
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Bus {
     /// 2KB 內部 RAM
+    #[serde(with = "BigArray")]
     pub ram: [u8; 2048],
 
     /// DMA 頁面位址（高位元組）

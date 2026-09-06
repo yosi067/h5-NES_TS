@@ -1,4 +1,5 @@
 use crate::fceumm_coeffs::very_high_44100_ntsc_coefficients;
+use serde::{Deserialize, Serialize};
 
 const VERY_HIGH_44100_NTSC_RATIO: u64 = 2_659_740;
 const WLOOKUP1_BASE: [u32; 32] = [
@@ -74,7 +75,7 @@ pub(crate) enum FceummChannelState {
     },
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct FceummRenderTimeline {
     timestamp: u64,
     channel_positions: [u64; 5],
@@ -279,7 +280,7 @@ fn triangle_amplitude(step: u8, volume: u32) -> i32 {
     ((output / 256 * volume) & !0xFFFF) as i32
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct FceummFirResampler {
     coefficients: Vec<i32>,
     ratio: u64,
@@ -354,7 +355,7 @@ impl FceummFirResampler {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 struct FceummPostFilter {
     mul1: i64,
     mul2: i64,
@@ -399,7 +400,7 @@ impl FceummPostFilter {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct FceummAudioPipeline {
     resampler: FceummFirResampler,
     post_filter: FceummPostFilter,
@@ -422,6 +423,12 @@ impl FceummAudioPipeline {
         let mut output = self.resampler.process(samples);
         self.post_filter.process(&mut output);
         output
+    }
+
+    pub(crate) fn is_portable_state_compatible(&self, baseline: &Self) -> bool {
+        self.resampler.coefficients == baseline.resampler.coefficients
+            && self.resampler.ratio == baseline.resampler.ratio
+            && self.resampler.history.len() <= self.resampler.coefficients.len() + 1
     }
 }
 

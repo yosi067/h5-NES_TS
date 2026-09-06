@@ -17,6 +17,7 @@
 use crate::fceumm_audio::{
     fceumm_wave_hi_flush, FceummAudioPipeline, FceummChannelState, FceummRenderTimeline,
 };
+use serde::{Deserialize, Serialize};
 
 /// 音頻緩衝區大小（足夠儲存一幀的取樣）
 const AUDIO_BUFFER_SIZE: usize = 8192;
@@ -58,7 +59,7 @@ const LENGTH_TABLE: [u8; 32] = [
 // ===== 脈衝波聲道 =====
 
 /// 脈衝波聲道（Pulse）
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 struct PulseChannel {
     /// 是否啟用
     enabled: bool,
@@ -290,7 +291,7 @@ impl PulseChannel {
 // ===== 三角波聲道 =====
 
 /// 三角波聲道（Triangle）
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 struct TriangleChannel {
     /// 是否啟用
     enabled: bool,
@@ -394,7 +395,7 @@ impl TriangleChannel {
 // ===== 雜訊聲道 =====
 
 /// 雜訊聲道（Noise）
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 struct NoiseChannel {
     /// 是否啟用
     enabled: bool,
@@ -530,7 +531,7 @@ impl NoiseChannel {
 // ===== DMC 聲道 =====
 
 /// DMC 聲道（Delta Modulation Channel）
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 struct DmcChannel {
     /// 是否啟用
     enabled: bool,
@@ -632,7 +633,7 @@ impl DmcChannel {
 // ===== APU 主結構 =====
 
 /// APU 結構體
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Apu {
     /// 脈衝波聲道 1
     pulse1: PulseChannel,
@@ -763,6 +764,29 @@ impl Apu {
             dmc_transfer_start_delay: 0,
             dmc_disable_delay: 0,
         }
+    }
+
+    pub(crate) fn portable_state_compatible(&self, state: &Self) -> bool {
+        state.audio_buffer.len() == self.audio_buffer.len()
+            && state.buffer_write_pos <= state.audio_buffer.len()
+            && state.fceumm_wave_hi_input.len() <= 1_000_000
+            && state.fceumm_audio.is_portable_state_compatible(&self.fceumm_audio)
+            && state.pulse1.duty < 4
+            && state.pulse1.duty_pos < 8
+            && state.pulse2.duty < 4
+            && state.pulse2.duty_pos < 8
+            && state.triangle.sequence_pos < 32
+            && state.noise.shift_register <= 0x7FFF
+            && state.dmc.rate_index < 16
+            && state.dmc.bits_remaining <= 8
+            && state.dmc.output_level <= 0x7F
+            && state.sample_rate.is_finite()
+            && state.sample_rate > 0.0
+            && state.sample_interval.is_finite()
+            && state.sample_interval > 0.0
+            && state.sample_counter.is_finite()
+            && state.sample_accumulator.is_finite()
+            && state.audio_buffer.iter().all(|sample| sample.is_finite())
     }
 
     /// 重置 APU

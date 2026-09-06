@@ -90,22 +90,25 @@
 - 設定 `CT2_TEST_PLAY=1` 和 `CT2_TEST_FRAMES=15000` 再執行上一項：實際開球，780 個劇情 glyph 事件、38 個比賽事件、64 個可見劇情片段，所有抽查一致。不是逐幀完整狀態等價證明；匯出 token 的舊十六進位診斷前綴仍只涵蓋部分狀態，不能當成完整可攜存檔。
 - 瀏覽器驗證：原 ROM 實際中文字形、844×390 橫向 contain 定位、390px 編輯器無水平溢位。尚無全遊戲／全部手機／完整存讀檔回歸覆蓋。
 
-## NES 臨時存檔修正與限制
+## NES 存檔與限制
 
 舊 NESW v1 只保存部分 CPU／RAM／PPU，遺漏 mapper、APU、DMA 與時序。CT2 實測舊讀檔後相同 CPU 位址映到錯誤 PRG bank；截斷舊資料也可能造成 WASM panic。正式讀取路徑不再呼叫此解碼器。
 
-目前原生 NES 改為完整硬體深拷貝（CPU、PPU、APU、匯流排、mapper／卡帶、手把、時鐘與 DMC DMA）的**同核心、本次執行暫存**。使用者有 16 個獨立欄位（0–15），覆寫一欄只替換該欄快照；診斷用 `exportSaveState()` 另保留最近 16 次，不再淘汰使用者欄位。未知、舊格式、過期或重新載入前的 token 會先拒絕，不修改執行中狀態。讀取成功後清空未播放的未來音訊並更新畫面。
+目前原生 NES 有兩條明確路徑：
+
+- 快速欄位使用完整硬體深拷貝（CPU、PPU、APU、匯流排、mapper／卡帶、手把、時鐘與 DMC DMA）的**同核心暫存 token**。使用者有 16 個獨立欄位（0–15），覆寫一欄只替換該欄快照；診斷用 `exportSaveState()` 另保留最近 16 次，不再淘汰使用者欄位。這些 token 綁定目前 WASM 實例，返回選單、重建核心或重新整理後不能使用。
+- 使用者的「儲存／讀取」按鈕另使用完整硬體快照 `NES-SAVE-1`。快照以版本前綴加 Base64／bincode 封裝，包含 ROM SHA-256、mapper／卡帶、CPU、PPU、APU、匯流排、手把、時鐘與 DMA 狀態；前端優先寫入 IndexedDB，失敗才用 `localStorage` 備援。讀取會檢查格式、大小、硬體資料範圍與目前 ROM 雜湊，錯誤或不同 ROM 會拒絕且不部分套用。
+
+未知、舊格式、過期或重新載入前的 token 會先拒絕，不修改執行中狀態。讀取成功後清空未播放的未來音訊並更新畫面。原生 NES 匯出檔是文字形式的 `.nes-save` 容器，不是舊 NESW v1，也不是 JSON；可用來手動備份，但仍只能匯入相同 ROM 身分及相容格式。
 
 ### 存讀檔回歸修正（2026-09-05）
 
 瀏覽器使用原版 CT2 可重現：儲存欄位 1，再覆寫欄位 0 共 16 次，欄位 1 讀取失敗。原因是 Rust 以「每次匯出」FIFO 淘汰，而前端 WeakMap 以「不同欄位」計數；兩者並不同步。既有 mock 每次 import 都回傳成功，未覆蓋此錯誤。現在前端走 `exportSaveStateForSlot()`，重複快存及診斷匯出不會影響其他欄位。暫停／重置後仍能讀取；ROM 載入中拒絕操作，空核心匯出也不再回報儲存成功。
 
-此修正**沒有加入跨重開持久化**。返回選單會重建核心，連同重新整理／重載 ROM 都會失去暫存；不能還原舊部分狀態檔。WASM 必須重新建置，不能只部署 TypeScript。
-
-- 不寫入 localStorage、不提供暫存檔下載；重新整理、換 ROM 或重建核心後失效。不能把此修正當成可攜式／跨重開存檔完成。
-- 舊暫存不會嘗試不安全遷移，也不刪除使用者原有 localStorage 檔案。其他主機的既有保存路徑不變。
+- `NES-SAVE-1` 會以 `emu_savestate_nes_<ROM名稱>_<slot>` 為 key，主寫入 IndexedDB；若瀏覽器不允許 IndexedDB，才回退到同一 key 的 `localStorage`。因此重新整理、返回選單後重建核心，再載入相同 ROM，仍可讀取使用者存檔。換 ROM、改 ROM 位元組、格式損壞或超過大小限制時會拒絕。
+- 舊暫存不會嘗試不安全遷移，也不刪除使用者原有 localStorage 檔案。其他主機的既有保存路徑不變；Snes9x 也沿用其既有的 IndexedDB／localStorage 路徑。
 - 文字觀察證據在讀檔時清除；已經顯示的日文需等新來源事件才能重新翻譯，仍是已知限制。
-- `node --test tools/nes-temporary-state.test.mjs`：九項回歸，含實際生成 WASM + 前端函式、40 次覆寫／診斷匯出、重置／重載、空核心與載入中 gate，以及其他平台既有格式。
+- `node --test tools/nes-temporary-state.test.mjs`：十項回歸，含實際生成 WASM + 前端函式、40 次覆寫／診斷匯出、持久快照跨核心讀取、ROM 不相容拒絕、重置／重載、空核心與載入中 gate，以及其他平台既有格式。
 - Rust `temporary_state` 測試：MMC3／DMA 中途恢復、重複讀取、過期／無效／舊格式原子拒絕；原 ROM opt-in `ct2_temporary_state_restores_original_game_exactly` 再對照 600 幀畫面、音訊、mapper 與時序。
 
 縮句稽核 `node tools/ct2-translation-fit.mjs` 以完整行計算固定字級保守預算：1,137 行中仍有 14 行超出「來源字數」預算，多為專名／片尾碎片；實際安全空白可能容納，不能宣稱全分支排版已驗收。自訂草稿不會被新版精簡稿自動覆蓋。

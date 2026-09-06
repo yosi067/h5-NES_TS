@@ -27,6 +27,7 @@
 // ============================================================
 
 use crate::ppu::MirrorMode;
+use serde::{Deserialize, Serialize};
 
 /// Mapper 寫入操作的結果
 pub struct MapperWriteResult {
@@ -120,6 +121,12 @@ pub trait MapperTrait: MapperClone {
     /// 檢查並消耗 IRQ 請求
     fn check_irq(&mut self) -> bool { false }
 
+    /// 取得可攜式存檔所需的 mapper 狀態
+    fn save_state(&self) -> MapperState;
+
+    /// 還原可攜式存檔中的 mapper 狀態
+    fn restore_state(&mut self, state: &MapperState) -> bool;
+
     /// 取得 CHR bank 可寫入遮罩（用於混合 CHR ROM/RAM mapper）
     /// 每個位元代表一個 1KB bank 是否可寫入
     fn chr_writable_mask(&self) -> u8 { 0 }
@@ -131,6 +138,45 @@ pub trait MapperTrait: MapperClone {
     fn trace_mapper1_state(&self) -> Option<Mapper1TraceState> { None }
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub enum MapperState {
+    Mapper0(Mapper0),
+    Mapper1(Mapper1),
+    Mapper2(Mapper2),
+    Mapper3(Mapper3),
+    Mapper4(Mapper4),
+    Mapper7(Mapper7),
+    Mapper11(Mapper11),
+    Mapper15(Mapper15),
+    Mapper16(Mapper16),
+    Mapper23(Mapper23),
+    Mapper66(Mapper66),
+    Mapper71(Mapper71),
+    Mapper113(Mapper113),
+    Mapper202(Mapper202),
+    Mapper225(Mapper225),
+    Mapper227(Mapper227),
+    Mapper245(Mapper245),
+    Mapper253(Mapper253),
+}
+
+macro_rules! mapper_state_methods {
+    ($ty:ident, $variant:ident) => {
+        fn save_state(&self) -> MapperState {
+            MapperState::$variant(self.clone())
+        }
+
+        fn restore_state(&mut self, state: &MapperState) -> bool {
+            if let MapperState::$variant(value) = state {
+                *self = value.clone();
+                true
+            } else {
+                false
+            }
+        }
+    };
+}
+
 // ============================================================
 // Mapper 0 (NROM) - 最簡單的 Mapper，無 bank 切換
 // ============================================================
@@ -138,7 +184,7 @@ pub trait MapperTrait: MapperClone {
 // CHR ROM: 8KB
 // 用於：超級瑪利歐兄弟、打磚塊等早期遊戲
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper0 {
     prg_banks: u8,
     chr_banks: u8,
@@ -151,6 +197,8 @@ impl Mapper0 {
 }
 
 impl MapperTrait for Mapper0 {
+    mapper_state_methods!(Mapper0, Mapper0);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             // 16KB 鏡像或 32KB 直接映射
@@ -192,7 +240,7 @@ impl MapperTrait for Mapper0 {
 // 支援 PRG/CHR bank 切換與鏡像控制
 // 用於：塞爾達傳說、洛克人2、最終幻想 等
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper1 {
     prg_banks: u8,
     chr_banks: u8,
@@ -224,6 +272,8 @@ impl Mapper1 {
 }
 
 impl MapperTrait for Mapper1 {
+    mapper_state_methods!(Mapper1, Mapper1);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             let prg_mode = (self.control >> 2) & 0x03;
@@ -349,7 +399,7 @@ impl MapperTrait for Mapper1 {
 // 可切換的 bank 在 $8000-$BFFF
 // 用於：洛克人、魂斗羅、惡魔城 等
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper2 {
     prg_banks: u8,
     selected_bank: u8,
@@ -365,6 +415,8 @@ impl Mapper2 {
 }
 
 impl MapperTrait for Mapper2 {
+    mapper_state_methods!(Mapper2, Mapper2);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 && addr < 0xC000 {
             Some(self.selected_bank as u32 * 16384 + (addr & 0x3FFF) as u32)
@@ -402,7 +454,7 @@ impl MapperTrait for Mapper2 {
 // 可切換 8KB CHR ROM bank
 // 用於：所羅門之鑰、暴力拆除 等
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper3 {
     prg_banks: u8,
     _chr_banks: u8,
@@ -420,6 +472,8 @@ impl Mapper3 {
 }
 
 impl MapperTrait for Mapper3 {
+    mapper_state_methods!(Mapper3, Mapper3);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             let mask = if self.prg_banks > 1 { 0x7FFF } else { 0x3FFF };
@@ -463,7 +517,7 @@ impl MapperTrait for Mapper3 {
 // - 可控的鏡像模式
 // 用於：超級瑪利歐兄弟3、忍者龍劍傳、大金剛3 等
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper4 {
     prg_banks: u8,
     chr_banks: u8,
@@ -559,6 +613,8 @@ impl Mapper4 {
 }
 
 impl MapperTrait for Mapper4 {
+    mapper_state_methods!(Mapper4, Mapper4);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             let bank = self.get_prg_bank(addr);
@@ -688,7 +744,7 @@ impl MapperTrait for Mapper4 {
 // 鏡像: 單屏
 // 用於：雙截龍、戰斧 等
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper7 {
     _prg_banks: u8,
     selected_bank: u8,
@@ -706,6 +762,8 @@ impl Mapper7 {
 }
 
 impl MapperTrait for Mapper7 {
+    mapper_state_methods!(Mapper7, Mapper7);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             Some(self.selected_bank as u32 * 32768 + (addr & 0x7FFF) as u32)
@@ -744,7 +802,7 @@ impl MapperTrait for Mapper7 {
 // ============================================================
 // Mapper 11 (Color Dreams) - 簡單 PRG/CHR 切換
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper11 {
     prg_banks: u8,
     chr_banks: u8,
@@ -759,6 +817,8 @@ impl Mapper11 {
 }
 
 impl MapperTrait for Mapper11 {
+    mapper_state_methods!(Mapper11, Mapper11);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             let bank = self.prg_bank as u32 % self.prg_banks.max(1) as u32;
@@ -794,7 +854,7 @@ impl MapperTrait for Mapper11 {
 // ============================================================
 // 用於 100 合 1 多遊戲卡帶
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper15 {
     prg_banks: u8,
     /// 記錄地址鎖存器 (用於模式選擇)
@@ -816,6 +876,8 @@ impl Mapper15 {
 }
 
 impl MapperTrait for Mapper15 {
+    mapper_state_methods!(Mapper15, Mapper15);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             let total_8k = self.prg_banks as u32 * 2; // 8KB banks
@@ -890,7 +952,7 @@ impl MapperTrait for Mapper15 {
 // 支援 PRG/CHR bank 切換和 CPU 週期 IRQ
 // 用於：龍珠Z 系列等
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper16 {
     prg_banks: u8,
     chr_banks: u8,
@@ -921,6 +983,8 @@ impl Mapper16 {
 }
 
 impl MapperTrait for Mapper16 {
+    mapper_state_methods!(Mapper16, Mapper16);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 && addr < 0xC000 {
             let bank = self.prg_bank as u32 % self.prg_banks.max(1) as u32;
@@ -1009,7 +1073,7 @@ impl MapperTrait for Mapper16 {
 // 支援精細的 PRG/CHR bank 切換和 IRQ
 // 用於：魂斗羅 Force 等 Konami 遊戲
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper23 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1043,6 +1107,8 @@ impl Mapper23 {
 }
 
 impl MapperTrait for Mapper23 {
+    mapper_state_methods!(Mapper23, Mapper23);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         let total = self.prg_banks as u32 * 2; // 8KB banks
         match addr {
@@ -1165,7 +1231,7 @@ impl MapperTrait for Mapper23 {
 // ============================================================
 // Mapper 66 (GxROM) - 簡單 PRG/CHR 切換
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper66 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1180,6 +1246,8 @@ impl Mapper66 {
 }
 
 impl MapperTrait for Mapper66 {
+    mapper_state_methods!(Mapper66, Mapper66);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             let bank = self.prg_bank as u32 % self.prg_banks.max(1) as u32;
@@ -1206,7 +1274,7 @@ impl MapperTrait for Mapper66 {
 // ============================================================
 // Mapper 71 (Camerica/Codemasters)
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper71 {
     prg_banks: u8,
     selected_bank: u8,
@@ -1220,6 +1288,8 @@ impl Mapper71 {
 }
 
 impl MapperTrait for Mapper71 {
+    mapper_state_methods!(Mapper71, Mapper71);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 && addr < 0xC000 {
             Some(self.selected_bank as u32 * 16384 + (addr & 0x3FFF) as u32)
@@ -1254,7 +1324,7 @@ impl MapperTrait for Mapper71 {
 // ============================================================
 // 用於台灣麻將等遊戲
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper113 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1274,6 +1344,8 @@ impl Mapper113 {
 }
 
 impl MapperTrait for Mapper113 {
+    mapper_state_methods!(Mapper113, Mapper113);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             let bank = self.prg_bank as u32 % self.prg_banks.max(1) as u32;
@@ -1306,7 +1378,7 @@ impl MapperTrait for Mapper113 {
 // ============================================================
 // Mapper 202 - 150合1 等合集卡帶
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper202 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1327,6 +1399,8 @@ impl Mapper202 {
 }
 
 impl MapperTrait for Mapper202 {
+    mapper_state_methods!(Mapper202, Mapper202);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             let total_prg = self.prg_banks as u32 * 16384;
@@ -1386,7 +1460,7 @@ impl MapperTrait for Mapper202 {
 // ============================================================
 // 支援高達 2MB PRG ROM 和 1MB CHR ROM
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper225 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1407,6 +1481,8 @@ impl Mapper225 {
 }
 
 impl MapperTrait for Mapper225 {
+    mapper_state_methods!(Mapper225, Mapper225);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             let total_prg = self.prg_banks as u32 * 16384;
@@ -1484,7 +1560,7 @@ impl MapperTrait for Mapper225 {
 //
 // Power-on: All bits clear → S=0,O=0 → UNROM-like, bank 0 at both halves
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper227 {
     prg_banks: u8,
     _chr_banks: u8,
@@ -1508,6 +1584,8 @@ impl Mapper227 {
 }
 
 impl MapperTrait for Mapper227 {
+    mapper_state_methods!(Mapper227, Mapper227);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         if addr >= 0x8000 {
             let total_prg = self.prg_banks as u32 * 16384;
@@ -1592,7 +1670,7 @@ impl MapperTrait for Mapper227 {
 // 類似 MMC3 但有額外的 CHR RAM 控制和 PRG 高位元
 // 用於一些中文版遊戲
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper245 {
     prg_banks: u8,
     _chr_banks: u8,
@@ -1623,6 +1701,8 @@ impl Mapper245 {
 }
 
 impl MapperTrait for Mapper245 {
+    mapper_state_methods!(Mapper245, Mapper245);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         let count = self.prg_banks as u32 * 2; // 8KB banks
         match addr {
@@ -1728,7 +1808,7 @@ impl MapperTrait for Mapper245 {
 //
 // 參考：FCEUX 253.cpp
 // ============================================================
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Mapper253 {
     prg_banks: u8,
     chr_banks: u8,
@@ -1792,6 +1872,8 @@ impl Mapper253 {
 }
 
 impl MapperTrait for Mapper253 {
+    mapper_state_methods!(Mapper253, Mapper253);
+
     fn cpu_read(&self, addr: u16) -> Option<u32> {
         let count = self.prg_banks as u32 * 2;
         match addr {

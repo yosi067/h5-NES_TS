@@ -1,3 +1,6 @@
+use serde::{Deserialize, Serialize};
+use serde_big_array::BigArray;
+
 // ============================================================
 // NES PPU 模擬 - 圖形處理器 (2C02)
 // ============================================================
@@ -40,7 +43,7 @@ const PALETTE: [(u8, u8, u8); 64] = [
 ];
 
 #[cfg(test)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub(crate) struct A12TraceEvent {
     pub scanline: i16,
     pub cycle: u16,
@@ -49,7 +52,7 @@ pub(crate) struct A12TraceEvent {
 }
 
 /// PPU 結構體
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Ppu {
     // ===== PPU 暫存器 =====
     /// PPUCTRL ($2000) - 控制暫存器
@@ -88,10 +91,12 @@ pub struct Ppu {
 
     // ===== 記憶體 =====
     /// 名稱表 VRAM（2KB，可能被鏡像映射到 4KB 位址空間）
+    #[serde(with = "BigArray")]
     pub nametable: [u8; 2048],
     /// 調色盤 RAM（32 位元組）
     pub palette: [u8; 32],
     /// OAM（Object Attribute Memory，精靈屬性記憶體，256 位元組）
+    #[serde(with = "BigArray")]
     pub oam: [u8; 256],
     /// 次要 OAM（掃描線精靈評估用，32 位元組 = 8 個精靈）
     pub secondary_oam: [u8; 32],
@@ -156,6 +161,7 @@ pub struct Ppu {
     text_source_high: u16,
     text_source_low: u16,
     text_source_shift: u8,
+    #[serde(with = "BigArray")]
     text_write_generation: [u32; 2048],
     pub text_fetched_cells: Vec<u32>,
     text_next_cell: u32,
@@ -207,7 +213,7 @@ pub struct Ppu {
     pub(crate) a12_trace: Vec<A12TraceEvent>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 struct ConditionalChrOverlayPage {
     guard_address: u16,
     guard_value: u8,
@@ -216,7 +222,7 @@ struct ConditionalChrOverlayPage {
 }
 
 /// 名稱表鏡像模式
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum MirrorMode {
     Horizontal,       // 水平鏡像（垂直排列）
     Vertical,         // 垂直鏡像（水平排列）
@@ -366,6 +372,32 @@ impl Ppu {
         } else {
             self.chr_use_bank_mapping = true;
         }
+    }
+
+    pub(crate) fn portable_state_compatible(&self, state: &Self) -> bool {
+        state.frame_buffer.len() == self.frame_buffer.len()
+            && state.chr_data.len() == self.chr_data.len()
+            && state.chr_overlay_values.len() == self.chr_overlay_values.len()
+            && state.chr_overlay_mask.len() == self.chr_overlay_mask.len()
+            && state.chr_base_overlay_values.len() == self.chr_base_overlay_values.len()
+            && state.chr_base_overlay_mask.len() == self.chr_base_overlay_mask.len()
+            && state.text_provenance.len() <= self.frame_buffer.len() / 4
+            && state.text_background_provenance.len() <= self.frame_buffer.len() / 4
+            && state.text_fetched_cells.len() <= 8192
+            && state.text_frame_metadata.len() <= 8192
+            && state.conditional_chr_overlay_pages.len() <= 1024
+            && state.conditional_chr_overlay_pages.iter().all(|page| {
+                page.overlays.len() <= state.chr_data.len()
+                    && page.overlays.iter().all(|(offset, _)| *offset < state.chr_data.len())
+            })
+            && state.v <= 0x7FFF
+            && state.t <= 0x7FFF
+            && state.fine_x < 8
+            && (-1..=261).contains(&state.scanline)
+            && state.cycle <= 340
+            && state.chr_bank_offsets.iter().all(|offset| {
+                offset.checked_add(0x03FF).is_some()
+            })
     }
 
     /// 更新 CHR bank 映射表（由 Emulator 在 Mapper 狀態變化時呼叫）
