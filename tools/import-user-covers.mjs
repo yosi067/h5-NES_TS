@@ -16,6 +16,10 @@ const userAgent = 'h5-nes-research/0.1 (non-commercial game preservation researc
 
 const targets = [
   {
+    file: 'nbbatman.zip',
+    source: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9KNF88h6jrlZ68pZFiwhVSWoaxeInc6CSt22hEP8Eqw&s=10',
+  },
+  {
     file: '南極大冒險.zip',
     source: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRwPFefZ1ziKim5-91cRLSWvukV3XTPuvsCtMFN0LEHeg&s=10',
   },

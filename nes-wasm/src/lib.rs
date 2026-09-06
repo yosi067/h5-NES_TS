@@ -105,6 +105,16 @@ impl NesWasm {
         self.emu.active_game_profile_id().to_string()
     }
 
+    #[wasm_bindgen(js_name = "setGameProfileTuning")]
+    pub fn set_game_profile_tuning(&mut self, json: &str) -> Result<(), JsValue> {
+        self.emu.set_game_profile_tuning(json).map_err(|e| JsValue::from_str(&e))
+    }
+
+    #[wasm_bindgen(js_name = "getGameProfileTuning")]
+    pub fn game_profile_tuning(&self) -> String {
+        self.emu.game_profile_tuning()
+    }
+
     /// 重置模擬器
     pub fn reset(&mut self) {
         self.emu.reset();
@@ -336,6 +346,22 @@ impl EmuWasm {
         match &self.core {
             CoreType::Nes(emu) => emu.active_game_profile_id().to_string(),
             _ => String::new(),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "setGameProfileTuning")]
+    pub fn set_game_profile_tuning(&mut self, json: &str) -> Result<(), JsValue> {
+        match &mut self.core {
+            CoreType::Nes(emu) => emu.set_game_profile_tuning(json).map_err(|e| JsValue::from_str(&e)),
+            _ => Err(JsValue::from_str("tuning requires the NES core")),
+        }
+    }
+
+    #[wasm_bindgen(js_name = "getGameProfileTuning")]
+    pub fn game_profile_tuning(&self) -> String {
+        match &self.core {
+            CoreType::Nes(emu) => emu.game_profile_tuning(),
+            _ => r#"{"supported":false,"tsubasaLevel":null}"#.into(),
         }
     }
 

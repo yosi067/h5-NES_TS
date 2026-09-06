@@ -14,6 +14,7 @@ import JSZip from 'jszip';
 import { applyBpsPatch } from './game-profiles/bps';
 import { CT2_SOURCE_HASHES, validateLocalizationAssets, type LocalizationAssets } from './game-profiles/localization';
 import { NesTextOverlay } from './game-profiles/text-overlay';
+import { mountCt2RuntimeTuning } from './game-profiles/ct2-runtime-tuning';
 import { getRomMagazineMeta } from './data/rom-metadata';
 import type { EmulatorControls } from 'mupen64plus-web';
 import {
@@ -103,6 +104,8 @@ const FBNEO_SUPPORTED_GAMES = [
   'ddp2100',
   'garou',
   'knights',
+  'nbbatman',
+  'nbbatmanu',
   'kof2000',
   'kof2001',
   'kof2003',
@@ -338,6 +341,7 @@ let activeGamePresentation: GamePresentation | null = null;
 let activeGamePresentationFrame = 0;
 let activeGamePresentationInputFrame: number | null = null;
 let textOverlay: NesTextOverlay | null = null;
+let gameProfileTuningControls: { dispose(): void } | null = null;
 
 async function loadGameProfileIndex(signal?: AbortSignal): Promise<GameProfileIndex> {
   if (!gameProfileIndexPromise) {
@@ -640,6 +644,8 @@ function stopFbNeoBackend(): void {
 }
 
 function resetWasmCore(): void {
+  gameProfileTuningControls?.dispose();
+  gameProfileTuningControls = null;
   textOverlay?.dispose();
   textOverlay = null;
   if (!nes) return;
@@ -2088,6 +2094,8 @@ async function startGame(
   signal?: AbortSignal,
 ): Promise<void> {
   throwIfSignalAborted(signal);
+  gameProfileTuningControls?.dispose();
+  gameProfileTuningControls = null;
   textOverlay?.dispose();
   textOverlay = null;
   activeGamePresentation = null;
@@ -2217,6 +2225,9 @@ async function startGame(
 
     if (coreType === 'nes' && localizationAssets && canvas && nes.enableTextObserver(true)) {
       textOverlay = new NesTextOverlay(canvas, localizationAssets);
+    }
+    if (coreType === 'nes' && canvas) {
+      gameProfileTuningControls = mountCt2RuntimeTuning(nes, canvas.closest('.screen-bezel') ?? canvas);
     }
     
     // 隱藏選擇器，顯示遊戲畫面

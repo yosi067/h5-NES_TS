@@ -105,7 +105,16 @@
 
       <section class="information-grid" aria-label="使用說明">
         <article class="notice"><h2>儲存之後，如何套用？</h2><p>僅按「儲存本機草稿」才會寫入此網站的 localStorage；匯入與匯出不會自動儲存。請定期匯出完整 JSON 備份，瀏覽器清除資料後本機草稿可能消失。</p><p>遊戲端需接上同源 localStorage 同步並核對 ROM 與原文；接入後可在下一次文字事件套用新譯文，不會立即重繪已顯示的對話。本頁只負責編輯，並不保證遊戲端已接入。</p></article>
-        <article class="notice"><h2>能力數值</h2><p class="unavailable">能力數值尚未確認，未提供可寫入欄位</p><p>交換檔保留空的 values 陣列；這裡不推測球員能力、位址或數值。</p></article>
+        <article class="notice" id="tsubasa-preview">
+          <h2>大空翼・能力研究預覽</h2>
+          <p class="unavailable">僅計算預覽，未套用至遊戲。沒有啟用滿能力補丁。</p>
+          <p>以原版 ROM 係數與查表公式計算，預設顯示自然滿級 64。自然滿級不代表每項能力都是 255；體力也不是 999。</p>
+          <label for="tsubasa-level">預覽等級（1–64）</label>
+          <input id="tsubasa-level" data-stat-level type="number" min="1" max="64" step="1" value="64" aria-describedby="stats-preview-help" />
+          <div class="stat-preview-actions"><button type="button" data-stat-max>預覽自然滿級</button><button type="button" data-stat-reset>回到初始等級</button></div>
+          <div data-stat-output aria-live="polite" aria-atomic="true"></div>
+          <p id="stats-preview-help"># 為原版能力選取器，保留重複標籤以免混淆不同欄位。預覽不讀寫 ROM、RAM、存檔或本機草稿；不改動翻譯，values 仍為空。換隊、重算及保存規則尚待驗證，因此尚無遊戲端套用按鈕。</p>
+        </article>
       </section>
       <details class="identity-details"><summary>目錄身分與檔案規格</summary><dl><dt>遊戲</dt><dd>captain-tsubasa-2-jp</dd><dt>ROM SHA-256</dt><dd id="source-sha">尚未載入</dd><dt>交換格式</dt><dd>nes-localization · v1 · zh-Hant · 單一完整 JSON · 上限 4 MiB</dd></dl><p>匯入必須包含所有 ID，且 ROM 身分、分類與原文需逐條相符；不接受未知、重複或缺少的 ID。</p></details>
       <footer>一條一條校對，讓故事更靠近。<span>純本機工作流程 / 翻譯工作室</span></footer>

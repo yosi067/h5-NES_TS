@@ -2,6 +2,9 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
 
+#[path = "ct2_tuning.rs"]
+pub mod ct2_tuning;
+
 pub const PROFILE_SCHEMA_VERSION: u32 = 1;
 
 #[derive(Debug, Deserialize, PartialEq, Eq)]

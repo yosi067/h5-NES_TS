@@ -63,7 +63,7 @@
       "id": "opening.intro.00.text.00bc",
       "category": "dialogue",
       "source": "ん",
-      "translation": "小次郎"
+      "translation": "同學"
     },
     {
       "id": "opening.intro.00.text.00be",
@@ -3837,7 +3837,7 @@
       "id": "cutscenes-bank-04.05.text.0356",
       "category": "dialogue",
       "source": "「ファイヤー!!",
-      "translation": "「火焰射門！"
+      "translation": "「火焰！」"
     },
     {
       "id": "cutscenes-bank-04.05.text.03ab",
@@ -3927,7 +3927,7 @@
       "id": "cutscenes-bank-04.05.text.04c0",
       "category": "dialogue",
       "source": "「ロベルトほんごう",
-      "translation": "「羅伯特・本鄉"
+      "translation": "「羅伯特本鄉"
     },
     {
       "id": "cutscenes-bank-04.05.text.04ca",
@@ -5535,7 +5535,7 @@
       "id": "cutscenes-bank-04.15.text.0012",
       "category": "dialogue",
       "source": "「ついにきたな",
-      "translation": "「終於來了，"
+      "translation": "「終於來了"
     },
     {
       "id": "cutscenes-bank-04.15.text.001a",
@@ -7543,7 +7543,7 @@
       "id": "cutscenes-bank-05.02.text.0d2a",
       "category": "dialogue",
       "source": "キャスト",
-      "translation": "登場人物"
+      "translation": "角色"
     },
     {
       "id": "cutscenes-bank-05.03.text.0005",

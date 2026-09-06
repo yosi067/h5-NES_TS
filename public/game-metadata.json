@@ -2061,6 +2061,21 @@
       "descriptionSource": "https://zh.wikipedia.org/wiki/%E6%81%90%E9%BE%99%E5%BF%AB%E6%89%93",
       "descriptionStatus": "candidate-wikipedia"
     },
+    "nbbatman.zip": {
+      "cover": "assets/covers/cover-55d88b6e2db2.jpg",
+      "coverSource": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9KNF88h6jrlZ68pZFiwhVSWoaxeInc6CSt22hEP8Eqw&s=10",
+      "coverImageSource": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT9KNF88h6jrlZ68pZFiwhVSWoaxeInc6CSt22hEP8Eqw&s=10",
+      "coverStatus": "user-selected-artwork",
+      "coverConfidence": "high",
+      "verified": true,
+      "year": "1993",
+      "publisher": "Irem America",
+      "genre": "BEAT ’EM UP",
+      "players": "1–4",
+      "description": "《忍者棒球》是 Irem 於 1993 年推出的橫向清版動作遊戲，以棒球裝備與忍者英雄為主題。本檔為美版 Ninja Baseball Batman，使用 Irem America 的 nbbatmanu 驅動。方向鍵移動、Z 攻擊、X 跳躍，5 投幣、1 或 Enter 開始。原街機支援四人；目前網頁核心輸入介面僅接入前兩位玩家，鍵盤控制 1P。",
+      "descriptionSource": "editorial:installed-fbneo-driver-and-runtime-verification",
+      "descriptionStatus": "editorial"
+    },
     "simpsons.zip": {
       "cover": "assets/covers/cover-007d6fcd68b1.jpg",
       "coverSource": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQhFMyyyuXcrLqahi0G9DaILiGa4iazjBpfx6YkWAq4bA&s=10",

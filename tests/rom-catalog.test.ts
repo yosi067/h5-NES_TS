@@ -43,10 +43,11 @@ const expectedSystemCounts = {
   gg: 4,
   genesis: 5,
   snes: 38,
-  arcade: 30,
+  arcade: 31,
   n64: 6,
 };
 const intentionallyHiddenFiles = new Set([
+  'megaman2.zip', // CPS2 key missing; actual bundled-core launch failed.
   '0073 - 無人島物語 (繁)(部分漢化)(天空漢化組).zip',
   '68合1(內含煙山坦克，即可消草的90坦克).zip',
   'Captain Tsubasa II - Super Striker (Japan).nes',

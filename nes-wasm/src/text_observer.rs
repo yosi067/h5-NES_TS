@@ -25,8 +25,8 @@ impl TextObserver {
     }
 
     /// Four u32 words: kind (0 invalidation, 1 cutscene glyph, 2 control,
-    /// 3 experimental battle glyph), physical offset, mirrored cell, byte.
-    /// Kind 4 follows a cutscene glyph: expected top generation, cell,
+    /// 3 battle glyph), physical offset, mirrored cell, byte.
+    /// Kind 4 follows a cutscene or battle glyph: expected top generation, cell,
     /// expected bottom generation; generation is captured BEFORE queueing.
     /// Kind 5: queued soft clear (display survives until actual PPU writes).
     /// Kind 6: original $E93D command call (A command/erase flag, X position).

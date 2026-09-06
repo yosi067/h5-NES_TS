@@ -150,7 +150,7 @@ function harness(assets = makeAssets(), withMetadata = false) {
   function observe(start = 0, end = glyphs.length): void {
     for (let column = start; column < end; column++) {
       const { run, glyph, index } = glyphs[column];
-      events.push(1, run.offset + index, CELL + column, glyph);
+      events.push(run.domain === 'battle' ? 3 : 1, run.offset + index, CELL + column, glyph);
       events.push(4, fetchedCells[CELL + column] >>> 8, CELL + column, fetchedCells[CELL + column + 32] >>> 8);
     }
   }
@@ -233,6 +233,43 @@ function harness(assets = makeAssets(), withMetadata = false) {
 }
 
 describe('NesTextOverlay real render with PPU provenance', () => {
+  function battle(fragments = [{ bytes: [0x11, 0x12, 0x13, 0x14], translation: '抽球射門' }]) {
+    const assets = makeAssets(fragments);
+    assets.runtime.scenes = [];
+    assets.runtime.fontAliases = Array.from({ length: 256 }, (_, tile) => [tile * 16]);
+    assets.runtime.runs.forEach(run => { run.domain = 'battle'; run.offset += 0x31400 - 0x6040; });
+    return harness(assets, true);
+  }
+
+  it('composes actually substituted names and moves in writer order before fitting', () => {
+    const h = battle([
+      { bytes: [0x11, 0x12, 0x13, 0x14, 0x15], translation: '巴賓頓' },
+      { bytes: [0x16, 0x17, 0x18, 0x19], translation: '射門！' },
+    ]);
+    h.frame(); h.observe(); h.render();
+    h.expectText('巴賓頓射門！', 9);
+    expect(h.coreMock.takeTextEvents).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not mask an incomplete battle run or an overwide move label', () => {
+    const h = battle();
+    h.frame(2); h.observe(0, 2); h.render(); h.expectNoChinese(); h.expectMasks(0);
+    h.frame(); h.observe(); h.render(); h.expectNoChinese(); h.expectMasks(0);
+  });
+
+  it('renders a fitting special move then clears it on real generation change without a new event', () => {
+    const h = battle([{ bytes: [0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17], translation: '抽球射門' }]);
+    h.frame(); h.observe(); h.render(); h.expectText('抽球射門', 7);
+    h.sourceTiles(2, 8); h.render(); h.expectNoChinese(); h.expectMasks(0);
+  });
+
+  it('rejects battle font lookalikes and sprite holes before any mask', () => {
+    const h = battle([{ bytes: [0x11, 0x12, 0x13, 0x14], translation: '射門' }]);
+    h.frame(); h.observe(); h.metadata[(CELL + 32) * 4 + 1] += 4096;
+    h.render(); h.expectNoChinese(); h.expectMasks(0);
+    h.frame(); h.observe(); h.provenance[(Y + 10) * 256 + X] = 0;
+    h.render(); h.expectNoChinese(); h.expectMasks(0);
+  });
   it('translates a complete source prefix, covers only its tiles, and applies overscan', () => {
     const h = harness();
     h.frame(); h.observe();

@@ -1,5 +1,13 @@
 # Captain Tsubasa II Translation Inventory
 
+## Runtime correction (2026-09-06)
+
+The inventory below records extraction, not display coverage. Current display-only behavior is documented in [the localization studio report](CT2_LOCALIZATION_STUDIO.md#比賽中文顯示更新2026-09-06仍非全中文): original-source menus already have a matcher, and complete observed battle/dictionary occurrences now have a generation/CHR-guarded renderer. The older BPS-only and entirely-disabled battle descriptions below are historical, not the current runtime.
+
+Original-ROM traversal verified team/player substitutions, ordinary shooting, and actual Drive Shot selection and commentary (`抽球射門`, `抽球射門！！`, `大空翼的`, `抽球射門！`). The special-menu dictionary writer at bank `$30000` / CPU `$8A79` and player-name writer at `$8D7B` supply guarded source events; these are not additional static definitions in the 221-entry menu catalog. Only Drive Shot has original-game special-shot traversal coverage, using supported level-64 read-side tuning, not RAM injection. Other moves, full sentences, RAM dictionary index 0, and incomplete/control-prefixed runs remain incomplete.
+
+For `battle-clouds.14.text.0010`, `.58.text.0004`, and `.75.text.0004`, the original FC next-row path skips one byte. The builder verifies the cursor-advance opcode signature, preceding FC and specific prefix byte, then narrows only these three runtime spans. Exchange IDs/source text and lossless IR remain unchanged. Other control-prefixed spans are not blanket-corrected; losslessness does not imply verified semantic segmentation. See the [latest runtime report](CT2_LOCALIZATION_STUDIO.md) for evidence and limitations.
+
 ## Scope
 
 This inventory separates verified translatable content from structural ROM candidates. It does not claim full-game coverage until battle messages, menus, names, and dictionaries have their own verified runtime writers.
@@ -25,7 +33,7 @@ node tools/captain-tsubasa-2-adapter.mjs validate-bundle --input <bundle.json> -
 node tools/captain-tsubasa-2-adapter.mjs migrate-bundle --input <legacy.json> --output <compact.json>
 ```
 
-The title-menu catalog is now distinct from dialogue and interface labels, but the ROM-side menu writer and runtime coverage are still pending; the category registration does not claim that those menu strings have been safely overlaid in the game.
+The title-menu catalog is distinct from dialogue and interface labels. Source/CHR-backed menu matching is enabled, but KICK OFF/CONTINUE are deliberately left in English by the display layer. Password kana remain functional code symbols; prompts and verified gameplay labels can be translated. Catalog registration alone does not establish exhaustive menu coverage.
 
 ## Verified cutscene coverage
 
@@ -85,7 +93,7 @@ The six compact translator bundles total 347,487 bytes. The formerly verbose v1 
 
 Regeneration preserves an entry's category, translation, and notes when its source hash and, for legacy entries, source evidence still match. Stale or changed source entries are not silently carried forward.
 
-Measured extraction time for one real 8KB bank is approximately 216 ms on the current development machine. The four current IR files total about 2.5 MB and the four editable bundles total about 746 KB. These JSON files are build-time inputs. Runtime still applies a source-verified BPS target and native CHR data, so inventory size and graph parsing add no per-frame emulator work.
+Historical extraction measurements: approximately 216 ms for one 8KB bank; four IR files about 2.5 MB and four editable bundles about 746 KB. IR and translator bundles are build-time inputs. Current supported original-ROM localization uses a generated catalog/runtime index and a display-only overlay, bypassing the legacy BPS path. Runtime observation, provenance matching and rendering do have per-frame costs; no new performance benchmark is claimed here.
 
 ## ROM-wide candidates
 
@@ -93,8 +101,8 @@ A structural scan inferred pointer counts from `(first pointer - $A000) / 2`. It
 
 Full-game coverage remains incomplete until these areas are mapped and written safely:
 
-- ROM-side menus and interface labels (the title-menu catalog category is registered, but runtime writers are not yet verified);
-- player, team, and opponent names;
+- remaining menu/interface variants beyond the verified source-backed matcher and Drive Shot route;
+- remaining player, team, and opponent names, especially RAM-backed dictionary index 0;
 - remaining repeated-word/name tables and compressed text;
 - credits and result screens;
 - any additional renderer-specific text reached through local call sites.

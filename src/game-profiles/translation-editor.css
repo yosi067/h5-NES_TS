@@ -119,6 +119,11 @@ progress::-moz-progress-bar { background: var(--accent); }
 .notice p { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .notice p:last-child { margin-bottom: 0; }
 .notice .unavailable { color: var(--warm); }
+.stat-preview-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+.stat-preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.stat-preview-grid > div { padding: 8px; border: 1px solid var(--line); border-radius: 8px; }
+.stat-preview-grid dt { font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.stat-preview-grid dd { margin: 0; font-size: 20px; font-variant-numeric: tabular-nums; color: var(--accent); }
 .notice.danger { border-color: #985c50; }
 .identity-details { color: var(--muted); font-size: 12px; padding: 8px 0 20px; }
 summary { cursor: pointer; min-height: 44px; padding-block: 10px; color: #c2d2df; }
