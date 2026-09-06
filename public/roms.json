@@ -195,6 +195,7 @@
     {"name": "吞食天地 2 赤壁之戰", "file": "wof.zip", "system": "arcade"},
     {"name": "恐龍快打", "file": "dino.zip", "system": "arcade"},
     {"name": "辛普森家庭", "file": "simpsons.zip", "system": "arcade"},
+    {"name": "忍者棒球 (美版)", "file": "nbbatman.zip", "system": "arcade"},
     {"name": "泡泡龍", "file": "bublbobl.zip", "system": "arcade"},
     {"name": "快打旋風 2", "file": "sf2.zip", "system": "arcade"},
     {"name": "快打旋風 2 冠軍版 (彩虹改版 2)", "file": "sf2rb2.zip", "system": "arcade"},

@@ -7,6 +7,8 @@ export const FBNEO_SUPPORTED_GAMES = [
   'ddp2100',
   'garou',
   'knights',
+  'nbbatman',
+  'nbbatmanu',
   'kof2000',
   'kof2001',
   'kof2003',
@@ -147,7 +149,7 @@ export function getFbNeoGameName(filename: string): FbNeoGameName | null {
 }
 
 export async function extractFbNeoRomSet(archiveName: string, zipData: ArrayBuffer): Promise<FbNeoRomSet> {
-  const gameName = getFbNeoGameName(archiveName);
+  let gameName = getFbNeoGameName(archiveName);
   if (!gameName) {
     throw new Error(`目前 FBNeo arcade backend 僅允許 ${FBNEO_SUPPORTED_GAMES.map((name) => `${name}.zip`).join(' / ')}`);
   }
@@ -169,6 +171,15 @@ export async function extractFbNeoRomSet(archiveName: string, zipData: ArrayBuff
 
   if (files.length === 0) {
     throw new Error(`${archiveName} 內沒有可寫入 MEMFS 的 ROM 晶片檔案`);
+  }
+
+  // Older archives named nbbatman contain the US revision. Keep the source ZIP
+  // intact, but mount it under the correct driver name; FBNeo validates CRCs.
+  const chipNames = new Set(files.map(file => file.name.toLowerCase()));
+  if (gameName === 'nbbatman'
+    && chipNames.has('a1-h0-a.34') && chipNames.has('a1-l0-a.31')
+    && !chipNames.has('6_h0.34') && !chipNames.has('3_l0.31')) {
+    gameName = 'nbbatmanu';
   }
 
   return { gameName, archiveName, archiveData, files };

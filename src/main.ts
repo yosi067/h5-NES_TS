@@ -104,6 +104,8 @@ const FBNEO_SUPPORTED_GAMES = [
   'ddp2100',
   'garou',
   'knights',
+  'nbbatman',
+  'nbbatmanu',
   'kof2000',
   'kof2001',
   'kof2003',
