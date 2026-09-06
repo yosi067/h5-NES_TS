@@ -14,6 +14,56 @@ import type { EmuWasm } from '../src/wasm/nes_wasm.js';
 const FRAMES = 2400;
 const HAN = /[\u3400-\u9fff]/;
 
+it.skipIf(process.env.CT2_TEST_BATTLE_ROM !== '1')('draws original-ROM match substitutions through the actual overlay', async () => {
+  const read = (path: string) => readFileSync(new NodeURL(path, import.meta.url));
+  const { initSync, EmuWasm: Core } = await import('../src/wasm/nes_wasm.js');
+  initSync({ module: read('../src/wasm/nes_wasm_bg.wasm') });
+  const rom = read('../roms/Captain Tsubasa II - Super Striker (Japan).nes');
+  expect(createHash('sha256').update(rom).digest('hex')).toBe(CT2_SOURCE_HASHES[0]);
+  const core = new Core();
+  const assets: LocalizationAssets = {
+    catalog: JSON.parse(read('../public/game-profiles/captain-tsubasa-2-jp/localization.json').toString()),
+    runtime: JSON.parse(read('../public/game-profiles/captain-tsubasa-2-jp/text-runtime.json').toString()),
+    menus: JSON.parse(read('../public/game-profiles/captain-tsubasa-2-jp/menus.json').toString()),
+  };
+  let overlay: NesTextOverlay | undefined;
+  const parent = document.createElement('div'), screen = document.createElement('canvas');
+  const seen = new Map<string, number>();
+  try {
+    vi.stubEnv('DEV', false); vi.stubGlobal('ResizeObserver', ResizeObserverMock); vi.stubGlobal('ImageData', undefined);
+    const ctx = makeContext();
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation((() => ctx) as unknown as HTMLCanvasElement['getContext']);
+    screen.width = 256; screen.height = 224; parent.append(screen); document.body.append(parent);
+    vi.spyOn(screen, 'getBoundingClientRect').mockImplementation(screenRect);
+    vi.spyOn(parent, 'getBoundingClientRect').mockImplementation(screenRect);
+    expect(core.loadRom(rom)).toBe(true);
+    core.setGameProfileTuning(JSON.stringify({ profileId: 'captain-tsubasa-2-jp', tsubasaLevel: null }));
+    expect(core.enableTextObserver(true)).toBe(true);
+    // Attach before match but drain earlier events to avoid unrelated cutscenes.
+    for (let frame = 0; frame < 15600; frame++) {
+      core.setButton(0, 3, frame >= 600 && frame < 604 || frame >= 900 && frame < 904);
+      core.setButton(0, 0, frame >= 1100 && frame % 120 < 4 && (frame < 9500 || frame >= 11200));
+      core.setButton(0, 5, [11000, 11020, 11040].includes(frame));
+      core.setButton(0, 7, frame >= 15000 && frame < 15004);
+      core.frame();
+      if (frame < 12900) { core.takeTextEvents(); continue; }
+      overlay ??= new NesTextOverlay(screen, assets);
+      ctx.fillText.mockClear(); ctx.fillRect.mockClear();
+      overlay.render(core, 8);
+      for (const [text] of ctx.fillText.mock.calls) if (!seen.has(text)) seen.set(text, frame);
+      for (const [, x, y] of ctx.fillText.mock.calls) { expect(x).toBeGreaterThanOrEqual(0); expect(y).toBeLessThan(240); }
+    }
+    for (const text of ['聖保羅', '巴賓頓', '射門！', '球，迎上去了！', '被擊中，', '變成落球了', '這顆落球，', '盤球', '傳球', '射門']) expect(seen.has(text), text).toBe(true);
+    // Source disappeared/replaced: old battle words must not remain painted.
+    expect(ctx.fillText.mock.calls.some(([text]) => text === '聖保羅' || text === '射門！')).toBe(false);
+    core.reset(); ctx.fillText.mockClear(); ctx.fillRect.mockClear(); overlay!.render(core, 8);
+    expect(ctx.fillText).not.toHaveBeenCalled();
+    console.log('[CT2 match renderer]', Object.fromEntries(seen));
+  } finally {
+    overlay?.dispose(); core.free(); parent.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs();
+  }
+}, 180000);
+
 class ResizeObserverMock {
   observe = vi.fn();
   unobserve = vi.fn();

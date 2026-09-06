@@ -29,6 +29,10 @@ use crate::game_profile::{sha256_hex, MemorySpace, NesGameProfile, WriteTiming};
 #[cfg(test)]
 use crate::mappers::Mapper1TraceState;
 
+#[cfg(test)]
+#[path = "ct2_stats_diagnostic.rs"]
+mod ct2_stats_diagnostic;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 enum DmcDmaPhase {
     Idle,
@@ -210,6 +214,8 @@ pub struct Emulator {
     dmc_dma_phase: DmcDmaPhase,
     loaded_rom_sha256: String,
     game_profile: Option<NesGameProfile>,
+    ct2_tuning: crate::game_profile::ct2_tuning::Ct2Tuning,
+    ct2_level_read_instruction: bool,
     temporary_states: RefCell<VecDeque<TemporaryState>>,
     // User slots must not be evicted by quick-save overwrites or diagnostic exports.
     temporary_slots: RefCell<Vec<(u32, TemporaryState)>>,
@@ -260,6 +266,8 @@ impl Emulator {
             dmc_dma_phase: DmcDmaPhase::Idle,
             loaded_rom_sha256: String::new(),
             game_profile: None,
+            ct2_tuning: Default::default(),
+            ct2_level_read_instruction: false,
             temporary_states: RefCell::new(VecDeque::new()),
             temporary_slots: RefCell::new(Vec::new()),
             next_temporary_state: Cell::new(0),
@@ -293,12 +301,15 @@ impl Emulator {
 
     /// 載入 ROM
     pub fn load_rom(&mut self, data: &[u8]) -> bool {
+        self.ct2_tuning = Default::default();
         self.text_observer.configure(false, "");
         self.ppu.set_text_provenance(false);
         self.clear_game_profile();
         let success = self.cartridge.load_rom(data);
         if success {
             self.loaded_rom_sha256 = sha256_hex(data);
+            self.ct2_tuning = crate::game_profile::ct2_tuning::Ct2Tuning::for_rom(
+                &self.loaded_rom_sha256, self.cartridge.header.mapper_id);
             // 將卡帶的 CHR 資料同步到 PPU
             let chr_data = self.cartridge.chr_data.clone();
             let chr_ram = self.cartridge.chr_ram;
@@ -310,6 +321,16 @@ impl Emulator {
             self.loaded_rom_sha256.clear();
         }
         success
+    }
+
+    /// Hot update only: never reset hardware, reload overlays or invalidate saves.
+    /// Session preference survives reset/restore; a new ROM load restores defaults.
+    pub fn set_game_profile_tuning(&mut self, json: &str) -> Result<(), String> {
+        self.ct2_tuning.update(json)
+    }
+
+    pub fn game_profile_tuning(&self) -> String {
+        self.ct2_tuning.status()
     }
 
     pub fn load_game_profile(&mut self, json: &str) -> Result<(), String> {
@@ -607,7 +628,8 @@ impl Emulator {
                 self.text_observer.push(6, self.cpu.a as u32, self.cpu.x as u32, 0);
             }
             if matches!(self.cpu.pc, 0x84E9 | 0x84F3 | 0x88B1) { self.observe_ct2_text(); }
-            else if matches!(self.cpu.pc, 0x8017 | 0x8218 | 0x8358 | 0x864B) { self.observe_ct2_cloud(); }
+            else if matches!(self.cpu.pc, 0x8017 | 0x8218 | 0x8358 | 0x864B | 0x8663 | 0x8668) { self.observe_ct2_cloud(); }
+            else if matches!(self.cpu.pc, 0x8a79 | 0x8d7b) { self.observe_ct2_menu_word(); }
         }
         // 取指令並執行
         #[cfg(test)]
@@ -743,9 +765,20 @@ impl Emulator {
                     ));
                 }
         }
+        // The original formula reads level at $8101/$8118; the panel at $ABB6.
+        // Physical PRG guards distinguish MMC3 banks; opcode guards also reject
+        // a profile replacing this instruction. No frame locks or RAM mutation.
+        self.ct2_level_read_instruction = self.ct2_tuning.level.is_some()
+            && matches!(self.cpu.pc, 0x8101 | 0x8118 | 0xabb6)
+            && matches!((self.cpu.pc, self.cartridge.mapper.cpu_read(self.cpu.pc)),
+                (0x8101, Some(0x38101)) | (0x8118, Some(0x38118)) | (0xabb6, Some(0x02bb6)))
+            && self.cpu.y == 3
+            && self.cartridge.cpu_read(self.cpu.pc) == 0xb1
+            && self.cartridge.cpu_read(self.cpu.pc + 1) == 0x34;
         let opcode = self.bus_read(self.cpu.pc);
         self.cpu.pc = self.cpu.pc.wrapping_add(1);
         self.execute_cpu_instruction(opcode);
+        self.ct2_level_read_instruction = false;
 
         // 扣除本次時鐘週期（fetch + execute 本身消耗 1 cycle）
         self.cpu.cycles = self.cpu.cycles.saturating_sub(1);
@@ -753,6 +786,11 @@ impl Emulator {
 
     /// 匯流排讀取
     fn bus_read(&mut self, addr: u16) -> u8 {
+        if self.ct2_level_read_instruction {
+            if let Some(level) = self.ct2_tuning.level_read(&self.bus.ram, addr) {
+                return level;
+            }
+        }
         let value = self.bus.cpu_read(
             addr,
             &mut self.ppu, &mut self.apu, &self.cartridge,
@@ -1523,7 +1561,10 @@ impl Emulator {
         let pointer = if pc == 0x8358 {
             u16::from_le_bytes([self.bus.ram[0x5f], self.bus.ram[0x60]])
         } else { u16::from_le_bytes([self.bus.ram[0x30], self.bus.ram[0x31]]) };
-        let address = pointer.wrapping_add(u16::from(self.cpu.y));
+        // Player-name routine appends literal くん through two immediate
+        // operands, not the dictionary pointer. Preserve their real sources.
+        let address = if matches!(pc, 0x8663 | 0x8668) { pc - 1 }
+            else { pointer.wrapping_add(u16::from(self.cpu.y)) };
         let Some(source) = self.cartridge.mapper.cpu_read(address) else { return; };
         let value = self.cpu.a;
         if value >= 0xe0 || self.cartridge.cpu_read(address) != value { return; }
@@ -1532,7 +1573,35 @@ impl Emulator {
         let base = u16::from_le_bytes([self.bus.ram[0x4a6], self.bus.ram[0x4a7]]);
         let target = base.wrapping_add(u16::from(self.bus.ram[0x3b]));
         if !(0x2000..0x2fc0).contains(&target) || target & 0x3ff >= 0x3a0 { return; }
-        self.text_observer.push(3, source, self.ppu.text_nametable_index(target) as u32, value as u32);
+        let cell = self.ppu.text_nametable_index(target);
+        self.text_observer.push(3, source, cell as u32, value as u32);
+        self.text_observer.push(4, self.ppu.text_next_write_generation(cell), cell as u32,
+            self.ppu.text_next_write_generation(cell + 32));
+    }
+
+    // Original bank $18 menu dictionary loops. Unlike battle clouds, menu
+    // rows are queued separately. Observe ONLY the mark pass ($3C == 1);
+    // the body pass must not replace its pending upper-row generation.
+    fn observe_ct2_menu_word(&mut self) {
+        let pc = self.cpu.pc;
+        if self.cartridge.mapper.cpu_read(pc) != Some(0x30000 + u32::from(pc - 0x8000))
+            || self.bus.ram[0x3c] != 1 { return; }
+        let pointer = u16::from_le_bytes([self.bus.ram[0x30], self.bus.ram[0x31]]);
+        let address = pointer.wrapping_add(u16::from(self.cpu.y));
+        let Some(source) = self.cartridge.mapper.cpu_read(address) else { return; };
+        let value = self.cpu.a;
+        if !(0x3f509..0x40000).contains(&source) || value >= 0xe0
+            || self.cartridge.cpu_read(address) != value { return; }
+        // $3A selects this queued row's header; $3D is its glyph cursor.
+        let queue = usize::from(self.bus.ram[0x3a]);
+        let Some(column) = self.bus.ram[0x3d].checked_sub(self.bus.ram[0x3a]) else { return; };
+        let base = u16::from_le_bytes([self.bus.ram[0x4a6 + queue], self.bus.ram[0x4a7 + queue]]);
+        let target = base.wrapping_add(u16::from(column));
+        if !(0x2000..0x2fc0).contains(&target) || target & 0x3ff >= 0x3a0 { return; }
+        let cell = self.ppu.text_nametable_index(target);
+        self.text_observer.push(3, source, cell as u32, value as u32);
+        self.text_observer.push(4, self.ppu.text_next_write_generation(cell), cell as u32,
+            self.ppu.text_next_write_generation(cell + 32));
     }
 
     /// 取得畫面緩衝區指標

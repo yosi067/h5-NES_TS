@@ -28321,9 +28321,8 @@
       "scene": "battle-clouds.14",
       "line": "battle-clouds.14.text.0010",
       "domain": "battle",
-      "offset": 202046,
+      "offset": 202047,
       "bytes": [
-        1,
         92,
         118,
         107,
@@ -30579,9 +30578,8 @@
       "scene": "battle-clouds.58",
       "line": "battle-clouds.58.text.0004",
       "domain": "battle",
-      "offset": 203366,
+      "offset": 203367,
       "bytes": [
-        8,
         205,
         77,
         71,
@@ -31378,9 +31376,8 @@
       "scene": "battle-clouds.75",
       "line": "battle-clouds.75.text.0004",
       "domain": "battle",
-      "offset": 205885,
+      "offset": 205886,
       "bytes": [
-        8,
         205,
         77,
         71,
@@ -39811,10 +39808,11 @@
   "coverage": {
     "extracted": 2199,
     "displayEnabledDomains": [
-      "cutscene"
+      "cutscene",
+      "battle-complete-occurrences"
     ],
-    "battleWriter": "runtime-events-observed; display-disabled",
-    "dictionaryWriter": "dynamic-composition-not-validated; display-disabled",
+    "battleWriter": "complete-source-occurrences; verified-name-honorifics; three-reviewed-FC-prefix-spans; other-incomplete-fragments-remain-native",
+    "dictionaryWriter": "ROM-word-substitutions-and-menu-mark-pass; original-Drive-Shot-route-verified; RAM-names-remain-native",
     "statsVerified": false,
     "fullyLocalized": false,
     "linguisticReview": "draft",

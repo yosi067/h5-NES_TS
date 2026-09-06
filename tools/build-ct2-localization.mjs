@@ -47,14 +47,32 @@ export function buildLocalization(rom, adapter, table, bundles, opening) {
     }
   }
   const clouds = extractCloudMessages(rom, adapter, 'battle-clouds', table);
+  // $FC dispatches to $85D6. On the next-row path, $85EF/$85F2
+  // advances $05E5 over one byte without emitting a glyph. Keep legacy
+  // exchange IDs/source intact; narrow only these independently reviewed
+  // runtime spans. Do not apply a blanket grammar rewrite to other branches.
+  const cloudPrefixBytes = new Map([
+    ['battle-clouds.14.text.0010', 0x01],
+    ['battle-clouds.58.text.0004', 0x08],
+    ['battle-clouds.75.text.0004', 0x08],
+  ]);
+  const prgStart = 16 + ((rom[6] & 4) ? 512 : 0);
+  if (rom.subarray(prgStart + 0x305ef, prgStart + 0x305f5).toString('hex') !== 'ace505eee505') {
+    throw new Error('Battle FC cursor-advance signature mismatch');
+  }
   validateCloudTranslations(clouds, bundles['battle-clouds'], false);
   const cloudEdits = new Map(bundles['battle-clouds'].scripts.flatMap(script => script.entries.map(entry => [entry.id, entry])));
   for (const scene of clouds.messages.filter(scene => !scene.aliasOf && scene.messageType === 'render')) {
     for (const instruction of scene.instructions.filter(instruction => instruction.kind === 'text')) {
       const id = `${scene.sceneId}.text.${instruction.offset.toString(16).padStart(4, '0')}`;
       add(id, instruction.text, cloudEdits.get(id), 'battleMessage');
+      const offset = scene.location.physicalPrgOffset + instruction.offset;
+      const skip = cloudPrefixBytes.has(id) ? 1 : 0;
+      if (skip && (rom[prgStart + offset - 1] !== 0xfc || instruction.bytes[0] !== cloudPrefixBytes.get(id))) {
+        throw new Error(`Battle FC prefix mismatch: ${id}`);
+      }
       runs.push({ id, scene: scene.sceneId, line: id, domain: 'battle',
-        offset: scene.location.physicalPrgOffset + instruction.offset, bytes: instruction.bytes });
+        offset: offset + skip, bytes: instruction.bytes.slice(skip) });
     }
   }
   const dictionary = extractFixedBankDictionary(rom, adapter, 'fixed-bank-words', table);
@@ -80,9 +98,9 @@ export function buildLocalization(rom, adapter, table, bundles, opening) {
       sourceSha256, locale: 'zh-Hant', entries, values: [] },
     runtime: { version: 1, sourceSha256, sourceHashes: adapter.sourceRoms.map(r => r.sha256),
       scenes, runs, fontAliases, lowerTiles: [...rom.subarray(16 + trainer + 0x8a14 - 0x8000, 16 + trainer + 0x8a14 - 0x8000 + 256)],
-      coverage: { extracted: entries.length, displayEnabledDomains: ['cutscene'],
-        battleWriter: 'runtime-events-observed; display-disabled',
-        dictionaryWriter: 'dynamic-composition-not-validated; display-disabled',
+      coverage: { extracted: entries.length, displayEnabledDomains: ['cutscene', 'battle-complete-occurrences'],
+        battleWriter: 'complete-source-occurrences; verified-name-honorifics; three-reviewed-FC-prefix-spans; other-incomplete-fragments-remain-native',
+        dictionaryWriter: 'ROM-word-substitutions-and-menu-mark-pass; original-Drive-Shot-route-verified; RAM-names-remain-native',
         statsVerified: false, fullyLocalized: false, linguisticReview: 'draft' } },
   };
 }
@@ -128,5 +146,5 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   }
   const menus = buildDefaultCT2Menus();
   fs.writeFileSync(path.join(directory, 'menus.json'), `${JSON.stringify(menus)}\n`);
-  console.log(`Extracted ${result.catalog.entries.length} editable strings; ${result.catalog.entries.filter(e => e.translation.trim()).length} draft-filled (${result.runtime.coverage.retainedKanaEntries} retained kana entries); ${menus.entries.length} menu definitions. Cutscene and verified menu rendering enabled; battle commentary and ability editing unfinished. No ROM modified.`);
+  console.log(`Extracted ${result.catalog.entries.length} editable strings; ${result.catalog.entries.filter(e => e.translation.trim()).length} draft-filled (${result.runtime.coverage.retainedKanaEntries} retained kana entries); ${menus.entries.length} menu definitions. Cutscene, verified menus and complete observed battle occurrences enabled; full battle composition remains unfinished. No ROM modified.`);
 }

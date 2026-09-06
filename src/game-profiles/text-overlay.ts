@@ -2,7 +2,7 @@ import type { EmuWasm } from '../wasm/nes_wasm.js';
 import { locateMenuTranslations } from './menu-localization';
 import {
   LOCALIZATION_STORAGE_KEY, TextObservationState, mergeLocalizationDraft,
-  locateTextCells, cellRectangleVisible, type LocalizationAssets, type LocalizationCatalog, type ObservedGlyph,
+  locateTextCells, cellRectangleVisible, locateBattleTranslations, type LocalizationAssets, type LocalizationCatalog, type ObservedGlyph,
 } from './localization';
 
 /** High-resolution display-only translation. The emulated framebuffer is untouched. */
@@ -130,7 +130,7 @@ export class NesTextOverlay {
     const rows = new Map<string, { glyphs: ObservedGlyph[]; x: number; y: number; firstIndex: number }>();
     const rejected = new Set<string>();
     for (const glyph of this.state.glyphs.values()) {
-      // Dynamic battle fragments have not yet passed whole-message layout tests.
+      // Battle occurrences use their own complete-token composition below.
       if (glyph.run.domain === 'battle' || !glyph.expectedGenerations) continue;
       const pos = positions.get(glyph.cell);
       const lower = glyph.glyph < 0xa0 ? glyph.glyph : this.assets.runtime.lowerTiles[glyph.glyph];
@@ -240,6 +240,22 @@ export class NesTextOverlay {
         continue;
       }
       this.lastRendered += `${text}\n`;
+    }
+    if (metadata) {
+      for (const row of locateBattleTranslations(this.state, this.entries, provenance, metadata)) {
+        ctx.font = '600 12px "Microsoft JhengHei", "Noto Sans TC", sans-serif';
+        // Reserve complete source + verified blank padding, never the next
+        // dynamic value/name. Reject BEFORE masking so long text stays native.
+        if (ctx.measureText(row.text).width > row.width || this.masks.some(m =>
+          m.x < row.x + row.width && m.x + m.width > row.x && m.y < row.y + 16 && m.y + m.height > row.y)) continue;
+        const cells = row.glyphs.flatMap(g => [g.cell, g.cell + 32]);
+        row.glyphs.forEach((g, i) => {
+          this.mask(row.x + i * 8, row.y, 8, 8, metadata[g.cell * 4 + 2] - 1);
+          this.mask(row.x + i * 8, row.y + 8, 8, 8, metadata[(g.cell + 32) * 4 + 2] - 1);
+        });
+        this.paint(row.text, row.x, row.y + 8, ctx.font, Math.max(0, ...cells.map(cell => metadata[cell * 4 + 3] - 1)));
+        this.lastRendered += `${row.text}\n`;
+      }
     }
     if (metadata && this.assets.menus) {
       for (const menu of locateMenuTranslations(this.assets.menus, background, metadata)) {

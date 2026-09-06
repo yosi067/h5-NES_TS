@@ -1,6 +1,7 @@
 import './translation-editor.css';
+import { mountTsubasaPreview } from './ct2-stats-preview';
 
-// Standalone editor: no emulator, shared profile modules, remote fonts or APIs.
+// Standalone editor: no emulator, game-write APIs, remote fonts or services.
 interface LocalizationEntry {
   id: string;
   category: string;
@@ -27,6 +28,8 @@ const MAX_ENTRIES = 10_000;
 const TEXT_LIMIT = 16_384;
 const NOTES_LIMIT = 4_096;
 const encoder = new TextEncoder();
+
+mountTsubasaPreview(document.getElementById('tsubasa-preview')!);
 
 function element<T extends HTMLElement>(id: string): T {
   const node = document.getElementById(id);
@@ -106,7 +109,7 @@ function validateDocument(raw: unknown, baseline?: LocalizationDocument): Locali
     fail('ROM SHA-256 必須是 64 位十六進位字串。');
   }
   if (baseline && raw.sourceSha256 !== baseline.sourceSha256) fail('ROM 身分不符，不能套用此翻譯。');
-  if (!Array.isArray(raw.values) || raw.values.length !== 0) fail('能力數值尚未確認；values 必須是空陣列。');
+  if (!Array.isArray(raw.values) || raw.values.length !== 0) fail('能力寫入尚未驗證；values 必須是空陣列。');
   if (!Array.isArray(raw.entries) || raw.entries.length === 0 || raw.entries.length > MAX_ENTRIES) {
     fail(`entries 必須包含 1 至 ${MAX_ENTRIES.toLocaleString()} 條字串。`);
   }
