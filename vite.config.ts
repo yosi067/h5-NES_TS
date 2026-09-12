@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import { copyFileSync, mkdirSync, readdirSync, existsSync, readFileSync, statSync, writeFileSync } from 'fs';
-import { getN64RebuiltAssetFileName } from './src/n64/runtime-assets';
+import { getN64RebuiltAssetFileName, N64_REBUILT_ASSET_VERSION } from './src/n64/runtime-assets';
 
 function copyDirectory(sourceDir: string, destinationDir: string): void {
   mkdirSync(destinationDir, { recursive: true });
@@ -55,7 +55,11 @@ function assertRebuiltMupenAssets(sourceDir: string): void {
 
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8').replace(/^\uFEFF/, '')) as {
     initialMemoryBytes?: number;
+    assetVersion?: string;
   };
+  if (manifest.assetVersion !== N64_REBUILT_ASSET_VERSION) {
+    throw new Error('Rebuilt N64 runtime version is stale. Run npm run n64:build before creating a production build.');
+  }
   if (manifest.initialMemoryBytes !== 64 * 1024 * 1024) {
     throw new Error(
       'Rebuilt N64 runtime does not have the required 64 MiB initial memory. ' +
@@ -391,9 +395,18 @@ export default defineConfig({
   },
   // 開發伺服器設定
   server: {
+    ...(process.env.N64_MOBILE_HTTPS === '1' ? {
+      host: '0.0.0.0', port: 5173, strictPort: true,
+      https: {
+        key: readFileSync(resolve(__dirname, '.cache/mobile-tls/server-key.pem')),
+        cert: readFileSync(resolve(__dirname, '.cache/mobile-tls/server.pem')),
+      },
+    } : {}),
     // 允許存取 roms 及 WASM 目錄
     fs: {
-      allow: ['..']
+      allow: ['..'],
+      // Vite can otherwise serve workspace files via /@fs or direct paths.
+      deny: ['.env', '.env.*', '*.{crt,pem,key}', '**/.git/**', '**/.cache/mobile-tls/**'],
     }
   },
   // Exclude nes-wasm from dependency pre-bundling so changes are picked up immediately

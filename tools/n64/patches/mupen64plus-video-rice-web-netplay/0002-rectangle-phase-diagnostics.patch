@@ -1,0 +1,88 @@
+diff --git a/src/OGLRender.cpp b/src/OGLRender.cpp
+--- a/src/OGLRender.cpp
++++ b/src/OGLRender.cpp
+@@ -271,1 +271,84 @@
++// Opt-in CPU/WebGL wall timing; no GL state or submission changes.
++#if EMSCRIPTEN
++static bool RiceRectDiagnosticsEnabled()
++{
++    static const bool enabled = EM_ASM_INT({
++        return new URLSearchParams(globalThis.location.search).get('n64RectDiagnostics') === '1';
++    });
++    return enabled;
++}
++static double g_rectPhases[4][8];
++static int g_rectPhaseRow = -1;
++static bool g_rectRestoring;
++static double g_rectPublishedAt;
++
++class RiceRectScope
++{
++    int previousRow;
++    bool previousRestore;
++    double started;
++public:
++    RiceRectScope(bool rectangle, const char *name)
++        : previousRow(g_rectPhaseRow), previousRestore(g_rectRestoring), started(0)
++    {
++        if (!rectangle || !RiceRectDiagnosticsEnabled()) return;
++        g_rectPhaseRow = strcmp(name, "RenderTexRect") == 0 ? 0 :
++            strcmp(name, "RenderFillRect") == 0 ? 1 :
++            strcmp(name, "DrawSimple2DTexture") == 0 ? 2 : 3;
++        g_rectRestoring = false;
++        started = emscripten_get_now();
++    }
++    ~RiceRectScope()
++    {
++        if (!started) return;
++        const double now = emscripten_get_now();
++        g_rectPhases[g_rectPhaseRow][0] += now - started;
++        g_rectPhases[g_rectPhaseRow][6]++;
++        g_rectPhaseRow = previousRow;
++        g_rectRestoring = previousRestore;
++        if (now - g_rectPublishedAt < 1000) return;
++        g_rectPublishedAt = now;
++        EM_ASM({
++            globalThis.__n64RectPhases = ({
++                version: 1, recordedAtMs: performance.now(),
++                values: Array.from(HEAPF64.subarray($0 >> 3, ($0 >> 3) + 32))
++            });
++        }, g_rectPhases);
++    }
++};
++
++class RiceRectCallTimer
++{
++    int row;
++    int phase;
++    double started;
++public:
++    RiceRectCallTimer(int requestedPhase)
++        : row(g_rectPhaseRow), phase(g_rectRestoring ? 5 : requestedPhase),
++          started(row < 0 ? 0 : emscripten_get_now()) {}
++    ~RiceRectCallTimer()
++    {
++        if (row < 0) return;
++        g_rectPhases[row][phase] += emscripten_get_now() - started;
++        if (phase == 1) g_rectPhases[row][7]++;
++        if (phase == 4) g_rectRestoring = true;
++    }
++};
++
++#undef RICE_DRAW_TIMER
++#define RICE_DRAW_TIMER(total, calls) RiceDrawTimer drawTimer(&(total), &(calls)); RiceRectScope rectScope(&(total) == &g_rectDrawMs, __func__)
++// Lambda wrappers retain arguments, return values and original call order.
++// No clocks or JS publication on the disabled path; only a scope/branch check.
++#define RICE_RECT_CALL(phase, call) ([&]() { RiceRectCallTimer timer(phase); return call; }())
++#define glIsEnabled(...) RICE_RECT_CALL(1, glIsEnabled(__VA_ARGS__))
++#define glEnable(...) RICE_RECT_CALL(2, glEnable(__VA_ARGS__))
++#define glDisable(...) RICE_RECT_CALL(2, glDisable(__VA_ARGS__))
++#define glViewport(...) RICE_RECT_CALL(2, glViewport(__VA_ARGS__))
++#define glScissor(...) RICE_RECT_CALL(2, glScissor(__VA_ARGS__))
++#define glVertexAttribPointer(...) RICE_RECT_CALL(3, glVertexAttribPointer(__VA_ARGS__))
++#define glEnableVertexAttribArray(...) RICE_RECT_CALL(3, glEnableVertexAttribArray(__VA_ARGS__))
++#define glDisableVertexAttribArray(...) RICE_RECT_CALL(3, glDisableVertexAttribArray(__VA_ARGS__))
++#define glDrawArrays(...) RICE_RECT_CALL(4, glDrawArrays(__VA_ARGS__))
++#endif
++
+ UVFlagMap OGLXUVFlagMaps[] =

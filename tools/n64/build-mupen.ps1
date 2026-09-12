@@ -48,13 +48,20 @@ New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
 Copy-Item (Join-Path $webOutput '*') $OutputDir -Recurse -Force
 
 $manifest = [ordered]@{
+    assetVersion = ((Get-Content (Join-Path $PSScriptRoot '../../src/n64/runtime-assets.ts') -Raw) -split "'")[1]
+    patches = @(Get-ChildItem (Join-Path $PSScriptRoot 'patches') -Recurse -Filter '*.patch' | Sort-Object FullName | ForEach-Object {
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hash = [BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($_.FullName))).Replace('-', '')
+            [ordered]@{ path = $_.FullName.Substring($PSScriptRoot.Length + 1).Replace('\', '/'); sha256 = $hash }
+        } finally { $sha.Dispose() }
+    })
     sourceCommit = '7f0ebbf78c16da0d41fe80f0e98f17523d4bf793'
     emsdkImage = $emsdkImage
     initialMemoryBytes = $initialMemoryBytes
     buildCommand = $buildCommand
     builtAt = (Get-Date).ToUniversalTime().ToString('o')
 }
-$manifest | ConvertTo-Json | Set-Content (Join-Path $OutputDir 'h5-nes-build.json') -Encoding UTF8
 
 $esbuild = Join-Path $PSScriptRoot '..\..\node_modules\.bin\esbuild.cmd'
 if (-not (Test-Path $esbuild)) {
@@ -75,4 +82,6 @@ $bundleOutput = Join-Path $OutputDir 'main.bundle.js'
 & $esbuild $bundleEntry --bundle --format=esm --platform=browser "--outfile=$bundleOutput"
 if ($LASTEXITCODE -ne 0) { throw 'Failed to bundle the rebuilt N64 JavaScript runtime.' }
 
+# Publish the success manifest only after the browser bundle is ready.
+$manifest | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $OutputDir 'h5-nes-build.json') -Encoding UTF8
 Write-Host "N64 baseline artifact ready at $OutputDir"

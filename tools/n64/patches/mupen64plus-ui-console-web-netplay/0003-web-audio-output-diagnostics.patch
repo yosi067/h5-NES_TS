@@ -1,0 +1,14 @@
+diff --git a/src/main.c b/src/main.c
+--- a/src/main.c
++++ b/src/main.c
+@@ -1271,1 +1271,10 @@
++        // Read-only bridge: diagnostics must never reconfigure audio routing.
++        emulatorControls.getAudioOutputDiagnostics = function() {
++            const context = Module.SDL2 && Module.SDL2.audioContext;
++            return ({
++                port: Module.n64AudioWorkletPort || null,
++                sampleRate: context ? context.sampleRate : null,
++                mode: Module.n64AudioWorkletPort ? 'audio-worklet' : 'script-processor'
++            });
++        };
+         return 0;

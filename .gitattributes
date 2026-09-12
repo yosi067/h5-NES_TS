@@ -1,1 +1,6 @@
 *.data binary
+# The pinned build manifest hashes patch files as CRLF working-tree bytes.
+# Keep checkouts reproducible on Linux as well as Windows; diff context lines
+# consisting of one space are valid patch syntax, not source trailing blanks.
+tools/n64/patches/**/*.patch text eol=crlf whitespace=-blank-at-eol,cr-at-eol
+tools/n64/patches/*.patch text eol=crlf whitespace=-blank-at-eol,cr-at-eol

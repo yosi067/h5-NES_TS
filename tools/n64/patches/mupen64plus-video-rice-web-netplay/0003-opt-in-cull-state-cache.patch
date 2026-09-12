@@ -1,0 +1,99 @@
+diff --git a/src/RiceCullCache.h b/src/RiceCullCache.h
+new file mode 100644
+--- /dev/null
++++ b/src/RiceCullCache.h
+@@ -0,0 +1,58 @@
++// Shared by all Rice translation units that write GL_CULL_FACE.
++// Single active Rice context; initialization's glDisable seeds every new context.
++#pragma once
++#if EMSCRIPTEN
++#include <emscripten.h>
++inline bool RiceCullCacheEnabled()
++{
++    static const bool enabled = EM_ASM_INT({
++        const enabled = new URLSearchParams(globalThis.location.search).get('n64CullStateCache') === '1';
++        globalThis.__n64CullStateCacheEnabled = enabled;
++        return enabled;
++    });
++    return enabled;
++}
++struct RiceCullState
++{
++    bool known;
++    GLboolean enabled;
++    RiceCullState() : known(false), enabled(GL_FALSE) {}
++};
++inline RiceCullState &RiceSharedCullState()
++{
++    // External-linkage inline function: one local static across translation units.
++    static RiceCullState state;
++    return state;
++}
++inline void RiceTrackedEnable(GLenum cap)
++{
++    glEnable(cap);
++    if (cap == GL_CULL_FACE) {
++        RiceSharedCullState().known = true;
++        RiceSharedCullState().enabled = GL_TRUE;
++    }
++}
++inline void RiceTrackedDisable(GLenum cap)
++{
++    glDisable(cap);
++    if (cap == GL_CULL_FACE) {
++        RiceSharedCullState().known = true;
++        RiceSharedCullState().enabled = GL_FALSE;
++    }
++}
++inline GLboolean RiceCachedIsEnabled(GLenum cap)
++{
++    if (!RiceCullCacheEnabled() || cap != GL_CULL_FACE) return glIsEnabled(cap);
++    RiceCullState &state = RiceSharedCullState();
++    if (!state.known) {
++        state.enabled = glIsEnabled(cap);
++        state.known = true;
++    }
++    return state.enabled;
++}
++#endif
+diff --git a/src/OGLRender.cpp b/src/OGLRender.cpp
+--- a/src/OGLRender.cpp
++++ b/src/OGLRender.cpp
+@@ -32,1 +32,2 @@
+ #include "OGLExtensions.h"
++#include "RiceCullCache.h"
+@@ -687,0 +688,12 @@
++// Keep phase timing around the selected query implementation and real writes.
++// Defined after diagnostics wrappers; helpers above were compiled against raw GL.
++#if EMSCRIPTEN
++#undef glIsEnabled
++#undef glEnable
++#undef glDisable
++#define glIsEnabled(...) RICE_RECT_CALL(1, RiceCachedIsEnabled(__VA_ARGS__))
++#define glEnable(...) RICE_RECT_CALL(2, RiceTrackedEnable(__VA_ARGS__))
++#define glDisable(...) RICE_RECT_CALL(2, RiceTrackedDisable(__VA_ARGS__))
++#endif
++
++
+diff --git a/src/OGLGraphicsContext.cpp b/src/OGLGraphicsContext.cpp
+--- a/src/OGLGraphicsContext.cpp
++++ b/src/OGLGraphicsContext.cpp
+@@ -43,0 +44,6 @@
++#include "RiceCullCache.h"
++#if EMSCRIPTEN
++#define glEnable(...) RiceTrackedEnable(__VA_ARGS__)
++#define glDisable(...) RiceTrackedDisable(__VA_ARGS__)
++#endif
++
+diff --git a/src/OGLRenderExt.cpp b/src/OGLRenderExt.cpp
+--- a/src/OGLRenderExt.cpp
++++ b/src/OGLRenderExt.cpp
+@@ -30,2 +31,8 @@
++#include "RiceCullCache.h"
++#if EMSCRIPTEN
++#define glEnable(...) RiceTrackedEnable(__VA_ARGS__)
++#define glDisable(...) RiceTrackedDisable(__VA_ARGS__)
++#endif
++
+ 
+ extern Matrix g_MtxReal;

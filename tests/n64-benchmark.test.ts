@@ -58,6 +58,15 @@ function report(overrides: Partial<N64TelemetryReport> = {}): N64TelemetryReport
 }
 
 describe('N64 benchmark controls', () => {
+  it('selects only the explicit fork cull cache without altering other defaults', () => {
+    const baseline = resolveN64BenchmarkConfig(PROFILE, '');
+    expect(resolveN64BenchmarkConfig(PROFILE, '?n64CullStateCache=1'))
+      .toEqual({ ...baseline, cullStateCache: true });
+    for (const search of ['?n64CullStateCache=0', '?n64CullStateCache=true', '?n64Runtime=npm&n64CullStateCache=1']) {
+      expect(resolveN64BenchmarkConfig(PROFILE, search).cullStateCache).toBe(false);
+    }
+    expect(resolveN64BenchmarkConfig(PROFILE, '?n64Benchmark=1&n64CullStateCache=1').cullStateCache).toBe(true);
+  });
   it('uses the rebuilt fork and triangle streaming for normal mobile gameplay', () => {
     const config = resolveN64BenchmarkConfig(PROFILE, '');
 
@@ -74,6 +83,7 @@ describe('N64 benchmark controls', () => {
       suppressDrawCalls: false,
       persistentBuffers: true,
       persistentRectBuffers: false,
+      cullStateCache: false,
     });
   });
 

@@ -559,7 +559,7 @@ var require_index_7f0ebbf78c = __commonJS({
         }
         var tempDouble;
         var tempI64;
-        var ASM_CONSTS = { 1718756: () => {
+        var ASM_CONSTS = { 1718772: () => {
           window.addEventListener("keydown", function(e) {
             if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].indexOf(e.code) > -1) {
               e.preventDefault();
@@ -741,34 +741,210 @@ var require_index_7f0ebbf78c = __commonJS({
           emulatorControls.configureAudioWorklet = configureAudioWorklet;
           emulatorControls.resumeAudio = resumeAudio;
           Module2.emulatorControls = emulatorControls;
+          emulatorControls.getAudioOutputDiagnostics = function() {
+            const context = Module2.SDL2 && Module2.SDL2.audioContext;
+            return { port: Module2.n64AudioWorkletPort || null, sampleRate: context ? context.sampleRate : null, mode: Module2.n64AudioWorkletPort ? "audio-worklet" : "script-processor" };
+          };
           return 0;
-        }, 1724736: () => {
+        }, 1725047: function() {
+          (function() {
+            const controls = Module2.emulatorControls;
+            let url = null, stopped = false, generation = 0, current = null;
+            let lastError = null, failures = 0;
+            const ids = /* @__PURE__ */ new WeakMap();
+            let nextId = 0;
+            const identity = function(value) {
+              if (!value) return null;
+              if (!ids.has(value)) ids.set(value, ++nextId);
+              return ids.get(value);
+            };
+            const device = function() {
+              const sdl = Module2.SDL2;
+              return [sdl && sdl.audioContext, sdl && sdl.audio && sdl.audio.scriptProcessorNode];
+            };
+            const matches = function(s) {
+              const d = device();
+              return !stopped && current === s && s.context === d[0] && s.script === d[1] && s.context.state !== "closed";
+            };
+            const safely = function(fn) {
+              try {
+                fn();
+              } catch (error) {
+                lastError = String(error);
+              }
+            };
+            const clearPublished = function() {
+              Module2.n64AudioWorkletPort = void 0;
+              Module2.n64AudioWorkletNode = void 0;
+              Module2.n64AudioWorkletSilentGain = void 0;
+              Module2.n64AudioWorkletPromise = void 0;
+            };
+            const release = function(s) {
+              if (!s) return;
+              clearTimeout(s.timer);
+              s.context.removeEventListener("statechange", s.onState);
+              if (s.node) {
+                s.node.onprocessorerror = null;
+                safely(function() {
+                  s.node.port.removeEventListener("message", s.onMessage);
+                  s.node.port.close();
+                });
+                safely(function() {
+                  s.node.disconnect();
+                });
+              }
+              if (s.gain) safely(function() {
+                s.gain.disconnect();
+              });
+              if (s.routed && s.context.state !== "closed") safely(function() {
+                s.script.disconnect();
+                s.script.connect(s.context.destination);
+              });
+              s.routed = false;
+              if (current === s) clearPublished();
+            };
+            const invalidate = function() {
+              ++generation;
+              release(current);
+              current = null;
+              clearPublished();
+            };
+            const configure = function(workletUrl) {
+              if (workletUrl) url = workletUrl;
+              if (stopped || !url) return Promise.resolve(false);
+              const d = device(), context = d[0], script = d[1];
+              if (current && !matches(current)) invalidate();
+              if (current) return current.promise || Promise.resolve(current.routed);
+              if (!context || !script || context.state === "closed") return Promise.resolve(false);
+              const s = { context, script, generation: ++generation, routed: false, node: null, gain: null, timer: null, acknowledged: false, heartbeatAt: null, status: "loading", promise: null, onState: null, onMessage: null };
+              current = s;
+              const fail = function(error) {
+                if (!matches(s)) return;
+                lastError = String(error);
+                ++failures;
+                release(s);
+                s.status = "fallback";
+                s.promise = null;
+              };
+              const arm = function() {
+                clearTimeout(s.timer);
+                if (matches(s) && context.state === "running" && s.status !== "fallback") {
+                  s.timer = setTimeout(function() {
+                    fail("worklet render heartbeat timeout");
+                  }, 5e3);
+                }
+              };
+              s.onState = function() {
+                if (context.state === "closed") {
+                  if (current === s) invalidate();
+                } else arm();
+              };
+              context.addEventListener("statechange", s.onState);
+              if (!context.audioWorklet || typeof AudioWorkletNode === "undefined") {
+                fail("AudioWorklet unavailable");
+                return Promise.resolve(false);
+              }
+              arm();
+              s.promise = Promise.resolve().then(function() {
+                return context.audioWorklet.addModule(url);
+              }).then(function() {
+                if (!matches(s) || s.status === "fallback") return false;
+                s.node = new AudioWorkletNode(context, "n64-audio-processor", { numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2] });
+                s.gain = context.createGain();
+                s.gain.gain.value = 0;
+                s.node.onprocessorerror = function() {
+                  fail("AudioWorklet processorerror");
+                };
+                s.onMessage = function(event2) {
+                  if (!matches(s) || s.status === "fallback") return;
+                  const data = event2.data;
+                  if (!data || data.type !== "n64-audio-heartbeat" || data.generation !== s.generation) return;
+                  s.acknowledged = true;
+                  s.heartbeatAt = Date.now();
+                  if (!s.routed) {
+                    try {
+                      s.routed = true;
+                      script.disconnect();
+                      script.connect(s.gain);
+                      s.gain.connect(context.destination);
+                      Module2.n64AudioWorkletNode = s.node;
+                      Module2.n64AudioWorkletSilentGain = s.gain;
+                      Module2.n64AudioWorkletPort = s.node.port;
+                      s.status = "live";
+                    } catch (error) {
+                      fail(error);
+                      return;
+                    }
+                  }
+                  arm();
+                };
+                s.node.port.addEventListener("message", s.onMessage);
+                s.node.port.start();
+                s.node.connect(context.destination);
+                s.node.port.postMessage({ type: "lifecycle", generation: s.generation });
+                s.status = "awaiting-render-ack";
+                return true;
+              }).catch(function(error) {
+                fail(error);
+                return false;
+              });
+              return s.promise;
+            };
+            Module2.n64AudioDeviceClosing = invalidate;
+            Module2.n64AudioDeviceOpened = function() {
+              if (!stopped) void configure();
+            };
+            const originalStop = controls.stop;
+            controls.stop = function() {
+              stopped = true;
+              invalidate();
+              return originalStop();
+            };
+            const originalStart = controls.start;
+            controls.start = function() {
+              stopped = false;
+              return originalStart.apply(this, arguments);
+            };
+            controls.configureAudioWorklet = configure;
+            controls.getAudioOutputDiagnostics = function() {
+              const d = device(), s = current;
+              const valid = s && matches(s), live = valid && s.routed && s.status === "live";
+              return { port: live ? s.node.port : null, mode: live ? "audio-worklet" : "script-processor", sampleRate: d[0] ? d[0].sampleRate : null, contextState: d[0] ? d[0].state : "unavailable", contextId: identity(d[0]), scriptProcessorId: identity(d[1]), generation, routeState: valid ? s.status : stopped ? "stopped" : "awaiting-device", acknowledged: !!(valid && s.acknowledged), heartbeatAgeMs: valid && s.heartbeatAt !== null ? Date.now() - s.heartbeatAt : null, lastError, failures };
+            };
+          })();
+        }, 1730388: () => {
           return Module2.canvas.width;
-        }, 1724768: () => {
+        }, 1730420: () => {
           return Module2.canvas.height;
-        }, 1724801: () => {
+        }, 1730453: () => {
           const emuMode = Module2.coreConfig.emuMode;
           if (emuMode == 2 && Module2.netplayConfig.player !== 0) {
             throw "Invalid parameters! Cannnot use dynarec when netplay is enabled!";
           }
           return emuMode;
-        }, 1724997: () => {
+        }, 1730649: () => {
           return Module2.netplayConfig.player;
-        }, 1725036: () => {
+        }, 1730688: () => {
           FS.mkdir("/mupen64plus");
           FS.mount(IDBFS, {}, "/mupen64plus");
           return 0;
-        }, 1725113: () => {
+        }, 1730765: () => {
           return Module2.netplayConfig.registrationId;
-        }, 1725161: ($0, $1) => {
+        }, 1730813: () => {
+          if (Module2.n64AudioDeviceClosing) Module2.n64AudioDeviceClosing();
+        }, 1730883: () => {
+          if (Module2.n64AudioDeviceClosing) Module2.n64AudioDeviceClosing();
+        }, 1730953: () => {
+          if (Module2.n64AudioDeviceOpened) Module2.n64AudioDeviceOpened();
+        }, 1731021: ($0, $1) => {
           console.error("BAiLING on alist command processing due to acmd index: ", $0 | 0, " with pointer ", $1 | 0);
-        }, 1725264: () => {
+        }, 1731124: () => {
           return Module2.coreConfig.mainLoopTimingMode;
-        }, 1725313: () => {
+        }, 1731173: () => {
           return Module2.coreConfig.mainLoopTimingMode;
-        }, 1725362: () => {
+        }, 1731222: () => {
           return Module2.netplayConfig.registrationId;
-        }, 1725410: ($0) => {
+        }, 1731270: ($0) => {
           const pauseCountsPtr = $0;
           const pauseCounts = [];
           for (let i2 = 0; i2 < 4; i2++) {
@@ -778,28 +954,36 @@ var require_index_7f0ebbf78c = __commonJS({
             Module2.netplay.pausePromiseResolve(pauseCounts);
           }
           return 0;
-        }, 1725667: ($0) => {
+        }, 1731527: () => {
+          return new URLSearchParams(globalThis.location.search).get("n64RectDiagnostics") === "1";
+        }, 1731621: () => {
+          const enabled = new URLSearchParams(globalThis.location.search).get("n64CullStateCache") === "1";
+          globalThis.__n64CullStateCacheEnabled = enabled;
+          return enabled;
+        }, 1731788: ($0) => {
+          globalThis.__n64RectPhases = { version: 1, recordedAtMs: performance.now(), values: Array.from(HEAPF64.subarray($0 >> 3, ($0 >> 3) + 32)) };
+        }, 1731935: ($0) => {
           var str = UTF8ToString($0) + "\n\nAbort/Retry/Ignore/AlwaysIgnore? [ariA] :";
           var reply = window.prompt(str, "i");
           if (reply === null) {
             reply = "i";
           }
           return allocate(intArrayFromString(reply), "i8", ALLOC_NORMAL);
-        }, 1725892: () => {
+        }, 1732160: () => {
           if (typeof AudioContext !== "undefined") {
             return true;
           } else if (typeof webkitAudioContext !== "undefined") {
             return true;
           }
           return false;
-        }, 1726039: () => {
+        }, 1732307: () => {
           if (typeof navigator.mediaDevices !== "undefined" && typeof navigator.mediaDevices.getUserMedia !== "undefined") {
             return true;
           } else if (typeof navigator.webkitGetUserMedia !== "undefined") {
             return true;
           }
           return false;
-        }, 1726273: ($0) => {
+        }, 1732541: ($0) => {
           if (typeof Module2["SDL2"] === "undefined") {
             Module2["SDL2"] = {};
           }
@@ -820,10 +1004,10 @@ var require_index_7f0ebbf78c = __commonJS({
             }
           }
           return SDL2.audioContext === void 0 ? -1 : 0;
-        }, 1726766: () => {
+        }, 1733034: () => {
           var SDL2 = Module2["SDL2"];
           return SDL2.audioContext.sampleRate;
-        }, 1726834: ($0, $1, $2, $3) => {
+        }, 1733102: ($0, $1, $2, $3) => {
           var SDL2 = Module2["SDL2"];
           var have_microphone = function(stream) {
             if (SDL2.capture.silenceTimer !== void 0) {
@@ -858,7 +1042,7 @@ var require_index_7f0ebbf78c = __commonJS({
           } else if (navigator.webkitGetUserMedia !== void 0) {
             navigator.webkitGetUserMedia({ audio: true, video: false }, have_microphone, no_microphone);
           }
-        }, 1728486: ($0, $1, $2, $3) => {
+        }, 1734754: ($0, $1, $2, $3) => {
           var SDL2 = Module2["SDL2"];
           SDL2.audio.scriptProcessorNode = SDL2.audioContext["createScriptProcessor"]($1, 0, $0);
           SDL2.audio.scriptProcessorNode["onaudioprocess"] = function(e) {
@@ -869,7 +1053,7 @@ var require_index_7f0ebbf78c = __commonJS({
             dynCall("vi", $2, [$3]);
           };
           SDL2.audio.scriptProcessorNode["connect"](SDL2.audioContext["destination"]);
-        }, 1728896: ($0, $1) => {
+        }, 1735164: ($0, $1) => {
           var SDL2 = Module2["SDL2"];
           var numChannels = SDL2.capture.currentCaptureBuffer.numberOfChannels;
           for (var c = 0; c < numChannels; ++c) {
@@ -887,7 +1071,7 @@ var require_index_7f0ebbf78c = __commonJS({
               }
             }
           }
-        }, 1729501: ($0, $1) => {
+        }, 1735769: ($0, $1) => {
           var SDL2 = Module2["SDL2"];
           var numChannels = SDL2.audio.currentOutputBuffer["numberOfChannels"];
           for (var c = 0; c < numChannels; ++c) {
@@ -899,7 +1083,7 @@ var require_index_7f0ebbf78c = __commonJS({
               channelData[j] = HEAPF32[$0 + (j * numChannels + c << 2) >> 2];
             }
           }
-        }, 1729981: ($0) => {
+        }, 1736249: ($0) => {
           var SDL2 = Module2["SDL2"];
           if ($0) {
             if (SDL2.capture.silenceTimer !== void 0) {
@@ -937,7 +1121,7 @@ var require_index_7f0ebbf78c = __commonJS({
             SDL2.audioContext.close();
             SDL2.audioContext = void 0;
           }
-        }, 1731153: ($0, $1, $2) => {
+        }, 1737421: ($0, $1, $2) => {
           var w = $0;
           var h = $1;
           var pixels = $2;
@@ -1007,7 +1191,7 @@ var require_index_7f0ebbf78c = __commonJS({
             }
           }
           SDL2.ctx.putImageData(SDL2.image, 0, 0);
-        }, 1732622: ($0, $1, $2, $3, $4) => {
+        }, 1738890: ($0, $1, $2, $3, $4) => {
           var w = $0;
           var h = $1;
           var hot_x = $2;
@@ -1043,17 +1227,17 @@ var require_index_7f0ebbf78c = __commonJS({
           var urlBuf = _malloc(url.length + 1);
           stringToUTF8(url, urlBuf, url.length + 1);
           return urlBuf;
-        }, 1733611: ($0) => {
+        }, 1739879: ($0) => {
           if (Module2["canvas"]) {
             Module2["canvas"].style["cursor"] = UTF8ToString($0);
           }
-        }, 1733694: () => {
+        }, 1739962: () => {
           if (Module2["canvas"]) {
             Module2["canvas"].style["cursor"] = "none";
           }
-        }, 1733763: () => {
+        }, 1740031: () => {
           return window.innerWidth;
-        }, 1733793: () => {
+        }, 1740061: () => {
           return window.innerHeight;
         } };
         function initIDBFS() {
@@ -10157,8 +10341,8 @@ var require_index_7f0ebbf78c = __commonJS({
         var _asyncify_stop_rewind = Module2["_asyncify_stop_rewind"] = function() {
           return (_asyncify_stop_rewind = Module2["_asyncify_stop_rewind"] = Module2["asm"]["asyncify_stop_rewind"]).apply(null, arguments);
         };
-        var ___start_em_js = Module2["___start_em_js"] = 1733824;
-        var ___stop_em_js = Module2["___stop_em_js"] = 1736350;
+        var ___start_em_js = Module2["___start_em_js"] = 1740092;
+        var ___stop_em_js = Module2["___stop_em_js"] = 1742618;
         function invoke_iiiii(index, a1, a2, a3, a4) {
           var sp = stackSave();
           try {

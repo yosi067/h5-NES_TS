@@ -17,6 +17,7 @@ export interface N64BenchmarkConfig {
   suppressDrawCalls: boolean;
   persistentBuffers: boolean;
   persistentRectBuffers: boolean;
+  cullStateCache: boolean;
 }
 
 export interface N64BenchmarkSummary {
@@ -98,6 +99,7 @@ export function resolveN64BenchmarkConfig(
       suppressDrawCalls: false,
       persistentBuffers: normalMobileStream,
       persistentRectBuffers: false,
+      cullStateCache: runtime === 'fork' && params.get('n64CullStateCache') === '1',
     };
   }
 
@@ -160,6 +162,7 @@ export function resolveN64BenchmarkConfig(
     suppressDrawCalls,
     persistentBuffers,
     persistentRectBuffers,
+    cullStateCache: runtime === 'fork' && params.get('n64CullStateCache') === '1',
   };
 }
 

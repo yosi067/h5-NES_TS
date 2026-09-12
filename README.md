@@ -36,6 +36,12 @@ H5-EMU 是一個在瀏覽器中運行的多平台模擬器研究專案，將 **N
 
 ## 技術價值
 
+### N64 iPhone 已接受基準（2026-09-12）
+
+目前保留 `7f0ebbf78c-64m2-lifecycle1`：修正 SDL 裝置重建時的 AudioWorklet 生命週期，加入可選的輸出／rectangle 診斷。實機 capture5 使用者回報「沒有雜訊、音質非常滿意」，但複雜場景仍卡頓；這不是零缺樣本、全遊戲或長時間穩定保證。
+維持 iPhone 320×240、emu1、triangle stream、SDL 3072/1024；cull cache 與 rectangle persistent buffers **預設關閉**，不加入新優化。桌面 emu2 的 `null function` 例外仍待定位，44.1/48 kHz 速率差僅是假設，未實作修正。
+詳見 [實機結果與限制](docs/N64_IPHONE_20260912_RESULTS.md) 及 [診斷使用說明](docs/N64_AUDIO_OUTPUT_DIAGNOSTICS.md)。
+
 ### 足球小將 II 中文化實驗
 
 已加入 [翻譯工作室](translation-studio.html) 與原 ROM 的高解析度劇情中文圖層。

@@ -11,6 +11,7 @@ artifacts/n64/*
 # Local Vite/dependency cache
 .vite/
 .cache/n64/
+.cache/mobile-tls/
 
 # Build logs
 build_stdout.txt

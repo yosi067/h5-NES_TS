@@ -39,9 +39,13 @@ import {
   getN64RuntimeAssetUrl,
   getN64RuntimeImportUrl,
   shouldRetryN64WithNpm,
+  N64_REBUILT_ASSET_VERSION,
 } from './n64/runtime-assets';
 import { getRomAssetUrl, hasN64RomMagic } from './rom-assets';
 import { createN64Telemetry } from './n64/telemetry';
+import { audioOutputDiagnosticsEnabled, createAudioOutputDiagnostics, type N64AudioOutputBridge } from './n64/audio-output-diagnostics';
+import { showN64AudioDiagnostics } from './n64/audio-diagnostics-panel';
+import { readRectDiagnostics } from './n64/rect-diagnostics';
 import { readBinaryState, writeBinaryState } from './storage/binary-state-store';
 import { getTouchContactTargetIds } from './ui/touch-contact';
 import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
@@ -56,6 +60,7 @@ import {
 type N64EmulatorControls = EmulatorControls & {
   resumeAudio?: () => Promise<void>;
   configureAudioWorklet?: (workletUrl: string) => Promise<boolean>;
+  getAudioOutputDiagnostics?: () => N64AudioOutputBridge;
 };
 
 // ===== 型別定義 =====
@@ -497,8 +502,30 @@ function installN64BenchmarkDiagnostics(canvas: HTMLCanvasElement, label: string
   };
 }
 
+let n64AudioOutputDiagnostics = createAudioOutputDiagnostics(audioOutputDiagnosticsEnabled(window.location.search));
 let n64Telemetry = createN64Telemetry({
   onReport: report => {
+    if (audioOutputDiagnosticsEnabled(window.location.search)) {
+      // SDL may replace the context/producer without any user gesture. Reattach
+      // at the existing telemetry cadence; never retain a retired port's counters.
+      n64AudioOutputDiagnostics.attach(n64Controls?.getAudioOutputDiagnostics?.());
+      const audioOutput = n64AudioOutputDiagnostics.snapshot();
+      const deviceReport = {
+        recordedAt: new Date().toISOString(), userAgent: navigator.userAgent,
+        secureContext: window.isSecureContext, rom: currentRomFilename,
+        config: resolveN64BenchmarkConfig(n64PerformanceProfile),
+        rebuiltAssetVersion: N64_REBUILT_ASSET_VERSION,
+        runtimeCullStateCache: globalThis.__n64CullStateCacheEnabled ?? null,
+        audioOutput, sourceAndRenderer: report,
+        rectanglePhases: readRectDiagnostics(window.location.search, globalThis.__n64RectPhases),
+      };
+      showN64AudioDiagnostics(audioOutput, deviceReport);
+      // Same local export surface as benchmark results; available without a benchmark.
+      try {
+        localStorage.setItem('n64AudioOutputDiagnostics', JSON.stringify(deviceReport));
+      } catch { /* Storage can be unavailable in private browsing. */ }
+      console.info('[N64 audio output]', audioOutput);
+    }
     const speed = report.viPerSecond >= 56 ? 'real-time' : 'below real-time';
     console.info(
       `[N64 perf] ${report.viPerSecond.toFixed(1)} VI/s (${speed}), ` +
@@ -537,6 +564,10 @@ let n64Telemetry = createN64Telemetry({
         profile: n64PerformanceProfile.name,
         userAgent: navigator.userAgent,
         recordedAt: new Date().toISOString(),
+        audioOutput: n64AudioOutputDiagnostics.snapshot(),
+        config: resolveN64BenchmarkConfig(n64PerformanceProfile),
+        rebuiltAssetVersion: N64_REBUILT_ASSET_VERSION,
+        runtimeCullStateCache: globalThis.__n64CullStateCacheEnabled ?? null,
       };
       console.info(
         `[N64 benchmark result] ${summary.label}: ${summary.viPerSecond.toFixed(1)} VI/s, ` +
@@ -575,7 +606,9 @@ let n64Telemetry = createN64Telemetry({
         `${summary.viPerSecond.toFixed(1)} VI/s\n` +
         `VI avg/max: ${summary.averageViMs.toFixed(1)}/${summary.longestViMs.toFixed(1)} ms\n` +
         `Triangle/Rect: ${summary.averageTriangleDrawMs.toFixed(1)}/${summary.averageRectDrawMs.toFixed(1)} ms\n` +
-        `Audio underruns: ${summary.audioUnderruns}\n` +
+        `SDL audio underruns: ${summary.audioUnderruns}\n` +
+        `Output diagnostics: ${result.audioOutput.status}\n` +
+        `Output gap total/max (since attach): ${result.audioOutput.underflowMs ?? 'N/A'}/${result.audioOutput.longestGapMs ?? 'N/A'} ms\n` +
         `Long VI: ${summary.longVis}\nRecompiles: ${summary.recompiles}`,
         'N64 測試結果',
       );
@@ -2309,6 +2342,8 @@ async function startSnes9xGame(
 }
 
 async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Promise<void> {
+  globalThis.__n64RectPhases = undefined; // Never export a previous runtime's rectangle capture.
+  globalThis.__n64CullStateCacheEnabled = undefined;
   if (!hasN64RomMagic(romData)) {
     throw new Error(`無效的 N64 ROM 資料: ${currentRomFilename}`);
   }
@@ -2338,6 +2373,8 @@ async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Prom
 
   try {
     activeBackend = 'mupen64';
+    n64AudioOutputDiagnostics.dispose();
+    n64AudioOutputDiagnostics = createAudioOutputDiagnostics(audioOutputDiagnosticsEnabled(window.location.search));
     currentN64RomData = romData;
     const benchmarkConfig = resolveN64BenchmarkConfig(selectN64PerformanceProfile());
     const useRebuiltRuntime = benchmarkConfig.runtime === 'fork' && !forceNpmRuntime;
@@ -2574,7 +2611,9 @@ function putMupenIdbFile(fileKey: string, contents: Uint8Array): Promise<void> {
 
 async function stopN64Backend(): Promise<void> {
   releaseAllN64Inputs();
+  document.getElementById('n64-audio-diagnostics')?.remove();
   n64Telemetry.reset();
+  n64AudioOutputDiagnostics.dispose();
   n64BenchmarkSession = null;
   removeN64BenchmarkDiagnostics?.();
   removeN64BenchmarkDiagnostics = null;
@@ -3685,6 +3724,7 @@ function clearAudioQueue(): void {
 
 function syncAudioWorkletState(): void {
   audioWorkletNode?.port.postMessage({ type: 'state', running: isRunning, muted: audioMuted });
+  n64AudioOutputDiagnostics.setLifecycle(isRunning && !document.hidden, audioMuted);
 }
 
 /**
@@ -3760,16 +3800,25 @@ function resumeAudio(): void {
 }
 
 function configureN64AudioWorklet(): void {
+  const diagnostics = n64AudioOutputDiagnostics;
+  diagnostics.setLifecycle(isRunning && !document.hidden, audioMuted);
+  const controls = n64Controls;
   const configure = n64Controls?.configureAudioWorklet;
-  if (!configure) return;
+  if (!configure) {
+    diagnostics.attach(controls?.getAudioOutputDiagnostics?.());
+    return;
+  }
 
   const workletUrl = new URL(
-    `${import.meta.env.BASE_URL}n64-audio-worklet.js`,
+    `${import.meta.env.BASE_URL}n64-audio-worklet.js?v=${N64_REBUILT_ASSET_VERSION}`,
     document.baseURI,
   ).href;
   void configure(workletUrl)
     .then(enabled => {
-      if (enabled) console.info('[N64] AudioWorklet transport enabled');
+      if (controls === n64Controls && diagnostics === n64AudioOutputDiagnostics) {
+        diagnostics.attach(controls?.getAudioOutputDiagnostics?.());
+      }
+      if (enabled) console.info('[N64] AudioWorklet configured; live routing requires render acknowledgement');
     })
     .catch(error => console.warn('[N64] AudioWorklet fallback to SDL ScriptProcessor:', error));
 }
@@ -5074,6 +5123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.addEventListener('keydown', resumeAudio);
   document.addEventListener('touchstart', resumeAudio, { passive: true });
   document.addEventListener('visibilitychange', () => {
+    n64AudioOutputDiagnostics.setLifecycle(isRunning && !document.hidden, audioMuted);
     if (document.hidden) saveSram();
     else resumeAudio();
   });

@@ -1,0 +1,23 @@
+diff --git a/src/sdl_backend.c b/src/sdl_backend.c
+--- a/src/sdl_backend.c
++++ b/src/sdl_backend.c
+@@ -259,3 +259,6 @@
+         DebugMessage(M64MSG_VERBOSE, "sdl_init_audio_device(): SDL Audio sub-system already initialized.");
+ 
++#if EMSCRIPTEN
++        EM_ASM({ if (Module.n64AudioDeviceClosing) Module.n64AudioDeviceClosing(); });
++#endif
+         SDL_PauseAudio(1);
+@@ -309,2 +312,5 @@
+     }
++#if EMSCRIPTEN
++    EM_ASM({ if (Module.n64AudioDeviceOpened) Module.n64AudioDeviceOpened(); });
++#endif
+     if (desired.format != obtained.format)
+@@ -351,3 +357,6 @@
+ static void release_audio_device(struct sdl_backend* sdl_backend)
+ {
++#if EMSCRIPTEN
++    EM_ASM({ if (Module.n64AudioDeviceClosing) Module.n64AudioDeviceClosing(); });
++#endif
+     if (SDL_WasInit(SDL_INIT_AUDIO) != 0) {

@@ -1,0 +1,155 @@
+diff --git a/src/main.c b/src/main.c
+--- a/src/main.c
++++ b/src/main.c
+@@ -1282,4 +1282,5 @@
+       });
++#include "web_audio_lifecycle.h"
+ }
+ 
+ EM_JS(void, initIDBFS, (), {
+diff --git a/src/web_audio_lifecycle.h b/src/web_audio_lifecycle.h
+new file mode 100644
+--- /dev/null
++++ b/src/web_audio_lifecycle.h
+@@ -0,0 +1,1 @@
++/* Separate EM_ASM preserves reverse-checks of the earlier bridge patches. */
++EM_ASM({
++    (function() {
++    // BEGIN N64 AUDIO LIFECYCLE (also executed directly by regression tests)
++    const controls = Module.emulatorControls;
++    let url = null, stopped = false, generation = 0, current = null;
++    let lastError = null, failures = 0;
++    const ids = new WeakMap();
++    let nextId = 0;
++    const identity = function(value) {
++        if (!value) return null;
++        if (!ids.has(value)) ids.set(value, ++nextId);
++        return ids.get(value);
++    };
++    const device = function() {
++        const sdl = Module.SDL2;
++        return [sdl && sdl.audioContext, sdl && sdl.audio && sdl.audio.scriptProcessorNode];
++    };
++    const matches = function(s) {
++        const d = device();
++        return !stopped && current === s && s.context === d[0] && s.script === d[1]
++            && s.context.state !== 'closed';
++    };
++    const safely = function(fn) { try { fn(); } catch (error) { lastError = String(error); } };
++    const clearPublished = function() {
++        Module.n64AudioWorkletPort = undefined;
++        Module.n64AudioWorkletNode = undefined;
++        Module.n64AudioWorkletSilentGain = undefined;
++        Module.n64AudioWorkletPromise = undefined;
++    };
++    const release = function(s) {
++        if (!s) return;
++        clearTimeout(s.timer);
++        s.context.removeEventListener('statechange', s.onState);
++        if (s.node) {
++            s.node.onprocessorerror = null;
++            safely(function() { s.node.port.removeEventListener('message', s.onMessage); s.node.port.close(); });
++            safely(function() { s.node.disconnect(); });
++        }
++        if (s.gain) safely(function() { s.gain.disconnect(); });
++        // Restore only our captured producer, never a replacement device.
++        if (s.routed && s.context.state !== 'closed') safely(function() {
++            s.script.disconnect(); s.script.connect(s.context.destination);
++        });
++        s.routed = false;
++        if (current === s) clearPublished();
++    };
++    const invalidate = function() {
++        ++generation;
++        release(current);
++        current = null;
++        clearPublished();
++    };
++    const configure = function(workletUrl) {
++        if (workletUrl) url = workletUrl;
++        if (stopped || !url) return Promise.resolve(false);
++        const d = device(), context = d[0], script = d[1];
++        if (current && !matches(current)) invalidate();
++        if (current) return current.promise || Promise.resolve(current.routed);
++        if (!context || !script || context.state === 'closed') return Promise.resolve(false);
++        const s = { context: context, script: script, generation: ++generation,
++            routed: false, node: null, gain: null, timer: null, acknowledged: false,
++            heartbeatAt: null, status: 'loading', promise: null, onState: null, onMessage: null };
++        current = s;
++        const fail = function(error) {
++            if (!matches(s)) return;
++            lastError = String(error); ++failures;
++            release(s);
++            s.status = 'fallback'; s.promise = null;
++            // No retries for this device: new SDL identity is the recovery boundary.
++        };
++        const arm = function() {
++            clearTimeout(s.timer);
++            if (matches(s) && context.state === 'running' && s.status !== 'fallback') {
++                s.timer = setTimeout(function() { fail('worklet render heartbeat timeout'); }, 5000);
++            }
++        };
++        s.onState = function() {
++            if (context.state === 'closed') { if (current === s) invalidate(); }
++            else arm();
++        };
++        context.addEventListener('statechange', s.onState);
++        if (!context.audioWorklet || typeof AudioWorkletNode === 'undefined') {
++            fail('AudioWorklet unavailable'); return Promise.resolve(false);
++        }
++        arm();
++        s.promise = Promise.resolve().then(function() { return context.audioWorklet.addModule(url); })
++            .then(function() {
++                if (!matches(s) || s.status === 'fallback') return false;
++                s.node = new AudioWorkletNode(context, 'n64-audio-processor', {
++                    numberOfInputs: 0, numberOfOutputs: 1, outputChannelCount: [2]
++                });
++                s.gain = context.createGain(); s.gain.gain.value = 0;
++                s.node.onprocessorerror = function() { fail('AudioWorklet processorerror'); };
++                s.onMessage = function(event) {
++                    if (!matches(s) || s.status === 'fallback') return;
++                    const data = event.data;
++                    if (!data || data.type !== 'n64-audio-heartbeat' || data.generation !== s.generation) return;
++                    s.acknowledged = true; s.heartbeatAt = Date.now();
++                    if (!s.routed) {
++                        try {
++                            // Until a render acknowledgement, SDL stays audible and no PCM is diverted.
++                            s.routed = true;
++                            script.disconnect(); script.connect(s.gain); s.gain.connect(context.destination);
++                            Module.n64AudioWorkletNode = s.node;
++                            Module.n64AudioWorkletSilentGain = s.gain;
++                            Module.n64AudioWorkletPort = s.node.port;
++                            s.status = 'live';
++                        } catch (error) { fail(error); return; }
++                    }
++                    arm();
++                };
++                s.node.port.addEventListener('message', s.onMessage);
++                s.node.port.start();
++                s.node.connect(context.destination);
++                s.node.port.postMessage({ type: 'lifecycle', generation: s.generation });
++                s.status = 'awaiting-render-ack';
++                return true;
++            }).catch(function(error) { fail(error); return false; });
++        return s.promise;
++    };
++    Module.n64AudioDeviceClosing = invalidate;
++    Module.n64AudioDeviceOpened = function() { if (!stopped) void configure(); };
++    const originalStop = controls.stop;
++    controls.stop = function() { stopped = true; invalidate(); return originalStop(); };
++    const originalStart = controls.start;
++    controls.start = function() { stopped = false; return originalStart.apply(this, arguments); };
++    controls.configureAudioWorklet = configure;
++    controls.getAudioOutputDiagnostics = function() {
++        const d = device(), s = current;
++        const valid = s && matches(s), live = valid && s.routed && s.status === 'live';
++        return ({ port: live ? s.node.port : null, mode: live ? 'audio-worklet' : 'script-processor',
++            sampleRate: d[0] ? d[0].sampleRate : null, contextState: d[0] ? d[0].state : 'unavailable',
++            contextId: identity(d[0]), scriptProcessorId: identity(d[1]), generation: generation,
++            routeState: valid ? s.status : (stopped ? 'stopped' : 'awaiting-device'),
++            acknowledged: !!(valid && s.acknowledged), heartbeatAgeMs: valid && s.heartbeatAt !== null ? Date.now() - s.heartbeatAt : null,
++            lastError: lastError, failures: failures });
++    };
++    // END N64 AUDIO LIFECYCLE
++    })();
++});
