@@ -68,7 +68,7 @@ fn ct2_runtime_tuning_original_rom() {
     let temporary = core.export_save_state();
     let ram_before = core.bus.ram;
     let cpu_before = (core.cpu.pc, core.system_clock);
-    let other: Vec<_> = (0..7).map(|s| query(&core, 0, s, None)).collect();
+    let tuned_home: Vec<_> = (0..7).map(|s| query(&core, 0, s, None)).collect();
     let evidence: serde_json::Value = serde_json::from_str(include_str!("../../src/game-profiles/ct2-stats-evidence.json")).unwrap();
     for level in 1..=64u8 {
         set_level(&mut core, Some(level));
@@ -86,7 +86,9 @@ fn ct2_runtime_tuning_original_rom() {
     assert_eq!((core.cpu.pc, core.system_clock), cpu_before, "hot update does not reset/advance");
     set_level(&mut core, None);
     assert_eq!(query(&core, 9, 1, None), 12);
-    assert_eq!(other, (0..7).map(|s| query(&core, 0, s, None)).collect::<Vec<_>>());
+    let native_home: Vec<_> = (0..7).map(|s| query(&core, 0, s, None)).collect();
+    assert!(tuned_home.iter().zip(&native_home).any(|(tuned, native)| tuned != native),
+        "non-Tsubasa home records must be affected by team tuning");
 
     // Synthetic roster permutations across all home positions and team contexts.
     // These exercise the original calculation, not merely the predicate.
@@ -103,11 +105,6 @@ fn ct2_runtime_tuning_original_rom() {
             let expected = query(&core, slot, 1, Some(63));
             set_level(&mut core, Some(64));
             assert_eq!(query(&core, slot, 1, None), expected, "team={team} slot={slot}");
-            if slot != 9 {
-                let unaffected = query(&core, 9, 1, None);
-                set_level(&mut core, None);
-                assert_eq!(query(&core, 9, 1, None), unaffected);
-            }
         }
     }
     assert!(core.import_persistent_save_state(&save));

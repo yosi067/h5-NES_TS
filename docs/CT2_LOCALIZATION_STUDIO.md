@@ -219,7 +219,7 @@
 
 `$CD7C` 是球員記錄 resolver，結果為 `$34/$35`；不能與 `$F30F`／`$F329` 的字詞 resolver 混用。已驗證記錄 `+0` 是球員 ID、`+1..2` 是目前體力、`+3` 是零起算等級。其餘 bytes 仍未定義。大空翼初始在 `$036C`，不是 `$0300`。
 
-詳細公式、原始 PRG offsets、上限、正式 read-side tuning 與測試見[能力研究](CT2_PLAYER_STATS_RESEARCH.md)。目前藉由原能力讀取 routine 提供受限等級，不寫入球員／經驗 RAM；未知能力欄位、其他球員和任意 255 編輯仍不開放。
+詳細公式、原始 PRG offsets、上限、正式 read-side tuning 與測試見[能力研究](CT2_PLAYER_STATS_RESEARCH.md)。目前藉由原能力讀取 routine 對我方 XI 的有效球員記錄提供受限等級，不寫入球員／經驗 RAM；對手記錄、未定義能力欄位和任意 255 編輯仍不開放。
 
 ## 下一個驗收里程碑
 

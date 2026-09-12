@@ -15,19 +15,19 @@ export function mountCt2RuntimeTuning(core: GameProfileTuningCore, anchor: Eleme
   const toggle = document.createElement('input');
   toggle.type = 'checkbox';
   toggle.checked = state.tsubasaLevel !== null;
-  toggleLabel.append(toggle, ' 啟用大空翼等級調整');
+  toggleLabel.append(toggle, ' 啟用我方全隊等級調整');
   const levelLabel = document.createElement('label');
   const slider = document.createElement('input');
   slider.type = 'range'; slider.min = '1'; slider.max = '64'; slider.step = '1';
   slider.value = String(state.tsubasaLevel ?? 64);
-  slider.setAttribute('aria-label', '大空翼遊戲內等級');
+  slider.setAttribute('aria-label', '我方球員遊戲內等級');
   levelLabel.append('等級 ', slider);
   const note = document.createElement('p');
-  note.textContent = '預設自然滿級 64，非全能力 255。下一次能力計算生效；既有畫面需重開。體力不補滿、不鎖定；降級可能暫時高於新上限。關閉恢復原生等級。重置／讀檔保留設定，重新載入遊戲回到預設。';
+  note.textContent = '預設我方全隊自然滿級 64，非全能力 255。劇情換隊後由原遊戲更新的我方名單同樣套用；對手不受影響。下一次能力計算生效；既有畫面需重開。體力不補滿、不鎖定；降級可能暫時高於新上限。關閉恢復原生等級。重置／讀檔保留設定，重新載入遊戲回到預設。';
   const error = document.createElement('p');
   error.setAttribute('role', 'status');
   const render = () => {
-    summary.textContent = toggle.checked ? `大空翼：等級 ${slider.value}（遊戲內）` : '大空翼：原生等級';
+    summary.textContent = toggle.checked ? `我方全隊：等級 ${slider.value}（遊戲內）` : '我方全隊：原生等級';
     slider.disabled = !toggle.checked;
   };
   const update = () => {

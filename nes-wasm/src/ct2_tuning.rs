@@ -42,12 +42,13 @@ impl Ct2Tuning {
     }
 
     // Only invoked during the original LDA ($34),Y at the verified calculation
-    // or level-display sites. Restrict to the home XI, never the opponent table.
+    // or level-display sites. The game keeps the active home XI in this table;
+    // story-driven roster changes replace its records in place.
     pub fn level_read(&self, ram: &[u8; 2048], address: u16) -> Option<u8> {
         let level = self.level?;
         let record = usize::from(u16::from_le_bytes([ram[0x34], ram[0x35]]));
         if self.supported && (0x300..0x384).contains(&record)
-            && (record - 0x300) % 12 == 0 && ram[record] == 1
+            && (record - 0x300) % 12 == 0 && ram[record] != 0
             && usize::from(address) == record + 3
         {
             Some(level - 1)
@@ -79,16 +80,16 @@ mod tests {
     }
 
     #[test]
-    fn roster_identity_not_slot_or_team_number() {
+    fn active_home_roster_identity_not_slot_or_team_number() {
         let tuning = Ct2Tuning::for_rom(ORIGINAL_SHA, 4);
         let mut ram = [0u8; 2048];
         for slot in 0..22 {
             let record = 0x300 + slot * 12;
             ram[0x34..0x36].copy_from_slice(&(record as u16).to_le_bytes());
-            ram[record] = 1;
+            ram[record] = slot as u8 + 1;
             assert_eq!(tuning.level_read(&ram, record as u16 + 3), (slot < 11).then_some(63));
             assert_eq!(tuning.level_read(&ram, record as u16 + 1), None);
-            ram[record] = 2;
+            ram[record] = 0;
             assert_eq!(tuning.level_read(&ram, record as u16 + 3), None);
         }
     }

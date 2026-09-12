@@ -20,6 +20,7 @@ describe('CT2 live tuning controls', () => {
   it('only appears for a core-verified ROM and does not install anything on mount', () => {
     expect(setup(false).controls).toBeNull();
     const { core } = setup();
+    expect(document.querySelector('summary')?.textContent).toContain('我方全隊');
     expect(document.querySelector('summary')?.textContent).toContain('64');
     expect(core.setGameProfileTuning).not.toHaveBeenCalled();
   });
