@@ -1,3 +1,20 @@
+html.standalone-mode {
+  background-color: #c7b78d;
+}
+
+body.standalone-mode #rom-selector.rom-selector {
+  height: 100dvh;
+  padding-top: max(18px, calc(env(safe-area-inset-top, 0px) + 12px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-bottom: max(18px, calc(env(safe-area-inset-bottom, 0px) + 12px));
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  overscroll-behavior-y: none;
+}
+
+body #rom-selector .rom-selector-footer {
+  display: none;
+}
+
 #rom-selector.rom-selector {
   --mag-red: #a52824;
   --mag-ink: #171713;
