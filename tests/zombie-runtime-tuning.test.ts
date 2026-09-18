@@ -18,6 +18,7 @@ it('requires verified Zombie Hunter identity, not CT2', () => {
   expect(setup('zombie-hunter-jp', false).controls).toBeNull();
   const { core, controls } = setup();
   expect(controls).not.toBeNull();
+  expect(document.querySelector<HTMLElement>('[data-zombie-runtime-tuning]')?.hidden).toBe(true);
   expect(document.body.textContent).toContain('L31');
   expect(core.setGameProfileTuning).not.toHaveBeenCalled();
 });

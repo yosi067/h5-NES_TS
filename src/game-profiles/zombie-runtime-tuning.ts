@@ -6,6 +6,7 @@ export function mountZombieRuntimeTuning(core: GameProfileTuningCore, anchor: El
   if (!state.supported || state.profileId !== 'zombie-hunter-jp') return null;
   const panel = document.createElement('div');
   panel.dataset.zombieRuntimeTuning = '';
+  panel.hidden = true;
   panel.style.cssText = 'padding:8px 12px;color:#bde8e1;font:13px system-ui;max-width:420px;margin:auto;';
   const label = document.createElement('label');
   const toggle = document.createElement('input');

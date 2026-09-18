@@ -9,6 +9,7 @@ export function mountCt2RuntimeTuning(core: GameProfileTuningCore, anchor: Eleme
   if (!state.supported) return null;
   const panel = document.createElement('details');
   panel.dataset.ct2RuntimeTuning = '';
+  panel.hidden = true;
   panel.style.cssText = 'padding:8px 12px;color:#bde8e1;font:13px system-ui;max-width:420px;margin:auto;';
   const summary = document.createElement('summary');
   const toggleLabel = document.createElement('label');
