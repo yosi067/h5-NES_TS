@@ -1,0 +1,2216 @@
+/*
+ * Editorial lobby layer — loaded last.
+ * Layout rules are scoped to portrait/desktop (body:not(.mobile-landscape-mode));
+ * the compact mobile-landscape layout in magazine-selector.css stays authoritative.
+ */
+
+#rom-selector.rom-selector {
+  --ed-sheet: #f4eddb;
+  --ed-card: #fbf7ec;
+  --ed-ink: #15130e;
+  --ed-ink-2: #3a3529;
+  --ed-muted: #6b6250;
+  --ed-line: rgba(21, 19, 14, 0.13);
+  --ed-line-strong: rgba(21, 19, 14, 0.78);
+  --ed-red: #c2321f;
+  --ed-green: #2f4a3c;
+  --ed-gold: #e5a92a;
+  --ed-display: "Bahnschrift", "DIN Alternate", "DIN Condensed", "Avenir Next Condensed", "Roboto Condensed", sans-serif-condensed, "Arial Narrow", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --ed-sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --ed-mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", Menlo, Consolas, monospace;
+  --ed-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ed-pad: clamp(20px, 4vw, 56px);
+  --ed-radius: 22px;
+  --ed-grain: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.32 0 0 0 0 0.24 0 0 0 0 0.12 0 0 0 0.16 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* System accent colours shared by machine cards, chapter header and list. */
+#rom-selector [data-system="nes"] { --sys: #c2321f; --system-color: #c2321f; --system-dark: #7d1f14; }
+#rom-selector [data-system="gb"] { --sys: #5f7d3b; --system-color: #5f7d3b; --system-dark: #3a4f22; }
+#rom-selector [data-system="snes"] { --sys: #6a58a8; --system-color: #6a58a8; --system-dark: #43377a; }
+#rom-selector [data-system="arcade"] { --sys: #d9771f; --system-color: #d9771f; --system-dark: #8a4a10; }
+#rom-selector [data-system="gg"] { --sys: #2d63a8; --system-color: #2d63a8; --system-dark: #1b3f6e; }
+#rom-selector [data-system="genesis"] { --sys: #22303f; --system-color: #22303f; --system-dark: #10181f; }
+#rom-selector [data-system="sms"] { --sys: #b0302b; --system-color: #b0302b; --system-dark: #6c1c19; }
+#rom-selector [data-system="n64"] { --sys: #2f8a55; --system-color: #2f8a55; --system-dark: #1c5634; }
+
+/* ---------- Sheet ---------- */
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector {
+  background:
+    radial-gradient(120% 80% at 18% 0%, rgba(255, 249, 228, 0.55), transparent 60%),
+    radial-gradient(90% 70% at 100% 100%, rgba(92, 62, 22, 0.2), transparent 62%),
+    #cbbd95;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-content {
+  position: relative;
+  width: min(1240px, 100%);
+  max-width: 1240px;
+  padding: var(--ed-pad);
+  border: 1px solid rgba(21, 19, 14, 0.12);
+  border-radius: 28px;
+  overflow: hidden;
+  background: var(--ed-grain), var(--ed-sheet);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 2px 6px rgba(60, 40, 10, 0.1),
+    0 40px 80px -36px rgba(60, 40, 10, 0.5);
+  font-family: var(--ed-sans);
+  color: var(--ed-ink);
+}
+
+/* ---------- Cover / hero ---------- */
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-header.lobby-cover-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 400px);
+  grid-template-areas:
+    "top top"
+    "brand crt"
+    "deck crt"
+    "title crt"
+    "sub crt"
+    "stats crt"
+    "ticker ticker";
+  grid-template-rows: auto auto auto auto auto 1fr auto;
+  align-items: start;
+  gap: 0 clamp(28px, 5vw, 72px);
+  min-height: 0;
+  margin: 0 0 clamp(36px, 5vw, 64px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-cover-copy {
+  display: contents;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-topline {
+  grid-area: top;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 clamp(20px, 3vw, 36px);
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--ed-line-strong);
+  color: var(--ed-ink-2);
+  font: 600 11px/1.2 var(--ed-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-header .brand-name {
+  grid-area: brand;
+  margin: 0;
+  padding: 0;
+  font-family: var(--ed-display);
+  font-size: clamp(76px, 14vw, 210px);
+  font-stretch: 85%;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 0.8;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+  text-shadow: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .brand-logo-red {
+  color: var(--ed-red);
+  text-shadow: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .brand-logo-white {
+  color: var(--ed-ink);
+  text-shadow: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-deck {
+  grid-area: deck;
+  align-self: center;
+  margin: 22px 0 0;
+  color: var(--ed-green);
+  font: 600 12px/1 var(--ed-mono);
+  letter-spacing: 0.34em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-issue {
+  grid-area: top;
+  position: static;
+  justify-self: center;
+  align-self: start;
+  display: inline-flex;
+  margin: -5px 0 0;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ed-sheet);
+  background: var(--ed-ink);
+  box-shadow: none;
+  font: 700 11px/1 var(--ed-mono);
+  letter-spacing: 0.14em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-header h2 {
+  grid-area: title;
+  width: auto;
+  margin: clamp(22px, 3vw, 34px) 0 0;
+  padding: 0;
+  border: 0;
+  color: var(--ed-ink);
+  font-family: var(--ed-sans);
+  font-size: clamp(24px, 2.8vw, 38px);
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  text-shadow: none;
+  text-wrap: balance;
+  animation: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .selector-subtitle {
+  grid-area: sub;
+  display: block;
+  width: auto;
+  margin: 10px 0 0;
+  border: 0;
+  color: var(--ed-muted);
+  -webkit-text-fill-color: var(--ed-muted);
+  font: 500 15px/1.6 var(--ed-sans);
+  letter-spacing: 0.02em;
+  text-shadow: none;
+  text-wrap: balance;
+  animation: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats {
+  grid-area: stats;
+  align-self: end;
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  margin: clamp(26px, 3.4vw, 44px) 0 0;
+  padding: 0;
+  border-top: 1px solid var(--ed-line-strong);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats[hidden] {
+  display: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats > div {
+  padding: 14px clamp(18px, 3vw, 40px) 0 0;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats > div + div {
+  padding-left: clamp(18px, 3vw, 40px);
+  border-left: 1px solid var(--ed-line);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats dt {
+  color: var(--ed-muted);
+  font: 600 11px/1.2 var(--ed-sans);
+  letter-spacing: 0.12em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats dd {
+  margin: 8px 0 0;
+  color: var(--ed-ink);
+  font-family: var(--ed-display);
+  font-size: clamp(30px, 3.4vw, 48px);
+  font-stretch: 85%;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* CRT: poster sun + halftone behind the set */
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-crt {
+  grid-area: crt;
+  position: relative;
+  isolation: isolate;
+  align-self: center;
+  justify-self: end;
+  width: 100%;
+  max-width: 400px;
+  padding: clamp(28px, 4vw, 52px) clamp(14px, 2vw, 26px) 0;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-crt::before,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-crt::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 44%;
+  width: 104%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-crt::before {
+  background: radial-gradient(circle, var(--ed-gold) 0 56%, transparent 56.4%);
+  opacity: 0.9;
+  transition: transform 0.8s var(--ed-ease);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-crt::after {
+  width: 132%;
+  background: radial-gradient(rgba(194, 50, 31, 0.55) 1.3px, transparent 1.8px) 0 0 / 10px 10px;
+  -webkit-mask: radial-gradient(circle, transparent 0 40%, #000 44%, transparent 70%);
+  mask: radial-gradient(circle, transparent 0 40%, #000 44%, transparent 70%);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-crt:hover::before,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-crt:focus-visible::before {
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-crt:focus-visible {
+  outline: 3px solid var(--ed-red);
+  outline-offset: 6px;
+  border-radius: 18px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .crt-cabinet {
+  box-shadow:
+    0 8px 0 #343733,
+    0 36px 40px -18px rgba(40, 26, 6, 0.6),
+    inset 0 0 0 2px #c7c5b3;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .crt-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 26px;
+  color: var(--ed-ink);
+  font: 700 11px/1 var(--ed-mono);
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .crt-caption-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ed-red);
+  box-shadow: 0 0 0 0 rgba(194, 50, 31, 0.5);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .crt-caption-text {
+  margin-left: 6px;
+  padding-left: 12px;
+  border-left: 1px solid var(--ed-line-strong);
+  font: 700 13px/1 var(--ed-sans);
+  letter-spacing: 0.06em;
+}
+
+/* Ticker band */
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-ticker {
+  grid-area: ticker;
+  display: block;
+  margin: clamp(40px, 5vw, 64px) calc(var(--ed-pad) * -1) 0;
+  overflow: hidden;
+  color: var(--ed-sheet);
+  background: var(--ed-ink);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-ticker-track {
+  display: flex;
+  width: max-content;
+  padding: 15px 0 13px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-ticker-track span {
+  display: inline-flex;
+  align-items: center;
+  padding-right: 32px;
+  font-family: var(--ed-display);
+  font-size: clamp(16px, 1.8vw, 22px);
+  font-stretch: 85%;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-ticker-track span::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-right: 32px;
+  background: var(--ed-gold);
+  transform: rotate(45deg);
+}
+
+/* ---------- Machine index ---------- */
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-grid {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: clamp(14px, 1.6vw, 22px);
+  padding: 0 0 8px;
+  overflow: visible;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-grid-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin: 0 0 6px;
+  padding: 0 0 14px;
+  border-bottom: 3px solid var(--ed-ink);
+}
+
+.machine-grid-kicker {
+  color: var(--ed-red);
+  font: 700 11px/1 var(--ed-mono);
+  letter-spacing: 0.22em;
+}
+
+.machine-grid-title {
+  color: var(--ed-ink);
+  font: 900 clamp(22px, 2.4vw, 30px)/1 var(--ed-sans);
+  letter-spacing: 0.04em;
+}
+
+.machine-grid-note {
+  margin-left: auto;
+  color: var(--ed-muted);
+  font: 600 11px/1 var(--ed-mono);
+  letter-spacing: 0.18em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell {
+  grid-column: span 4;
+  min-height: 0;
+  padding: 0;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell[data-system="nes"] {
+  grid-column: span 7;
+  grid-row: span 2;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell[data-system="gb"],
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell[data-system="snes"] {
+  grid-column: span 5;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell[data-system="n64"] {
+  grid-column: 1 / -1;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card {
+  --sys-soft: 0.13;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template:
+    "folio" auto
+    "art" minmax(170px, 1fr)
+    "copy" auto
+    "footer" auto / minmax(0, 1fr);
+  gap: 16px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: clamp(18px, 1.8vw, 24px);
+  border: 1px solid var(--ed-line);
+  border-radius: var(--ed-radius);
+  overflow: hidden;
+  color: var(--ed-ink);
+  text-align: left;
+  background: var(--ed-card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(60, 40, 10, 0.06);
+  outline: none;
+  filter: none;
+  cursor: pointer;
+  transition:
+    transform 0.55s var(--ed-ease),
+    box-shadow 0.55s var(--ed-ease),
+    border-color 0.3s ease;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card::before {
+  content: "";
+  display: block;
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  height: auto;
+  border-radius: inherit;
+  background: linear-gradient(180deg, transparent 40%, var(--sys) 180%);
+  opacity: 0.08;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card::after {
+  display: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:hover,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:focus-visible {
+  transform: translateY(-6px);
+  border-color: rgba(21, 19, 14, 0.24);
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 34px 52px -30px rgba(52, 34, 8, 0.55);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:focus-visible {
+  outline: 3px solid var(--sys);
+  outline-offset: 4px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:hover::before,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:focus-visible::before {
+  opacity: 0.2;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:active {
+  transform: translateY(-2px) scale(0.995);
+  transition-duration: 0.12s;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-folio {
+  grid-area: folio;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--ed-line);
+  color: var(--ed-muted);
+  font: 600 11px/1 var(--ed-mono);
+  letter-spacing: 0.14em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-section {
+  margin-right: auto;
+  color: var(--sys);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-issue {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--ed-sheet);
+  background: var(--ed-ink);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-index {
+  position: absolute;
+  z-index: -1;
+  top: 56px;
+  right: clamp(16px, 1.8vw, 24px);
+  color: transparent;
+  font-family: var(--ed-display);
+  font-size: clamp(64px, 6vw, 92px);
+  font-stretch: 85%;
+  font-weight: 700;
+  line-height: 0.8;
+  letter-spacing: -0.03em;
+  -webkit-text-stroke: 1.5px var(--sys);
+  opacity: 0.55;
+  transition: opacity 0.5s ease, transform 0.6s var(--ed-ease);
+  pointer-events: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:hover .machine-index,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:focus-visible .machine-index {
+  opacity: 0.9;
+  transform: translateX(-4px);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-art {
+  grid-area: art;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-art::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 50%;
+  width: min(78%, 280px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--sys);
+  opacity: var(--sys-soft);
+  transform: translate(-50%, -50%);
+  transition: transform 0.7s var(--ed-ease), opacity 0.5s ease;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:hover .machine-art::before,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:focus-visible .machine-art::before {
+  opacity: 0.22;
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-art-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: 240px;
+  max-height: 190px;
+  padding: 0;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 18px 16px rgba(40, 25, 5, 0.22));
+  image-rendering: auto;
+  transition: transform 0.7s var(--ed-ease);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:hover .machine-art-img,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:focus-visible .machine-art-img {
+  transform: translateY(-8px) rotate(-2deg) scale(1.04);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-copy {
+  grid-area: copy;
+  align-self: end;
+  min-width: 0;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-title {
+  display: block;
+  padding: 0;
+  color: var(--ed-ink);
+  font-family: var(--ed-display);
+  font-size: clamp(28px, 2.6vw, 38px);
+  font-stretch: 85%;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-shadow: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-meta,
+body.android-device-mode:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-meta {
+  display: block;
+  max-width: 40ch;
+  margin: 10px 0 0;
+  padding: 0;
+  border: 0;
+  color: var(--ed-muted);
+  -webkit-text-fill-color: var(--ed-muted);
+  font: 500 14px/1.65 var(--ed-sans);
+  letter-spacing: 0.01em;
+  text-shadow: none;
+  text-wrap: pretty;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-footer {
+  grid-area: footer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 0 0;
+  border-top: 1px solid var(--ed-line);
+  color: var(--ed-muted);
+  font: 600 11px/1 var(--ed-mono);
+  letter-spacing: 0.14em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-count {
+  position: static;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  color: var(--ed-muted);
+  background: transparent;
+  box-shadow: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-count b {
+  align-self: center;
+  color: var(--sys);
+  font-size: 9px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-count strong {
+  color: var(--ed-ink);
+  font-family: var(--ed-display);
+  font-size: 26px;
+  font-stretch: 85%;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 0.8;
+  font-variant-numeric: tabular-nums;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-tag {
+  display: none;
+  color: var(--ed-muted);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-page {
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  color: var(--ed-muted);
+}
+
+.machine-cta {
+  display: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px 0 16px;
+  border: 1px solid var(--ed-ink);
+  border-radius: 999px;
+  color: var(--ed-ink);
+  font: 700 13px/1 var(--ed-sans);
+  letter-spacing: 0.08em;
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-cta::after {
+  content: "→";
+  font-family: var(--ed-mono);
+  transition: transform 0.45s var(--ed-ease);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:hover .machine-cta,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:focus-visible .machine-cta {
+  border-color: var(--sys);
+  color: #fff;
+  background: var(--sys);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:hover .machine-cta::after,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card:focus-visible .machine-cta::after {
+  transform: translateX(4px);
+}
+
+/* Feature card (FC/NES) */
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] {
+  grid-template-rows: auto minmax(300px, 1fr) auto auto;
+  padding: clamp(22px, 2.4vw, 32px);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-index {
+  top: 64px;
+  font-size: clamp(110px, 11vw, 168px);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-art::before {
+  width: min(78%, 400px);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-art-img {
+  max-width: 420px;
+  max-height: 330px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-title {
+  font-size: clamp(44px, 4.6vw, 68px);
+  line-height: 0.92;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-meta {
+  font-size: 15px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-tag,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-tag {
+  display: inline;
+}
+
+/* Side cards (GB / SFC) and wide card (N64): art beside copy */
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="gb"],
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="snes"],
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] {
+  grid-template:
+    "folio folio" auto
+    "art copy" minmax(170px, 1fr)
+    "footer footer" auto / minmax(0, 0.9fr) minmax(0, 1.1fr);
+  column-gap: 20px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] {
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  grid-template-rows: auto minmax(220px, 1fr) auto;
+  column-gap: clamp(24px, 4vw, 56px);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="gb"] .machine-copy,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="snes"] .machine-copy {
+  align-self: end;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-copy {
+  align-self: center;
+}
+
+/* Tiles (Arcade / GG / MD): fixed stage so titles line up */
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="arcade"],
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="gg"],
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="genesis"] {
+  grid-template-rows: auto 190px 1fr auto;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="arcade"] .machine-copy,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="gg"] .machine-copy,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="genesis"] .machine-copy {
+  align-self: start;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="arcade"] .machine-art::before,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="gg"] .machine-art::before,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="genesis"] .machine-art::before {
+  width: 176px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="arcade"] .machine-art-img,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="gg"] .machine-art-img,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="genesis"] .machine-art-img {
+  max-height: 176px;
+}
+
+/* Back-cover card (N64): inverted ink stock */
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] {
+  --ed-line: rgba(244, 237, 219, 0.14);
+  border-color: transparent;
+  color: var(--ed-sheet);
+  background:
+    radial-gradient(90% 120% at 12% 50%, rgba(47, 138, 85, 0.28), transparent 60%),
+    var(--ed-ink);
+  box-shadow: 0 1px 2px rgba(20, 14, 4, 0.2);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"]::before {
+  display: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-folio,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-card-footer,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-count,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-tag,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-page {
+  color: rgba(244, 237, 219, 0.62);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-section {
+  color: #6fd39a;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-issue {
+  color: var(--ed-ink);
+  background: var(--ed-sheet);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-title,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-count strong {
+  color: var(--ed-sheet);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-meta {
+  color: rgba(244, 237, 219, 0.72);
+  -webkit-text-fill-color: rgba(244, 237, 219, 0.72);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-index {
+  -webkit-text-stroke-color: #6fd39a;
+  opacity: 0.4;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-art::before {
+  --sys-soft: 0.22;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-art-img {
+  filter: drop-shadow(0 22px 22px rgba(0, 0, 0, 0.55));
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-cta {
+  border-color: rgba(244, 237, 219, 0.7);
+  color: var(--ed-sheet);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"]:hover,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"]:focus-visible {
+  border-color: transparent;
+  box-shadow: 0 34px 52px -30px rgba(20, 14, 4, 0.8);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-art-img {
+  max-width: 300px;
+  max-height: 220px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-title {
+  font-size: clamp(36px, 3.8vw, 56px);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-index {
+  font-size: clamp(90px, 9vw, 140px);
+}
+
+/* ---------- Chapter opener (game list header) ---------- */
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-browser-header.is-visible {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 34%);
+  grid-template-areas:
+    "back art"
+    "copy art";
+  grid-template-rows: auto 1fr;
+  gap: 0 clamp(20px, 4vw, 48px);
+  min-height: 0;
+  margin: 0 0 clamp(28px, 4vw, 48px);
+  padding: clamp(20px, 3vw, 40px);
+  border: 1px solid var(--ed-line);
+  border-radius: 26px;
+  overflow: hidden;
+  background:
+    linear-gradient(rgba(251, 247, 236, 0.86), rgba(251, 247, 236, 0.86)),
+    var(--system-color);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(60, 40, 10, 0.06);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-browser-header.is-visible::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -4%;
+  top: 50%;
+  width: min(48%, 460px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--system-color);
+  opacity: 0.2;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-back-btn {
+  grid-area: back;
+  align-self: start;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  margin: 0;
+  padding: 0 18px 0 14px;
+  border: 1px solid rgba(21, 19, 14, 0.2);
+  border-radius: 999px;
+  color: var(--ed-ink);
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: none;
+  font: 700 14px/1 var(--ed-sans);
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, transform 0.4s var(--ed-ease);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-back-btn:hover,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-back-btn:focus-visible {
+  border-color: var(--ed-ink);
+  color: var(--ed-sheet);
+  background: var(--ed-ink);
+  outline: none;
+  transform: translateX(-3px);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-back-btn:focus-visible {
+  outline: 3px solid var(--system-color);
+  outline-offset: 3px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-copy {
+  grid-area: copy;
+  align-self: end;
+  min-width: 0;
+  margin-top: clamp(28px, 4vw, 56px);
+  padding: 0;
+  text-align: left;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-folio {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--ed-line-strong);
+  color: var(--ed-ink-2);
+  font: 600 11px/1 var(--ed-mono);
+  letter-spacing: 0.16em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-folio span:first-child {
+  margin-right: auto;
+  color: var(--system-dark);
+  font-weight: 700;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-folio span:last-child {
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--ed-sheet);
+  background: var(--ed-ink);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-browser-title {
+  margin: clamp(18px, 2.4vw, 28px) 0 0;
+  color: var(--ed-ink);
+  font-family: var(--ed-display);
+  font-size: clamp(56px, 8.6vw, 128px);
+  font-stretch: 85%;
+  font-weight: 700;
+  line-height: 0.84;
+  letter-spacing: -0.03em;
+  text-align: left;
+  text-shadow: none;
+  overflow-wrap: anywhere;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-label {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 22px 12px 0 0;
+  padding: 7px 14px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--system-color);
+  font: 800 12px/1 var(--ed-sans);
+  letter-spacing: 0.24em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-summary {
+  display: inline-block;
+  vertical-align: middle;
+  margin: 22px 0 0;
+  color: var(--ed-ink-2);
+  font: 700 16px/1.3 var(--ed-sans);
+  letter-spacing: 0.04em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-art {
+  grid-area: art;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 100%;
+  height: auto;
+  margin: 0;
+  border: 0;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-art img {
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  max-height: 280px;
+  object-fit: contain;
+  filter: drop-shadow(0 26px 22px rgba(40, 25, 5, 0.3));
+}
+
+/* ---------- Game list ---------- */
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: clamp(14px, 1.6vw, 22px);
+  max-height: none;
+  margin: 0;
+  padding: 0 0 12px;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-areas:
+    "cover number"
+    "cover copy";
+  grid-template-columns: clamp(104px, 11vw, 136px) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 12px clamp(16px, 2vw, 24px);
+  align-items: start;
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  padding: clamp(16px, 1.6vw, 20px);
+  border: 1px solid var(--ed-line);
+  border-radius: 20px;
+  color: var(--ed-ink);
+  text-align: left;
+  background: var(--ed-card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(60, 40, 10, 0.06);
+  outline: none;
+  filter: none;
+  cursor: pointer;
+  transition:
+    transform 0.5s var(--ed-ease),
+    box-shadow 0.5s var(--ed-ease),
+    border-color 0.3s ease;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item::before,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item::after {
+  display: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item:hover,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item:focus-visible {
+  transform: translateY(-4px);
+  border-color: rgba(21, 19, 14, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 30px 46px -30px rgba(52, 34, 8, 0.55);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item:focus-visible {
+  outline: 3px solid var(--system-color);
+  outline-offset: 3px;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item:active {
+  transform: translateY(-1px) scale(0.995);
+  transition-duration: 0.12s;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item-number {
+  grid-area: number;
+  align-self: start;
+  padding: 4px 0 12px;
+  border-bottom: 1px dashed rgba(21, 19, 14, 0.24);
+  color: var(--system-color);
+  font: 700 11px/1 var(--ed-mono);
+  letter-spacing: 0.18em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-cover-frame {
+  grid-area: cover;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  outline: 1px solid rgba(21, 19, 14, 0.1);
+  outline-offset: -1px;
+  background: #1f1c17;
+  box-shadow:
+    0 16px 24px -14px rgba(30, 20, 5, 0.6),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-cover-frame.is-missing {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.14), transparent 60%),
+    var(--system-color);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-cover-image {
+  grid-area: 1 / 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.7s var(--ed-ease);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-cover-image[hidden],
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-cover-placeholder[hidden] {
+  display: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item:hover .rom-cover-image,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item:focus-visible .rom-cover-image {
+  transform: scale(1.05);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-cover-placeholder {
+  padding: 10px;
+  color: #fff;
+  font: 800 13px/1.35 var(--ed-sans);
+  text-shadow: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-copy {
+  grid-area: copy;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-name {
+  display: block;
+  margin: 0;
+  color: var(--ed-ink);
+  font-family: var(--ed-display);
+  font-size: clamp(20px, 1.9vw, 26px);
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  text-shadow: none;
+  overflow-wrap: anywhere;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-description {
+  display: block;
+  margin: 0;
+  color: #574d3d;
+  font: 400 14px/1.72 var(--ed-sans);
+  letter-spacing: 0.01em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item-meta > span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--ed-line);
+  border-radius: 999px;
+  color: var(--ed-ink);
+  background: rgba(255, 255, 255, 0.45);
+  font: 700 11px/1 var(--ed-mono);
+  letter-spacing: 0.08em;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item-meta > span + span {
+  border-left: 1px solid var(--ed-line);
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item-meta small {
+  display: inline;
+  margin: 0;
+  color: var(--ed-muted);
+  font: 600 11px/1 var(--ed-sans);
+  letter-spacing: 0.06em;
+}
+
+.rom-play {
+  display: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-play {
+  position: absolute;
+  top: clamp(12px, 1.2vw, 16px);
+  right: clamp(14px, 1.4vw, 18px);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 26px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--system-color);
+  font: 700 10px/1 var(--ed-mono);
+  letter-spacing: 0.18em;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.35s ease, transform 0.45s var(--ed-ease);
+  pointer-events: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-play::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid currentColor;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item:hover .rom-play,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item:focus-visible .rom-play {
+  opacity: 1;
+  transform: none;
+}
+
+@media (hover: none) {
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-play {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-empty,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-error,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-loading {
+  grid-column: 1 / -1;
+  padding: 48px 20px;
+  border: 1px dashed rgba(21, 19, 14, 0.3);
+  border-radius: 20px;
+  color: var(--ed-muted);
+  background: transparent;
+  font: 600 14px/1.6 var(--ed-sans);
+  text-align: center;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-scroll-top {
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right, 0px));
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ed-sheet);
+  background: var(--ed-ink);
+  box-shadow: 0 16px 30px -12px rgba(20, 14, 4, 0.6);
+  font: 700 20px/1 var(--ed-mono);
+  transition: transform 0.4s var(--ed-ease), background-color 0.3s ease;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-scroll-top:hover,
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-scroll-top:focus-visible {
+  background: var(--ed-red);
+  transform: translateY(-3px);
+  outline: none;
+}
+
+body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-scroll-top[hidden] {
+  display: none;
+}
+
+/* ---------- Motion ---------- */
+
+@keyframes ed-rise {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes ed-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ed-ticker {
+  to { transform: translateX(-50%); }
+}
+
+@keyframes ed-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(194, 50, 31, 0.5); }
+  70%, 100% { box-shadow: 0 0 0 9px rgba(194, 50, 31, 0); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-header .brand-name,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-header h2,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats {
+    animation: ed-rise 0.9s var(--ed-ease) backwards;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-header h2 { animation-delay: 0.08s; }
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats { animation-delay: 0.16s; }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-crt {
+    animation: ed-fade 1.2s ease 0.1s backwards;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-ticker-track {
+    animation: ed-ticker 42s linear infinite;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .crt-caption-dot {
+    animation: ed-pulse 1.8s ease-out infinite;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell {
+    animation: ed-rise 0.8s var(--ed-ease) backwards;
+    animation-delay: calc(var(--i, 0) * 70ms + 120ms);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-browser-header.is-visible {
+    animation: ed-rise 0.7s var(--ed-ease) backwards;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item {
+    animation: ed-rise 0.7s var(--ed-ease) backwards;
+    animation-delay: calc(var(--i, 0) * 45ms + 120ms);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-art-img,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-cover-image {
+    transition: none;
+  }
+}
+
+/* ---------- Tablet ---------- */
+
+@media (max-width: 1100px) {
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell[data-system="gb"],
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell[data-system="snes"],
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell[data-system="n64"] {
+    grid-column: span 6;
+    grid-row: auto;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell[data-system="nes"] {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] {
+    grid-template:
+      "folio folio" auto
+      "art copy" minmax(260px, 1fr)
+      "footer footer" auto / minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 28px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-copy {
+    align-self: center;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="gb"],
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="snes"],
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] {
+    grid-template:
+      "folio" auto
+      "art" minmax(170px, 1fr)
+      "copy" auto
+      "footer" auto / minmax(0, 1fr);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-tag {
+    display: none;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-title {
+    font-size: clamp(28px, 2.6vw, 38px);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="n64"] .machine-index {
+    font-size: clamp(64px, 6vw, 92px);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system]:not([data-system="nes"]) {
+    grid-template-rows: auto 200px 1fr auto;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system]:not([data-system="nes"]) .machine-copy {
+    align-self: start;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system]:not([data-system="nes"]) .machine-art::before {
+    width: 184px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system]:not([data-system="nes"]) .machine-art-img {
+    max-width: 240px;
+    max-height: 180px;
+  }
+}
+
+/* ---------- Phone ---------- */
+
+@media (max-width: 760px) {
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector {
+    --ed-pad: 18px;
+    --ed-radius: 18px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-content {
+    border-radius: 22px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-header.lobby-cover-header {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 40%);
+    grid-template-areas:
+      "top top"
+      "brand brand"
+      "deck deck"
+      "title crt"
+      "sub crt"
+      "stats stats"
+      "ticker ticker";
+    grid-template-rows: auto auto auto auto 1fr auto auto;
+    column-gap: 14px;
+    margin-bottom: 30px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-topline {
+    margin-bottom: 18px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-header .brand-name {
+    font-size: clamp(64px, 26vw, 180px);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-deck {
+    margin-top: 16px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-deck {
+    font-size: 10px;
+    letter-spacing: 0.24em;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-issue {
+    padding: 5px 10px;
+    font-size: 10px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-selector-header h2 {
+    margin-top: 22px;
+    font-size: clamp(20px, 6vw, 26px);
+    line-height: 1.3;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .selector-subtitle {
+    font-size: 13px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .lobby-crt {
+    align-self: end;
+    max-width: none;
+    padding: 18px 2px 0;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .crt-caption {
+    gap: 6px;
+    margin-top: 14px;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .crt-caption-text {
+    display: none;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats {
+    grid-template-columns: repeat(3, auto);
+    justify-content: start;
+    margin-top: 24px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats > div {
+    padding-right: 10px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats > div + div {
+    padding-left: 12px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats dt {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-stats dd {
+    font-size: clamp(24px, 7.4vw, 34px);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-ticker {
+    margin-top: 30px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-ticker-track {
+    padding: 12px 0 10px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-ticker-track span {
+    padding-right: 22px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-ticker-track span::before {
+    margin-right: 22px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-grid-head {
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-shell[data-system] {
+    grid-column: 1 / -1;
+    grid-row: auto;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system] {
+    grid-template:
+      "folio folio" auto
+      "art copy" minmax(128px, auto)
+      "footer footer" auto / minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 14px 16px;
+    padding: 16px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] {
+    grid-template:
+      "folio" auto
+      "art" 200px
+      "copy" auto
+      "footer" auto / minmax(0, 1fr);
+    padding: 18px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system] .machine-copy {
+    align-self: center;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system] .machine-art::before {
+    width: min(96%, 150px);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system] .machine-art-img {
+    max-height: 132px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-art::before {
+    width: min(78%, 220px);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-art-img {
+    max-width: 280px;
+    max-height: 196px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card .machine-index,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system] .machine-index {
+    top: 50px;
+    right: 16px;
+    font-size: 54px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-index {
+    font-size: 96px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card .machine-title,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system] .machine-title {
+    font-size: clamp(26px, 8vw, 32px);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system="nes"] .machine-title {
+    font-size: clamp(40px, 12vw, 52px);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card .machine-meta,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system] .machine-meta {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system] .machine-tag {
+    display: none;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card-footer {
+    gap: 10px;
+    padding-top: 14px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-count strong {
+    font-size: 22px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-cta {
+    height: 34px;
+    padding: 0 12px 0 14px;
+    font-size: 12px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-browser-header.is-visible {
+    grid-template-columns: minmax(0, 1fr) 112px;
+    grid-template-areas:
+      "back art"
+      "copy copy";
+    gap: 0 12px;
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-browser-header.is-visible::before {
+    right: -18%;
+    top: 22%;
+    width: 62%;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-art img {
+    max-width: 112px;
+    max-height: 92px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-copy {
+    margin-top: 18px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-folio {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-browser-title {
+    font-size: clamp(48px, 16vw, 76px);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-label,
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-summary {
+    margin-top: 16px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .rom-feature-summary {
+    font-size: 14px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list {
+    gap: 12px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item {
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 10px 14px;
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-cover-frame {
+    border-radius: 10px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-name {
+    font-size: clamp(18px, 5.4vw, 22px);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-description {
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item-meta > span {
+    padding: 6px 10px;
+    font-size: 10px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-item-meta small {
+    font-size: 10px;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector #rom-list .rom-play {
+    top: 12px;
+    right: 12px;
+    height: 22px;
+    padding: 0 9px 0 8px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 380px) {
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-topline span:last-child {
+    display: none;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .cover-issue {
+    justify-self: end;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-card[data-system]:not([data-system="nes"]) {
+    grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-page {
+    display: none;
+  }
+
+  body:not(.mobile-landscape-mode) #rom-selector.rom-selector .machine-cta {
+    margin-left: auto;
+  }
+}
+
+/* ---------- In-game MENU panel (desktop) ---------- */
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls {
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(242, 231, 189, 0.14);
+  border-radius: 14px;
+  background: rgba(18, 21, 19, 0.86);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 18px 32px -20px rgba(0, 0, 0, 0.7);
+}
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls button,
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls label {
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid rgba(242, 231, 189, 0.12);
+  border-radius: 10px;
+  color: #f2e7bd;
+  background: linear-gradient(180deg, #2c322e, #212622);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 0 rgba(0, 0, 0, 0.35);
+  font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s ease, background-color 0.2s ease;
+}
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls button:hover,
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls label:hover,
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls button:focus-visible {
+  border-color: rgba(242, 231, 189, 0.42);
+  background: linear-gradient(180deg, #363d38, #292f2b);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 16px -8px rgba(0, 0, 0, 0.6);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls button:focus-visible {
+  outline: 2px solid #e5a92a;
+  outline-offset: 2px;
+}
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls button:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls .save-btn {
+  box-shadow: inset 3px 0 0 #6fbf73, 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls .load-btn {
+  box-shadow: inset 3px 0 0 #6fa3d8, 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls #btn-select-game {
+  border-color: rgba(194, 50, 31, 0.6);
+  background: linear-gradient(180deg, #b53221, #8f2517);
+  color: #fff4e0;
+}
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls #btn-select-game:hover {
+  background: linear-gradient(180deg, #c63a28, #9d2a1b);
+}
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .desktop-controls label {
+  border-style: dashed;
+  border-color: rgba(242, 231, 189, 0.3);
+  background: transparent;
+  box-shadow: none;
+}
+
+body:not(.touch-device-mode):not(.mobile-landscape-mode) .gameboy-shell .keyboard-guide {
+  border: 1px solid rgba(242, 231, 189, 0.14);
+  border-radius: 14px;
+  background: rgba(18, 21, 19, 0.86);
+}
+
+.gameboy-shell .keyboard-guide h3 {
+  color: #f2e7bd;
+  letter-spacing: 0.04em;
+}
+
+.gameboy-shell .keyboard-guide-note {
+  color: rgba(242, 231, 189, 0.62);
+}
+
+.gameboy-shell .keyboard-binding {
+  border-color: rgba(242, 231, 189, 0.1);
+  border-radius: 10px;
+  background: rgba(242, 231, 189, 0.04);
+}
+
+.gameboy-shell .keyboard-action {
+  color: rgba(242, 231, 189, 0.7);
+}
+
+/* ---------- Compact mobile landscape: same structure, editorial finish ---------- */
+
+body.mobile-landscape-mode #rom-selector.rom-selector {
+  background:
+    radial-gradient(120% 80% at 18% 0%, rgba(255, 249, 228, 0.55), transparent 60%),
+    #cbbd95;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .rom-selector-content {
+  padding: 12px 14px;
+  border: 1px solid rgba(21, 19, 14, 0.12);
+  border-radius: 18px;
+  background: var(--ed-grain), var(--ed-sheet);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 24px 40px -24px rgba(60, 40, 10, 0.5);
+  font-family: var(--ed-sans);
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .rom-selector-header.lobby-cover-header {
+  grid-template-columns: minmax(0, 1fr) 72px;
+  align-items: center;
+  flex: 0 0 78px;
+  height: 78px;
+  min-height: 78px;
+  margin: 0 0 10px;
+  padding: 0 0 8px;
+  border: 0;
+  border-bottom: 1px solid var(--ed-line-strong);
+  background: transparent;
+  box-shadow: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .lobby-cover-header .brand-name {
+  margin: 0;
+  padding: 0;
+  color: var(--ed-ink);
+  font-family: var(--ed-display);
+  font-size: 46px;
+  font-stretch: 85%;
+  font-weight: 700;
+  line-height: 0.8;
+  letter-spacing: -0.03em;
+  text-shadow: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .brand-logo-red {
+  color: var(--ed-red);
+  text-shadow: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .brand-logo-white {
+  color: var(--ed-ink);
+  text-shadow: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .lobby-crt {
+  width: 72px;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .machine-grid {
+  gap: 8px;
+  padding: 2px 2px 8px;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .machine-card-shell {
+  height: 88px;
+  min-height: 0;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .machine-card {
+  grid-template: "art copy" minmax(0, 1fr) / 64px minmax(0, 1fr);
+  align-items: center;
+  height: 88px;
+  min-height: 0;
+  gap: 0 10px;
+  padding: 8px 10px 8px 8px;
+  border: 1px solid var(--ed-line);
+  border-radius: 14px;
+  color: var(--ed-ink);
+  background: var(--ed-card);
+  box-shadow: inset 3px 0 0 var(--sys, var(--ed-red)), 0 1px 2px rgba(60, 40, 10, 0.06);
+  transition: transform 0.3s var(--ed-ease), box-shadow 0.3s ease;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .machine-card::before,
+body.mobile-landscape-mode #rom-selector.rom-selector .machine-card::after {
+  display: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .machine-card:active {
+  transform: scale(0.98);
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .machine-card:focus-visible {
+  outline: 3px solid var(--sys, var(--ed-red));
+  outline-offset: 2px;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .machine-art {
+  width: 64px;
+  height: 64px;
+  min-height: 0;
+  border: 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .machine-art-img {
+  width: 100%;
+  height: 100%;
+  max-width: 64px;
+  max-height: 64px;
+  padding: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 6px rgba(40, 25, 5, 0.2));
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .machine-title {
+  color: var(--ed-ink);
+  font-family: var(--ed-display);
+  font-size: 17px;
+  font-stretch: 85%;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-shadow: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .rom-browser-header.is-visible {
+  align-items: center;
+  flex: 0 0 76px;
+  height: 76px;
+  min-height: 76px;
+  margin: 0 0 10px;
+  padding: 0 0 8px;
+  border: 0;
+  border-bottom: 1px solid var(--ed-line-strong);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .rom-back-btn {
+  height: 36px;
+  margin: 0 10px 0 0;
+  padding: 0 14px 0 11px;
+  border: 1px solid rgba(21, 19, 14, 0.24);
+  border-radius: 999px;
+  color: var(--ed-ink);
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: none;
+  font: 700 12px/1 var(--ed-sans);
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .rom-feature-copy {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "title title" "label summary";
+  align-content: center;
+  column-gap: 8px;
+  text-align: left;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .rom-browser-title {
+  grid-area: title;
+  margin: 0;
+  color: var(--ed-ink);
+  font-family: var(--ed-display);
+  font-size: 28px;
+  font-stretch: 85%;
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-align: left;
+  text-shadow: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .rom-feature-label {
+  grid-area: label;
+  align-self: center;
+  margin: 6px 0 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: var(--system-color);
+  font: 800 10px/1.1 var(--ed-sans);
+  letter-spacing: 0.16em;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .rom-feature-summary {
+  grid-area: summary;
+  align-self: center;
+  margin: 6px 0 0;
+  color: var(--ed-ink-2);
+  font: 700 11px/1.1 var(--ed-sans);
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .rom-feature-art {
+  height: 56px;
+  border: 0;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector .rom-feature-art img {
+  height: 54px;
+  filter: drop-shadow(0 6px 6px rgba(40, 25, 5, 0.2));
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list {
+  gap: 8px;
+  margin: 0;
+  padding: 2px 2px 8px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-item {
+  grid-template-areas:
+    "cover number"
+    "cover copy";
+  grid-template-columns: 60px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 4px 12px;
+  height: auto;
+  min-height: 0;
+  padding: 10px;
+  border: 1px solid var(--ed-line);
+  border-radius: 14px;
+  color: var(--ed-ink);
+  background: var(--ed-card);
+  box-shadow: 0 1px 2px rgba(60, 40, 10, 0.06);
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-item:hover {
+  outline: none;
+  transform: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-item:active {
+  transform: scale(0.99);
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-item:focus-visible {
+  outline: 3px solid var(--system-color);
+  outline-offset: 2px;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-item-number {
+  padding: 0 0 4px;
+  border-bottom: 1px dashed rgba(21, 19, 14, 0.24);
+  color: var(--system-color);
+  font: 700 9px/1 var(--ed-mono);
+  letter-spacing: 0.16em;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-cover-frame {
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 8px 12px -8px rgba(30, 20, 5, 0.6);
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-copy {
+  gap: 4px;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-name {
+  color: var(--ed-ink);
+  font-family: var(--ed-display);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-shadow: none;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-description {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #574d3d;
+  font: 400 11px/1.5 var(--ed-sans);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 0;
+  border: 0;
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-item-meta > span {
+  display: inline-flex;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--ed-line);
+  border-radius: 999px;
+  color: var(--ed-ink);
+  font: 700 9px/1.2 var(--ed-mono);
+}
+
+body.mobile-landscape-mode #rom-selector.rom-selector #rom-list .rom-item-meta small {
+  display: inline;
+  margin: 0;
+  color: var(--ed-muted);
+  font: 600 9px/1.2 var(--ed-sans);
+}
+
+body.mobile-landscape-mode #rom-selector .cover-ticker,
+body.mobile-landscape-mode #rom-selector .cover-stats,
+body.mobile-landscape-mode #rom-selector .crt-caption,
+body.mobile-landscape-mode #rom-selector .machine-grid-head,
+body.mobile-landscape-mode #rom-selector .machine-index,
+body.mobile-landscape-mode #rom-selector .machine-cta,
+body.mobile-landscape-mode #rom-selector .rom-play {
+  display: none !important;
+}

@@ -6676,6 +6676,7 @@
     }
   </style>
   <link rel="stylesheet" href="/magazine-selector.css">
+  <link rel="stylesheet" href="/lobby-editorial.css">
 </head>
 <body>
   <div class="game-loading-overlay" id="game-loading-overlay" role="status" aria-live="polite" aria-busy="true" hidden>
@@ -6723,6 +6724,11 @@
           <h2>你手機上的電動玩具店</h2>
           <div class="selector-subtitle">選一台主機，再挑選你要懷舊的遊戲。</div>
           <div class="cover-issue">VOL.01</div>
+          <dl class="cover-stats" id="cover-stats" hidden>
+            <div><dt>收錄作品</dt><dd id="cover-stat-games">—</dd></div>
+            <div><dt>主機平台</dt><dd id="cover-stat-systems">—</dd></div>
+            <div><dt>年代跨度</dt><dd id="cover-stat-years">—</dd></div>
+          </dl>
         </div>
         <button class="lobby-crt" id="lobby-crt" type="button" aria-label="啟動超級瑪利歐兄弟" title="超級瑪利歐兄弟">
           <span class="crt-cabinet">
@@ -6737,7 +6743,14 @@
               <span class="crt-power-led"></span>
             </span>
           </span>
+          <span class="crt-caption" aria-hidden="true"><span class="crt-caption-dot"></span>ON AIR<span class="crt-caption-text">點擊電視，立即開玩</span></span>
         </button>
+        <div class="cover-ticker" aria-hidden="true">
+          <div class="cover-ticker-track">
+            <span>FAMICOM</span><span>GAME BOY</span><span>SUPER FAMICOM</span><span>ARCADE</span><span>GAME GEAR</span><span>MEGA DRIVE</span><span>NINTENDO 64</span>
+            <span>FAMICOM</span><span>GAME BOY</span><span>SUPER FAMICOM</span><span>ARCADE</span><span>GAME GEAR</span><span>MEGA DRIVE</span><span>NINTENDO 64</span>
+          </div>
+        </div>
       </div>
 
       <div class="machine-grid" id="machine-grid" aria-label="選擇主機">

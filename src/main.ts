@@ -1767,17 +1767,39 @@ function renderMachineSelector(): void {
   romListEl.style.display = 'none';
   machineGridEl.style.display = 'grid';
 
-  machineGridEl.innerHTML = MACHINES.map((machine) => {
-    const count = romCatalog.filter((rom) => detectRomSystem(rom) === machine.key).length;
+  const machineCounts = MACHINES.map((machine) => romCatalog.filter((rom) => detectRomSystem(rom) === machine.key).length);
+  const activeMachines = MACHINES.filter((_, index) => machineCounts[index] > 0);
+  const machineYears = activeMachines.map((machine) => Number(machine.year)).filter(Number.isFinite);
+  const coverStats = document.getElementById('cover-stats');
+  const setStat = (id: string, value: string) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value;
+  };
+  setStat('cover-stat-games', String(machineCounts.reduce((sum, count) => sum + count, 0)));
+  setStat('cover-stat-systems', String(activeMachines.length).padStart(2, '0'));
+  if (machineYears.length > 0) setStat('cover-stat-years', `${Math.min(...machineYears)}–${String(Math.max(...machineYears)).slice(-2)}`);
+  if (coverStats) coverStats.hidden = false;
+
+  const gridHeading = `
+    <div class="machine-grid-head" aria-hidden="true">
+      <span class="machine-grid-kicker">CONTENTS</span>
+      <span class="machine-grid-title">主機目錄</span>
+      <span class="machine-grid-note">${String(activeMachines.length).padStart(2, '0')} PLATFORMS</span>
+    </div>
+  `;
+
+  machineGridEl.innerHTML = gridHeading + MACHINES.map((machine, index) => {
+    const count = machineCounts[index];
     const disabled = count === 0 ? 'disabled aria-disabled="true"' : '';
     return `
-      <div class="machine-card-shell">
+      <div class="machine-card-shell" data-system="${machine.key}" style="--i:${index}">
         <button class="machine-card" type="button" data-system="${machine.key}" ${disabled}>
           <span class="machine-folio">
             <span class="machine-section">${escapeHtml(machine.section)}</span>
             <span class="machine-year">${escapeHtml(machine.year)}</span>
             <span class="machine-issue">${escapeHtml(machine.issue)}</span>
           </span>
+          <span class="machine-index" aria-hidden="true">${String(index + 1).padStart(2, '0')}</span>
           <span class="machine-art ${machine.artClass}" aria-hidden="true">
             <img class="machine-art-img" src="${getPublicAssetUrl(`assets/machines/${machine.artFile}`)}" alt="" loading="eager" decoding="async">
           </span>
@@ -1786,9 +1808,10 @@ function renderMachineSelector(): void {
             <span class="machine-meta">${escapeHtml(machine.label)}</span>
           </span>
           <span class="machine-card-footer">
-            <span class="machine-count"><b aria-hidden="true">■</b> ${count} GAMES</span>
+            <span class="machine-count"><b aria-hidden="true">■</b> <strong>${count}</strong> GAMES</span>
             <span class="machine-tag">COLLECTOR'S ARCHIVE</span>
             <span class="machine-page">P.${escapeHtml(machine.page)}</span>
+            <span class="machine-cta" aria-hidden="true"><span>進入</span></span>
           </span>
         </button>
       </div>
@@ -1857,7 +1880,7 @@ function renderRomList(system: SystemKey): void {
       : `<span class="rom-cover-placeholder" aria-hidden="true">${escapeHtml(getRomDisplayName(rom).slice(0, 18))}</span>`;
     const description = rom.description?.trim() || '中文簡介待核對';
     return `
-      <button class="rom-item" data-index="${index}" data-system="${system}" data-file="${encodeURIComponent(rom.file)}">
+      <button class="rom-item" data-index="${index}" data-system="${system}" data-file="${encodeURIComponent(rom.file)}" style="--i:${Math.min(index, 11)}">
         <span class="rom-item-number">No.${number}</span>
         <span class="rom-cover-frame${coverUrl ? '' : ' is-missing'}">${coverMarkup}</span>
         <span class="rom-copy">
@@ -1868,6 +1891,7 @@ function renderRomList(system: SystemKey): void {
             <span><small>遊戲類型</small>${escapeHtml(meta.genre)}</span>
           </span>
         </span>
+        <span class="rom-play" aria-hidden="true">PLAY</span>
       </button>
     `;
   }).join('');
