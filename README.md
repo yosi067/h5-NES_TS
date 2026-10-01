@@ -1,6 +1,6 @@
 # H5-EMU 多平台復古遊戲模擬器
 
-H5-EMU 是一個在瀏覽器中運行的多平台模擬器研究專案，將 **NES / FC、Game Boy、Game Gear、Master System、SFC / SNES、Nintendo 64 與 FBNeo Arcade** 整合在同一個入口。前端使用 TypeScript、Canvas、Web Audio 與 WebGL2；自製核心以 Rust 編譯成 WebAssembly，N64 與街機則整合成熟的開源 runtime。
+H5-EMU 是一個在瀏覽器中運行的多平台模擬器研究專案，將 **NES / FC、Game Boy、Game Gear、Master System、Mega Drive、SFC / SNES、Nintendo 64 與 FBNeo Arcade** 整合在同一個入口。前端使用 TypeScript、Canvas、Web Audio 與 WebGL2；自製核心以 Rust 編譯成 WebAssembly，N64、街機與 Mega Drive 則整合成熟的開源 runtime。
 
 它既是一間數位電玩店，也是一個持續往下一個硬體世代推進的系統工程實驗。
 
@@ -40,7 +40,7 @@ H5-EMU 是一個在瀏覽器中運行的多平台模擬器研究專案，將 **N
 
 目前保留 `7f0ebbf78c-64m2-lifecycle1`：修正 SDL 裝置重建時的 AudioWorklet 生命週期，加入可選的輸出／rectangle 診斷。實機 capture5 使用者回報「沒有雜訊、音質非常滿意」，但複雜場景仍卡頓；這不是零缺樣本、全遊戲或長時間穩定保證。
 維持 iPhone 320×240、emu1、triangle stream、SDL 3072/1024；cull cache 與 rectangle persistent buffers **預設關閉**，不加入新優化。桌面 emu2 的 `null function` 例外仍待定位，44.1/48 kHz 速率差僅是假設，未實作修正。
-詳見 [實機結果與限制](docs/N64_IPHONE_20260912_RESULTS.md) 及 [診斷使用說明](docs/N64_AUDIO_OUTPUT_DIAGNOSTICS.md)。
+詳見 [iPhone 實機結果、限制與診斷工具](docs/N64_IPHONE_AUDIO.md)。
 
 ### 足球小將 II 中文化實驗
 
@@ -50,7 +50,7 @@ H5-EMU 是一個在瀏覽器中運行的多平台模擬器研究專案，將 **N
 **尚非完整中文化：比賽動態解說／人名、全部分支驗收與能力數值編輯仍待完成。**
 使用方式、測試與限制請見 [CT2 中文化工作室說明](docs/CT2_LOCALIZATION_STUDIO.md)。
 
-後續遊戲參考：[FC 中文化最短可靠流程](docs/FC_LOCALIZATION_PLAYBOOK.md)、[Zombie Hunter 工時與成本估算](docs/ZOMBIE_HUNTER_LOCALIZATION_ESTIMATE.md)、[模擬器優化優先序](docs/LOCALIZATION_RETROSPECTIVE_OPTIMIZATION.md)。
+後續遊戲參考：[FC 中文化最短可靠流程](docs/FC_LOCALIZATION_PLAYBOOK.md)、[Zombie Hunter 選單繁中與工時估算](docs/ZOMBIE_HUNTER.md)、[模擬器優化優先序](docs/LOCALIZATION_RETROSPECTIVE_OPTIMIZATION.md)。
 
 模擬器會迫使開發者同時面對電腦架構、即時系統與產品整合問題。H5-EMU 的技術價值不只在於「遊戲能啟動」，還包含：
 
@@ -66,6 +66,7 @@ H5-EMU 是一個在瀏覽器中運行的多平台模擬器研究專案，將 **N
 |---|---|---|
 | **NES / FC** | 任天堂於 1983 年推出的 8 位元主機，奠定現代家用遊戲市場 | 起點；用來理解 6502、PPU、APU 與 Mapper |
 | **Master System / Game Gear** | Sega 的 8 位元家用主機與 1990 年彩色掌機，皆以 Z80 系統為基礎 | 比較共用 CPU、不同顯示與輸入形態的設計 |
+| **Mega Drive / Genesis** | Sega 1988 年的 16 位元主機，以 68000 搭配 Z80 音效處理 | 透過 EmulatorJS Genesis Plus GX 整合，沿用共用控制與存檔 |
 | **Game Boy** | 1989 年推出，以低功耗硬體和卡帶 MBC 延伸出長生命週期 | 練習 LR35902、掌機時序、MBC 與電池存檔 |
 | **SFC / SNES** | 1990 年的 16 位元主機，具備多圖層、Mode 7、獨立音頻系統與卡帶協處理器 | 自製核心中複雜度最高的一代 |
 | **Arcade / FBNeo** | 街機橫跨大量不同板卡，沒有單一固定硬體規格 | 透過 FinalBurn Neo 整合 ROM set、driver 與多種輸入配置 |
@@ -84,6 +85,9 @@ Browser / TypeScript UI
 │       ├── Game Boy
 │       ├── Game Gear / Master System
 │       └── SFC / SNES
+├── EmulatorJS iframe
+│   ├── Genesis Plus GX → Mega Drive
+│   └── Snes9x / FCEUmm → SNES 特殊晶片、NES Mapper 備援
 ├── WebGL2 Canvas
 │   └── Mupen64Plus Web + Rice renderer
 │       └── Nintendo 64
@@ -91,16 +95,17 @@ Browser / TypeScript UI
     └── Arcade ROM sets
 ```
 
-N64 使用獨立 WebGL2 canvas 與 Mupen64Plus runtime，不走自製 Rust 核心；FBNeo Arcade 也有獨立的 Emscripten 檔案系統、音視頻與輸入橋接。完整邊界、目錄與建置流程請見 [技術概覽](docs/TECHNICAL_OVERVIEW.md)。
+N64 使用獨立 WebGL2 canvas 與 Mupen64Plus runtime，不走自製 Rust 核心；FBNeo Arcade 也有獨立的 Emscripten 檔案系統、音視頻與輸入橋接。EmulatorJS 則負責 Mega Drive，以及自製核心尚未支援的 SA-1 / S-DD1 超任遊戲與部分 NES Mapper。完整邊界、目錄與建置流程請見 [技術概覽](docs/TECHNICAL_OVERVIEW.md)。
 
 ## 主要功能
 
-- 主機分類式遊戲大廳與自動 ROM 後端路由。
-- 桌機鍵盤、手機觸控與橫向全螢幕控制器。
-- 快速存檔／讀檔、SRAM 電池存檔、暫停、重置與靜音。
+- 主機分類式遊戲大廳、遊戲介紹與封面，以及自動 ROM 後端路由。
+- 桌機鍵盤、手機觸控與橫向全螢幕控制器；可加到主畫面以 PWA 模式執行。
+- 快速存檔／讀檔（`F5`／`F7`，另有 4 個欄位）、SRAM 電池存檔、暫停、重置與靜音。
 - 依主機切換 Canvas 尺寸、幀率、按鍵配置與音頻路徑。
 - N64 裝置效能 profile、版本化 runtime 與效能遙測。
 - FBNeo 完整街機 ZIP ROM set、畫面方向與六鍵控制支援。
+- FC 遊戲執行期中文化圖層與[翻譯工作室](translation-studio.html)，不修改原 ROM。
 
 ## 快速開始
 
@@ -111,37 +116,41 @@ npm install
 npm run dev
 ```
 
-瀏覽器開啟 Vite 顯示的本機網址。也可以從畫面選擇依法持有的 ROM 檔案。
+瀏覽器開啟 Vite 顯示的本機網址。遊戲清單來自 `public/roms.json`，對應的 ROM 檔放在 `roms/`；請只使用依法持有的 ROM。新增遊戲的方式見[開發指南](docs/DEVELOPMENT.md#rom-與遊戲目錄)。
 
 ```bash
-npm test       # 執行測試
-npm run build  # 重建 Rust/WASM 並產生 production bundle
+npm run dev:mobile  # 開放區網，用手機實測
+npm test            # 執行測試
+npm run build       # 重建 Rust/WASM 並產生 production bundle
 ```
+
+推送到 `main` 會由 GitHub Actions 自動建置並部署到 GitHub Pages。
 
 ## 專案結構
 
 ```text
-src/                 # TypeScript 前端、Arcade 與 N64 適配層
+src/                 # TypeScript 前端、Arcade、N64、EmulatorJS 與中文化適配層
 nes-wasm/src/        # NES、GB、GG/SMS、SNES 的 Rust 核心
+game-profiles/       # 遊戲 profile、翻譯與 schema
+public/              # 靜態資源、遊戲清單與遊戲資料
+roms/                # 本機 ROM
 tests/               # 核心、runtime、效能與資產測試
-tools/n64/           # N64 runtime 取得、patch 與重建工具
-artifacts/n64/       # 可重現的 N64 runtime 資產
+tools/               # ROM 分析、中文化、稽核與 N64 重建工具
+artifacts/           # 可重現的研究輸出與 N64 runtime 資產
 docs/                # 技術、除錯、規格與優化文件
 ```
 
 ## 延伸文件
 
-最新進展、實測結果與細節不再堆疊於 README：
+最新進展、實測結果與細節不再堆疊於 README，完整分類請見 **[文件導覽](docs/README.md)**。常用入口：
 
-- [Near 與 Snes9x 團隊的模擬器故事與致敬](docs/NEAR_AND_SNES9X_TRIBUTE.md)
 - [技術概覽與完整架構](docs/TECHNICAL_OVERVIEW.md)
 - [開發指南](docs/DEVELOPMENT.md)
-- [NES runtime translation development status](docs/NES_RUNTIME_TRANSLATION_STATUS.md)
 - [問題與修復紀錄](docs/TROUBLESHOOTING.md)
-- [模擬核心優化計畫](docs/CORE_OPTIMIZATION_PLAN.md)
 - [N64 瀏覽器核心優化計畫](docs/N64_CORE_OPTIMIZATION_PLAN.md)
-- [NES 技術規格](docs/NES_SPECS.md)
+- [遊戲 Profile 與翻譯框架](docs/GAME_PROFILE_AUTHORING.md)
 - [ROM 遊戲庫稽核](docs/ROM_LIBRARY_AUDIT.md)
+- [Near 與 Snes9x 團隊的模擬器故事與致敬](docs/NEAR_AND_SNES9X_TRIBUTE.md)
 
 ## 研究、權利與責任
 

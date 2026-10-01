@@ -1,628 +1,408 @@
-# 🔧 問題集 — 開發過程中遇到的難題與解決方案
+# 問題與修復紀錄
 
-本文件記錄了 H5-EMU 多平台模擬器開發過程中遇到的關鍵技術問題，包含排查思路與最終解決方案。按平台與子系統分類。
-
----
+本文件記錄 H5-EMU 多平台模擬器開發中遇到的關鍵技術問題與修復，依平台與子系統分類。
+每則條目依「症狀 → 根因 → 修正 → 驗證」整理；「驗證」只列出實際執行過的檢查。
+系統架構見 [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md)，建置與測試流程見 [DEVELOPMENT.md](DEVELOPMENT.md)。
 
 ## 目錄
 
-- [SNES — CPU / 匯流排](#snes--cpu--匯流排)
-- [SNES — PPU 渲染](#snes--ppu-渲染)
-- [SNES — APU 音頻](#snes--apu-音頻)
-- [SNES — DMA / HDMA](#snes--dma--hdma)
-- [SNES — 協處理器](#snes--協處理器)
-- [N64 — Mupen64Plus Web 後端](#n64--mupen64plus-web-後端)
-- [FBNeo Arcade — Raiden / Warriors of Fate](#fbneo-arcade--raiden--warriors-of-fate)
-- [NES — CPU 時序](#nes--cpu-時序)
-- [NES — Mapper](#nes--mapper)
-- [NES — APU 音頻](#nes--apu-音頻)
-- [Game Gear / Master System — Z80 CPU](#game-gear--master-system--z80-cpu)
-- [Game Gear / Master System — VDP](#game-gear--master-system--vdp)
-- [Game Boy — Joypad](#game-boy--joypad)
+- **Arcade（FBNeo）**：ARC-1 ROM set 載入 · ARC-2 切換遊戲越界 · ARC-3 雷電直向畫面 · ARC-4 街機觸控按鍵
+- **SNES CPU / 匯流排**：SNES-1 RDNMI VBlank 旗標 · SNES-2 LoROM SRAM 寫入 · SNES-3 H-IRQ 觸發 · SNES-4 65816 短分支 cycle
+- **SNES PPU**：SNES-5 Mode 5 hi-res · SNES-6 Mode 7 latch · SNES-7 OAM 優先級旋轉 · SNES-8 圖層優先級 · SNES-9 OBJ palette color math · SNES-10 CGWSEL / direct color · SNES-11 水平捲動 latch
+- **SNES APU**：SNES-12 FIR 精度 · SNES-13 BRR / Gauss 尺度 · SNES-14 SPC700 分支 cycle · SNES-15 `$B8` opcode · SNES-16 IPL ROM · SNES-17 APU cycle 漂移 · SNES-18 Sub screen backdrop
+- **SNES DMA / HDMA**：SNES-19 HDMA 間接指標 · SNES-20 HDMA 掃描線 0
+- **SNES 協處理器**：SNES-21 DSP-1 Newton 截斷 · SNES-22 DSP-1 Raster Output 迴圈 · SNES-23 CX4
+- **N64（Mupen64Plus Web）**：N64-1 首次啟動畫面尺寸 · N64-2 手機掉幀與爆音 · N64-3 效能基準參數 · N64-4 iPhone 瓶頸量測 · N64-5 rebuilt runtime 啟動失敗 · N64-6 Rice renderer 瓶頸定位
+- **NES**：NES-1 CPU off-by-one · NES-2 Mapper 225 鏡像 · NES-3 Mapper 253 · NES-4 DMC silence · NES-5 `$4017` 延遲 · NES-6 DMC / frame counter / pulse 對齊 · NES-7 DMC 搶用 OAM DMA
+- **Game Gear / Master System**：GG-1 DAA H 旗標 · GG-2 INI/IND 時序 · GG-3 Line/Frame IRQ · GG-4 CRAM 寫入 · GG-5 精靈 Y 環繞
+- **Game Boy**：GB-1 方向鍵
 
 ---
 
-## FBNeo Arcade — Raiden / Warriors of Fate
+## Arcade（FBNeo）— Raiden / Warriors of Fate
 
-### Q1: `raiden.zip` / `wof.zip` 被當成一般 ZIP ROM，無法由 FBNeo 載入
+### ARC-1：`raiden.zip` / `wof.zip` 被當成一般 ZIP ROM
 
-**現象**：Arcade zip 上傳或從清單選取後，原流程會嘗試在 zip 內尋找 `.nes/.sfc/.gb` 等單一主機 ROM，導致 FBNeo 無法收到完整 ROM set。
+- **症狀**：上傳或選取後，原流程在 zip 內尋找 `.nes/.sfc/.gb` 等單一 ROM，FBNeo 收不到完整 ROM set。
+- **根因**：街機 ROM set 由多個 chip 檔組成，FBNeo 需依遊戲名稱與檔名/CRC 檢查整包內容。
+- **修正**：`src/main.ts` 以檔名辨識後直接切到 FBNeo backend；`src/arcade/fbneo-core.ts` 以 JSZip 解包，寫入 `/roms/<game>.zip` 與 `/roms/<game>/` 後啟動 `@mantou/fbneo` runtime。缺檔或 CRC 不符時 stdout/stderr 回傳前端提示。
 
-**原因**：街機 ROM set 是多個 chip 檔組成的 zip，FBNeo 需要依遊戲名稱與檔名/CRC 檢查整包內容，不能只抽出第一個檔案。
+### ARC-2：切換 FBNeo 遊戲時 `memory access out of bounds`
 
-**解決**：`src/main.ts` 先以檔名辨識 `raiden.zip` / `wof.zip`，直接切到 FBNeo backend。`src/arcade/fbneo-core.ts` 使用 JSZip 解包，寫入 `/roms/<game>.zip` 與 `/roms/<game>/`，再啟動 `@mantou/fbneo` runtime。若缺檔或 CRC 不符，stdout/stderr 會回傳給前端提示。
+- **症狀**：先玩《雷電》再切到《吞食天地二》，所有 chip 已列為 `(OK)`，Emscripten runtime 仍可能越界。
+- **根因**：Mantou FBNeo runtime 不適合在同一 module instance 內反覆切換大型遊戲，前一款的內部狀態可能殘留。
+- **修正**：每次載入都建立新的 `FbNeoArcadeCore` instance，不共用舊的 Emscripten memory 與 native 狀態。
 
----
+### ARC-3：《雷電》畫面方向不符直向玩法
 
-### Q2: 從一款 FBNeo 遊戲切換到另一款時發生 `memory access out of bounds`
+- **症狀**：原始 framebuffer 為橫向排列，直接貼到 Canvas 不符直向射擊遊戲觀感。
+- **修正**：僅對 `raiden` 在前端左轉 90 度：Canvas 由 `256x224` 改為 `224x256`，逐像素 remap；`wof` 的 `384x224` 橫向畫面不受影響。
 
-**現象**：先玩《雷電》再切到《吞食天地二》時，FBNeo 已列出所有 chip `(OK)`，但 Emscripten runtime 仍可能丟出 `memory access out of bounds`。
+### ARC-4：手機觸控只有 A/B
 
-**原因**：Mantou FBNeo runtime 不適合在同一個 module instance 內反覆切換大型 arcade 遊戲，前一款遊戲的內部狀態可能殘留。
-
-**解決**：每次載入 FBNeo arcade ROM 都建立新的 `FbNeoArcadeCore` instance，避免共用舊的 Emscripten memory 與 native 狀態。
-
----
-
-### Q3: 《雷電》畫面方向不符合直向街機玩法
-
-**現象**：《雷電》原始 framebuffer 是橫向資料排列，直接貼到 Canvas 時不符合直向射擊遊戲的操作觀感。
-
-**解決**：只對 `raiden` 啟用前端 framebuffer 左轉 90 度：Canvas 尺寸由 `256x224` 轉成 `224x256`，渲染時逐像素 remap，不影響 `wof` 的 `384x224` 橫向畫面。
-
----
-
-### Q4: 手機觸控只提供 A/B，街機遊戲操作不夠
-
-**現象**：原本 NES/SNES 觸控配置不適合 FBNeo arcade，尤其是格鬥或清版動作遊戲可能需要更多按鍵。
-
-**解決**：新增 `#arcade-controller-area`，保留十字鍵，右側提供 COIN、START、MUTE 與 A-F 六顆街機常用圓形按鈕。前端仍使用 32-bit bitmask，再轉成 Mantou FBNeo `_setEmInput(playerIndex, state, alx, aly, arx, ary)`。
-
----
+- **症狀**：NES/SNES 觸控配置不足以操作格鬥或清版動作遊戲。
+- **修正**：新增 `#arcade-controller-area`：十字鍵，加上 COIN、START、MUTE 與 A-F 六顆圓形按鈕。前端仍用 32-bit bitmask，再轉為 Mantou FBNeo `_setEmInput(playerIndex, state, alx, aly, arx, ary)`。
 
 ## SNES — CPU / 匯流排
 
-### Q1: FF6 / MMX2 開場動畫全黑 — RDNMI ($4210) VBlank 旗標問題
+### SNES-1：FF6 / MMX2 開場全黑 — RDNMI（$4210）VBlank 旗標
 
-**現象**：Final Fantasy VI 和 Mega Man X2 的開場動畫全黑，遊戲主迴圈卡在 `LDA $4210 / BPL` 無限迴圈。
+- **症狀**：Final Fantasy VI、Mega Man X2 開場全黑，主迴圈卡在 `LDA $4210 / BPL`。亦影響超時空之鑰等以 VBlank 輪詢的遊戲。
+- **根因**：$4210 實作為讀取後清除 bit 7；NMI handler 先讀走後主迴圈永遠讀到 0。硬體上 bit 7 在整個 VBlank（掃描線 225-261）持續為 1。
+- **修正**：讀取不再清除 bit 7；改為掃描線 225 設定、掃描線 0 清除。
 
-**排查**：透過 CPU trace 發現主迴圈不斷輪詢 $4210 bit 7，但永遠讀到 0。NMI handler 已先讀取過 $4210 並清除了 bit 7。
+### SNES-2：LoROM SRAM 寫入遺失
 
-**原因**：RDNMI 暫存器實作為「讀取後清除 bit 7」（edge-triggered）。然而 SNES 硬體上，$4210 bit 7 反映的是 VBlank **連續狀態** — 在整個 VBlank 期間 (掃描線 225-261) 持續為 HIGH。NMI handler 先讀取一次後清除了旗標，主迴圈再也看不到。
+- **症狀**：LoROM 遊戲存檔後讀回為空或損毀。
+- **根因**：`bus_write_system_low()` 缺少 $6000-$7FFF 處理，bank $40-$6F 的 SRAM 寫入被靜默丟棄。
+- **修正**：新增 $6000-$7FFF match arm：`sram_addr = ((effective & 0x1F) * 0x2000) + (addr - 0x6000)`。
 
-**解決**：$4210 讀取不再清除 bit 7。改為在掃描線 225 設定 bit 7，掃描線 0 清除。VBlank 期間 NMI handler 和主迴圈都能看到 bit 7 = 1。
+### SNES-3：H-IRQ 在掃描線內從不觸發
 
-**影響遊戲**：FF6、MMX2、超時空之鑰 等使用 VBlank 輪詢的遊戲。
+- **症狀**：Super Mario Kart（SMK）Mode 7 賽道的 WRAM 緩衝區全為零，HDMA 傳空資料到 M7 暫存器；追查到 DSP-1 Raster 命令未發出、IRQ handler 從未執行。
+- **根因**：H-IRQ 只在 cycle-leftover 區塊檢查，指令執行後不檢查；V+H 組合 IRQ 永遠不會在掃描線中間觸發。
+- **修正**：CPU 迴圈每條指令執行後都檢查 H-IRQ 條件。
 
----
+### SNES-4：65816 短分支固定 2 cycles
 
-### Q2: LoROM SRAM 寫入遺失 — 存檔資料損毀
-
-**現象**：LoROM 遊戲存檔後讀取資料為空或損毀。
-
-**原因**：`bus_write_system_low()` 缺少 $6000-$7FFF 地址範圍的處理。來自 bank $40-$6F 的 SRAM 寫入靜默丟棄。
-
-**解決**：新增 $6000-$7FFF match arm，使用公式 `sram_addr = ((effective & 0x1F) * 0x2000) + (addr - 0x6000)` 正確路由至 SRAM。
-
----
-
-### Q3: H-IRQ 在掃描線內從不觸發
-
-**現象**：Super Mario Kart 的 Mode 7 賽道 WRAM 緩衝區全為零，HDMA 傳輸空資料到 M7 暫存器。
-
-**排查**：發現 DSP-1 Raster 命令從未被發出，追溯到 IRQ handler 從未執行。
-
-**原因**：H-IRQ 只在「cycle-leftover」區塊中檢查，CPU 指令執行後不檢查。V+H 組合 IRQ 也永遠不會在掃描線中間觸發。
-
-**解決**：在 CPU 迴圈中每條指令執行後都檢查 H-IRQ 條件，使中斷能在掃描線任意位置觸發。
-
----
-
-### Q3.1: 65816 短分支固定為 2 cycles — Raster 產生時序失真
-
-**現象**：Super Mario Kart 已能進入賽道，但 DSP-1 Raster 與 NMI/IRQ 內的緊密迴圈執行時序不正確。
-
-**原因**：BPL/BMI/BVC/BVS/BRA/BCC/BCS/BNE/BEQ 全部固定計為 2 CPU cycles。65816 的短分支未採用時為 2 cycles，採用時需增加 1 cycle；模擬模式跨 page 時再增加 1 cycle。
-
-**解決**：短分支共用同一個 timing helper；BRA 套用必定採用的分支規則，native mode 不加入跨 page penalty。回歸測試涵蓋未採用、同 page、native 跨 page 與 emulation 跨 page。
-
----
+- **症狀**：SMK 已能進賽道，但 DSP-1 Raster 與 NMI/IRQ 緊密迴圈時序不正確。
+- **根因**：BPL/BMI/BVC/BVS/BRA/BCC/BCS/BNE/BEQ 固定 2 cycles。正確為未採用 2、採用 +1，emulation mode 跨 page 再 +1。
+- **修正**：短分支共用 timing helper；BRA 套用必定採用規則；native mode 無跨 page penalty。
+- **驗證**：回歸測試涵蓋未採用、同 page、native 跨 page、emulation 跨 page。
 
 ## SNES — PPU 渲染
 
-### Q4: Mode 5 高解析度文字亂碼 — 聖劍傳說 2/3
+### SNES-5：Mode 5 高解析度文字亂碼（聖劍傳說 2/3）
 
-**現象**：Secret of Mana (SoM2) 和 Seiken Densetsu 3 (SD3) 的對話框、名字輸入選單、字幕文字全部亂碼或消失。
+- **症狀**：Secret of Mana（SoM2）、Seiken Densetsu 3（SD3）的對話框、名字輸入、字幕亂碼或消失；開場 credits 可見但模糊。
+- **根因**：Mode 5（hi-res 512px）落入通用 `_ => render_bg(0, y, 4, 4, 8)`。每個 tilemap entry 應覆蓋 16 hi-res 像素（兩個 8x8 character 並排），被當作 256px 模式解讀而錯位。
+- **修正**：新增 `render_bg_hires()`：
+  - 輸出像素 x 映射到 hi-res 座標 x*2；水平捲動仍以 256px 計數，取樣前須乘 2，否則字形在 tile N/N+1 邊界錯位
+  - tile N = 左 8px、tile N+1 = 右 8px；支援 flip_x/flip_y 與 16px 高 tile
+  - Mode 4/5/6 各自正確路由
 
-**排查**：開場 credits 文字可見但模糊不清，PPU 在 Mode 5 (hi-res 512px) 運行。原先 Mode 5 落入 `_ => render_bg(0, y, 4, 4, 8)` 通用處理。
+### SNES-6：Mode 7 暫存器 flip-flop 導致 HDMA 錯亂
 
-**原因**：Mode 5 是高解析度模式，每個 tilemap entry 覆蓋 16 hi-res 像素（兩個 8x8 character 並排），但被當作普通 256px 模式渲染，tile 資料解讀完全錯位。
+- **症狀**：SD3 開場 Mode 7 背景劇烈跳動後崩潰；M7A-M7D（$211B-$211E）的 HDMA 寫入值被翻轉組合。影響 SD3、SoM2 等 Mode 7 + HDMA 遊戲。
+- **根因**：持久 flip-flop 交替寫低/高 byte；VBlank 一次多餘寫入永久翻轉狀態，之後所有 HDMA 更新高低 byte 互換。
+- **修正**：改為標準 byte-latch：`reg = (val << 8) | m7_latch; m7_latch = val`；移除 `m7_flipflop`、`m7_low_buffer`。
 
-**解決**：新增 `render_bg_hires()` 方法：
-- 每個輸出像素 x 映射到 hi-res 座標 x*2
-- 水平捲動暫存器仍以 256px 座標計數，取樣前必須乘 2；否則字形會在 tile N/N+1 邊界錯位
-- tilemap entry 覆蓋 16 hi-res 像素，tile N = 左 8px，tile N+1 = 右 8px
-- 支援 flip_x/flip_y 和 16px 高 tile
-- Mode 4/5/6 各自正確路由
+### SNES-7：OAM 優先級旋轉未實作 — SMK 賽車閃爍
 
-**影響遊戲**：所有使用 Mode 5 文字的遊戲 (SoM2、SD3 等)。
+- **症狀**：SMK 其他車手精靈閃爍且位置錯誤。
+- **根因**：$2103 bit 7（priority rotation）已解析但未套用；啟用時應從 `(oam_addr_reload >> 2) & 0x7F` 開始遍歷，而非 sprite 0。
+- **修正**：精靈評估從 `first_sprite` 開始、以 0x7F 環繞；收集後依 OAM index 排序再渲染（低 index 在上層）。
 
----
+### SNES-8：圖層優先級數值錯誤 — FF6 精靈被背景遮擋
 
-### Q5: Mode 7 暫存器 flip-flop 導致 HDMA 錯亂
+- **症狀**：FF6 背景遮擋精靈或精靈順序錯亂。
+- **根因**：Mode 0/1 BG priority 數值過高，與 OBJ 範圍重疊甚至超過。
+- **修正**：重新校正 Mode 0~7 所有圖層 priority，使 BG（low/high）與 OBJ priority 0~3 正確交錯。
 
-**現象**：SD3 開場 Mode 7 背景劇烈跳動後崩潰。
+### SNES-9：OBJ 半透明規則反向（palette 0-3 / 4-7）
 
-**排查**：M7A-M7D 暫存器 ($211B-$211E) 值異常，追蹤到 HDMA 寫入的值被翻轉組合。
+- **症狀**：不該透明的 OBJ 被混色，或該半透明的 OBJ 未套用 color math（Secret of Mana、SD3 等）。
+- **根因**：`composite_scanline()` 把 palettes 4-7 排除在 color math 外、讓 0-3 參與。硬體上 0-3 永不參與，只有 4-7 在 `$2131 CGADSUB` OBJ bit 啟用時參與。
+- **修正**：`nes-wasm/src/snes/ppu.rs` 的 OBJ source（`src == 4`）：`main_obj_pal < 4` 不做 color math；`>= 4` 依 `CGADSUB bit 4` 決定。
 
-**原因**：Mode 7 暫存器使用持久性 flip-flop（奇/偶交替寫入低/高字節）。VBlank 期間一次多餘的寫入永久翻轉了 flip-flop 狀態，導致後續所有 HDMA 更新的高低字節互換。
+### SNES-10：Color math 來源反向與缺 direct color（聖劍傳說 2 開頭色彩）
 
-**解決**：改為標準 byte-latch 模式：`reg = (val << 8) | m7_latch; m7_latch = val`。每次寫入立即更新，無持久狀態。移除 `m7_flipflop` 和 `m7_low_buffer` 欄位。
+- **症狀**：許多透明物件變成不透明或混色錯誤；Secret of Mana 開頭與部分 256 色背景色彩不自然。
+- **根因**：
+  1. `$2130 CGWSEL` bit 1 解讀反向：硬體上 bit=0 用 fixed color、bit=1 用 sub screen 作第二來源。
+  2. Mode 3/4 BG1 8bpp 在 `$2130` bit 0 啟用 direct color 時仍查 CGRAM（direct color 應由 tile palette bits + pixel bits 直接產生 RGB）。
+- **修正**：
+  1. `using_fixed` 改為 `self.cgwsel & 0x02 == 0`；bit 1 設定時改用 `sub_buf`。
+  2. 新增 `direct_color_to_rgba()`、`uses_direct_color()`，一般 BG 與 Mode 5/6 hires sampler 皆支援 BG1 8bpp direct color。
 
-**影響遊戲**：SD3、SoM2、所有使用 Mode 7 + HDMA 的遊戲。
+### SNES-11：水平捲動量化為 8px — 超時空之鑰背景卡頓
 
----
-
-### Q6: OAM 優先級旋轉未實作 — SMK 賽車閃爍
-
-**現象**：Super Mario Kart 其他車手的卡丁車精靈閃爍且位置錯誤。
-
-**原因**：$2103 bit 7（OAM priority rotation）已解析但未在精靈評估中應用。啟用時應從 `(oam_addr_reload >> 2) & 0x7F` 開始遍歷，而非固定從 sprite 0 開始。
-
-**解決**：啟用 priority rotation 時，精靈評估從 `first_sprite` 偏移開始、0x7F 環繞。收集到的精靈在渲染前按 OAM index 排序（低 index 繪製在上層）。
-
----
-
-### Q7: PPU 圖層優先級值錯誤 — FF6 精靈被背景遮擋
-
-**現象**：FF6 圖層顯示混亂，背景遮擋精靈或精靈順序不對。
-
-**原因**：Mode 0/1 的 BG 優先級數值設定過高，與 OBJ 優先級範圍重疊甚至超過。
-
-**解決**：重新校正 Mode 0~7 所有圖層的 priority 數值，確保 BG (low/high) 與 OBJ (priority 0~3) 正確交錯排列。
-
----
-
-### Q8: OBJ 透明物件混合錯誤 — palette 0-3 / 4-7 規則反向
-
-**現象**：SNES 遊戲中部分透明物件、半透明精靈或特效看起來不正確，可能出現不該透明的 OBJ 被混合，或應該半透明的 OBJ 沒有套用 color math。
-
-**排查**：檢查 `composite_scanline()` 的 OBJ color math 條件後發現規則反向：程式把 OBJ palettes 4-7 排除 color math，卻讓 palettes 0-3 可參與混合。
-
-**原因**：SNES 硬體規則是 OBJ palettes 0-3 不參與 color math，只有 OBJ palettes 4-7 在 `$2131 CGADSUB` 的 OBJ bit 啟用時才參與主/副畫面色彩運算。
-
-**解決**：`nes-wasm/src/snes/ppu.rs` 中 OBJ source (`src == 4`) 的 color math 條件改為：
-- `main_obj_pal < 4`：永遠不做 color math
-- `main_obj_pal >= 4`：依 `CGADSUB bit 4` 決定是否做 color math
-
-**影響遊戲**：Secret of Mana、Seiken Densetsu 3，以及使用 OBJ 半透明特效的 SNES 遊戲。
-
----
-
-### Q8.1: Color Math 來源判斷錯誤 — 透明物件失去半透明 / 聖劍傳說 2 開頭色彩異常
-
-**現象**：SFC 遊戲中不少透明物件看起來變成不透明或色彩混合錯誤；Secret of Mana / 聖劍傳說 2 開頭畫面與部分 256 色背景顯示不自然。
-
-**排查**：追蹤 `composite_scanline()` 發現 `$2130 CGWSEL` bit 1 被解讀成「使用 fixed color」。實際硬體語意是 bit 1 控制是否使用 sub screen 作為 color math 第二來源：bit=0 使用 fixed color，bit=1 使用 sub screen。原實作剛好反向，導致多數依賴主/副畫面加減法的半透明效果套到錯誤來源。
-
-同時檢查 Mode 3/4 的 8bpp BG1 渲染，發現 `$2130` bit 0 啟用 direct color 時仍從 CGRAM 查色。部分開場或特效畫面會用 direct color 直接由 tile palette bits + pixel bits 產生 RGB，缺少這條路徑會造成色彩不符。
-
-**原因**：
-1. `$2130` bit 1 的 sub screen / fixed color 選擇邏輯反向。
-2. BG1 8bpp direct color 模式未實作，Mode 3/4 仍一律查 CGRAM。
-
-**解決**：
-1. `using_fixed` 改為 `self.cgwsel & 0x02 == 0`，bit 1 設定時改用 `sub_buf`。
-2. 新增 `direct_color_to_rgba()` 與 `uses_direct_color()`，在一般 BG 與 Mode 5/6 hires sampler 中支援 BG1 8bpp direct color。
-
-**影響遊戲**：Secret of Mana / 聖劍傳說 2、Seiken Densetsu 3，以及依賴 sub screen 半透明、fixed color 加減法或 direct color 的 SFC 遊戲。
-
----
-
-### Q8.2: 水平捲動量化成 8px — 超時空之鑰背景移動卡頓
-
-**現象**：開頭部分場景橫向移動時，背景不是逐像素平滑捲動，而是停住後一次跳動約 8px。
-
-**原因**：`$210D/$210F/$2111/$2113` 水平捲動需要 PPU1/PPU2 兩個共享 latch。舊實作只使用一個 latch，低 3 位錯誤地沿用該 BG 的舊值，使 1-7px 的細捲動被丟棄。
-
-**解決**：水平寫入改為 `data << 8 | (latch1 & ~7) | (latch2 & 7)`，並在每次 H-scroll 寫入後同步更新兩個 latch。回歸測試逐一驗證 0-15px 都能正確寫入。
-
----
+- **症狀**：開頭場景橫向移動時，背景停住後一次跳約 8px。
+- **根因**：`$210D/$210F/$2111/$2113` 需 PPU1/PPU2 兩個共享 latch；舊實作只有一個，低 3 位沿用該 BG 舊值，1-7px 細捲動被丟棄。
+- **修正**：寫入改為 `data << 8 | (latch1 & ~7) | (latch2 & 7)`，每次 H-scroll 寫入後同步更新兩個 latch。
+- **驗證**：回歸測試逐一驗證 0-15px。
 
 ## SNES — APU 音頻
 
-### Q9: FIR 回聲濾波器精度損失 — 音效刺耳 / 回聲過大
+### SNES-12：FIR 回聲濾波精度損失 — 音效刺耳 / 回聲過大
 
-**現象**：FF6 風聲 SFX 刺耳；SoM2 回聲/混響淹沒主旋律。
+- **症狀**：FF6 風聲 SFX 刺耳；SoM2 回聲淹沒主旋律；echo 輸出幅度異常大。
+- **根因**：
+  1. FIR 每個 tap 各自 `>>6`，小乘積被截為 0，頻率響應失真
+  2. BRR 解碼使用 wrapping 而非 clamping，溢出產生噪音
+- **修正**：先累加 8 個 tap 乘積再 `>>6` 並 clamp 到 16-bit（同 blargg `clamp16(sum >> 6)`）；BRR 輸出 `.max(-32768).min(32767)`。
 
-**排查**：echo 輸出幅度異常大，FIR 濾波結果不正確。
+### SNES-13：BRR decode 與 Gauss interpolation 尺度不一致 — 特定音色刺耳
 
-**原因**：
-1. FIR 濾波每個 tap 分別做 `>>6`，小乘積被截斷為 0，頻率響應失真
-2. BRR 解碼使用 wrapping 而非 clamping，溢出產生噪音
+- **症狀**：某種樂器或音效仍有刺耳高頻；回退到 commit `0590b1efed1900f7270cb2934a2a4b4fa0cef541` 後改善但仍殘留。
+- **根因**：`nes-wasm/src/snes/apu.rs` 的 `generate_sample()` 已回到舊版 Gauss 路徑（末端 `>> 1`），但 `decode_next_sample()` 仍在推入 Gauss ring buffer 前額外 `<< 1`，兩種尺度混用。
+- **修正**：BRR decode 還原為 `0590b1e` 行為：filter 2/3 公式回到參考版、filter output 只 clamp 到 16-bit、ring buffer 寫入 `clamped as i16`（不再 `<< 1`）。
+- **驗證**：`npm run build` 通過；Secret of Mana 可啟動出圖；特定場景音色仍待聽感確認。
 
-**解決**：
-1. 先累加全部 8 個 tap 的乘積，再做一次 `>>6` 並 clamp 到 16-bit（匹配 blargg `clamp16(sum >> 6)`）
-2. BRR 解碼輸出 `.max(-32768).min(32767)`
+### SNES-14：SPC700 分支指令 cycle 數錯誤
 
----
+- **症狀**：多款遊戲 APU 時序異常或不穩定。
+- **根因**：條件分支（BPL/BMI/BCC/BCS/BNE/BEQ 等）固定 2 cycles；正確為未跳 2、跳轉 4。CBNE、DBNZ、BBS/BBC 也各有不同 taken/not-taken 值。
+- **修正**：校正全部 10+ 條分支指令 cycle 數。
 
-### Q10: BRR decode 與 Gauss interpolation 尺度不一致 — 特定音色刺耳
+### SNES-15：SPC700 缺少 `$B8` opcode — PC 跑飛
 
-**現象**：SNES 音樂整體可接受，但某一種特定音頻、樂器或音效仍有刺耳高頻。回退到 commit `0590b1efed1900f7270cb2934a2a4b4fa0cef541` 後改善，但仍殘留部分異常。
+- **症狀**：音頻異常或 SPC700 執行亂碼。
+- **根因**：`$B8`（SBC dp, #imm）未實作，被跳過後 PC 對齊錯誤，後續解碼全亂。
+- **修正**：補上 `$B8: SBC dp, #imm` 完整實作。
 
-**排查**：比對 `0590b1e` 的 `nes-wasm/src/snes/apu.rs` 發現 `generate_sample()` 已回到舊版 Gauss 路徑，但 `decode_next_sample()` 仍保留較新的 BRR 輸出尺度：把 sample 推入 Gauss ring buffer 前額外 `<< 1`。舊版 Gauss interpolation 末端已經做 `>> 1`，兩種尺度混用會放大或偏移部分 BRR 樣本的高頻內容。
+### SNES-16：IPL ROM 被 RAM 寫入覆蓋
 
-**原因**：BRR decode 與 Gauss interpolation 需要使用一致的 sample 尺度。只回退 `generate_sample()` 而未同步回退 BRR decode，會讓某些 BRR 樣本在插值與 envelope 前後的幅度不符合參考版本。
+- **症狀**：APU 初始化後行為異常。
+- **根因**：IPL ROM 只存在 RAM 陣列，寫入 $FFC0-$FFFF 會覆蓋 boot ROM。
+- **修正**：新增獨立 `ipl_rom: [u8; 64]`，$FFC0-$FFFF 讀取一律由此取值。
 
-**解決**：將 BRR decode 還原為 `0590b1e` 行為：
-- filter 2/3 公式回到參考版本
-- BRR filter output 只 clamp 到 16-bit
-- Gauss ring buffer 寫入 `clamped as i16`，不再額外 `<< 1`
+### SNES-17：APU 分數 cycle 累積漂移
 
-**驗證**：`npm run build` 通過；Secret of Mana 可啟動出圖。實際音色仍需以聽感確認特定場景。
+- **症狀**：長時間遊玩後音訊與畫面逐漸不同步。
+- **根因**：每條掃描線的 APU cycle 計算丟棄小數，每幀漂移約 249 SPC cycles。
+- **修正**：新增 `apu_master_remainder: u32`：`total_master = 1364 + remainder`、APU cycles = `total_master / 21`、新 remainder = `total_master % 21`。
 
----
+### SNES-18：Sub screen 背景為純黑 — 色彩數學異常
 
-### Q11: SPC700 分支指令 cycle 數全部錯誤
-
-**現象**：多款 SNES 遊戲音頻時序異常或 APU 行為不穩定。
-
-**原因**：所有條件分支 (BPL/BMI/BCC/BCS/BNE/BEQ 等) 固定返回 2 cycles。正確值應為：未跳轉 2 cycles、跳轉 4 cycles。CBNE、DBNZ、BBS/BBC 也各有不同的 taken/not-taken 值。
-
-**解決**：校正全部 10+ 條分支指令的 cycle 數。
-
----
-
-### Q12: SPC700 缺少 $B8 opcode — PC 跑飛
-
-**現象**：多款遊戲音頻異常或 SPC700 執行亂碼。
-
-**原因**：opcode `$B8` (SBC dp, #imm) 未實作。遇到時跳過，PC 對齊錯誤，後續所有指令解碼錯亂。
-
-**解決**：補上 `$B8: SBC dp, #imm` 完整實作。
-
----
-
-### Q13: IPL ROM 被 RAM 寫入覆蓋
-
-**現象**：APU 初始化後行為異常。
-
-**原因**：IPL ROM 只存在 RAM 陣列中，寫入 $FFC0-$FFFF 會覆蓋 boot ROM 內容。
-
-**解決**：新增獨立 `ipl_rom: [u8; 64]` 欄位，$FFC0-$FFFF 讀取始終從 ipl_rom 取值。
-
----
-
-### Q14: APU 分數 cycle 累積漂移
-
-**現象**：長時間遊玩後音頻與視頻逐漸不同步。
-
-**原因**：每條掃描線的 APU cycle 計算丟棄小數餘數。每幀漂移約 249 SPC cycles。
-
-**解決**：新增 `apu_master_remainder: u32`，每條掃描線 `total_master = 1364 + remainder`，APU cycles = `total_master / 21`，新 remainder = `total_master % 21`。
-
----
-
-### Q15: Sub Screen 背景色為純黑 — 色彩數學異常
-
-**現象**：SoM2 名字輸入 UI 不可見（色彩混合結果全黑）。
-
-**原因**：Sub screen 預設填充為 0x000000 (黑色)，而非 CGRAM[0] (backdrop 色)。色彩加法 Main + Sub = Main + 黑 = 暗色。
-
-**解決**：`sub_buf[x]` 初始值改為 `bgr15_to_rgba(cgram[0])`。
-
----
+- **症狀**：SoM2 名字輸入 UI 不可見（混色結果全黑）。
+- **根因**：Sub screen 預設填 0x000000，而非 CGRAM[0]（backdrop）；Main + Sub = Main + 黑。
+- **修正**：`sub_buf[x]` 初始值改為 `bgr15_to_rgba(cgram[0])`。
 
 ## SNES — DMA / HDMA
 
-### Q16: HDMA 間接定址指標欄位缺失
+### SNES-19：HDMA 間接定址指標欄位缺失
 
-**現象**：使用 HDMA 間接模式的遊戲（如 SMK）光柵效果失敗。
+- **症狀**：使用 HDMA 間接模式的遊戲（如 SMK）光柵效果失敗。
+- **根因**：間接模式需從表格讀出 16-bit 指標存入獨立欄位，原實作與 `count` 混用。
+- **修正**：DMA channel 新增 `indirect_addr: u16`，init/transfer 時讀取並使用。
 
-**原因**：HDMA 間接模式需要從表格讀取 16-bit 指標存入獨立的 `indirect_addr`，再從該位址傳輸。原實作缺少此欄位，與 `count` 混用。
+### SNES-20：HDMA 掃描線 0 不應傳輸
 
-**解決**：DMA channel 新增 `indirect_addr: u16`，init/transfer 時正確讀取並使用間接指標。
-
----
-
-### Q17: HDMA 掃描線 0 不應傳輸資料
-
-**現象**：HDMA 效果第一行資料錯誤。
-
-**原因**：掃描線 0 應只載入第一筆 entry（和間接指標），不執行傳輸。原實作在掃描線 0 也傳輸了。
-
-**解決**：掃描線 0 只做 init（載入 entry + indirect），掃描線 1+ 才執行 transfer → decrement → reload。
-
----
+- **症狀**：HDMA 效果第一行資料錯誤。
+- **根因**：掃描線 0 應只載入第一筆 entry 與間接指標，原實作也做了傳輸。
+- **修正**：掃描線 0 只 init；1 以後才 transfer → decrement → reload。
 
 ## SNES — 協處理器
 
-### Q18: DSP-1 Newton 疊代精度不符 — Mode 7 地面扭曲
+### SNES-21：DSP-1 Newton 疊代精度不符 — Mode 7 地面扭曲
 
-**現象**：DSP-1 Inverse 函數結果錯誤，Mode 7 地面紋理和精靈定位失準。
+- **症狀**：DSP-1 Inverse 結果錯誤，Mode 7 地面紋理與精靈定位失準。
+- **根因**：Newton 疊代用 `i32` 累加，snes9x 用 `i16` 截斷，中間值不同。
+- **修正**：每步疊代後 `as i16 as i32` 截斷到 16-bit 有號範圍。
 
-**原因**：Newton 疊代使用 `i32` 累加器，而 snes9x 使用 `i16` 截斷。每步疊代的中間值不同導致結果偏差。
+### SNES-22：DSP-1 Raster Output 階段無限迴圈
 
-**解決**：每步 Newton 疊代後加入 `as i16 as i32` 強制截斷到 16-bit 有號範圍。
+- **症狀**：DSP-1 卡在 Raster Output（54 commands/1800 frames），不退出 Mode 7 計算迴圈。
+- **根因**：`write_dr` 在 Raster Output 階段消費寫入並自動 repeat。
+- **修正**：skip-without-repeat：每次 dummy write 只丟棄一個待輸出 byte、不觸發 auto-repeat；清空後回 Idle，與 snes9x 一致。
+- **驗證**：
+  - 測試涵蓋完整 8-byte flush 與已讀半個 word 後的剩餘輸出。
+  - 日版 SMK：可進入賽事、CPU 無 BRK、DSP-1 在 Output/Params/Idle 間推進；單幀 trace 為 SL25-114 上方 Mode 7、SL115 分隔列、SL116-224 下方 Mode 7，M7A-D 四條間接 HDMA 各消耗約 104 筆；300 frames 後排名與賽道持續更新，無水平撕裂。
 
----
+### SNES-23：CX4 協處理器未實作 — Mega Man X2/X3 無法運行
 
-### Q19: DSP-1 Raster Output 階段無限迴圈
-
-**現象**：DSP-1 卡在 Raster Output 階段（54 commands/1800 frames），永遠不退出 Mode 7 計算迴圈。
-
-**原因**：`write_dr` 在 Raster Output 階段消費寫入並自動 repeat，形成無限迴圈。
-
-**解決**：實作 skip-without-repeat：每次 dummy write 只丟棄一個待輸出 byte，不觸發 Raster auto-repeat；待輸出資料清空後回到 Idle，精確匹配 snes9x 邏輯。測試同時覆蓋完整 8-byte flush 與已讀取半個 word 後的剩餘輸出。
-
-**實際 ROM 驗證**：瀏覽器載入日版 Super Mario Kart 後可正常進入賽事，CPU 無 BRK，DSP-1 可在 Output/Params/Idle 間持續推進。單幀 trace 顯示 SL25-114 為上方駕駛視角 Mode 7、SL115 為分隔列、SL116-224 為下方賽道俯視圖 Mode 7；M7A-D 的四條間接 HDMA channel 均消耗約 104 筆矩陣資料。再執行 300 frames 後排名與俯視賽道持續更新，畫面結構並非水平撕裂。
-
----
-
-### Q18: CX4 協處理器未實作 — Mega Man X2/X3 無法運行
-
-**現象**：Mega Man X2 和 X3 載入後無畫面。
-
-**原因**：Hitachi HG51B169 (CX4) 協處理器未實作。這兩款是唯一使用 CX4 的遊戲。
-
-**解決**：實作 HLE CX4 (`cx4.rs`)：ROM 偵測（$F3 + LoROM + 擴展標頭 $7FBF=0x10）、記憶體映射（$6000-$7FFF RAM/I/O）、命令分派（build_oam、math、wireframe 等）、匯流排路由。
-
----
+- **症狀**：MMX2、MMX3 載入後無畫面。
+- **根因**：Hitachi HG51B169（CX4）未實作；這兩款是唯一使用 CX4 的遊戲。
+- **修正**：HLE 實作 `cx4.rs`：ROM 偵測（$F3 + LoROM + 擴展標頭 $7FBF=0x10）、記憶體映射（$6000-$7FFF RAM/I/O）、命令分派（build_oam、math、wireframe 等）、匯流排路由。
 
 ## N64 — Mupen64Plus Web 後端
 
-### Q1: 第一次啟動 N64 ROM 時畫面內容尺寸錯誤
+詳細量測、benchmark 結果與優化路線見 [N64_CORE_OPTIMIZATION_PLAN.md](N64_CORE_OPTIMIZATION_PLAN.md)；iPhone 音訊見 [N64_IPHONE_AUDIO.md](N64_IPHONE_AUDIO.md)。
 
-**現象**：第一次啟動 N64 遊戲時，畫面上方與右側被裁切或留下大片清屏色；外框本身仍是正確的 `4:3`。
+### N64-1：首次啟動時畫面內容尺寸錯誤
 
-**排查**：DOM 量測顯示外層 `.screen-bezel` 與 canvas CSS 尺寸正確，但手機 canvas backing變成`390x292`，Rice viewport仍只繪製`320x240`。因此內容落在部分畫布內，問題不是CSS overflow。
+- **症狀**：畫面上方與右側被裁切或留清屏色；外框仍是正確的 `4:3`。
+- **根因**：手機 backing 變成 `390x292`，Rice viewport 仍只畫 `320x240`（非 CSS overflow）。Mupen `start()` 先非同步準備 IDBFS，SDL/Rice 之後才讀 canvas 尺寸，此時 CSS 已放大，SDL 便以顯示尺寸改寫 backing；假 `resize` / `orientationchange` 事件使競態更不穩。
+- **修正**（`src/main.ts`）：建立全新 `<canvas id="canvas">`（不重用已取得 2D context 的 `#screen`）；初始化期間以 `body.n64-initializing` 將 CSS 固定為 profile 原生尺寸，Rice 第一個 `beginStats`（第一個 VI）後才鎖定 WebGL backing 並移除該 class；停止或失敗時一律清除；不再發送假 resize。
+- **驗證**：Pages base path 的 production preview（iPhone profile）：Super Mario 64 backing `320x240`、CSS `390x292.5` 填滿 `4:3`；切 Mario Kart 64 仍為 `320x240`；切 NES 正確還原 `#screen` 與 `256x240`。
 
-**原因**：Mupen的`start()`會先非同步準備IDBFS，之後SDL/Rice才讀取canvas尺寸。若此時CSS已放大至容器寬度，SDL會用顯示尺寸改寫backing；發送假的`resize`或`orientationchange`事件會讓這個競態更不穩定。
+### N64-2：手機嚴重掉幀與音訊爆音
 
-**解決**：`src/main.ts` 新增 N64 專用適配流程：
-- 建立全新的 `<canvas id="canvas">`，避免重用已取得 2D context 的 `#screen`
-- SDL/Rice初始化期間以`body.n64-initializing`將CSS尺寸固定為效能profile的原生尺寸
-- Rice第一個`beginStats`（第一個VI）回呼後才鎖定WebGL backing，並移除初始化class恢復responsive CSS
-- backend停止或啟動失敗時一律清除初始化class；不再發送假的window/orientation resize pulse
+- **根因**：所有裝置固定 `640x480`，Rice 用精確材質映射、mipmap 與 sinc resampler；高更新率手機讓 rAF 主迴圈以 90/120 Hz 喚醒；reset 時複製完整 ROM 造成記憶體尖峰與 GC。
+- **修正**：
+  - 效能 profile：手機 `320x240` backing、快速材質載入、16-bit texture；Android low-end 保留跳幀 + trivial resampler；iPhone/iPad 用 cached interpreter、不跳幀、rAF 同步、3072/1024 audio buffers、`src-linear` resampler。ROM reset 共用原始 buffer。
+  - 音訊短缺：rebuilt fork 只對 SDL callback 不足的尾端補靜音，送往 `n64-audio-processor` AudioWorklet 的 Float32 chunk 不含補零尾端。Worklet 先累積 1024 frames、queue 超過 6144 frames 丟最舊、drain 後以 64-frame crossfade 恢復；SDL ScriptProcessor 留在 zero-gain sink 作 producer 與 fallback。
+  - 啟動或切換後無聲：app AudioWorklet 與 Mupen SDL 是不同 AudioContext。保留 click/keydown/touchstart 恢復監聽，Rice 第一個 VI 後恢復 SDL，頁面 visible 時恢復兩者；fork control 必須讀 `Module.SDL2.audioContext`（lexical `SDL2` 會靜默失效）。
+  - 正式路徑：mobile 預設載入 64 MiB initial memory 的 rebuilt fork + triangle stream；desktop 維持 npm 1.5.7。`?n64Runtime=npm` / `?n64Runtime=fork` 可強制切換。
+- **驗證**：
+  - 主控台 `[N64 perf]` 每 5 秒輸出 VI/s、VI avg/max、long VI、recompiles、audio underruns（SDL source-side，非 Worklet underflow）。NTSC 穩定低於約 56 VI/s 代表核心未達 real-time；long VI 與 recompiles 同高代表 Wasm 重編譯卡點；recompiles 下降但 underruns 仍增，代表主執行緒長工作餓死音訊。
+  - production preview 模擬兩個 context suspended，visibility 與 click 均觸發兩次 resume。
+  - Pages：fork bundle、Wasm、data 共用 asset version 檔名，artifact 不完整則 build 失敗，Actions 依 repository name 設 `VITE_BASE_PATH`；驗收須確認不帶 query 的手機路徑選到 fork 並進入 3D 畫面，不能只看 HTTP 200。
+- **限制**：單執行緒 Mupen64Plus/Rice Wasm；音訊緩衝只能遮蔽短暫 gap，持續 underrun 須先降低 renderer stall。
 
-**驗證**：GitHub Pages base path的production preview以iPhone profile啟動Super Mario 64後，backing為`320x240`、CSS為`390x292.5`，完整畫面填滿`4:3` canvas。切換Mario Kart 64後仍為`320x240`；切至NES則正確還原`#screen`與`256x240`。
+### N64-3：A/B 效能基準參數
 
-### Q2: N64 在手機上嚴重掉幀與音頻爆音
+- **用法**：`?n64Benchmark=1`：暖機 30 秒、採樣 60 秒，輸出 `[N64 benchmark result]`；未啟用時不覆寫正常設定。須同 ROM、場景、裝置與溫度比較。例：`?n64Benchmark=1&n64EmuMode=2&n64SkipFrame=1&n64Timing=0`。
+- **參數**：`n64EmuMode=1|2`（cached interpreter / Wasm recompiler）、`n64SkipFrame=0|1`、`n64Timing=0|1`（rAF / timer）、`n64Runtime=fork`（固定 source/toolchain 重建版；省略為 npm 1.5.7 rollback）、`n64MobileTest=baseline|stream|full`（手機短測，固定 fork，10 秒暖機 + 20 秒採樣）。僅在 benchmark + fork 時生效：`n64NullVideo=1`（NoVideo plugin，黑屏為預期）、`n64SuppressDraw=1`（保留 Rice DList/texture/state，抑制主要 GL draw）、`n64PersistentBuffers=1`（triangle streaming ring）、`n64PersistentRectBuffers=1`（另加 rectangle ring，需搭配前者）。
+- **狀態**：baseline/stream/full 手機簡測已完成；下一次只在另一個大型 renderer 調整通過本機三款遊戲驗收後安排。
 
-**原因**：舊流程在所有裝置固定繪製 `640x480`，Rice 使用精確材質映射、mipmap 與 sinc resampler；高更新率手機還會讓 `requestAnimationFrame` 主迴圈以 90/120 Hz 喚醒。重設遊戲時額外複製完整 ROM，也會造成行動裝置記憶體尖峰與 GC 壓力。
+### N64-4：iPhone 基準的瓶頸判讀
 
-**解決**：新增自動效能 profile。手機使用 N64 原生級 `320x240` backing store、快速材質載入與 16-bit texture；Android low-end 保留畫面跳幀並使用 trivial resampler。iPhone/iPad 改用 cached interpreter、關閉畫面跳幀、使用 rAF 同步、3072/1024 audio buffers 與 `src-linear` resampler，降低取樣率轉換造成的粗糙高頻。ROM reset 改為共用原始 buffer。
+- **數據**（iPhone 17 Pro Max）：
+  - SM64：recompiler 27.23 VI/s、cached interpreter 27.65 VI/s；recompiler 穩態仍 163 次 recompiles，吞吐量低約 1.5%，最長 VI 118 → 207 ms。關閉 SkipFrame 僅 27.65 → 27.06 VI/s（約 2.1%）。
+  - MK64 / OoT（cached interpreter、no SkipFrame、rAF）：21.24 VI/s（平均 38.89 ms、最長 275 ms，比 SM64 慢約 21.5%，約即時 35%）/ 21.98 VI/s（43.37 ms、212 ms，約 36.6%）。OoT 90 秒內無 diagnostic，但不能據此宣稱長時間閃退已修復。
+- **結論**：SkipFrame 收益小只代表它沒避開主要工作；N64-6 確認瓶頸在 Rice GL draw 入口與 WebGL 提交。降解析度不是首選，WebGPU 保留為 WebGL 優化不足時的候選。
+- **崩潰分類**：benchmark 模式將 JS error、unhandled rejection、Mupen `setErrorStatus`、`webglcontextlost` POST 到開發伺服器 `/__n64-benchmark`，Vite 主控台以 `[N64 benchmark received]`、`event: diagnostic` 與 `type` 區分來源。Safari 直接終止頁面時來不及送出，需以 Web Inspector 或系統記錄確認。
 
-**量測**：開啟瀏覽器遠端主控台，搜尋 `[N64 perf]`。每五秒會顯示 VI/s、VI avg/max、long VI、recompiles與audio underruns。NTSC 遊戲穩定低於約 56 VI/s 表示核心本身未達 real-time；若 long VI 與 recompiles 同時偏高，啟動初期的 Wasm 動態重編譯是主要卡點。若recompiles已下降但audio underruns仍持續增加，表示renderer或其他主執行緒長工作仍在餓死SDL/Web Audio供料。
+### N64-5：rebuilt runtime（`n64Runtime=fork`）啟動失敗
 
-**音訊短缺處理**：rebuilt fork會保留SDL callback當下仍可安全resample的樣本，只將不足尾端補靜音，不再因少量短缺捨棄整個callback。傳往 N64 AudioWorklet 的 chunk 只包含有效前段，不會把補靜音尾端排入 queue；Worklet 會在真正缺資料時做短暫衰減，收到下一段 PCM 時再 crossfade 接回。SDL累積underrun counter透過既有每VI telemetry傳回，沒有新增高頻JS crossing。這可降低破碎幅度並提供客觀計數，但無法替代把Rice renderer降到real-time預算內；若手機持續大量underrun，仍應先降低主執行緒render stall。
+- **症狀**：ROM 下載後即顯示啟動失敗。依序出現：無 diagnostic → `initWasmRecompiler` 的 `ReferenceError: wasmExports is not defined` → 588-page artifact 在 `startCore` Asyncify rewind 發生 `memory access out of bounds`（desktop 與 iPhone 皆可重現）→ 正式站另一次越界。
+- **根因**：
+  1. upstream `main.js` 是給 bundler 的來源入口（extensionless imports、`axios` bare import），不能直接當 browser module。
+  2. Emscripten 3.1.25 的 exports 在 `Module['asm']`，舊 `corelib.js` 仍用不存在的 `wasmExports`。
+  3. 加入 instrumentation 後仍沿用 npm 的 38,535,168-byte 初始記憶體。
+  4. Windows `core.autocrlf=true` 把 binary `.data` 從 537,524 bytes 正規化成 515,609-byte Git blob，Actions 部署了損壞的 preload archive。
+- **修正**：
+  1. `npm run n64:build` 以 esbuild 產生 `main.bundle.js` 供 fork 載入，並新增 backend startup 與 `start()` rejection diagnostic。
+  2. 版本化 core submodule patch，function table 與 memory 存取改用 `Module['asm']`。
+  3. （2026-07-19）fork 改為 64 MiB（1024 pages），manifest 記錄 `initialMemoryBytes=67108864`，build 拒絕缺此值的 artifact。
+  4. `.gitattributes` 加 `*.data binary`；bundle、data、Wasm 以相同 asset version 檔名原子發布。
+- **驗證**：
+  - 桌面完成 Rice/RSP/Input 初始化並輸出 VI telemetry；修復後 SM64、MK64 完成第一個 VI，OoT 完成啟動且無越界。
+  - iPhone fork 對 npm baseline（5% 驗收門檻內，無相容性回歸；長時間遊玩的歷史閃退仍未排除）：
 
-**AudioWorklet 輸出路徑**：N64 SDL callback 會把 S16 PCM 轉成 Float32 chunk，送到 `n64-audio-processor`；partial underrun 的零值尾端不會送入 queue。Worklet 初次先累積 1024 frames，queue 超過 6144 frames 時丟棄最舊資料；短暫 drain 後以 64-frame crossfade 恢復，避免欠載恢復時產生新的 click。SDL ScriptProcessor 則保留在 zero-gain sink，作為 PCM producer 與 AudioWorklet 不可用時的 audible fallback。這可以遮住短暫的主執行緒 callback gap，但不能替代缺失的 PCM，也不保證降低延遲。現有 `[N64 perf]` audio counters 是 SDL source-side 數據，不等於 Worklet underflow；正式測試需要另外記錄 Worklet underflow、queue depth、drop count 與輸出延遲。
+    | 遊戲 | npm VI/s | fork VI/s | 差異 | 平均 VI (ms) | 最長 VI (ms) |
+    | --- | --- | --- | --- | --- | --- |
+    | SM64 | 27.060 | 27.082 | +0.08% | 差異 < 0.4%（噪音） | 114 → 107 |
+    | MK64 | 21.24 | 21.94 | +3.32% | 38.89 → 37.51 | 275 → 147 |
+    | OoT | 21.98 | 22.70 | +3.29% | 43.37 → 41.92 | 212 → 116 |
 
-**啟動或切換後無聲**：app AudioWorklet與Mupen SDL使用不同的AudioContext。N64啟動前呼叫resume時，SDL context可能尚未建立；Safari也可能在背景切換後再次暫停context。頁面現在保留click、keydown與touchstart恢復監聽，在Rice第一個VI後再恢復SDL，並於頁面回到visible時同時恢復兩個context。fork control必須讀取`Module.SDL2.audioContext`，直接引用lexical `SDL2`會因符號不在該scope而靜默失效。production preview將兩個context模擬為suspended後，visibility與後續click均確認觸發兩次resume。
+### N64-6：Rice renderer 瓶頸定位與 triangle stream ring
 
-**限制**：這個後端仍是單執行緒 Mupen64Plus/Rice WebAssembly。遊戲相容性與最終速度仍受手機 SoC、瀏覽器 WebGL 驅動及遊戲本身負載影響；低階裝置會以畫面更新率換取穩定遊戲速度。
+- **量測方式**：instrumented fork 在 C 端累加 RSP、DList/RDP、present、audio plugin 與五個主要 draw 入口的 triangle/rectangle 時間與呼叫數，隨每 VI 一次的 `endStats` 傳回（`averageCoreResidualMs`、`averageTriangleDrawMs` 等欄位；DList/RDP 已含在 RSP 內，不可再從 residual 扣除；npm rollback 欄位為 0）。
+- **SM64 結果**：
 
-**正式手機路徑**：mobile不帶benchmark參數時載入64 MiB initial memory的rebuilt fork並啟用triangle stream；desktop維持npm 1.5.7。`?n64Runtime=npm`可強制手機回退，`?n64Runtime=fork`可在desktop明確測試fork。
+  | 模式 | VI/s | ms/VI | 重點 |
+  | --- | --- | --- | --- |
+  | 正常 Rice | 27.20 | 31.68 | RSP 28.22、DList 28.08（88.6%）、residual 3.45、present 0.012、audio 0.003 ms |
+  | null-video（`n64NullVideo=1`） | 60.0 | 6.13 | max 9 ms、0 long VI、residual 6.12 ms |
+  | no-draw（`n64SuppressDraw=1`） | 59.98 | 12.19 | DList 0.24 ms（parser/ucode/texture/state 照常執行） |
 
-**GitHub Pages部署檢查**：production build包含帶共同asset version實體檔名的fork bundle、Wasm與data。Vite會在artifact不完整時使build失敗；GitHub Actions依repository name設定`VITE_BASE_PATH`。正式驗收必須另外確認不帶query的手機路徑選到rebuilt fork並能進入3D畫面，不能只檢查靜態artifact為HTTP 200。
+  約 27.84 ms/VI 位於 GL draw 入口與周邊 WebGL 提交，不應優先重構 R4300 或降解析度；維持 60 VI/s 時 renderer 預算約 10.55 ms/VI，DList 需減少至少 62.4%。應先處理 WebGL 同步點、client array 上傳與 draw batching，再評估 WebGPU。
+- **null-video 無結果（bug）**：黑屏如預期但 90 秒後 server 收不到結果。Web cached-interpreter loop 以 `viArrived` 決定何時 yield，Rice 由 `VidExt_GL_SwapBuffers()` 遞增，但 dummy `UpdateScreen()` 為空，loop 永不返回 JS。修正：dummy video 在 `UpdateScreen()` 遞增 `viArrived`（不繪圖）；static console 辨識 `--gfx dummy` 以連接真正的 NoVideo plugin。
+- **triangle stream ring**（`n64PersistentBuffers=1`）：position/fog、兩組 texture coordinates 與 color 交錯成 40-byte vertex，寫入單一 2.56 MB `GL_STREAM_DRAW` ring，改用 `glDrawArrays`；每 VI 第一批 orphan buffer、後續依序追加，每 draw 三次 upload 降為一次，批次後恢復原 client pointers。
+- **iPhone 固定場景 A/B**（2026-07-19）：
 
-### Q3: 如何取得可重現的 N64 A/B 效能基準
+  | 模式 | VI/s | ms/VI | DList ms | triangle ms | rectangle ms | underruns |
+  | --- | --- | --- | --- | --- | --- | --- |
+  | baseline | 16.71 | 57.69 | 48.16 | 0.469 | 46.47 | 706 |
+  | stream | 38.22 | 21.39 | 18.70 | 0.078 | 18.36 | 290 |
+  | full（+ rectangle ring，36-byte vertex） | 37.7 | 22.0 | — | — | 18.4 | 449 |
+  | stream + audio 4096/2048 | 37.9 | 21.7 | — | — | 18.1 | 435 |
 
-**方法**：在網址 query string 加上 `n64Benchmark=1`。模擬器會先暖機 30 秒，再收集 60 秒穩態資料，最後輸出 `[N64 benchmark result]`。未啟用 benchmark 時不會覆寫正常設定。
-
-可選參數：
-- `n64MobileTest=baseline|stream|full`：手機短版renderer比較；固定rebuilt fork，使用10秒暖機與20秒採樣。stream只啟用triangle ring，full另含已判定不採用的rectangle ring
-- `n64EmuMode=1|2`：cached interpreter / Wasm recompiler
-- `n64SkipFrame=0|1`：關閉 / 開啟 Rice SkipFrame
-- `n64Timing=0|1`：requestAnimationFrame / timer
-- `n64Runtime=fork`：使用固定 source/toolchain 重建的 baseline；省略時使用 npm 1.5.7 rollback runtime
-- `n64NullVideo=1`：只在benchmark與fork同時啟用時改用核心內建NoVideo plugin；畫面全黑是預期行為，正常遊玩與npm runtime不受影響
-- `n64SuppressDraw=1`：只在benchmark與fork同時啟用時保留Rice DList解析、texture與state處理，但抑制主要GL draw calls；用來估算替換render backend的收益上限
-- `n64PersistentBuffers=1`：只在benchmark與fork同時啟用Rice triangle交錯streaming ring A/B；rectangle與預設Rice路徑不變
-- `n64PersistentRectBuffers=1`：需同時啟用`n64PersistentBuffers=1`；將四條rectangle draw路徑移至獨立交錯ring
-
-例如：`?n64Benchmark=1&n64EmuMode=2&n64SkipFrame=1&n64Timing=0`。比較不同組合時必須使用同一 ROM、場景、裝置與溫度條件。
-
-baseline、stream與full手機簡測已完成，不需重跑。目前沒有待執行的手機短測；下一次只會在另一個大型renderer調整通過本機三款遊戲驗收後安排。
-
-### Q4: iPhone N64 基準顯示主要瓶頸在哪裡
-
-**Super Mario 64 實測**（iPhone 17 Pro Max）：Wasm recompiler (`emuMode=2`) 為 27.23 VI/s，cached interpreter (`emuMode=1`) 為 27.65 VI/s。recompiler 在穩態期間仍產生 163 次 recompiles，吞吐量反而低約 1.5%，最長 VI 也由 118 ms 增至 207 ms。
-
-同樣使用 cached interpreter 時，關閉 SkipFrame只讓27.65 VI/s降至27.06 VI/s，差約2.1%。這項早期結果只能說明Rice的SkipFrame沒有避開主要工作，不能據此判定renderer成本低；後續C端分段、true null-video與Rice no-draw已確認主要瓶頸位於Rice的GL draw入口及WebGL資料提交。降低輸出解析度仍不是首選，WebGPU則保留為低風險WebGL優化不足時的候選。
-
-**Mario Kart 64 實測**：cached interpreter、no SkipFrame、rAF 為 21.24 VI/s，平均 VI 38.89 ms，最長 VI 275 ms。相較 Super Mario 64 同設定再慢約 21.5%，約為 NTSC 即時速度的 35%。結果支持優先處理 R4300、RSP、Wasm 執行與主執行緒成本。
-
-**Ocarina of Time 實測**：cached interpreter、no SkipFrame、rAF 為 21.98 VI/s，平均 VI 43.37 ms，最長 VI 212 ms，約為 NTSC 即時速度的 36.6%。90 秒測試內正常完成且未收到 diagnostic，因此這次沒有重現較長時間遊玩後的閃退，也不能據此宣稱閃退已修復。
-
-**崩潰分類**：benchmark 模式會額外監聽 JavaScript error、unhandled Promise rejection、Mupen `setErrorStatus` 與 `webglcontextlost`，並 POST 到開發伺服器的 `/__n64-benchmark`。Vite 主控台出現 `[N64 benchmark received]` 後，可由 `event: diagnostic` 與 `type` 區分 Wasm/JS、Mupen 或 WebGL 問題。Safari 若直接終止整個頁面程序，瀏覽器來不及送出事件，此情況仍需由 Safari Web Inspector 或裝置系統記錄確認。
-
-### Q5: rebuilt N64 runtime 顯示「模擬器啟動失敗」
-
-**現象**：使用 `n64Runtime=fork` 時，ROM 下載完成後立即顯示啟動失敗；最初沒有 server diagnostic。修正 browser import 後，核心進一步在 `initWasmRecompiler` 發生 `ReferenceError: wasmExports is not defined`。
-
-**原因**：upstream `main.js` 是預期由 npm bundler處理的來源入口，包含 extensionless imports與 `axios` bare import，不能直接作為靜態 browser module載入。此外 Emscripten 3.1.25 將 Wasm exports放在 `Module['asm']`，但舊 `corelib.js`仍使用已不存在的 `wasmExports`全域變數。
-
-**解決**：`npm run n64:build` 使用 esbuild產生 browser-ready `main.bundle.js`；版本化 core submodule patch將 function table與memory存取改為 `Module['asm']`。`n64Runtime=fork`改載入 bundle，並新增 backend startup與 `start()` rejection diagnostic。桌面實測已完成 Rice/RSP/Input初始化、loading overlay消失並開始輸出 VI telemetry。
-
-**2026-07-19 Asyncify修復**：588-page rebuilt artifact雖能完成module與Rice初始化，但在`startCore`的Asyncify rewind發生Wasm `memory access out of bounds`；desktop與iPhone路徑都可重現，因此不是Safari專屬。原因是加入instrumentation後仍把npm的38,535,168-byte初始空間當作固定目標。fork已改為64 MiB（1024 pages），manifest記錄`initialMemoryBytes=67108864`，production build會拒絕缺少此值的舊artifact。正式站後續仍越界是另一個問題：Windows `core.autocrlf=true`曾把Emscripten binary `.data`從537,524 bytes正規化成515,609-byte Git blob，使Actions部署損壞的preload archive；`.gitattributes`現以`*.data binary`保存原始bytes。main bundle、data與Wasm也發布為帶相同asset version的實體檔名，確保三層原子更新。修復後Super Mario 64與Mario Kart 64完成第一個VI，Ocarina of Time完成backend啟動且沒有越界。
-
-**iPhone驗證**：Super Mario 64 rebuilt fork為 27.082 VI/s，npm baseline為 27.060 VI/s，差約 +0.08%；平均 VI與 long VI差異也低於 0.4%，可視為量測噪音。最長 VI由 114 ms降至107 ms。此結果確認固定 source/toolchain沒有造成第一款遊戲的效能回歸。
-
-Mario Kart 64 rebuilt fork為21.94 VI/s，npm baseline為21.24 VI/s，提升約3.32%；平均 VI由38.89 ms降至37.51 ms，最長 VI由275 ms降至147 ms。結果在5%驗收門檻內，且沒有發現相容性回歸。
-
-Ocarina of Time rebuilt fork為22.70 VI/s，npm baseline為21.98 VI/s，提升約3.29%；平均 VI由43.37 ms降至41.92 ms，最長 VI由212 ms降至116 ms。90秒內正常完成且未收到 diagnostic。三款遊戲因此完成 rebuilt baseline驗收，可以在此固定版本上加入 subsystem timing；較長時間遊玩後的歷史閃退仍未被這次短測排除。
-
-**Subsystem timing**：instrumented fork在C端累加RSP、Rice DList/RDP、present與audio plugin時間，並隨既有每VI一次的 `endStats` 呼叫一起送到JavaScript，沒有新增per-event JS crossing。benchmark結果中的 `averageCoreResidualMs`是扣除inclusive RSP、present與audio後的core/R4300上限；DList與RDP已包含在RSP時間內，只作明細，不能再次從residual扣除。npm rollback不提供這些C端數值，因此分段欄位為0。
-
-正常Rice的instrumented fork另在五個主要draw入口內累加triangle與rectangle的總時間及呼叫數，仍只透過既有每VI一次的 `endStats` 傳送。結果欄位為 `averageTriangleDrawMs`、`averageRectDrawMs`、`averageTriangleDrawCalls`與`averageRectDrawCalls`。若時間由高calls/VI的triangle路徑主導，優先減少client-array uploads並評估batching；若少量draw仍耗時很高，優先建立persistent VBO/EBO staging。`rice-no-draw`與null-video模式的這四項應接近0。
-
-Super Mario 64首組分段結果為31.68 ms/VI，其中RSP inclusive 28.22 ms、Rice DList 28.08 ms、core residual 3.45 ms、present 0.012 ms、audio plugin 0.003 ms。Rice DList約占整個VI的88.6%，而present接近零，因此先前SkipFrame僅約2%的改善不代表video plugin成本低；它只沒有避開主要的display-list解析與繪圖工作。需以true null-video量測移除整個Rice路徑後的上限，再決定renderer優化或其他核心方向。
-
-true null-video使用 `?n64Benchmark=1&n64Runtime=fork&n64NullVideo=1`。static console已修正為辨識既有的 `--gfx dummy`，讓core連接真正的NoVideo plugin，而非只關閉present或使用Rice SkipFrame。此模式刻意限制在fork benchmark，避免一般遊玩意外黑屏。
-
-**第一次null-video無結果**：畫面如預期全黑，但90秒後server沒有收到benchmark或diagnostic。Web cached-interpreter loop以 `viArrived`決定每個VI何時yield；Rice透過 `VidExt_GL_SwapBuffers()`增加該計數，原始dummy `UpdateScreen()`則完全為空，導致loop永遠不返回JavaScript。Emscripten dummy video現會在 `UpdateScreen()`增加 `viArrived`，只補回main-loop生命週期訊號，不執行Rice、GL swap或任何繪圖。
-
-**修正後null-video結果**：Super Mario 64為60.0 VI/s、6.13 ms/VI、9 ms max、0 long VI；RSP 0.005 ms、DList/RDP/present 0、audio 0.001 ms、core residual 6.12 ms。相較Rice的27.20 VI/s與31.68 ms/VI，移除video plugin後已達原生60 VI/s，因此目前不應優先重構R4300或降低輸出解析度。若維持60 VI/s，renderer只能使用約10.55 ms/VI；Rice DList目前28.08 ms，至少需減少62.4%。
-
-**Rice no-draw A/B**：使用 `?n64Benchmark=1&n64Runtime=fork&n64SuppressDraw=1`。此模式仍初始化Rice並完整執行DList parser、ucode dispatch、texture lookup與render state，但在五個主要OpenGL draw入口提前成功返回。若結果接近null-video的60 VI/s，GL draw/backend是主要投資方向；若仍接近正常Rice的27 VI/s，成本主要在parser、texture或state，單純換WebGPU後端不會達標。
-
-Super Mario 64 Rice no-draw實測為59.98 VI/s、12.19 ms/VI、DList 0.24 ms；正常Rice則為27.20 VI/s、DList 28.08 ms。約27.84 ms/VI因此位於主要GL draw入口及其周邊WebGL提交，而非DList parser、ucode、texture lookup或一般state處理。應先處理WebGL同步點、client array上傳與draw batching，再評估WebGPU。
-
-**Interleaved triangle stream ring A/B**：使用 `?n64Benchmark=1&n64Runtime=fork&n64PersistentBuffers=1`。此路徑把position/fog、兩組texture coordinates與color交錯成40-byte vertex，寫入單一2.56 MB `GL_STREAM_DRAW` ring，並利用Rice已展開為連續三頂點的資料改用`glDrawArrays`。每VI第一批先orphan buffer，後續draw依序追加，將每draw三次upload降為一次並避免立即覆寫GPU可能仍在讀取的區段。每批後仍恢復原client pointers；未帶參數、npm runtime、rectangle與no-draw路徑維持原行為。
-
-2026-07-19 iPhone固定場景baseline為16.71 VI/s、57.69 ms/VI、48.16 ms DList、0.469 ms triangle、46.47 ms rectangle與706 underruns；stream為38.22 VI/s、21.39 ms/VI、18.70 ms DList、0.078 ms triangle、18.36 ms rectangle與290 underruns。VI/s提升128.7%、DList降低61.2%、underruns降低58.9%，triangle ring確定保留。rectangle程式尚未修改卻同步下降，表示client-array同步等待會跨draw入口累積。
-
-**Rectangle stream ring**：`full`模式把四條rectangle路徑交錯為36-byte vertex並寫入第二個ring。iPhone結果為37.7 VI/s、22.0 ms/VI、18.4 ms rectangle與449 underruns；相較stream的38.22 VI/s、21.39 ms、18.36 ms與290 underruns沒有收益，因此不採用並維持rectangle flag關閉。使用者主觀感受整體較好但仍有輕微爆音，記錄為可能的run-to-run差異。
-
-**iOS audio buffer A/B**：曾以triangle-only stream將secondary callback由1024增至2048 samples、primary target由3072增至4096。結果為37.9 VI/s、21.7 ms/VI、18.1 ms rectangle與435 underruns，未優於stream的38.22 VI/s與290 underruns；使用者亦回報體感沒有改善且延遲稍增。此preset已移除，iOS維持3072/1024，剩餘爆音應由降低renderer stall處理而非繼續增加buffer。
-
----
+- **結論**：triangle ring 保留（VI/s +128.7%、DList −61.2%、underruns −58.9%）；rectangle 未修改卻同步下降，表示 client-array 同步等待會跨 draw 入口累積。rectangle ring 無收益，flag 維持關閉（使用者主觀較好但仍有輕微爆音，記為可能的 run-to-run 差異）。加大 audio buffer 未改善且延遲稍增，preset 已移除，iOS 維持 3072/1024；剩餘爆音應由降低 renderer stall 處理。
 
 ## NES — CPU 時序
 
-### Q19: CPU 指令 Off-by-One — Zombie Hunter 場景跳動
+核心規格見 [NES_SPECS.md](NES_SPECS.md)。
 
-**現象**：Zombie Hunter 進入遊戲後場景跳動、文字部分顯示錯誤。
+### NES-1：CPU 指令 off-by-one — Zombie Hunter 場景跳動
 
-**排查**：排除 APU、PPU scroll、Mapper 1 後，定位到 cpu_clock() 時序。
-
-**原因**：每條指令的執行本身佔用 1 個 CPU cycle，但 `cycles` 計數未扣除此消耗。所有指令多消耗 1 cycle，CPU 吞吐量下降約 22%，VBlank handler 無法在時限內完成。
-
-**解決**：`cpu_clock()` 中每次執行指令後 `cycles = cycles.saturating_sub(1)`。
-
----
+- **症狀**：Zombie Hunter 進入遊戲後場景跳動、部分文字顯示錯誤。
+- **根因**：排除 APU、PPU scroll、Mapper 1 後定位到 `cpu_clock()`：指令執行本身佔 1 個 CPU cycle，但 `cycles` 未扣除，所有指令多耗 1 cycle，吞吐量降約 22%，VBlank handler 無法在時限內完成。
+- **修正**：`cpu_clock()` 每次執行指令後 `cycles = cycles.saturating_sub(1)`。
 
 ## NES — Mapper
 
-### Q20: Mapper 225 鏡像模式反轉 — 合集遊戲藍屏
+### NES-2：Mapper 225 鏡像反轉 — 合集遊戲藍屏
 
-**現象**：64 合 1 遊戲開啟後藍屏。
+- **症狀**：64 合 1 遊戲開啟後藍屏。
+- **根因**：FCEUX 使用 `setmirror(mirr ^ 1)`（MI_V=0、MI_H=1），原實作 bit13 對應相反。
+- **修正**：bit13=0 → Horizontal，bit13=1 → Vertical。
 
-**原因**：FCEUX 使用 `setmirror(mirr ^ 1)` 異或翻轉，其中 MI_V=0, MI_H=1。原實作 bit13 對應關係相反。
+### NES-3：Mapper 253 多重錯誤 — 龍珠 Z 破圖
 
-**解決**：交換 bit13 的鏡像對應：bit13=0 → Horizontal，bit13=1 → Vertical。
-
----
-
-### Q21: Mapper 253 多重錯誤 — 龍珠 Z 破圖
-
-**現象**：龍珠 Z 強襲賽亞人部分畫面破圖。
-
-**原因**：4 個關鍵錯誤：
-1. 缺少 CHR RAM 替換 (`chrlo==4||5` 且 `!vlock`)
-2. 缺少 vlock 機制 (`chrlo[0]==0xC8` 解鎖、`0x88` 鎖定)
-3. chrhi 儲存錯誤 (`data & 0x10` → 應為 `data >> 4`)
-4. 地址解碼錯誤（應使用 FCEUX 公式）
-
-**解決**：以 FCEUX `253.cpp` 為參考完整重寫，新增 CHR RAM 混合映射支援。
-
----
+- **症狀**：龍珠 Z 強襲賽亞人部分畫面破圖。
+- **根因**：
+  1. 缺少 CHR RAM 替換（`chrlo==4||5` 且 `!vlock`）
+  2. 缺少 vlock 機制（`chrlo[0]==0xC8` 解鎖、`0x88` 鎖定）
+  3. chrhi 儲存錯誤（`data & 0x10` → 應為 `data >> 4`）
+  4. 地址解碼錯誤（應使用 FCEUX 公式）
+- **修正**：以 FCEUX `253.cpp` 為參考完整重寫，新增 CHR RAM 混合映射。
 
 ## NES — APU 音頻
 
-### Q22: DMC 通道邏輯缺陷 — Captain Tsubasa II 音效消失
+### NES-4：DMC 通道邏輯缺陷 — Captain Tsubasa II 音效消失
 
-**現象**：部分音效聽不到，且有爆音。
+- **症狀**：部分音效聽不到，且有爆音。
+- **根因**：DMC 缺少 `silence` 旗標，無資料時仍修改輸出電平；缺少濾波器導致 DC 偏移與高頻雜訊。
+- **修正**：新增 silence 旗標、初始 bits_remaining=8、低通/高通濾波器、軟削波。
 
-**原因**：DMC 缺少 `silence` 旗標，無資料時仍修改輸出電平。缺少音頻濾波器導致 DC 偏移與高頻雜訊。
+### NES-5：`$4017` 寫入延遲與 DMC 啟動時序 — FC 音樂細微差異
 
-**解決**：新增 silence 旗標、初始 bits_remaining=8、低通/高通濾波器、軟削波。
+- **症狀**：部分 FC 遊戲音樂與參考模擬器相比，節奏、包絡或音效進入時機有些微差異。
+- **根因**：
+  1. `$4017` 寫入當下即重置 frame counter，5-step 模式也立即 clock quarter/half frame；硬體依 CPU cycle 奇偶延遲 3 或 4 CPU cycles，使 envelope、length counter、sweep、linear counter 的 clock 邊界提早。
+  2. `$4015` 從 bytes_remaining 0 重新啟用 DMC 時未立即發出第一次 sample fetch request，首個 sample 偏晚。
+- **修正**：
+  1. 新增 `pending_frame_counter_write`，依 `cycle & 1` 延遲 3 或 4 CPU cycles 後才套用 mode / IRQ inhibit / immediate quarter+half frame clock。
+  2. 需要 restart 時呼叫 `fetch_dmc_sample()` 產生初始讀取請求（後續由 NES-6 校正為依 parity 延後）。
 
----
+### NES-6：DMC / frame counter / pulse 相位與主流模擬器不一致
 
-### Q22.1: APU Frame Counter / DMC 啟動時序偏差 — FC 音樂細微差異
+- **症狀**：DMC 音高偏低或播放速度不對；包絡線、長度計數器與掃頻變化約快一倍；重寫 `$4003/$4007` 後 pulse 相位不一致。
+- **根因**（對照 Mesen2 `Core/NES/APU/DeltaModulationChannel.cpp`、`ApuFrameCounter.h` 與 FCEUX `src/sound.cpp`、`documentation/tech/cpu/dmc.txt`）：
+  1. DMC rate table 是 CPU cycle 間隔，DMC 必須每個 CPU cycle clock；428、380、…、54 需以 `period - 1` 載入倒數器才得到精確的 `period` cycles。
+  2. NTSC frame counter 邊界為 7457、14913、22371、29829；4-step IRQ window 從 29828 開始，29829 才 clock 最後的 quarter/half frame；5-step 最後一步為 37281。原 Rust 值 3729、7457、11186、14915、18641 約為一半。
+  3. pulse duty table 採反向計數相位；寫入 `$4003/$4007` 重設為 0 後，下一個 timer rollover 走到位置 7。
+  4. DMC 啟用後第一次 fetch 依 CPU parity 延後 2 或 3 個 APU cycles；DMA 依序經過 halt、dummy、必要的 alignment 與 memory read。
+- **修正**：
+  1. DMC clock 移到每個 CPU cycle，以 `period - 1` 套用 NTSC rate table。
+  2. 校正 4-step/5-step frame counter 的 NTSC CPU-cycle 邊界。
+  3. pulse sequencer 改為 3-bit 反向計數，保留 length write 的位置重設。
+  4. `$4015` 讀取立即解除 frame IRQ line，但 status bit 保留到下一個 APU cycle 才清除；`$4017` 的 IRQ inhibit 仍立即生效。
+  5. DMC request 保留到資料真正交付，以 halt/dummy/alignment/read phase 執行：下一個 CPU slot 為偶數耗 3 slots、奇數耗 4 slots；stale request 可在 read 前取消；DMC ready 時可 steal OAM DMA 的 read slot，OAM 傳輸暫停該 slot。
+- **驗證**：
+  - Rust APU/emulator 測試涵蓋 DMC 精確週期、啟用/停用延遲、DMA parity、取消、OAM overlap、loop/IRQ/address wrap/silence、frame counter 邊界、IRQ acknowledge 與 pulse duty phase。
+  - `cargo test --manifest-path nes-wasm/Cargo.toml --lib` 通過：79 個測試通過，3 個需 ROM 的手動 trace 測試預設忽略。
+  - 限制：尚未以同一測試 ROM 對 FCEUmm、Nestopia 做 PCM golden comparison；CPU 尚非逐 bus cycle，未完整模擬 `$4000-$401F` internal bus conflict、controller bit deletion 與 DMC/OAM 同時進行時的所有讀取順序。
 
-**現象**：部分 FC 遊戲音樂與參考模擬器相比有些微節奏、包絡或音效進入時機差異。
+### NES-7：DMC 搶用 OAM DMA 讀取槽 — 足球小將 2 閃爍彩色方塊
 
-**排查**：檢查 `$4017` frame counter 寫入流程，原實作在 CPU 寫入當下立即重置 frame counter 並在 5-step 模式立即 clock quarter/half frame。NES APU 硬體會依 CPU cycle 奇偶延遲 3 或 4 CPU cycles 才套用 `$4017` 寫入，因此 envelope、length counter、sweep、linear counter 的 clock 邊界可能提早。另檢查 `$4015` 啟用 DMC 時，restart 後沒有立即安排初始 sample fetch，會讓 DMC 第一個 sample 進入時機偏晚。
-
-**原因**：
-1. `$4017` frame counter 寫入缺少 3/4 CPU cycle 延遲。
-2. DMC bytes_remaining 從 0 重新啟用時，未立即觸發第一次 sample fetch request。
-
-**解決**：
-1. 新增 `pending_frame_counter_write`，根據 `cycle & 1` 延遲 3 或 4 CPU cycles 後才套用 `$4017` 的 mode / IRQ inhibit / immediate quarter+half frame clock。
-2. `$4015` 啟用 DMC 且 sample 需要 restart 時，呼叫 `fetch_dmc_sample()` 產生初始讀取請求。
-
-**影響遊戲**：使用精細 envelope / sweep / DMC 音效時序的 FC 遊戲，包含音樂與短音效差異較容易被聽出的作品。
-
----
-
-### Q22.2: NES APU 與主流模擬器的 DMC / frame counter / pulse 相位差異
-
-**現象**：DMC 音高偏低或音效播放速度不對；包絡線、長度計數器與掃頻變化約快一倍；pulse 音色在重新寫入 `$4003/$4007` 後相位不一致。
-
-**排查**：對照 Mesen2 `Core/NES/APU/DeltaModulationChannel.cpp`、`ApuFrameCounter.h` 與 FCEUX `src/sound.cpp`、`documentation/tech/cpu/dmc.txt`：
-
-1. DMC rate table 的數值是 CPU cycle 間隔，DMC 必須每個 CPU cycle clock；428、380、…、54 會以 `period - 1` 載入倒數器，才能得到精確的 `period` 個 CPU cycles。
-2. NTSC frame counter 邊界是 7457、14913、22371、29829；4-step IRQ window 從 29828 開始，29829 才 clock 最後的 quarter/half frame；5-step 模式最後一步是 37281。原 Rust 值 3729、7457、11186、14915、18641 是約一半的序列。
-3. Mesen2/FCEUX 的 pulse duty table 採反向計數相位；寫入 `$4003/$4007` 將位置重設為 0 後，下一個 timer rollover 會走到位置 7。
-4. DMC 啟用後的第一次 fetch 不是立即發生，而是依 CPU parity 延後 2 或 3 個 APU cycles；DMA 本身依序經過 halt、dummy、必要的 alignment 與 memory read。
-
-**解決**：
-
-1. 將 DMC clock 移到每個 CPU cycle，並以 `period - 1` 套用 NTSC rate table。
-2. 校正 4-step/5-step frame counter 的 NTSC CPU-cycle 邊界。
-3. 將 pulse sequencer 改為 3-bit 反向計數，保留 length write 的位置重設行為。
-4. `$4015` 讀取現在立即解除 frame IRQ line，但保留 status bit 到下一個 APU cycle 才清除；`$4017` 的 IRQ inhibit 仍立即生效。
-5. DMC request 會保留到資料真正交付，emulator 以 halt/dummy/alignment/read phase 執行：下一個 CPU slot 為偶數時耗用 3 slots，為奇數時耗用 4 slots；stale request 可在 read 前取消，DMC ready 時可 steal OAM DMA 的 read slot，OAM 傳輸會暫停該 slot。
-6. 在 Rust APU/emulator 測試中加入 DMC 精確週期、啟用/停用延遲、DMA parity、取消、OAM overlap、loop/IRQ/address wrap/silence、frame counter 邊界、IRQ acknowledge 與 pulse duty phase 回歸驗證。
-
-**驗證**：`cargo test --manifest-path nes-wasm/Cargo.toml --lib` 通過；目前共 79 個 Rust 測試通過，另有 3 個需 ROM 的手動 trace 測試預設忽略。這些測試驗證了核心 register/timing 狀態，但尚未取代以同一個測試 ROM 擷取 FCEUmm、Nestopia 與本核心 PCM 波形的 golden comparison。DMC DMA 已不再固定 4 slots，並涵蓋 ready read 對 OAM DMA 的 slot steal；由於本核心 CPU 尚未拆成逐 bus cycle 的微循環，仍未完整模擬 `$4000-$401F` internal bus conflict、controller bit deletion，以及 DMC/OAM 同時進行時的所有硬體讀取順序。
-
-### Q22.3: DMC 搶用 OAM DMA 讀取槽 — 足球小將 2 閃爍彩色方塊
-
-**現象**：足球小將 2 開頭人物畫面會間歇出現位置與顏色不定的 8x8 方塊；可能落在人物、黑色背景或畫面左側，單張截圖不一定能捕捉。其他同時使用 DMC 音效與 OAM DMA 的遊戲也可能出現短暫 sprite tile 雜訊。
-
-**原因**：DMC DMA 在偶數 CPU slot 搶走 OAM DMA 的 source read 後，OAM DMA 的下一個奇數 write slot 仍把前一次殘留的 `dma_data` 寫入新 OAM 位址並前進 index。這會令 sprite 的 Y、tile、attribute 或 X byte 偶發重複/錯位。先前的 sprite Y row 修正只能校正 CHR 取樣列，無法避免 OAM 本身被污染。
-
-**解決**：OAM DMA 新增 `dma_data_ready` 狀態。只有完成 source read 才允許下一個 write；成功寫入後立即清除 ready。若 read 被 DMC 搶走，緊接的 write slot 會停住，直到下一次 OAM read 真正取得資料。
-
-**驗證**：回歸測試會預先放入 stale `dma_data`，讓 DMC 搶走 OAM read，再推進到下一個 write slot，確認 OAM byte 與 DMA address 都沒有變動。完整 Rust suite 為 79 passed、3 ignored，`npm run build` 通過。
+- **症狀**：足球小將 2 開頭人物畫面間歇出現位置與顏色不定的 8x8 方塊（單張截圖不一定捕捉得到）；其他同時使用 DMC 與 OAM DMA 的遊戲也可能有短暫 sprite tile 雜訊。
+- **根因**：DMC DMA 在偶數 CPU slot 搶走 OAM DMA 的 source read 後，下一個奇數 write slot 仍把殘留的 `dma_data` 寫入新 OAM 位址並前進 index，使 sprite 的 Y、tile、attribute 或 X byte 偶發重複/錯位。先前的 sprite Y row 修正只校正 CHR 取樣列，無法避免 OAM 被污染。
+- **修正**：OAM DMA 新增 `dma_data_ready`：完成 source read 才允許下一個 write，寫入後立即清除；read 被 DMC 搶走時，write slot 停住直到下一次 read 取得資料。
+- **驗證**：回歸測試預放 stale `dma_data`、讓 DMC 搶走 OAM read 後推進到 write slot，確認 OAM byte 與 DMA address 皆未變動。Rust suite 79 passed、3 ignored，`npm run build` 通過。
 
 ## Game Gear / Master System — Z80 CPU
 
-### Q23: DAA H 旗標不精確 — Ninku 開頭崩潰
+### GG-1：DAA H 旗標不精確 — Ninku 開頭崩潰
 
-**現象**：GG 忍空開頭動畫崩潰。
+- **症狀**：GG 忍空開頭動畫崩潰。
+- **根因**：DAA 的 Half-Carry 旗標計算不正確。
+- **修正**：採用 MAME/ZEXALL 公式 `H = ((original_a ^ corrected_a) & 0x10) != 0`。
 
-**原因**：DAA 指令的 Half-Carry 旗標計算不正確。
+### GG-2：INI/IND B 遞減時序 — Defenders of Oasis 選單不顯示
 
-**解決**：採用 MAME/ZEXALL 公式：`H = ((original_a ^ corrected_a) & 0x10) != 0`。
-
----
-
-### Q24: INI/IND B 遞減時序 — Defenders of Oasis 選單不顯示
-
-**現象**：選單無法顯示。
-
-**原因**：INI/IND 中 B 遞減在 mem_write 之後，不符 Z80 硬體時序。
-
-**解決**：read port → decrement B → write memory。
-
----
+- **症狀**：選單無法顯示。
+- **根因**：INI/IND 的 B 遞減在 mem_write 之後，不符 Z80 硬體時序。
+- **修正**：順序改為 read port → decrement B → write memory。
 
 ## Game Gear / Master System — VDP
 
-### Q25: Line IRQ / Frame IRQ 共用旗標 — 捲軸閃爍
+### GG-3：Line IRQ / Frame IRQ 共用旗標 — 捲軸閃爍
 
-**現象**：部分遊戲捲軸與 HUD 閃爍。
+- **症狀**：部分遊戲捲軸與 HUD 閃爍。
+- **根因**：行中斷與幀中斷共用 `irq_pending`，讀取狀態時互相清除。
+- **修正**：新增 `line_irq_pending` 獨立追蹤，`irq_pending` 動態計算。
 
-**原因**：行中斷與幀中斷共用 `irq_pending`，讀取狀態時互相清除。
+### GG-4：CRAM 寫入邏輯錯誤 — 色盤異常
 
-**解決**：新增 `line_irq_pending` 獨立追蹤，`irq_pending` 動態計算。
+- **症狀**：色彩渲染異常。
+- **根因**：CRAM latch 狀態機過於複雜，與 GG 硬體不符。
+- **修正**：移除狀態機，偶數位址暫存、奇數位址組合寫入 12-bit RGB444。
 
----
+### GG-5：精靈 Y 座標環繞 — GG 精靈消失
 
-### Q26: CRAM 寫入邏輯錯誤 — 色盤異常
-
-**現象**：色彩渲染異常。
-
-**原因**：CRAM latch 狀態機過於複雜，與 GG 硬體不符。
-
-**解決**：移除狀態機，改為偶數位址暫存、奇數位址組合寫入 12-bit RGB444。
-
----
-
-### Q27: 精靈 Y 座標環繞 — GG 精靈消失
-
-**現象**：GG 模式下某些精靈消失或位置錯誤。
-
-**原因**：Y >= 0xD1 (209) 的精靈應 wrap 到畫面頂部但未處理。
-
-**解決**：使用 `(y_raw + 1) % 256` 計算實際 Y。
-
----
+- **症狀**：GG 模式下某些精靈消失或位置錯誤。
+- **根因**：Y >= 0xD1（209）的精靈應 wrap 到畫面頂部但未處理。
+- **修正**：以 `(y_raw + 1) % 256` 計算實際 Y。
 
 ## Game Boy — Joypad
 
-### Q28: 方向鍵完全無法操作
+### GB-1：方向鍵完全無法操作
 
-**現象**：GB 遊戲方向鍵無反應。
-
-**原因**：`read()` 中 `result` 低 4 位初始為 0x0。方向 bank AND 結果永遠 0x00，等同所有方向同時按下。
-
-**解決**：低 4 位初始化為 0x0F（全部放開），由選取的 bank 透過 AND 清除對應 bit。
+- **症狀**：GB 遊戲方向鍵無反應。
+- **根因**：`read()` 中 `result` 低 4 位初始為 0x0，方向 bank AND 結果永遠為 0x00，等同所有方向同時按下。
+- **修正**：低 4 位初始化為 0x0F（全部放開），由選取的 bank 以 AND 清除對應 bit。

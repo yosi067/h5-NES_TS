@@ -1,458 +1,119 @@
-# H5-NES 開發指南
+# 開發指南
 
-## 目錄
-1. [專案概述](#專案概述)
-2. [架構設計](#架構設計)
-3. [開發階段](#開發階段)
-4. [技術細節](#技術細節)
-5. [測試策略](#測試策略)
-6. [除錯工具](#除錯工具)
+> 現況：前端為 Vite + TypeScript；NES、GB、GG/SMS、SNES 由 `nes-wasm` Rust 核心編譯成 WASM，N64 使用 Mupen64Plus Web，街機使用 FBNeo，相容性備援與 Mega Drive 使用 EmulatorJS。本文件只講「怎麼開發」，架構說明見 [技術概覽](TECHNICAL_OVERVIEW.md)。
 
----
+## 環境需求
 
-## 專案概述
+| 工具 | 用途 |
+|---|---|
+| Node.js（CI 使用 24） | Vite、TypeScript、Vitest 與 `tools/*.mjs` |
+| Rust + `wasm-pack` | 重建 `nes-wasm` → `src/wasm` |
+| Docker | 只有重建 N64 Mupen fork 時需要 |
+| PowerShell | `npm run n64:source` / `n64:build` 腳本 |
 
-### 專案現況
+## 常用指令
 
-H5-NES 已從最初的 NES 模擬器擴展成瀏覽器中的多平台模擬器。前端仍由 Vite/TypeScript 負責 UI、ROM 載入、輸入、Canvas 與 Web Audio；核心模擬器主要由 Rust 編譯成 WASM，另以 Mupen64Plus-web 提供 N64 後端。
+| 指令 | 說明 |
+|---|---|
+| `npm install` | 安裝依賴 |
+| `npm run dev` | 本機開發伺服器 |
+| `npm run dev:mobile` | 以 `0.0.0.0` 開放區網，供手機實測 |
+| `npm run wasm:build` | 只重建 Rust/WASM 核心 |
+| `npm run build` | wasm-pack → `tsc --noEmit` → 清除 `dist` → Vite production build |
+| `npm run preview` | 預覽 production build |
+| `npm test` | Vitest（watch 模式） |
+| `npx vitest run tests/<name>.test.ts` | 執行單一測試檔 |
+| `npm run lint` | ESLint（`src`） |
+| `npm run n64:source` / `npm run n64:build` | 取得並以 Docker 重建 N64 runtime fork |
 
-目前重點平台：
+> `test:cpu`、`test:ppu`、`test:apu` 使用的 `--testPathPattern` 在 Vitest 1.x 不支援，請改用 `npx vitest run tests/cpu.test.ts` 這類直接指定檔案的方式。
 
-- **NES / Famicom**：Rust/WASM 原生核心，包含 CPU、PPU、APU、Mapper。
-- **SNES / Super Famicom**：Rust/WASM 原生核心，包含 CPU、PPU、APU、DMA/HDMA 與部分協處理器支援。
-- **Game Boy / Game Gear / Master System**：Rust/WASM 原生核心。
-- **Nintendo 64**：透過 `mupen64plus-web` 啟動 WebGL 後端，使用獨立 `<canvas id="canvas">`，避免與 2D WASM canvas 共用 context。
-- **FBNeo Arcade**：透過 `@mantou/fbneo` 的 FinalBurn Neo arcade WebAssembly runtime 支援 `raiden.zip` 與 `wof.zip`，沿用現有 Canvas/Web Audio/game loop 外殼。
+中文化與遊戲資料相關指令另見：[遊戲 Profile 與翻譯框架](GAME_PROFILE_AUTHORING.md)、[足球小將 II](CT2_LOCALIZATION_STUDIO.md)、[Zombie Hunter](ZOMBIE_HUNTER.md)、[遊戲資料與封面](GAME_METADATA_PLAN.md)。
 
----
+## 目錄速覽
 
-### 什麼是 NES 模擬器？
-
-NES 模擬器是一個在現代電腦/瀏覽器中重現 Nintendo Entertainment System (任天堂紅白機) 硬體行為的軟體。我們需要模擬以下硬體元件：
-
-- **CPU (6502)**: 8 位元處理器，負責執行遊戲邏輯
-- **PPU (Picture Processing Unit)**: 圖形處理單元，產生 256×240 的視訊輸出
-- **APU (Audio Processing Unit)**: 音頻處理單元，產生 5 聲道的音效
-- **記憶體映射**: 管理 CPU 和 PPU 的記憶體存取
-- **卡帶/Mapper**: 處理不同遊戲卡帶的記憶體擴展
-
-### 技術棧
-
-- **語言**: TypeScript / Rust
-- **建置工具**: Vite
-- **測試框架**: Vitest
-- **核心輸出**: wasm-pack (`nes-wasm` → `src/wasm`)
-- **圖形輸出**: HTML5 Canvas 2D / WebGL canvas (N64)
-- **音頻輸出**: Web Audio API
-- **N64 後端**: Mupen64Plus-web + Rice video plugin
-- **Arcade 後端**: `@mantou/fbneo` + FBNeo arcade WASM
-
-### 近期修正紀錄
-
-#### FBNeo Arcade：Raiden / Warriors of Fate 支援
-
-新增 FBNeo arcade backend，`raiden.zip` 與 `wof.zip` 會從 ROM 選單或檔案上傳直接進入 arcade 路徑，而不再被一般 ZIP 解包流程當作主機 ROM 處理。前端以 `JSZip` 在記憶體中解壓 ROM set，將原始 zip 寫入 MEMFS `/roms/<game>.zip`，並同時把 chip 檔寫入 `/roms/<game>/` 供診斷；FBNeo 載入時會收集 stdout/stderr 與 missing/CRC 訊息回傳 UI。
-
-Arcade 畫面尺寸由 FBNeo runtime 回報並動態設定 Canvas。《吞食天地二 / Warriors of Fate》以 `384x224` 顯示；《雷電》原始 framebuffer 為 `256x224`，前端渲染時向左旋轉 90 度，輸出為直向 `224x256`，符合手機直向遊玩的觀感。
-
-Arcade 輸入以 32-bit bitmask 作為前端抽象：方向鍵佔 bit 0-3，A-F 六鍵佔 bit 4-7、10-11，Coin/Start 佔 bit 8-9。鍵盤映射為方向鍵、`Z/X/A/S/Q/W`、`5` 投幣、`1` 或 Enter 開始；手機控制器切換為街機版十字鍵加 COIN/START/MUTE 和 A-F 六顆圓形按鈕。
-
-CI/CD 方面，`package-lock.json` 已包含 `@mantou/fbneo`，GitHub Pages workflow 使用 `npm ci` 與 `npm run build`，Vite production build 會把 `fbneo-arcade-*.wasm` 打進 `dist/assets/`，並透過 `copyRomsPlugin()` 複製 `.zip` arcade ROM 到 `dist/roms/`。
-
-#### N64 runtime、畫面與效能適配
-
-N64 模式必須使用全新的 WebGL canvas，不能沿用已建立 2D context 的 `#screen`。啟動流程先套用 `body.n64-mode` 與 `body.n64-initializing`；SDL/Rice 初始化期間將 CSS 與 WebGL backing 固定在 profile 尺寸，等 Rice 第一個 VI 後才鎖定 backing 並恢復 responsive CSS。桌機使用 `640x480`，手機使用 `320x240`，可避免 SDL 在非同步啟動期間把手機 backing 改成 CSS 顯示尺寸而造成上方或右側裁切。
-
-`src/n64/performance.ts` 會依 user agent、觸控能力、CPU 邏輯核心數與可用記憶體選擇 desktop / ios-high-end / mobile / mobile-low-end profile，並在寫入 IDBFS 前重寫 `mupen64plus.cfg`。iOS 使用 cached interpreter (`emuMode=1`)、rAF、關閉 SkipFrame、3072/1024 samples 音頻緩衝與已編入 fork 的 `src-linear` resampler，降低 33600/44100 Hz 轉換造成的高頻失真；Android 手機使用 dynamic recompiler (`emuMode=2`)、timer，並依 profile 啟用 SkipFrame 與較低成本的 trivial resampler。手機共同套用快速材質載入、16-bit texture、關閉 mipmap 與 OSD。ROM reset 共用原始 `ArrayBuffer`，避免為 32-64 MB ROM 製造額外記憶體尖峰。
-
-手機正常模式預設使用固定 commit 與 Emscripten 3.1.25 重建的 fork，並開啟已通過 iPhone A/B 的 Rice triangle streaming ring；桌機預設維持 npm 1.5.7，`?n64Runtime=npm` 可強制手機回退。rectangle ring 與較大的 4096/2048 iOS 音頻緩衝因沒有改善 VI/s、draw timing 或 underrun 數而維持停用。SDL callback 資料不足時會播放仍可安全 resample 的前段，只將缺少的尾端補靜音；送往 N64 Worklet 的 transport 只排入有效前段，不把這段補靜音再次當成 PCM 排隊。
-
-N64 SDL 音頻現在可在初始化完成後切換到 `AudioWorkletNode` 輸出：SDL ScriptProcessor 仍保留並接到 zero-gain sink，負責維持既有 callback/fallback 路徑；C-side callback 將 S16 PCM 轉為可轉移的 Float32 chunk，送入 `n64-audio-processor` queue，partial underrun 時只送出有效前段，避免把大段零值尾端誤當成正常音訊。Worklet 僅在初次啟動時累積 1024 frames，queue 超過 6144 frames 時丟棄最舊 chunk；短暫 queue drain 後會以 64-frame crossfade 接回新 PCM，不再重新等待整個 priming window，並在 pause、resume、stop 時清理過期資料。若 AudioWorklet 不可用，SDL ScriptProcessor 仍可直接輸出聲音。
-
-這個設計改善的是短暫主執行緒排程抖動，不會修復 SDL callback 根本沒有產生 PCM 的長時間空窗；因此 `[N64 perf]` 的 SDL underrun 與 Worklet queue underflow 必須分開判讀。正式裝置驗收應同時記錄 callback count、partial/empty underrun、最大 callback gap、Worklet queue underflow、queue 深度與實際延遲，不能只用 AudioWorklet 成功載入判定音效改善。
-
-`src/n64/telemetry.ts` 透過 Mupen 的 `beginStats` / `endStats` hook 每五秒輸出 VI/s、平均/最長 VI、long VI、recompiles、RSP/DList/RDP、triangle/rectangle draw timing/calls 與 audio underruns。約 56 VI/s 以上代表 NTSC 遊戲接近 real-time。true null-video 為 60.0 VI/s、Rice no-draw 為 59.98 VI/s，已把主要瓶頸定位到 Rice GL draw 入口與 WebGL 資料提交，而不是 R4300 或一般 DList parsing。
-
-重建 fork 時先執行 `npm run n64:source`，再以 Docker 執行 `npm run n64:build`。production build 會驗證 `artifacts/n64` 的 manifest、64 MiB initial memory，以及帶相同 asset version 的 bundle/Wasm/data 實體檔名；`.gitattributes` 必須將 `*.data` 視為 binary，避免 Git 換行正規化破壞 preload archive。完整 A/B 參數、實測數據與回退條件見 [N64 瀏覽器核心分階段優化計畫](N64_CORE_OPTIMIZATION_PLAN.md)。
-
-#### SNES APU 音效回歸修正
-
-SNES 音效以 commit `0590b1efed1900f7270cb2934a2a4b4fa0cef541` 作為回歸基準。`nes-wasm/src/snes/apu.rs` 已同步調整 `generate_sample()` 與 `decode_next_sample()` 的 BRR/Gauss sample 尺度，避免只回退輸出路徑但保留新版 BRR ring buffer `<< 1` 導致特定樂器或音效高頻刺耳。
-
-#### SNES OBJ 透明與 color math
-
-SNES PPU 的 OBJ color math 規則已修正：OBJ palettes 0-3 不參與 color math，只有 palettes 4-7 在 `$2131 CGADSUB` OBJ bit 啟用時才參與。這項修正影響透明精靈、半透明特效與 Secret of Mana / Seiken Densetsu 3 類型遊戲的物件混合。
-
----
-
-## 架構設計
-
-### 系統架構圖
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Browser Environment                     │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌─────────────────┐              ┌─────────────────┐       │
-│  │  HTML5 Canvas   │◄────────────│      PPU        │       │
-│  │  (256 × 240)    │   渲染輸出   │  圖形處理單元   │       │
-│  └─────────────────┘              └────────┬────────┘       │
-│                                            │                 │
-│  ┌─────────────────┐              ┌────────┴────────┐       │
-│  │   Web Audio     │◄────────────│      APU        │       │
-│  │   (5 聲道)      │   音頻輸出   │  音頻處理單元   │       │
-│  └─────────────────┘              └────────┬────────┘       │
-│                                            │                 │
-│                         ┌──────────────────┴───────────┐    │
-│                         │           BUS                │    │
-│                         │       記憶體匯流排           │    │
-│                         └───┬──────────────────────┬───┘    │
-│                             │                      │         │
-│  ┌─────────────────┐  ┌─────┴─────┐  ┌────────────┴────┐   │
-│  │   Controller    │  │    CPU    │  │    Cartridge    │   │
-│  │     控制器      │  │   6502    │  │   卡帶+Mapper   │   │
-│  └─────────────────┘  └───────────┘  └─────────────────┘   │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
+```text
+index.html                 # 遊戲大廳與模擬器頁面
+translation-studio.html    # CT2 翻譯工作室
+src/
+├── main.ts                # 入口：ROM 路由、後端生命週期、輸入、存檔
+├── arcade/                # FBNeo 適配
+├── n64/                   # N64 效能 profile、遙測、音訊診斷、資產檢查
+├── snes/                  # EmulatorJS iframe 後端（Snes9x / FCEUmm / Genesis Plus GX）
+├── game-profiles/         # 中文化圖層、選單覆蓋、能力調整、翻譯編輯器
+├── ui/                    # ROM 選單、虛擬控制器、觸控
+├── storage/               # 存檔儲存
+├── data/rom-metadata/     # 遊戲資料
+├── core/ + mappers/       # 早期 TypeScript NES 實作（測試與參考用，非正式執行路徑）
+└── wasm/                  # wasm-pack 產物（勿手改）
+nes-wasm/src/              # Rust 核心：NES（根目錄）、gb/、gg/、snes/
+game-profiles/             # 遊戲 profile 原始檔、翻譯與 schema
+public/                    # 靜態資源、roms.json、遊戲資料、AudioWorklet、編譯後 profile
+roms/                      # 本機 ROM（不隨文件說明散布）
+tests/                     # Vitest 測試
+tools/                     # ROM 分析、中文化、稽核與 N64 建置工具
+artifacts/                 # 可重現的研究輸出與 N64 runtime 資產
 ```
 
-### 檔案結構
+## ROM 與遊戲目錄
 
-```
-h5-NES/
-├── src/
-│   ├── core/                    # 核心模擬元件
-│   │   ├── cpu/
-│   │   │   ├── cpu.ts          # 6502 CPU 實作
-│   │   │   └── index.ts        # CPU 模組匯出
-│   │   ├── ppu/
-│   │   │   ├── ppu.ts          # PPU 實作
-│   │   │   └── index.ts        # PPU 模組匯出
-│   │   ├── apu/                 # (待實作)
-│   │   │   └── apu.ts          # APU 實作
-│   │   ├── bus.ts              # 記憶體匯流排
-│   │   ├── cartridge.ts        # 卡帶載入和解析
-│   │   ├── controller.ts       # 控制器輸入
-│   │   ├── nes.ts              # NES 主控台整合
-│   │   └── index.ts            # 核心模組匯出
-│   ├── mappers/
-│   │   └── index.ts            # Mapper 實作 (0, 1, 2, 3)
-│   ├── ui/                      # (待實作)
-│   │   └── debugger.ts         # 除錯介面
-│   └── main.ts                 # 應用程式入口
-├── tests/
-│   ├── cpu.test.ts             # CPU 單元測試
-│   ├── ppu.test.ts             # PPU 單元測試
-│   └── mapper.test.ts          # Mapper 單元測試
-├── docs/
-│   └── DEVELOPMENT.md          # 本文件
-├── index.html                  # 網頁入口
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
-```
+1. 將自己依法持有的 ROM 放進 `roms/`（支援 `.nes`、`.gb/.gbc`、`.gg`、`.sms`、`.md/.gen/.smd`、`.sfc/.smc/.fig`、`.z64` 等，及其 `.zip`；街機需完整 FBNeo ROM set ZIP）。
+2. 在 `public/roms.json` 新增 `{ "name", "file", "system" }`。`system` 省略時依副檔名判斷，無法判斷者視為 NES，因此 `.zip` 建議明確填寫。
+3. Vite 的 `copyRomsPlugin()` 會在 build 時把目錄中的 ROM 複製到 `dist/roms/`；Pages 部署會排除 `vite.config.ts` 中 `pagesExcludedRomFiles` 列出的檔案。
 
-### 元件職責
+遊戲大廳的介紹與封面資料流程見 [遊戲資料與卡匣呈現](GAME_METADATA_PLAN.md)；整體遊戲庫稽核見 [ROM 遊戲庫稽核](ROM_LIBRARY_AUDIT.md)。
 
-#### CPU (`src/core/cpu/cpu.ts`)
-- 實作完整的 6502 指令集 (56 條指令)
-- 支援所有 13 種定址模式
-- 處理中斷 (IRQ, NMI, Reset)
-- 提供除錯功能 (反組譯、狀態輸出)
+## 後端路由
 
-#### PPU (`src/core/ppu/ppu.ts`)
-- 渲染背景圖層 (命名表、屬性表)
-- 渲染精靈 (OAM)
-- 處理捲動
-- 產生 VBlank NMI
-- 輸出 256×240 像素的幀緩衝區
+| 系統 | 主要後端 | 備援／例外 |
+|---|---|---|
+| NES / FC | Rust WASM | 原生核心拒絕的 Mapper 或已知黑畫面 ROM 改走 EmulatorJS FCEUmm |
+| Game Boy、Game Gear、Master System | Rust WASM | — |
+| SFC / SNES | Rust WASM | SA-1、S-DD1 遊戲改走 EmulatorJS Snes9x iframe |
+| Mega Drive / Genesis | EmulatorJS Genesis Plus GX（`EJS_core` 為 `segaMD`） | — |
+| Nintendo 64 | Mupen64Plus Web（獨立 WebGL2 canvas） | 手機預設使用重建 fork；`?n64Runtime=npm` 可回退 npm 版 |
+| Arcade | FBNeo WASM | — |
 
-#### Bus (`src/core/bus.ts`)
-- 管理 CPU 記憶體映射 ($0000-$FFFF)
-- 處理 PPU 暫存器存取
-- 處理控制器讀取
-- 處理 OAM DMA 傳輸
+EmulatorJS 的 runtime 檔案由 `vite.config.ts` 從 `node_modules/@emulatorjs/*` 提供與複製。
 
-#### Cartridge (`src/core/cartridge.ts`)
-- 解析 iNES ROM 格式
-- 載入 PRG ROM 和 CHR ROM
-- 管理 Mapper
+## 預設鍵盤配置
 
-#### Mapper (`src/mappers/index.ts`)
-- 實作不同的記憶體映射方案
-- 支援 Mapper 0, 1, 2, 3
+| 系統 | 配置 |
+|---|---|
+| NES / GB / GG / SMS | 方向鍵、`Z`=A、`X`=B、`Enter`=Start、右 `Shift`=Select |
+| SNES | 同上，另加 `A`=Y、`S`=X、`Q`=L、`W`=R |
+| Arcade | 方向鍵、`Z/X/A/S/Q/W`=A–F、`5`=投幣、`1` 或 `Enter`=開始 |
+| N64 | 方向鍵=類比、`WASD`=十字鍵、`IJKL`=C 鍵、左 `Shift`=A、左 `Ctrl`=B、`Enter`=Start、`Z`=Z、`X`=L、`C`=R |
 
----
-
-## 開發階段
-
-### Phase 1: CPU 實作 (目前完成)
-
-**目標**: 完整實作 6502 CPU
-
-**已完成**:
-- [x] 所有官方指令 (56 條)
-- [x] 所有定址模式 (13 種)
-- [x] 中斷處理 (IRQ, NMI, Reset)
-- [x] 精確的週期計數
-- [x] 反組譯功能
-
-**驗證方法**:
-```bash
-npm run test:cpu
-```
-
-**關鍵測試**: 
-- 使用 `nestest.nes` ROM 進行驗證
-- 比對 CPU 日誌輸出與標準結果
-
-### Phase 2: PPU 基礎渲染 (目前完成)
-
-**目標**: 實作基本的圖形渲染
-
-**已完成**:
-- [x] PPU 暫存器讀寫
-- [x] 背景渲染
-- [x] 精靈渲染
-- [x] 調色盤
-- [x] 捲動
-- [x] VBlank 和 NMI
-
-**驗證方法**:
-```bash
-npm run test:ppu
-```
-
-### Phase 3: 輸入系統 (目前完成)
-
-**目標**: 實作控制器輸入
-
-**已完成**:
-- [x] 標準控制器模擬
-- [x] 鍵盤映射
-- [x] 控制器串列讀取
-
-**預設鍵盤配置**:
-| 按鈕 | 按鍵 |
-|------|------|
-| A | Z |
-| B | X |
-| Start | Enter |
-| Select | Shift (右) |
-| 方向鍵 | 方向鍵 |
-
-### Phase 4: APU 音頻 (待實作)
-
-**目標**: 實作 5 聲道音頻
-
-**待完成**:
-- [ ] 方波聲道 1
-- [ ] 方波聲道 2
-- [ ] 三角波聲道
-- [ ] 雜訊聲道
-- [ ] DMC 聲道
-- [ ] 混音器
-
-### Phase 5: Mapper 擴展 (進行中)
-
-**目標**: 支援更多遊戲
-
-**已完成**:
-- [x] Mapper 0 (NROM)
-- [x] Mapper 1 (MMC1)
-- [x] Mapper 2 (UxROM)
-- [x] Mapper 3 (CNROM)
-
-**待完成**:
-- [ ] Mapper 4 (MMC3)
-- [ ] Mapper 7 (AxROM)
-- [ ] 更多 Mapper...
-
----
-
-## 技術細節
-
-### NES 時序
-
-```
-主時鐘: 21.477272 MHz (NTSC)
-CPU 時鐘: 主時鐘 / 12 = 1.789773 MHz
-PPU 時鐘: 主時鐘 / 4 = 5.369318 MHz
-
-關係: 1 CPU 週期 = 3 PPU 週期
-```
-
-### CPU 記憶體映射
-
-| 位址範圍 | 大小 | 說明 |
-|----------|------|------|
-| $0000-$07FF | 2KB | 內部 RAM |
-| $0800-$1FFF | - | RAM 鏡像 |
-| $2000-$2007 | 8B | PPU 暫存器 |
-| $2008-$3FFF | - | PPU 暫存器鏡像 |
-| $4000-$4017 | - | APU 和 I/O |
-| $4018-$401F | - | 通常禁用 |
-| $4020-$FFFF | - | 卡帶空間 |
-
-### PPU 記憶體映射
-
-| 位址範圍 | 大小 | 說明 |
-|----------|------|------|
-| $0000-$0FFF | 4KB | 圖案表 0 |
-| $1000-$1FFF | 4KB | 圖案表 1 |
-| $2000-$23FF | 1KB | 命名表 0 |
-| $2400-$27FF | 1KB | 命名表 1 |
-| $2800-$2BFF | 1KB | 命名表 2 |
-| $2C00-$2FFF | 1KB | 命名表 3 |
-| $3000-$3EFF | - | 鏡像 |
-| $3F00-$3F1F | 32B | 調色盤 |
-| $3F20-$3FFF | - | 調色盤鏡像 |
-
-### 6502 狀態暫存器
-
-```
-7 6 5 4 3 2 1 0
-N V - B D I Z C
-
-N: 負數旗標 (Negative)
-V: 溢位旗標 (Overflow)
--: 未使用 (永遠為 1)
-B: Break 旗標
-D: 十進位模式 (NES 不使用)
-I: 中斷禁用 (Interrupt Disable)
-Z: 零旗標 (Zero)
-C: 進位旗標 (Carry)
-```
-
----
+存檔快捷鍵：`F5` 存檔、`F7` 讀檔；`Shift+F1–F4` 存到欄位 1–4，`Ctrl+1–4` 讀取欄位 1–4。
 
 ## 測試策略
 
-### 單元測試
+- **單元／整合測試**：`tests/` 涵蓋 CPU、PPU、Mapper、街機輸入、ROM 目錄、SNES 路由、N64 runtime／音訊／遙測、中文化圖層等。
+- **Node 測試**：`tools/*.test.mjs`，多數需要本機 ROM，透過 `npm run test:profiles`、`test:localization:*`、`test:zombie:*` 等指令執行。
+- **Rust 原 ROM 診斷**：`cargo test --manifest-path nes-wasm/Cargo.toml --release <name> -- --ignored --nocapture`，例如 `test:ct2:stats:rom`。
+- **實機驗收**：以實際遊戲畫面、音訊與效能數據為準，「能啟動」不等於「行為正確」。N64 的手機驗收規格見 [N64 iPhone 音訊](N64_IPHONE_AUDIO.md)。
 
-每個模組都有對應的測試檔案：
+## 新增或修正核心功能
 
-```bash
-# 執行所有測試
-npm test
+1. 先以實際遊戲重現問題，記錄 ROM、場景與症狀。
+2. 對照 [nesdev wiki](https://www.nesdev.org/wiki/) 或各平台硬體文件，確認規格；NES 速查見 [NES 技術規格](NES_SPECS.md)。
+3. 在 `nes-wasm/src/` 修改，`npm run wasm:build` 後回到瀏覽器驗證。
+4. 補上可重現的測試，並把根因與修正寫進 [問題與修復紀錄](TROUBLESHOOTING.md)。
 
-# 執行特定模組測試
-npm run test:cpu
-npm run test:ppu
+新增 NES Mapper 時，修改 `nes-wasm/src/mappers.rs`；`src/mappers/` 只屬於早期 TypeScript 實作。
 
-# 互動式 UI 測試
-npm run test:ui
-```
+## 部署
 
-### 測試覆蓋範圍
+推送到 `main` 會觸發 `.github/workflows/deploy.yml`：安裝 Rust、wasm-pack 與 Node 24 → `npm ci` → 以 `PAGES_DEPLOY=true`、`VITE_BASE_PATH=/<repo>/` 執行 `npm run build` → 檢查 `dist` 小於 1 GiB → 部署到 GitHub Pages。
 
-#### CPU 測試 (`tests/cpu.test.ts`)
-- 載入/儲存指令
-- 傳送指令
-- 算術運算
-- 邏輯運算
-- 移位運算
-- 比較指令
-- 分支指令
-- 跳躍和副程式
-- 堆疊操作
-- 旗標操作
-- 所有定址模式
+注意事項：
 
-#### PPU 測試 (`tests/ppu.test.ts`)
-- 暫存器讀寫
-- 調色盤操作
-- 時序驗證
-- VBlank/NMI
-
-#### Mapper 測試 (`tests/mapper.test.ts`)
-- 各 Mapper 的記憶體映射
-- Bank 切換
-
-### 整合測試
-
-使用測試 ROM 進行驗證：
-
-1. **nestest.nes**: CPU 指令集驗證
-2. **ppu_vbl_nmi**: PPU 時序驗證
-3. **sprite_hit_tests**: 精靈碰撞測試
-
----
-
-## 除錯工具
-
-### CPU 狀態輸出
-
-```typescript
-// 取得 CPU 狀態字串
-const state = cpu.getState();
-// 輸出: "PC:8000 A:00 X:00 Y:00 SP:FD [--1-DI-C]"
-```
-
-### 反組譯
-
-```typescript
-// 反組譯指定位址的指令
-const { instruction, bytes } = cpu.disassemble(0x8000);
-// 輸出: { instruction: "LDA #$42", bytes: 2 }
-```
-
-### 圖案表檢視
-
-```typescript
-// 取得圖案表 (128×128 像素)
-const patternTable = ppu.getPatternTable(0, 0);
-```
-
-### 調色盤檢視
-
-```typescript
-// 取得調色盤顏色
-const color = ppu.getPaletteColor(0, 1);
-```
-
----
+- `.gitattributes` 必須把 `*.data` 視為 binary，否則 N64 preload archive 會被換行正規化破壞。
+- production build 會驗證 `artifacts/n64` 的 manifest 與資產檔名；缺少時需還原 `artifacts/n64/mupen64plus-web-1.5.7-baseline` 或執行 `npm run n64:build`。詳見 [N64 瀏覽器核心優化計畫](N64_CORE_OPTIMIZATION_PLAN.md)。
 
 ## 參考資源
 
-### 官方文件
-- [nesdev.org Wiki](https://www.nesdev.org/wiki/) - NES 開發權威資源
-- [6502 指令集參考](http://www.obelisk.me.uk/6502/reference.html)
-
-### 測試 ROM
-- [nestest.nes](https://www.nesdev.org/wiki/Emulator_tests) - CPU 測試
-- [PPU Tests](https://www.nesdev.org/wiki/Emulator_tests#PPU_Tests) - PPU 測試
-
-### 其他模擬器參考
-- [FCEUX](http://fceux.com/) - 功能完整的 NES 模擬器
-- [Mesen](https://www.mesen.ca/) - 高精度模擬器
-
----
-
-## 常見問題
-
-### Q: 為什麼我的遊戲無法載入？
-
-檢查以下項目：
-1. ROM 格式是否為 iNES (.nes)
-2. 檢查 Mapper 編號是否支援
-3. 查看瀏覽器控制台的錯誤訊息
-
-### Q: 遊戲畫面不正確？
-
-可能原因：
-1. PPU 時序問題
-2. Mapper 實作不完整
-3. 命名表鏡像模式錯誤
-
-### Q: 如何新增 Mapper 支援？
-
-1. 在 `src/mappers/index.ts` 新增 Mapper 類別
-2. 實作 `Mapper` 介面的所有方法
-3. 在 `createMapper` 函數中註冊
-4. 新增對應的測試
-
----
-
-*最後更新: 2026-01-27*
+- [nesdev.org Wiki](https://www.nesdev.org/wiki/)：NES 硬體與測試 ROM
+- [Mesen](https://www.mesen.ca/)、[FCEUX](http://fceux.com/)：NES 行為比對
+- [Near 與 Snes9x 團隊的故事](NEAR_AND_SNES9X_TRIBUTE.md)

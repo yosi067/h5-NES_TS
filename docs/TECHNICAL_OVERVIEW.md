@@ -22,6 +22,10 @@ Browser / TypeScript UI
 │       ├── Game Boy
 │       ├── Game Gear / Master System
 │       └── SFC / SNES
+├── EmulatorJS iframe
+│   ├── Genesis Plus GX → Mega Drive / Genesis
+│   ├── Snes9x → SA-1 / S-DD1 等 SNES 特殊晶片遊戲
+│   └── FCEUmm → 原生核心不支援的 NES Mapper 備援
 ├── WebGL2 Canvas + runtime audio
 │   └── Mupen64Plus Web + Rice renderer
 │       └── Nintendo 64
@@ -44,6 +48,18 @@ N64 跨越到 3D 圖形、R4300 動態重編譯、RSP/RDP 微碼與更高記憶�
 
 街機不是單一固定硬體，因此交由 FinalBurn Neo WebAssembly runtime 處理。前端負責完整 ZIP ROM set 驗證、Emscripten 檔案系統、遊戲 driver 路由、動態 framebuffer、畫面方向與街機輸入橋接。
 
+### EmulatorJS 備援與 Mega Drive
+
+`src/snes/snes9x-backend.ts` 以隔離的 iframe 載入 EmulatorJS 核心，沿用既有的鍵盤、觸控與 F5/F7 存讀檔：
+
+- **Genesis Plus GX**：Mega Drive / Genesis 的主要後端；內部系統鍵為 `genesis`，僅在 iframe 邊界轉成 `EJS_core=segaMD`。
+- **Snes9x**：原生 SNES 核心未模擬 SA-1，SA-1 與 S-DD1 遊戲自動改走此路徑。
+- **FCEUmm**：原生 NES 核心拒絕的 Mapper，以及少數已知黑畫面 ROM 的相容性備援。
+
+### 遊戲中文化圖層
+
+NES 核心提供執行期觀察與 profile 掛鉤；`src/game-profiles/` 依來源驗證的文字位置覆蓋高解析度中文，不修改原 ROM。詳見 [遊戲 Profile 與翻譯框架](GAME_PROFILE_AUTHORING.md)。
+
 ## 整合多世代核心的價值
 
 - **同一介面比較硬體世代**：可直接觀察 6502、LR35902、Z80、65816 到 MIPS/R4300，以及 2D tile/sprite 到 3D RDP pipeline 的演進。
@@ -58,6 +74,8 @@ src/
 ├── main.ts                 # 應用入口、ROM 路由、後端生命週期
 ├── arcade/                 # FBNeo 適配與輸入/音視頻橋接
 ├── n64/                    # N64 runtime、效能 profile、遙測與資產檢查
+├── snes/                   # EmulatorJS iframe 後端（Snes9x / FCEUmm / Genesis Plus GX）
+├── game-profiles/          # 中文化圖層、選單覆蓋與翻譯編輯器
 ├── core/ + mappers/        # 早期 TypeScript NES 實作與參考
 └── wasm/                   # wasm-pack 產物
 nes-wasm/src/
@@ -72,12 +90,7 @@ artifacts/n64/              # 可重現的 N64 runtime 資產
 
 ## 文件索引
 
-- [開發指南](DEVELOPMENT.md)：開發環境、測試方法與基礎規格。
-- [問題與修復紀錄](TROUBLESHOOTING.md)：各核心實際遇到的相容性問題。
-- [模擬核心優化計畫](CORE_OPTIMIZATION_PLAN.md)：跨平台相容性與測試基線。
-- [N64 瀏覽器核心優化計畫](N64_CORE_OPTIMIZATION_PLAN.md)：效能數據、A/B 結果、可重建 runtime 與後續路線。
-- [NES 技術規格](NES_SPECS.md)：6502、PPU、iNES 與 Mapper 速查。
-- [ROM 遊戲庫稽核](ROM_LIBRARY_AUDIT.md)：遊戲庫與街機 ROM set 的驗證紀錄。
+完整分類見 [文件導覽](README.md)。
 
 ## 建置與測試
 
@@ -88,4 +101,4 @@ npm test
 npm run build
 ```
 
-`npm run build` 會先以 `wasm-pack` 重建 Rust 核心，再執行 TypeScript 檢查與 Vite production build。N64 fork 需要重建時，另使用 `npm run n64:source` 與 `npm run n64:build`；詳細前置需求見 N64 優化文件。
+`npm run build` 會先以 `wasm-pack` 重建 Rust 核心，再執行 TypeScript 檢查與 Vite production build。完整指令與 N64 runtime 重建見 [開發指南](DEVELOPMENT.md)。
