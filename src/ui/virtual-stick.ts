@@ -1,39 +1,8 @@
-export interface VirtualStickState {
-  up: boolean;
-  down: boolean;
-  left: boolean;
-  right: boolean;
-}
+import type { DirectionState } from './controls/types';
 
-export const NEUTRAL_STICK_STATE: VirtualStickState = {
-  up: false,
-  down: false,
-  left: false,
-  right: false,
-};
+export type VirtualStickState = DirectionState;
 
-const DIAGONAL_COMPONENT_RATIO = 0.36;
-
-export function quantizeVirtualStick(
-  dx: number,
-  dy: number,
-  deadZone: number,
-): VirtualStickState {
-  if (Math.hypot(dx, dy) <= deadZone) return { ...NEUTRAL_STICK_STATE };
-
-  const absX = Math.abs(dx);
-  const absY = Math.abs(dy);
-  const horizontal = absX >= absY * DIAGONAL_COMPONENT_RATIO;
-  const vertical = absY >= absX * DIAGONAL_COMPONENT_RATIO;
-
-  return {
-    up: vertical && dy < 0,
-    down: vertical && dy > 0,
-    left: horizontal && dx < 0,
-    right: horizontal && dx > 0,
-  };
-}
-
+/** 垂直與水平互跳時，回傳應先輸出的過渡斜角；其他情況回傳 null。 */
 export function getBridgedDiagonal(
   previous: VirtualStickState,
   next: VirtualStickState,

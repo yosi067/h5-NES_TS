@@ -2315,6 +2315,39 @@
       "description": "《越南大戰 5》延續系列的高密度橫向射擊，玩家使用槍械、刀攻與載具迎戰敵軍；此檔案標示為 JAMMA PCB 版本。",
       "descriptionSource": "editorial:https://en.wikipedia.org/wiki/Metal_Slug_5",
       "descriptionStatus": "editorial"
+    },
+    "30d2.zip": {
+      "cover": "assets/covers/cover-df6acc9a15e7.jpg",
+      "coverSource": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQOrFmbsTk8Cfa_o9QnzYN012AOWHFyBh5ujmP4zn_khQ&s=10",
+      "coverImageSource": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQOrFmbsTk8Cfa_o9QnzYN012AOWHFyBh5ujmP4zn_khQ&s=10",
+      "coverStatus": "user-selected-artwork",
+      "coverConfidence": "review",
+      "verified": false,
+      "description": "《光明與黑暗》（Shining in the Darkness）是 SEGA 1991 年的 Mega Drive 第一人稱迷宮 RPG，玩家組隊深入地下迷宮、討伐魔物並拯救被擄走的公主，系列之後轉向戰略 RPG。本 ROM 為中文化版本，支援電池存檔。",
+      "descriptionSource": "editorial",
+      "descriptionStatus": "editorial"
+    },
+    "光明與黑暗古代封印.zip": {
+      "cover": "assets/covers/cover-3b8c0b842e14.jpg",
+      "coverSource": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBvzHhb7uIh3xVuQcrZU09TWde8vGnXITyDzswrqvocw&s=10",
+      "coverImageSource": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBvzHhb7uIh3xVuQcrZU09TWde8vGnXITyDzswrqvocw&s=10",
+      "coverStatus": "user-selected-artwork",
+      "coverConfidence": "review",
+      "verified": false,
+      "description": "《光明與黑暗 古代封印》（Shining Force II）是 1993 年的 Mega Drive 戰略 RPG，玩家在地圖上探索城鎮、招募同伴，再以回合制戰鬥推進劇情。本 ROM 為簡體中文化版本，支援電池存檔。",
+      "descriptionSource": "editorial",
+      "descriptionStatus": "editorial"
+    },
+    "光明與黑暗諸神遺產.zip": {
+      "cover": "assets/covers/cover-d1a2758abad5.jpg",
+      "coverSource": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4sEs_KEsyx_i-5MqiDqukxtCvsn1Qv-OcAK4ESNT1og&s=10",
+      "coverImageSource": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4sEs_KEsyx_i-5MqiDqukxtCvsn1Qv-OcAK4ESNT1og&s=10",
+      "coverStatus": "user-selected-artwork",
+      "coverConfidence": "review",
+      "verified": false,
+      "description": "《光明與黑暗 諸神遺產》（Shining Force）是 1992 年的 Mega Drive 戰略 RPG，玩家率領戰士團在格子地圖上回合制作戰，對抗復活的黑暗勢力。本 ROM 為中文化版本，支援電池存檔。",
+      "descriptionSource": "editorial",
+      "descriptionStatus": "editorial"
     }
   }
 }

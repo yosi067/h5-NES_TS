@@ -41,7 +41,7 @@ const expectedSystemCounts = {
   nes: 105,
   gb: 5,
   gg: 4,
-  genesis: 5,
+  genesis: 8,
   snes: 38,
   arcade: 31,
   n64: 6,

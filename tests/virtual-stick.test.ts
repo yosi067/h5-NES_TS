@@ -1,17 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { getBridgedDiagonal, quantizeVirtualStick } from '../src/ui/virtual-stick';
+import { getBridgedDiagonal } from '../src/ui/virtual-stick';
 
-describe('virtual stick fighting inputs', () => {
-  it('gives diagonal inputs a forgiving angular range', () => {
-    expect(quantizeVirtualStick(40, 100, 10)).toMatchObject({ down: true, right: true });
-    expect(quantizeVirtualStick(-40, 100, 10)).toMatchObject({ down: true, left: true });
-  });
-
-  it('keeps clear cardinal directions cardinal', () => {
-    expect(quantizeVirtualStick(20, 100, 10)).toEqual({ up: false, down: true, left: false, right: false });
-    expect(quantizeVirtualStick(100, 20, 10)).toEqual({ up: false, down: false, left: false, right: true });
-  });
-
+describe('virtual stick diagonal bridging', () => {
   it.each([
     [{ up: false, down: true, left: false, right: false }, { up: false, down: false, left: false, right: true }, 'down-right'],
     [{ up: false, down: true, left: false, right: false }, { up: false, down: false, left: true, right: false }, 'down-left'],

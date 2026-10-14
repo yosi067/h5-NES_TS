@@ -1,6 +1,6 @@
 # ROM 遊戲庫稽核
 
-> 現況：最新紀錄（2026-09-06）遊戲目錄為 194 款、Arcade 31 款；新增 `nbbatman.zip`（US 版 `nbbatmanu` driver），Mega Man 2: The Power Fighters 因缺 CPS2 key 已移除。
+> 現況：最新紀錄（2026-10-14）遊戲目錄為 197 款、Arcade 31 款；新增三款 Mega Drive 中文化 RPG（光明與黑暗系列）。2026-09-06 新增 `nbbatman.zip`（US 版 `nbbatmanu` driver），Mega Man 2: The Power Fighters 因缺 CPS2 key 已移除。
 > 入庫原則：必須由目前核心實際完成 ROM audit 並產生非黑 framebuffer，檔名對上 driver 不算驗證。
 
 ## 目前狀態
@@ -9,6 +9,7 @@
 |---|---:|---:|---|
 | 2026-07-19 掃描後 | 133（與 `public/roms.json` 一致） | 37 | 本文〈2026-07-19 掃描〉 |
 | 2026-09-06 新增 nbbatman 後 | 194 | 31 | 本文〈2026-09-06 新增街機 ROM 驗證〉 |
+| 2026-10-14 新增光明與黑暗三款後 | 197 | 31 | 本文〈2026-10-14 新增 Mega Drive 中文化 RPG〉 |
 
 ## 相關指令
 
@@ -144,6 +145,58 @@
 - 目錄與 metadata：[roms.json](../public/roms.json)、[game-metadata.json](../public/game-metadata.json)、[arcade.ts](../src/data/rom-metadata/arcade.ts)、[import-user-covers.mjs](../tools/import-user-covers.mjs)，以及上述壓縮檔與封面。
 - 測試：[fbneo-rom-set.test.ts](../tests/fbneo-rom-set.test.ts)、[rom-catalog.test.ts](../tests/rom-catalog.test.ts)、[rom-magazine-metadata.test.ts](../tests/rom-magazine-metadata.test.ts)。
 - 兩支重現工具與本文件。
+
+## 2026-10-14 新增 Mega Drive 中文化 RPG
+
+新增三款 Mega Drive ROM，皆為單一 `.md` 的 ZIP，內檔名為 ROM 內容的 SHA-256；走 EmulatorJS Genesis Plus GX（`segaMD`）。目錄由 194 增為 **197 款**（Mega Drive 5 → 8）。
+
+### ROM 資訊
+
+| 目錄名稱 | 檔案 | 大小 | ROM 標頭 | 判定 |
+|---|---|---:|---|---|
+| 光明與黑暗 | `30d2.zip` | 2 MB | `GM G-5506`、日版、`SHINING AND THE DARKNESS` | Shining in the Darkness（1991）中文化版 |
+| 光明與黑暗 諸神遺產 | `光明與黑暗諸神遺產.zip` | 2 MB | `MK-1312`、US/EU、`SHINING FORCE` | Shining Force（1992，封面副標 The Legacy of Great Intention）中文化版 |
+| 光明與黑暗 古代封印 | `光明與黑暗古代封印.zip` | 3 MB | `GM G-5521`、`SHINING FORCE 2`，海外名欄含中文字元與 `V1.8d` | Shining Force II（1993）簡體中文化版 |
+
+- 三款標頭都宣告電池 SRAM（`RA F8`、`0x200001–0x203FFF`）。
+- 標頭 checksum 與全檔計算值不符；這是修改過的 ROM 常見現象，Genesis Plus GX 不依賴它，實測不影響開機。
+- 封面來自使用者提供的 Google 縮圖，已人工檢視與標題相符（Shining in the Darkness、Shining Force II 古の封印、Shining Force 神々の遺産），經 `tools/import-user-covers.mjs` 正規化為 240×320；`coverConfidence` 維持 `review`。
+- 簡介、年份、類型為編輯撰寫（年份依日版發售年），`verified` 皆為 `false`。
+
+### 可玩性測試
+
+環境：桌面 Chromium（無頭、SwiftShader）＋ 本機 Vite dev server，鍵盤輸入。
+
+| 項目 | 光明與黑暗 | 諸神遺產 | 古代封印 |
+|---|---|---|---|
+| 開機並顯示中文畫面 | 是 | 是 | 是（先出現「意志之路」字樣畫面） |
+| 按 Start / 確認進入遊戲 | 是，進入王城劇情對話 | 是，進入城鎮地圖並可移動 | 是，進入含拼音輸入法的命名畫面 |
+| F5 存檔／F7 讀檔 | 成功 | 成功 | 成功 |
+| 開機 9 秒後已有 `.srm` | 是（16,128 bytes，遊戲開機即初始化） | 否 | 否 |
+
+- 結論：三款都**可以開始遊玩**，鍵盤輸入有效，即時存檔可用。
+- 後兩款在第一次遊戲內存檔前沒有 `.srm` 屬正常（模擬器核心在 SRAM 被寫入後才建立檔案）；SRAM 同步沿用既有流程：每 30 秒、`pagehide`、返回大廳時寫入 IDBFS，並以 localStorage 備援。
+- 鍵位：Genesis 使用 SFC 配置，`Z`＝C（確認）、`X`＝B（取消）、`A`＝A、`Enter`＝Start；可在選單的「按鍵」分頁改鍵。
+
+### 調查發現
+
+- **古代封印 ROM 內含廣告**：ROM 內可見 `kxB` 字串，開機後也出現賣家／製作團隊的畫面（「意志之路」與店家廣告）。不影響遊玩，但屬第三方加入的內容；若要公開部署，建議確認來源與授權，或改用未帶廣告的版本。
+- **檔名可讀性**：`30d2.zip` 與 ZIP 內的 SHA-256 檔名沒有遊戲資訊，建議日後改為 `光明與黑暗.zip`（需同步修改 `roms.json` 與 `game-metadata.json`）。
+- **顯示名稱**：中文名稱依檔名與使用者命名；「光明與黑暗」在不同地區可能指不同作品，3 個條目已加副標區分。
+- **標題顯示修正**：先前壓縮檔內檔名為雜湊的遊戲，電腦版舞台會把雜湊當標題；現改用目錄名稱。
+- **授權**：遊戲著作權屬 SEGA／Climax Entertainment／Sonic! Software Planning；中文化修改版的作者與授權未知。
+
+### 未涵蓋
+
+- 未實際玩到戰鬥或遊戲內存檔，也未驗證跨瀏覽器重新載入後的 SRAM 還原（只確認路徑與檔案存在）。
+- 未檢查音訊輸出，也未在手機觸控版面操作這三款。
+- 只在桌面 Chromium 測試，未測 Safari 與 LINE。
+
+### 變更清單
+
+- 目錄與 metadata：[roms.json](../public/roms.json)、[game-metadata.json](../public/game-metadata.json)、[consoles.ts](../src/data/rom-metadata/consoles.ts)、[import-user-covers.mjs](../tools/import-user-covers.mjs)，及 3 張封面與 3 個 ROM 壓縮檔。
+- 測試：[rom-catalog.test.ts](../tests/rom-catalog.test.ts)、[rom-magazine-metadata.test.ts](../tests/rom-magazine-metadata.test.ts)（總數 197、Mega Drive 8）。
+- `npm run audit:games`：目錄 197 款、封面 194/197（缺者為既有的 115 合 1、260 合 1、1200 合 1）、簡介 197/197、無缺少的資產。
 
 ## 限制與待辦
 

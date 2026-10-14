@@ -99,6 +99,18 @@ const targets = [
     file: 'Streets of Rage 2 (USA).zip',
     source: 'https://wowroms-photos.com/emulators-roms-logo/44/26500/420-420/Streets+of+Rage+2+(USA)-image.jpg',
   },
+  {
+    file: '30d2.zip',
+    source: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQOrFmbsTk8Cfa_o9QnzYN012AOWHFyBh5ujmP4zn_khQ&s=10',
+  },
+  {
+    file: '光明與黑暗古代封印.zip',
+    source: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQBvzHhb7uIh3xVuQcrZU09TWde8vGnXITyDzswrqvocw&s=10',
+  },
+  {
+    file: '光明與黑暗諸神遺產.zip',
+    source: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS4sEs_KEsyx_i-5MqiDqukxtCvsn1Qv-OcAK4ESNT1og&s=10',
+  },
 ];
 
 const uncertaintyMarkers = [

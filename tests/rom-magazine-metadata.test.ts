@@ -18,7 +18,7 @@ describe('ROM magazine metadata', () => {
     });
 
     expect(unresolved.map((rom) => rom.name)).toEqual([]);
-    expect(catalog.roms).toHaveLength(194);
+    expect(catalog.roms).toHaveLength(197);
   });
 
   it.each(['Rockman 4', 'Mega Man 4', '洛克人4'])(

@@ -87,6 +87,15 @@ EmulatorJS 的 runtime 檔案由 `vite.config.ts` 從 `node_modules/@emulatorjs/
 
 存檔快捷鍵：`F5` 存檔、`F7` 讀檔；`Shift+F1–F4` 存到欄位 1–4，`Ctrl+1–4` 讀取欄位 1–4。
 
+電腦版可在選單（`M` 或 `F1`）的「按鍵」分頁改鍵，鍵盤與外接手把／街機基板都能綁定，設定存在 `localStorage`（`h5emu.input-bindings.v1`）。`Esc`、`M`、`Tab`、`F1–F12` 保留給舞台功能，不能指派給遊戲。N64 改鍵後由本頁攔截並轉送合成按鍵給 Mupen；維持預設時不攔截。
+
+## 虛擬控制器與電腦版舞台
+
+- `src/ui/controls/`：觸控輸入引擎。`direction.ts`（極座標扇形、浮動搖桿、斜角過渡）、`buttons.ts`（容器級多點命中、隱形重疊區、巨集、連發）、`profiles.ts`（`NES_GB` / `SNES` / `ARCADE_FIGHTING` / `ARCADE_SHMUP` / `ARCADE_GENERIC` / `N64_PS1`）、`layouts.ts`（把 DOM 與核心轉接器接起來）。按鈕判定直接讀 DOM 的實際位置，不在 Profile 重複存座標。
+- 街機 Profile 依遊戲名稱選擇（格鬥／射擊對照表在 `profiles.ts`）；巨集鍵只在該遊戲按鈕數足夠時出現。N64 搖桿仍是數位八方向（鍵盤事件），不輸出類比向量。
+- `src/ui/desktop-stage.ts` + `public/game-stage-desktop.css`：電腦版（`body.desktop-ui`）依主機換外框、頂部工具列、側邊抽屜。畫面以 `stage-fit.ts` 計算「不裁切、不變形」的最大尺寸；全螢幕時自動收起抽屜，工具列放進黑邊，沒有黑邊才浮在畫面角落。
+- 觸控裝置版面在 `public/game-stage.css`；`browser-env.ts` 負責內嵌瀏覽器（LINE 等）偵測與直立版畫面高度預算。
+
 ## 測試策略
 
 - **單元／整合測試**：`tests/` 涵蓋 CPU、PPU、Mapper、街機輸入、ROM 目錄、SNES 路由、N64 runtime／音訊／遙測、中文化圖層等。

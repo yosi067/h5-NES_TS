@@ -1,0 +1,746 @@
+/* ==========================================================================
+   電腦版舞台（body.desktop-ui）
+   依主機換外框、頂部工具列、側邊抽屜；全螢幕時工具列放進黑邊。
+   幾何數值需與 src/ui/desktop-stage.ts 讀取的 --frame-x / --frame-y 保持一致（必須是純數字 px）。
+   ========================================================================== */
+
+/* 預設不顯示；只有電腦版且遊戲進行中才出現。 */
+.stage-hud,
+.stage-scrim,
+.stage-drawer,
+.stage-marquee {
+  display: none;
+}
+
+body.desktop-ui.game-active {
+  overflow: hidden;
+  padding: 0 !important;
+  background: #07070b;
+}
+
+body.desktop-ui.game-active #gameboy-shell {
+  --stage-accent: #d2a646;
+  --stage-glow: rgba(210, 166, 70, 0.16);
+  position: fixed !important;
+  inset: 0 !important;
+  display: grid !important;
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-items: center;
+  width: auto !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 55%, var(--stage-glow), transparent 70%),
+    radial-gradient(ellipse at 50% 120%, rgba(0, 0, 0, 0.7), transparent 60%),
+    linear-gradient(180deg, #101017 0%, #07070b 100%) !important;
+}
+
+body.desktop-ui.game-active #gameboy-shell::before,
+body.desktop-ui.game-active #gameboy-shell::after,
+body.desktop-ui.game-active .top-decoration,
+body.desktop-ui.game-active .brand-area,
+body.desktop-ui.game-active .virtual-controller,
+body.desktop-ui.game-active .power-led,
+body.desktop-ui.game-active .fullscreen-screen-btn,
+body.desktop-ui.game-active .cabinet-toolbar {
+  display: none !important;
+}
+
+/* ---------- 工具列 ---------- */
+body.desktop-ui.game-active .stage-hud {
+  grid-row: 1;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  color: #f2eee4;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+}
+
+.stage-hud-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stage-hud-system {
+  flex: 0 0 auto;
+  padding: 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--stage-accent) 70%, transparent);
+  border-radius: 999px;
+  color: var(--stage-accent);
+  font: 700 11px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.14em;
+}
+
+.stage-hud-game {
+  overflow: hidden;
+  font: 600 15px/1.2 system-ui, 'Noto Sans TC', sans-serif;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage-hud-buttons {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.stage-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 40px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(24, 24, 32, 0.78);
+  color: #f2eee4;
+  font: 600 13px/1 system-ui, 'Noto Sans TC', sans-serif;
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+
+.stage-btn:hover {
+  border-color: color-mix(in srgb, var(--stage-accent) 80%, white);
+  background: rgba(44, 44, 58, 0.9);
+}
+
+.stage-btn:active {
+  transform: translateY(1px);
+}
+
+.stage-btn:focus-visible,
+.stage-action:focus-visible,
+.stage-tab:focus-visible,
+.bind-chip:focus-visible,
+.bind-layout-tab:focus-visible,
+.stage-toggle input:focus-visible {
+  outline: 2px solid var(--stage-accent);
+  outline-offset: 2px;
+}
+
+.stage-btn-icon {
+  padding: 0;
+  font-size: 17px;
+}
+
+.stage-btn kbd {
+  padding: 2px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  font: 600 11px/1 ui-monospace, monospace;
+}
+
+/* ---------- 外框與畫面 ---------- */
+body.desktop-ui.game-active .screen-bezel {
+  --frame-x: 56px;
+  --frame-y: 96px;
+  --bezel-top: #d8d0bc;
+  --bezel-bottom: #b3a88d;
+  --bezel-edge: rgba(0, 0, 0, 0.45);
+  --marquee-bg: linear-gradient(90deg, #8f1823, #c8303c 50%, #8f1823);
+  --marquee-ink: #fff4dc;
+  position: relative;
+  grid-row: 2;
+  box-sizing: border-box;
+  width: auto !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 24px 28px 72px !important;
+  align-self: center;
+  justify-self: center;
+  border: 0 !important;
+  border-radius: 18px 18px 28px 28px !important;
+  background: linear-gradient(180deg, var(--bezel-top), var(--bezel-bottom)) !important;
+  box-shadow:
+    0 0 0 1px var(--bezel-edge),
+    0 28px 70px rgba(0, 0, 0, 0.65),
+    0 0 90px var(--stage-glow),
+    inset 0 2px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.22) !important;
+}
+
+body.desktop-ui.game-active .screen-inner {
+  position: relative;
+  display: block !important;
+  width: auto !important;
+  padding: 0 !important;
+  border-radius: 6px;
+  background: #000 !important;
+  box-shadow: 0 0 0 4px #0b0b10, 0 0 0 6px rgba(255, 255, 255, 0.08), inset 0 0 24px rgba(0, 0, 0, 0.9);
+  line-height: 0;
+  overflow: hidden;
+}
+
+body.desktop-ui.game-active #screen,
+body.desktop-ui.game-active #canvas,
+body.desktop-ui.game-active #snes9x-screen {
+  width: var(--stage-w, 640px) !important;
+  height: var(--stage-h, 480px) !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  border: 0;
+  border-radius: 0;
+  object-fit: fill !important;
+  background: #000;
+}
+
+body.desktop-ui.game-active .stage-marquee {
+  position: absolute;
+  right: 28px;
+  bottom: 14px;
+  left: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 44px;
+  box-sizing: border-box;
+  padding: 0 18px;
+  border-radius: 8px;
+  background: var(--marquee-bg);
+  color: var(--marquee-ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), inset 0 -2px 0 rgba(0, 0, 0, 0.3);
+}
+
+.stage-marquee-system {
+  flex: 0 0 auto;
+  font: 800 12px/1 system-ui, sans-serif;
+  letter-spacing: 0.22em;
+  opacity: 0.85;
+}
+
+.stage-marquee-title {
+  overflow: hidden;
+  font: 700 15px/1.2 system-ui, 'Noto Sans TC', sans-serif;
+  letter-spacing: 0.06em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 掃描線 */
+body.desktop-ui.game-active.fx-scanlines .screen-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0 1px, transparent 1px 3px);
+}
+
+/* 無外框：畫面更大。 */
+body.desktop-ui.game-active.stage-no-frame .screen-bezel {
+  --frame-x: 0px;
+  --frame-y: 0px;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+body.desktop-ui.game-active.stage-no-frame .stage-marquee {
+  display: none;
+}
+
+/* ---------- 各主機外框 ---------- */
+body[data-system="nes"] #gameboy-shell {
+  --stage-accent: #e0525e;
+  --stage-glow: rgba(200, 50, 60, 0.18);
+}
+
+body[data-system="gb"] #gameboy-shell {
+  --stage-accent: #9bbc0f;
+  --stage-glow: rgba(155, 188, 15, 0.12);
+}
+
+body[data-system="gb"].desktop-ui .screen-bezel {
+  --bezel-top: #cfcbc0;
+  --bezel-bottom: #a8a496;
+  --marquee-bg: linear-gradient(90deg, #5a2a6a, #8b2252 50%, #3d3f8f);
+  border-radius: 18px 18px 60px 18px !important;
+}
+
+body[data-system="gg"] #gameboy-shell,
+body[data-system="sms"] #gameboy-shell {
+  --stage-accent: #3ec9c0;
+  --stage-glow: rgba(62, 201, 192, 0.14);
+}
+
+body[data-system="gg"].desktop-ui .screen-bezel,
+body[data-system="sms"].desktop-ui .screen-bezel {
+  --bezel-top: #2b2b34;
+  --bezel-bottom: #141419;
+  --bezel-edge: rgba(255, 255, 255, 0.12);
+  --marquee-bg: linear-gradient(90deg, #0e0e12, #232a2e 50%, #0e0e12);
+  --marquee-ink: #7fe8e0;
+}
+
+body[data-system="snes"] #gameboy-shell {
+  --stage-accent: #9d8cf0;
+  --stage-glow: rgba(120, 100, 220, 0.16);
+}
+
+body[data-system="snes"].desktop-ui .screen-bezel {
+  --bezel-top: #dad9e0;
+  --bezel-bottom: #b4b2c0;
+  --marquee-bg: linear-gradient(90deg, #4b3f96, #7a6bd0 50%, #4b3f96);
+}
+
+body[data-system="genesis"] #gameboy-shell {
+  --stage-accent: #cfd4de;
+  --stage-glow: rgba(160, 170, 200, 0.12);
+}
+
+body[data-system="genesis"].desktop-ui .screen-bezel {
+  --bezel-top: #24242b;
+  --bezel-bottom: #0f0f13;
+  --bezel-edge: rgba(255, 255, 255, 0.14);
+  --marquee-bg: linear-gradient(90deg, #6e7480, #cfd4de 50%, #6e7480);
+  --marquee-ink: #101015;
+}
+
+body[data-system="n64"] #gameboy-shell {
+  --stage-accent: #4ea1ff;
+  --stage-glow: rgba(78, 161, 255, 0.14);
+}
+
+body[data-system="n64"].desktop-ui .screen-bezel {
+  --bezel-top: #4a4d58;
+  --bezel-bottom: #2a2c34;
+  --bezel-edge: rgba(255, 255, 255, 0.1);
+  --marquee-bg: linear-gradient(90deg, #d8232a, #1c64d6 33%, #f2c200 66%, #1a9b4a);
+}
+
+body[data-system="arcade"] #gameboy-shell {
+  --stage-accent: #ff9a3c;
+  --stage-glow: rgba(255, 130, 40, 0.2);
+}
+
+body[data-system="arcade"].desktop-ui .screen-bezel {
+  --bezel-top: #1d1b26;
+  --bezel-bottom: #0b0a10;
+  --bezel-edge: rgba(255, 150, 60, 0.45);
+  --marquee-bg: linear-gradient(90deg, #5b1f8c, #c8541a 50%, #5b1f8c);
+  border-radius: 8px 8px 20px 20px !important;
+}
+
+body[data-system="arcade"].desktop-ui:not(.stage-no-frame) .stage-marquee {
+  box-shadow: 0 0 24px rgba(255, 140, 50, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* ---------- 全螢幕：黑底、無外框、按鈕放進黑邊 ---------- */
+body.desktop-ui.game-active.fullscreen-active #gameboy-shell {
+  background: #000 !important;
+}
+
+body.desktop-ui.game-active.fullscreen-active .screen-bezel {
+  grid-row: 1 / -1;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: #000 !important;
+  box-shadow: none !important;
+}
+
+body.desktop-ui.game-active.fullscreen-active .screen-inner {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+body.desktop-ui.game-active.fullscreen-active .stage-marquee {
+  display: none;
+}
+
+body.desktop-ui.game-active.fullscreen-active .stage-hud {
+  position: fixed;
+  grid-row: auto;
+  width: auto;
+  height: auto;
+  padding: 6px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  transition: opacity 250ms ease;
+}
+
+body.desktop-ui.game-active.fullscreen-active .stage-hud-title {
+  display: none;
+}
+
+body.desktop-ui.game-active.fullscreen-active .stage-hud[data-placement="right-bar"] {
+  background: transparent;
+}
+
+body.desktop-ui.game-active.fullscreen-active .stage-hud[data-placement="right-bar"] .stage-hud-buttons {
+  flex-direction: column;
+}
+
+body.desktop-ui.game-active.fullscreen-active .stage-hud[data-placement="right-bar"] .stage-btn-label,
+body.desktop-ui.game-active.fullscreen-active .stage-hud[data-placement="right-bar"] .stage-btn kbd {
+  display: none;
+}
+
+body.desktop-ui.game-active.fullscreen-active .stage-hud.is-idle {
+  opacity: 0;
+}
+
+/* ---------- 抽屜 ---------- */
+body.desktop-ui.game-active .stage-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 29;
+  display: block;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+body.desktop-ui.game-active .stage-scrim[hidden],
+body.desktop-ui.game-active .stage-drawer[hidden] {
+  display: none;
+}
+
+body.desktop-ui.game-active .stage-scrim.is-open {
+  opacity: 1;
+}
+
+body.desktop-ui.game-active .stage-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: min(440px, 100vw);
+  color: #f2eee4;
+  background: linear-gradient(180deg, rgba(24, 24, 32, 0.97), rgba(12, 12, 17, 0.98));
+  border-left: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: -24px 0 60px rgba(0, 0, 0, 0.55);
+  font: 14px/1.5 system-ui, 'Noto Sans TC', sans-serif;
+  transform: translateX(100%);
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  outline: none;
+}
+
+body.desktop-ui.game-active .stage-drawer.is-open {
+  transform: none;
+}
+
+.stage-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px 20px;
+}
+
+.stage-drawer-title {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stage-drawer-system {
+  color: var(--stage-accent);
+  font: 700 11px/1.2 system-ui, sans-serif;
+  letter-spacing: 0.18em;
+}
+
+.stage-drawer-game {
+  overflow: hidden;
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stage-tab {
+  padding: 10px 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: rgba(242, 238, 228, 0.6);
+  font: 600 14px/1 inherit;
+  cursor: pointer;
+}
+
+.stage-tab[aria-selected="true"] {
+  border-bottom-color: var(--stage-accent);
+  color: #fff;
+}
+
+.stage-panels {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px 28px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.stage-panel[hidden] {
+  display: none;
+}
+
+.stage-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.stage-heading {
+  margin: 8px 0 10px;
+  color: rgba(242, 238, 228, 0.6);
+  font: 700 12px/1 system-ui, sans-serif;
+  letter-spacing: 0.14em;
+}
+
+.stage-action {
+  min-height: 38px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font: 600 13px/1.2 inherit;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.stage-action:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--stage-accent) 70%, white);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.stage-action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.stage-action-primary {
+  border-color: transparent;
+  background: var(--stage-accent);
+  color: #15121a;
+}
+
+.stage-action-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--stage-accent) 85%, white);
+}
+
+.stage-action-danger {
+  border-color: rgba(255, 110, 110, 0.4);
+  color: #ffb0b0;
+}
+
+.stage-action-small {
+  min-height: 30px;
+  padding: 4px 12px;
+}
+
+.stage-slots {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+.stage-slot {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.stage-slot-name {
+  color: rgba(242, 238, 228, 0.85);
+  font-size: 13px;
+}
+
+.stage-toggle {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+}
+
+.stage-toggle input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  accent-color: var(--stage-accent);
+}
+
+.stage-toggle-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.stage-toggle-copy small {
+  color: rgba(242, 238, 228, 0.6);
+  font-size: 12px;
+}
+
+.stage-help {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 10px 16px;
+  margin: 0;
+}
+
+.stage-help dt {
+  font: 700 12px/1.6 ui-monospace, monospace;
+  color: var(--stage-accent);
+}
+
+.stage-help dd {
+  margin: 0;
+  color: rgba(242, 238, 228, 0.85);
+}
+
+/* ---------- 按鍵設定 ---------- */
+.bind-layouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.bind-layout-tab {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: none;
+  color: rgba(242, 238, 228, 0.7);
+  font: 600 12px/1 inherit;
+  cursor: pointer;
+}
+
+.bind-layout-tab[aria-selected="true"] {
+  border-color: transparent;
+  background: var(--stage-accent);
+  color: #15121a;
+}
+
+.bind-hint {
+  margin: 0 0 12px;
+  color: rgba(242, 238, 228, 0.6);
+  font-size: 12px;
+}
+
+.bind-row {
+  display: grid;
+  grid-template-columns: 84px 1fr 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bind-row-head {
+  color: rgba(242, 238, 228, 0.5);
+  font: 700 11px/1 system-ui, sans-serif;
+  letter-spacing: 0.1em;
+}
+
+.bind-action {
+  font-weight: 600;
+}
+
+.bind-keys {
+  display: flex;
+  gap: 6px;
+}
+
+.bind-keys .bind-chip {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.bind-chip {
+  min-width: 52px;
+  max-width: 100%;
+  min-height: 30px;
+  padding: 4px 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font: 600 12px/1.2 ui-monospace, 'Noto Sans TC', monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bind-chip:hover {
+  border-color: var(--stage-accent);
+}
+
+.bind-chip.is-empty {
+  color: rgba(242, 238, 228, 0.35);
+  border-style: dashed;
+}
+
+.bind-chip.is-active {
+  border-color: var(--stage-accent);
+  background: color-mix(in srgb, var(--stage-accent) 30%, transparent);
+  animation: bind-pulse 900ms ease-in-out infinite;
+}
+
+.bind-pad {
+  width: 100%;
+}
+
+.bind-footer {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+@keyframes bind-pulse {
+  50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--stage-accent) 35%, transparent); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.desktop-ui .stage-drawer,
+  body.desktop-ui .stage-scrim,
+  .stage-hud,
+  .bind-chip.is-active {
+    transition: none;
+    animation: none;
+  }
+}

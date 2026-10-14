@@ -136,6 +136,9 @@
     {"name": "麥可傑克森 月球漫步", "file": "Michael Jackson's Moonwalker (World).zip", "system": "genesis"},
     {"name": "音速小子 3 與納克魯斯", "file": "Sonic & Knuckles + Sonic The Hedgehog 3 (World).zip", "system": "genesis"},
     {"name": "怒之鐵拳 2", "file": "Streets of Rage 2 (USA).zip", "system": "genesis"},
+    {"name": "光明與黑暗", "file": "30d2.zip", "system": "genesis"},
+    {"name": "光明與黑暗 諸神遺產", "file": "光明與黑暗諸神遺產.zip", "system": "genesis"},
+    {"name": "光明與黑暗 古代封印", "file": "光明與黑暗古代封印.zip", "system": "genesis"},
 
     {"name": "超級瑪利歐世界", "file": "Super Mario World (USA).sfc", "system": "snes"},
     {"name": "超級瑪利歐賽車 (日版)", "file": "Super Mario Kart (Japan).zip", "system": "snes"},

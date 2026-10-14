@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="H5-EMU">
@@ -6677,6 +6677,8 @@
   </style>
   <link rel="stylesheet" href="/magazine-selector.css">
   <link rel="stylesheet" href="/lobby-editorial.css">
+  <link rel="stylesheet" href="/game-stage.css">
+  <link rel="stylesheet" href="/game-stage-desktop.css">
 </head>
 <body>
   <div class="game-loading-overlay" id="game-loading-overlay" role="status" aria-live="polite" aria-busy="true" hidden>
@@ -6791,11 +6793,6 @@
 
   <!-- GameBoy 外殼 -->
   <div class="gameboy-shell" id="gameboy-shell" style="display: none;">
-    <div class="cabinet-toolbar">
-      <button id="btn-toggle-controls" class="cabinet-toggle" type="button" aria-expanded="false">MENU</button>
-      <button id="btn-fullscreen" class="fullscreen-btn" type="button" aria-label="全螢幕">⛶</button>
-    </div>
-
     <!-- 頂部裝飾 -->
     <div class="top-decoration">
       <div class="decoration-line"></div>
@@ -6817,17 +6814,8 @@
       <div class="brand-name" id="game-home-link" role="button" tabindex="0" aria-label="返回遊戲主機選單">H5-EMU</div>
     </div>
 
-    <!-- 電腦版控制按鈕 -->
-    <div class="desktop-controls">
-      <label for="rom-input">📁 載入 ROM</label>
-      <input type="file" id="rom-input" accept=".nes,.gb,.gbc,.gg,.sms,.md,.gen,.smd,.smc,.sfc,.fig,.z64,.n64,.v64,.zip">
-      <button id="btn-save-state" class="save-btn">💾 存檔 (F5)</button>
-      <button id="btn-load-state" class="load-btn">📂 讀取 (F7)</button>
-      <button id="btn-pause">⏸ 暫停</button>
-      <button id="btn-resume">▶ 繼續</button>
-      <button id="btn-reset">🔄 重置</button>
-      <button id="btn-select-game">🎮 選擇遊戲</button>
-    </div>
+    <!-- 本機 ROM 選擇器（由電腦版選單觸發） -->
+    <input type="file" id="rom-input" hidden accept=".nes,.gb,.gbc,.gg,.sms,.md,.gen,.smd,.smc,.sfc,.fig,.z64,.n64,.v64,.zip">
 
     <!-- 虛擬控制器 (手機版) -->
     <div class="virtual-controller" id="virtual-controller">
@@ -6877,6 +6865,10 @@
           <div class="ab-touch-area">
             <button class="action-btn btn-a" data-btn="a" id="btn-a">A</button>
           </div>
+        </div>
+        <div class="turbo-row">
+          <button type="button" class="turbo-btn" id="btn-turbo-b" aria-label="連發 B">連B</button>
+          <button type="button" class="turbo-btn" id="btn-turbo-a" aria-label="連發 A">連A</button>
         </div>
       </div>
       </div><!-- /nes-controller-area -->
@@ -6969,6 +6961,7 @@
           </div>
           <button class="n64-start-btn" data-n64-button="start">START</button>
           <button class="n64-shoulder-btn" data-n64-button="r">R</button>
+          <button class="n64-shoulder-btn n64-trigger-btn" data-n64-button="z" data-pad-secondary="1">Z</button>
         </div>
         <div class="n64-main-row">
           <div class="n64-stick-block">
@@ -7014,13 +7007,6 @@
         </div>
       </div><!-- /n64-controller-area -->
 
-    </div>
-
-    <!-- 鍵盤指南 (電腦版) -->
-    <div class="keyboard-guide">
-      <h3 id="keyboard-guide-title">鍵盤控制</h3>
-      <div class="keyboard-guide-note" id="keyboard-guide-note">載入遊戲後會依目前主機顯示對應按鍵。</div>
-      <div class="keyboard-grid" id="keyboard-bindings"></div>
     </div>
   </div>
 

@@ -47,8 +47,20 @@ import { audioOutputDiagnosticsEnabled, createAudioOutputDiagnostics, type N64Au
 import { showN64AudioDiagnostics } from './n64/audio-diagnostics-panel';
 import { readRectDiagnostics } from './n64/rect-diagnostics';
 import { readBinaryState, writeBinaryState } from './storage/binary-state-store';
-import { getTouchContactTargetIds } from './ui/touch-contact';
-import { getBridgedDiagonal, quantizeVirtualStick } from './ui/virtual-stick';
+import { computePortraitFit, isInAppBrowser, shouldUseDesktopUi } from './ui/browser-env';
+import { TouchControlsEngine } from './ui/controls/engine';
+import { mountDesktopStage, type DesktopStage } from './ui/desktop-stage';
+import {
+  BindingStore,
+  isDefaultLayout,
+  readPadActions,
+  resolveKeyAction,
+  type BindingLayout,
+} from './ui/input-bindings';
+import { CommandHistory, IdleFader } from './ui/controls/feedback';
+import { mountArcadeLayout, mountN64Layout, mountNesLayout, mountSnesLayout, type PadTable } from './ui/controls/layouts';
+import { getControllerProfile, selectProfileType, type PadSystem } from './ui/controls/profiles';
+import { PadBit } from './ui/controls/types';
 import {
   shouldUseDigitalArcadeDpad,
   shouldUseSnes9x,
@@ -100,11 +112,6 @@ interface MachineInfo {
   issue: string;
   year: string;
   page: string;
-}
-
-interface KeyboardBindingView {
-  action: string;
-  keys: string[];
 }
 
 const FBNEO_SUPPORTED_GAMES = [
@@ -742,85 +749,6 @@ function getRomCoverUrl(rom: RomInfo): string {
   return getPublicAssetUrl(rom.cover.replace(/^\/+/, ''));
 }
 
-function renderKeyboardBindings(bindings: KeyboardBindingView[]): string {
-  return bindings.map((binding) => `
-    <div class="keyboard-binding">
-      <span class="keyboard-action">${escapeHtml(binding.action)}</span>
-      <span class="key-row">${binding.keys.map((key) => `<kbd>${escapeHtml(key)}</kbd>`).join('')}</span>
-    </div>
-  `).join('');
-}
-
-function updateKeyboardGuide(): void {
-  const titleEl = document.getElementById('keyboard-guide-title');
-  const noteEl = document.getElementById('keyboard-guide-note');
-  const bindingsEl = document.getElementById('keyboard-bindings');
-  if (!titleEl || !noteEl || !bindingsEl) return;
-
-  let title = 'NES / GB / GG / SMS 鍵盤控制';
-  let note = '這組按鍵適用於二鍵家用主機與掌機。';
-  let bindings: KeyboardBindingView[] = [
-    { action: '方向', keys: ['↑', '↓', '←', '→'] },
-    { action: 'A', keys: ['Z'] },
-    { action: 'B', keys: ['X'] },
-    { action: 'Start', keys: ['Enter'] },
-    { action: 'Select', keys: ['Right Shift'] },
-  ];
-
-  if (isMupenN64Active()) {
-    title = 'Nintendo 64 鍵盤控制';
-    note = 'N64 使用方向鍵當類比搖桿，WASD 保留給 D-Pad，右側 C 鍵用 IJKL。';
-    bindings = [
-      { action: 'Analog Stick', keys: ['↑', '↓', '←', '→'] },
-      { action: 'D-Pad', keys: ['W', 'A', 'S', 'D'] },
-      { action: 'A / B', keys: ['Left Shift', 'Left Ctrl'] },
-      { action: 'C Buttons', keys: ['I', 'J', 'K', 'L'] },
-      { action: 'Z / L / R', keys: ['Z', 'X', 'C'] },
-      { action: 'Start', keys: ['Enter'] },
-    ];
-  } else if (isFbNeoActive()) {
-    title = 'FBNeo Arcade 鍵盤控制';
-    note = '街機模式含投幣與 1P Start，A-F 六鍵對應左手鍵位。';
-    bindings = [
-      { action: '方向', keys: ['↑', '↓', '←', '→'] },
-      { action: 'A / B / C', keys: ['Z', 'X', 'A'] },
-      { action: 'D / E / F', keys: ['S', 'Q', 'W'] },
-      { action: 'Coin', keys: ['5'] },
-      { action: '1P Start', keys: ['1', 'Enter'] },
-    ];
-  } else if (isGenesisCore()) {
-    title = 'Mega Drive / Genesis 鍵盤控制';
-    note = '三鍵遊戲使用 A/B/C，六鍵遊戲另可使用 X/Y/Z 與 Mode。';
-    bindings = [
-      { action: '方向', keys: ['↑', '↓', '←', '→'] },
-      { action: 'C / B', keys: ['Z', 'X'] },
-      { action: 'A / Y', keys: ['A', 'S'] },
-      { action: 'X / Z', keys: ['Q', 'W'] },
-      { action: 'Start', keys: ['Enter'] },
-      { action: 'Mode', keys: ['Right Shift'] },
-    ];
-  } else if (isSnesCore()) {
-    title = 'SFC / SNES 鍵盤控制';
-    note = 'SNES 使用四顆正面按鈕與 L/R 肩鍵，和二鍵主機配置不同。';
-    bindings = [
-      { action: '方向', keys: ['↑', '↓', '←', '→'] },
-      { action: 'A / B', keys: ['Z', 'X'] },
-      { action: 'Y / X', keys: ['A', 'S'] },
-      { action: 'L / R', keys: ['Q', 'W'] },
-      { action: 'Start', keys: ['Enter'] },
-      { action: 'Select', keys: ['Right Shift'] },
-    ];
-  }
-
-  bindings.push(
-    { action: '存檔 / 讀檔', keys: ['F5', 'F7'] },
-  );
-
-  titleEl.textContent = title;
-  noteEl.textContent = note;
-  bindingsEl.innerHTML = renderKeyboardBindings(bindings);
-}
-
 interface N64GraphicsCapability {
   supported: boolean;
   message: string;
@@ -1003,7 +931,6 @@ function setupAppShell(): boolean {
   // 設定觸控裝置 RWD 狀態（iPhone Safari 橫版可能仍落在桌機寬度斷點）
   setupIOSInstallHint();
   setupResponsiveModeDetection();
-  updateKeyboardGuide();
 
   // 設定檔案選擇器
   setupFileInput();
@@ -1059,9 +986,74 @@ function updateIOSInstallHint(): void {
   const hint = document.getElementById('ios-install-hint');
   if (!hint || hint.dataset.dismissed === 'true') return;
 
-  const isIOSBrowser = isIOSDevice() && !isStandaloneDisplayMode();
+  const isIOSBrowser = isIOSDevice() && !isStandaloneDisplayMode() && !isInAppBrowser(navigator.userAgent);
   const isLobbyVisible = romSelector ? getComputedStyle(romSelector).display !== 'none' : false;
   hint.hidden = !isIOSBrowser || !isLobbyVisible;
+}
+
+let portraitFitFrame: number | null = null;
+
+/** 直立觸控版：內容超出可視高度時縮小遊戲畫面，避免按鍵被推出螢幕或整頁需要捲動。 */
+function requestPortraitFit(): void {
+  if (portraitFitFrame !== null) return;
+  portraitFitFrame = requestAnimationFrame(() => {
+    portraitFitFrame = null;
+    applyPortraitFit();
+  });
+}
+
+function applyPortraitFit(): void {
+  const root = document.documentElement;
+  const body = document.body;
+  root.style.removeProperty('--screen-max-h');
+  body.classList.remove('screen-shrunk');
+  if (
+    !body.classList.contains('game-active')
+    || !body.classList.contains('touch-device-mode')
+    || body.classList.contains('mobile-landscape-mode')
+    || body.classList.contains('n64-initializing')
+    || window.matchMedia('(min-width: 769px)').matches
+  ) return;
+
+  const screenEl = ['screen', 'canvas', 'snes9x-screen']
+    .map((id) => document.getElementById(id))
+    .find((element) => element !== null && element.getBoundingClientRect().height > 0);
+  const area = Array.from(document.querySelectorAll<HTMLElement>('#virtual-controller > div'))
+    .find((element) => element.style.display !== 'none' && element.offsetHeight > 0);
+  if (!screenEl || !area) return;
+
+  const screenRect = screenEl.getBoundingClientRect();
+  let bottom = 0;
+  for (const child of Array.from(area.children) as HTMLElement[]) {
+    const style = getComputedStyle(child);
+    if (style.position === 'absolute' || style.position === 'fixed' || child.offsetHeight === 0) continue;
+    bottom = Math.max(bottom, child.getBoundingClientRect().bottom);
+  }
+  const shellPadding = gameboyShell ? parseFloat(getComputedStyle(gameboyShell).paddingBottom) || 0 : 0;
+  bottom += (parseFloat(getComputedStyle(area).paddingBottom) || 0) + shellPadding + window.scrollY;
+
+  const fit = computePortraitFit({
+    viewportHeight: window.visualViewport?.height ?? window.innerHeight,
+    contentBottom: bottom,
+    screenHeight: screenRect.height,
+    screenWidth: screenRect.width,
+  });
+  root.style.setProperty('--screen-aspect', String(fit.aspect));
+  if (fit.maxScreenHeight !== null) {
+    root.style.setProperty('--screen-max-h', `${fit.maxScreenHeight}px`);
+    body.classList.add('screen-shrunk');
+  }
+}
+
+function watchBodyClassForPortraitFit(): void {
+  const keyOf = () => document.body.className.replace(/\bscreen-shrunk\b/, '').trim();
+  let lastKey = keyOf();
+  new MutationObserver(() => {
+    const key = keyOf();
+    if (key === lastKey) return;
+    lastKey = key;
+    requestPortraitFit();
+  }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 }
 
 function setupIOSInstallHint(): void {
@@ -1076,6 +1068,8 @@ function setupIOSInstallHint(): void {
 function setupResponsiveModeDetection(): void {
   document.body.classList.toggle('android-device-mode', /Android/i.test(navigator.userAgent));
   const iosDevice = isIOSDevice();
+  const inAppBrowser = isInAppBrowser(navigator.userAgent);
+  document.body.classList.toggle('in-app-browser', inAppBrowser);
   let wasIOSBrowserLandscape = false;
   let collapseAddressBarFrame: number | null = null;
 
@@ -1109,11 +1103,19 @@ function setupResponsiveModeDetection(): void {
     const viewportOffsetTop = visualViewport?.offsetTop ?? 0;
     const isLandscape = viewportWidth > viewportHeight;
     const isTouchDevice = navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches;
+    const isDesktopUi = shouldUseDesktopUi({
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      maxTouchPoints: navigator.maxTouchPoints,
+      hasFinePointerAndHover: window.matchMedia('(any-hover: hover) and (any-pointer: fine)').matches,
+      viewportWidth,
+    });
     const isCompressedLandscape = isLandscape && viewportHeight <= 560;
-    const shouldUseMobileLandscape = isTouchDevice && isLandscape && (viewportWidth <= 1180 || isCompressedLandscape);
+    const shouldUseMobileLandscape = !isDesktopUi && isTouchDevice && isLandscape && (viewportWidth <= 1180 || isCompressedLandscape);
     const isIOSLandscape = iosDevice && isLandscape;
     const isStandalone = isStandaloneDisplayMode();
-    const isIOSBrowser = iosDevice && !isStandalone;
+    // 內嵌瀏覽器（LINE 等）沒有 Safari 的網址列收合行為，不套用 Safari 專用的捲動技巧。
+    const isIOSBrowser = iosDevice && !isStandalone && !inAppBrowser;
     const isIOSBrowserLandscape = isIOSLandscape && isIOSBrowser;
 
     document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
@@ -1125,18 +1127,21 @@ function setupResponsiveModeDetection(): void {
     document.body.classList.toggle('ios-safari-landscape-mode', isIOSBrowserLandscape);
     document.documentElement.classList.toggle('standalone-mode', isStandalone);
     document.body.classList.toggle('standalone-mode', isStandalone);
-    document.body.classList.toggle('touch-device-mode', isTouchDevice);
+    document.body.classList.toggle('touch-device-mode', isTouchDevice && !isDesktopUi);
+    document.body.classList.toggle('desktop-ui', isDesktopUi);
     document.body.classList.toggle('mobile-landscape-mode', shouldUseMobileLandscape);
-    document.body.classList.toggle('fullscreen-active', Boolean(document.fullscreenElement) || isIOSLandscape);
+    document.body.classList.toggle('fullscreen-active', Boolean(document.fullscreenElement) || (isIOSLandscape && !isDesktopUi));
     updateIOSInstallHint();
 
     if (isIOSBrowserLandscape && !wasIOSBrowserLandscape) {
       requestIOSAddressBarCollapse();
     }
     wasIOSBrowserLandscape = isIOSBrowserLandscape;
+    requestPortraitFit();
   };
 
   updateResponsiveMode();
+  watchBodyClassForPortraitFit();
   window.addEventListener('resize', updateResponsiveMode, { passive: true });
   window.addEventListener('orientationchange', () => {
     updateResponsiveMode();
@@ -1148,34 +1153,44 @@ function setupResponsiveModeDetection(): void {
   window.addEventListener('touchend', requestIOSAddressBarCollapse, { passive: true });
 }
 
-// ===== 鍵盤輸入 =====
+// ===== 鍵盤與手把輸入（可自訂按鍵） =====
 
-/** 鍵盤映射 (玩家 1) */
-const KEYBOARD_MAP_P1: Record<string, ControllerButton> = {
-  'KeyZ': ControllerButton.A,
-  'KeyX': ControllerButton.B,
-  'ShiftRight': ControllerButton.Select,
-  'Enter': ControllerButton.Start,
-  'ArrowUp': ControllerButton.Up,
-  'ArrowDown': ControllerButton.Down,
-  'ArrowLeft': ControllerButton.Left,
-  'ArrowRight': ControllerButton.Right,
+function getSafeStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+const inputBindings = new BindingStore(getSafeStorage());
+
+/** 動作 → NES 核心按鍵 */
+const NES_ACTION_BUTTONS: Record<string, ControllerButton> = {
+  up: ControllerButton.Up,
+  down: ControllerButton.Down,
+  left: ControllerButton.Left,
+  right: ControllerButton.Right,
+  a: ControllerButton.A,
+  b: ControllerButton.B,
+  select: ControllerButton.Select,
+  start: ControllerButton.Start,
 };
 
-/** SNES 鍵盤映射 (玩家 1) */
-const KEYBOARD_MAP_SNES: Record<string, number> = {
-  'KeyZ': SnesButton.A,
-  'KeyX': SnesButton.B,
-  'KeyA': SnesButton.Y,
-  'KeyS': SnesButton.X,
-  'KeyQ': SnesButton.L,
-  'KeyW': SnesButton.R,
-  'ShiftRight': SnesButton.Select,
-  'Enter': SnesButton.Start,
-  'ArrowUp': SnesButton.Up,
-  'ArrowDown': SnesButton.Down,
-  'ArrowLeft': SnesButton.Left,
-  'ArrowRight': SnesButton.Right,
+/** 動作 → SNES / Mega Drive 按鍵 */
+const SNES_ACTION_BUTTONS: Record<string, number> = {
+  up: SnesButton.Up,
+  down: SnesButton.Down,
+  left: SnesButton.Left,
+  right: SnesButton.Right,
+  a: SnesButton.A,
+  b: SnesButton.B,
+  x: SnesButton.X,
+  y: SnesButton.Y,
+  l: SnesButton.L,
+  r: SnesButton.R,
+  select: SnesButton.Select,
+  start: SnesButton.Start,
 };
 
 interface N64KeyBinding {
@@ -1208,23 +1223,22 @@ const N64_KEY_BINDINGS: Record<string, N64KeyBinding> = {
 
 const n64PressedKeys = new Set<string>();
 
-const ARCADE_KEYBOARD_MAP: Record<string, number> = {
-  'ArrowUp': ArcadeInputBit.Up,
-  'ArrowDown': ArcadeInputBit.Down,
-  'ArrowLeft': ArcadeInputBit.Left,
-  'ArrowRight': ArcadeInputBit.Right,
-  'KeyZ': ArcadeInputBit.ButtonA,
-  'KeyX': ArcadeInputBit.ButtonB,
-  'KeyA': ArcadeInputBit.ButtonC,
-  'KeyS': ArcadeInputBit.ButtonD,
-  'KeyQ': ArcadeInputBit.ButtonE,
-  'KeyW': ArcadeInputBit.ButtonF,
-  'Digit5': ArcadeInputBit.Coin,
-  'Numpad5': ArcadeInputBit.Coin,
-  'Digit1': ArcadeInputBit.Start,
-  'Numpad1': ArcadeInputBit.Start,
-  'Enter': ArcadeInputBit.Start,
+const ARCADE_ACTION_BITS: Record<string, number> = {
+  up: ArcadeInputBit.Up,
+  down: ArcadeInputBit.Down,
+  left: ArcadeInputBit.Left,
+  right: ArcadeInputBit.Right,
+  a: ArcadeInputBit.ButtonA,
+  b: ArcadeInputBit.ButtonB,
+  c: ArcadeInputBit.ButtonC,
+  d: ArcadeInputBit.ButtonD,
+  e: ArcadeInputBit.ButtonE,
+  f: ArcadeInputBit.ButtonF,
+  coin: ArcadeInputBit.Coin,
+  start: ArcadeInputBit.Start,
 };
+
+const N64_DEFAULT_KEY_CODES = new Set(Object.values(N64_KEY_BINDINGS).map((binding) => binding.code));
 
 export function mergeArcadeInputSources(directInput: number, gamepadInput: number): number {
   return directInput | gamepadInput;
@@ -1242,86 +1256,137 @@ function setArcadeInputBit(bit: number, pressed: boolean, player: 1 | 2 = 1): vo
   }
 }
 
-function setArcadeKeyboardInput(code: string, pressed: boolean): boolean {
-  const bit = ARCADE_KEYBOARD_MAP[code];
-  if (bit === undefined) return false;
-  setArcadeInputBit(bit, pressed);
-  return true;
+function getBindingLayout(): BindingLayout {
+  if (isMupenN64Active()) return 'n64';
+  if (isFbNeoActive()) return 'arcade';
+  return usesSixButtonController() ? 'snes' : 'nes';
 }
 
-function pollArcadeGamepads(): void {
+/** 依目前主機把「動作」送進對應核心。 */
+function performInputAction(layout: BindingLayout, action: string, pressed: boolean): void {
+  switch (layout) {
+    case 'nes': {
+      const button = NES_ACTION_BUTTONS[action];
+      if (button !== undefined && nes) setNesButton(button, pressed);
+      break;
+    }
+    case 'snes': {
+      const button = SNES_ACTION_BUTTONS[action];
+      if (button !== undefined) setSnesButton(button, pressed);
+      break;
+    }
+    case 'arcade': {
+      const bit = ARCADE_ACTION_BITS[action];
+      if (bit !== undefined) setArcadeInputBit(bit, pressed);
+      break;
+    }
+    case 'n64':
+      if (isMupenN64Active()) dispatchN64KeyboardEvent(action, pressed);
+      break;
+  }
+}
+
+function getFirstGamepad(): Gamepad | null {
   const pads = navigator.getGamepads?.() ?? [];
-  const pad = pads[0];
+  for (const pad of pads) {
+    if (pad && pad.connected) return pad;
+  }
+  return null;
+}
+
+/** 街機核心每幀取輸入，這裡把手把動作換成位元遮罩。 */
+function pollArcadeGamepads(): void {
+  const pad = getFirstGamepad();
   if (!pad) {
     arcadeGamepadInputP1 = 0;
     return;
   }
-
-  const pressed = (index: number) => pad.buttons[index]?.pressed ?? false;
-  const axisPressed = (index: number, direction: -1 | 1) => {
-    const value = pad.axes[index] ?? 0;
-    return direction < 0 ? value < -0.45 : value > 0.45;
-  };
-
   let mask = 0;
-  if (pressed(12) || axisPressed(1, -1)) mask |= ArcadeInputBit.Up;
-  if (pressed(13) || axisPressed(1, 1)) mask |= ArcadeInputBit.Down;
-  if (pressed(14) || axisPressed(0, -1)) mask |= ArcadeInputBit.Left;
-  if (pressed(15) || axisPressed(0, 1)) mask |= ArcadeInputBit.Right;
-  if (pressed(0)) mask |= ArcadeInputBit.ButtonA;
-  if (pressed(1)) mask |= ArcadeInputBit.ButtonB;
-  if (pressed(2)) mask |= ArcadeInputBit.ButtonC;
-  if (pressed(3)) mask |= ArcadeInputBit.ButtonD;
-  if (pressed(4)) mask |= ArcadeInputBit.ButtonE;
-  if (pressed(5)) mask |= ArcadeInputBit.ButtonF;
-  if (pressed(8)) mask |= ArcadeInputBit.Coin;
-  if (pressed(9)) mask |= ArcadeInputBit.Start;
+  for (const action of readPadActions(inputBindings.layout('arcade'), pad)) {
+    mask |= ARCADE_ACTION_BITS[action] ?? 0;
+  }
   arcadeGamepadInputP1 = mask;
 }
 
+let gamepadLoopHandle: number | null = null;
+let gamepadHeldLayout: BindingLayout | null = null;
+const gamepadHeldActions = new Set<string>();
+
+function releaseGamepadActions(): void {
+  if (gamepadHeldLayout) {
+    for (const action of gamepadHeldActions) performInputAction(gamepadHeldLayout, action, false);
+  }
+  gamepadHeldActions.clear();
+  gamepadHeldLayout = null;
+}
+
+/** 非街機主機的手把輪詢；街機由 FBNeo 幀迴圈直接讀取。 */
+function pollGamepadActions(): void {
+  gamepadLoopHandle = null;
+  const pad = getFirstGamepad();
+  if (!pad) {
+    releaseGamepadActions();
+    return;
+  }
+
+  const layout = getBindingLayout();
+  const active = isRunning && layout !== 'arcade' && !document.body.classList.contains('binding-capture');
+  if (!active || gamepadHeldLayout !== layout) releaseGamepadActions();
+  if (active) {
+    gamepadHeldLayout = layout;
+    const next = readPadActions(inputBindings.layout(layout), pad);
+    for (const action of next) {
+      if (!gamepadHeldActions.has(action)) performInputAction(layout, action, true);
+    }
+    for (const action of Array.from(gamepadHeldActions)) {
+      if (!next.has(action)) performInputAction(layout, action, false);
+    }
+    gamepadHeldActions.clear();
+    for (const action of next) gamepadHeldActions.add(action);
+  }
+  gamepadLoopHandle = requestAnimationFrame(pollGamepadActions);
+}
+
+function setupGamepadInput(): void {
+  const start = () => {
+    if (gamepadLoopHandle === null) gamepadLoopHandle = requestAnimationFrame(pollGamepadActions);
+  };
+  window.addEventListener('gamepadconnected', start);
+  window.addEventListener('gamepaddisconnected', () => {
+    if (!getFirstGamepad()) releaseGamepadActions();
+  });
+  if (getFirstGamepad()) start();
+}
+
 function setupKeyboardInput(): void {
-  window.addEventListener('keydown', (e) => {
-    if (isMupenN64Active()) return;
-    if (isFbNeoActive()) {
-      if (setArcadeKeyboardInput(e.code, true)) e.preventDefault();
+  const handle = (event: KeyboardEvent, pressed: boolean) => {
+    if (document.body.classList.contains('binding-capture')) return;
+    const layout = getBindingLayout();
+
+    if (layout === 'n64') {
+      // 預設按鍵由 Mupen 直接處理；只有改過鍵位時才攔截並改送合成事件。
+      if (!event.isTrusted || isDefaultLayout('n64', inputBindings.all)) return;
+      const action = resolveKeyAction(inputBindings.layout('n64'), event.code);
+      if (action) {
+        performInputAction('n64', action, pressed);
+      } else if (!N64_DEFAULT_KEY_CODES.has(event.code)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
       return;
     }
-    if (usesSixButtonController()) {
-      const button = KEYBOARD_MAP_SNES[e.code];
-      if (button !== undefined) {
-        setSnesButton(button, true);
-        e.preventDefault();
-      }
-    } else {
-      if (!nes) return;
-      const button = KEYBOARD_MAP_P1[e.code];
-      if (button !== undefined) {
-        setNesButton(button, true);
-        e.preventDefault();
-      }
-    }
-  });
-  window.addEventListener('keyup', (e) => {
-    if (isMupenN64Active()) return;
-    if (isFbNeoActive()) {
-      if (setArcadeKeyboardInput(e.code, false)) e.preventDefault();
-      return;
-    }
-    if (usesSixButtonController()) {
-      const button = KEYBOARD_MAP_SNES[e.code];
-      if (button !== undefined) {
-        setSnesButton(button, false);
-        e.preventDefault();
-      }
-    } else {
-      if (!nes) return;
-      const button = KEYBOARD_MAP_P1[e.code];
-      if (button !== undefined) {
-        setNesButton(button, false);
-        e.preventDefault();
-      }
-    }
-  });
+
+    if (layout === 'nes' && !nes) return;
+    const action = resolveKeyAction(inputBindings.layout(layout), event.code);
+    if (!action) return;
+    performInputAction(layout, action, pressed);
+    event.preventDefault();
+  };
+
+  window.addEventListener('keydown', (event) => handle(event, true), true);
+  window.addEventListener('keyup', (event) => handle(event, false), true);
+  setupGamepadInput();
 }
 
 // ===== ROM 選擇器 =====
@@ -1923,6 +1988,7 @@ function renderRomList(system: SystemKey): void {
 async function loadRomFromServer(filename: string): Promise<void> {
   const loadController = beginGameLoad();
   const rom = getRomCatalogEntry(filename);
+  currentGameTitle = getRomDisplayName(rom);
   let loadingSequence = 0;
   try {
     loadingSequence = await showGameLoading(rom.name, '正在下載遊戲檔案…');
@@ -1998,6 +2064,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
 async function loadRomFromFile(file: File): Promise<void> {
   const loadController = beginGameLoad();
   const rom = getRomCatalogEntry(file.name, file.name);
+  currentGameTitle = getRomDisplayName(rom).replace(/\.[^.]+$/, '');
   let loadingSequence = 0;
   try {
     loadingSequence = await showGameLoading(rom.name, '正在讀取遊戲檔案…');
@@ -2670,6 +2737,7 @@ function hideRomSelector(): void {
   stopLobbyCrtPreview();
   if (romSelector) romSelector.style.display = 'none';
   if (gameboyShell) gameboyShell.style.removeProperty('display');
+  document.body.classList.add('game-active');
   updateIOSInstallHint();
 }
 
@@ -2686,10 +2754,12 @@ async function showRomSelector(): Promise<void> {
   resetWasmCore();
   clearAudioQueue();
   currentN64RomData = null;
+  touchControls?.releaseAll();
   powerLed?.classList.remove('on');
   if (romCatalog.length > 0) renderMachineSelector();
   if (romSelector) romSelector.style.display = 'flex';
   if (gameboyShell) gameboyShell.style.display = 'none';
+  document.body.classList.remove('game-active', 'screen-shrunk');
   updateIOSInstallHint();
   void startLobbyCrtPreview();
 }
@@ -2697,464 +2767,6 @@ async function showRomSelector(): Promise<void> {
 async function confirmReturnToMachineMenu(): Promise<void> {
   if (await showAppConfirm('是否返回遊戲主機選單')) {
     await showRomSelector();
-  }
-}
-
-// ===== 虛擬控制器 (多點觸控支援) =====
-
-// 追蹤活躍的觸控點
-interface TouchState {
-  identifier: number;
-  element: string;  // 'dpad', 'a', 'b', 'start', 'select'
-}
-
-const activeTouches: Map<number, TouchState> = new Map();
-
-// D-Pad 方向狀態
-interface DpadState {
-  up: boolean;
-  down: boolean;
-  left: boolean;
-  right: boolean;
-}
-
-let currentDpadState: DpadState = { up: false, down: false, left: false, right: false };
-
-/**
- * 設定虛擬控制器 (支援多點觸控)
- */
-function setupVirtualController(): void {
-  // 設定 D-Pad 觸控區域 (支援斜向)
-  setupDpad();
-  
-  // 設定 A/B 按鈕 (支援同時按)
-  setupABButtons();
-  
-  // 設定功能按鈕 (Select/Start)
-  setupFunctionButtons();
-
-  // 防止頁面捲動
-  const virtualController = document.getElementById('virtual-controller');
-  virtualController?.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-  }, { passive: false });
-}
-
-/**
- * 設定 D-Pad (區域偵測，支援斜向輸入)
- */
-function setupDpad(): void {
-  const dpadArea = document.getElementById('dpad-touch-area');
-  const dpad = document.getElementById('dpad');
-  if (!dpadArea || !dpad) return;
-
-  const updateDpadFromTouch = (touch: Touch) => {
-    const rect = dpad.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    
-    const dx = touch.clientX - centerX;
-    const dy = touch.clientY - centerY;
-    
-    // 計算距離中心的距離
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxRadius = rect.width / 2;
-    
-    // 死區：距離中心太近時不觸發
-    const deadZone = maxRadius * 0.15;
-    
-    const newState: DpadState = { up: false, down: false, left: false, right: false };
-    
-    if (distance > deadZone) {
-      // 計算角度 (-180 到 180)
-      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-      
-      // 45 度分割，支援 8 方向
-      // 右: -22.5 到 22.5
-      // 右下: 22.5 到 67.5
-      // 下: 67.5 到 112.5
-      // 左下: 112.5 到 157.5
-      // 左: 157.5 到 180 或 -180 到 -157.5
-      // 左上: -157.5 到 -112.5
-      // 上: -112.5 到 -67.5
-      // 右上: -67.5 到 -22.5
-      
-      if (angle >= -22.5 && angle < 22.5) {
-        newState.right = true;
-      } else if (angle >= 22.5 && angle < 67.5) {
-        newState.right = true;
-        newState.down = true;
-      } else if (angle >= 67.5 && angle < 112.5) {
-        newState.down = true;
-      } else if (angle >= 112.5 && angle < 157.5) {
-        newState.left = true;
-        newState.down = true;
-      } else if (angle >= 157.5 || angle < -157.5) {
-        newState.left = true;
-      } else if (angle >= -157.5 && angle < -112.5) {
-        newState.left = true;
-        newState.up = true;
-      } else if (angle >= -112.5 && angle < -67.5) {
-        newState.up = true;
-      } else if (angle >= -67.5 && angle < -22.5) {
-        newState.right = true;
-        newState.up = true;
-      }
-    }
-    
-    applyDpadState(newState);
-  };
-
-  const clearDpad = () => {
-    const newState: DpadState = { up: false, down: false, left: false, right: false };
-    applyDpadState(newState);
-  };
-
-  // 觸控開始
-  dpadArea.addEventListener('touchstart', (e) => {
-    e.preventDefault();
-    for (const touch of Array.from(e.changedTouches)) {
-      activeTouches.set(touch.identifier, { identifier: touch.identifier, element: 'dpad' });
-      updateDpadFromTouch(touch);
-    }
-  }, { passive: false });
-
-  // 觸控移動 (支援滑動改變方向)
-  dpadArea.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-    for (const touch of Array.from(e.changedTouches)) {
-      if (activeTouches.get(touch.identifier)?.element === 'dpad') {
-        updateDpadFromTouch(touch);
-      }
-    }
-  }, { passive: false });
-
-  // 觸控結束
-  dpadArea.addEventListener('touchend', (e) => {
-    e.preventDefault();
-    for (const touch of Array.from(e.changedTouches)) {
-      if (activeTouches.get(touch.identifier)?.element === 'dpad') {
-        activeTouches.delete(touch.identifier);
-        // 檢查是否還有其他 D-Pad 觸控
-        const remainingDpadTouches = Array.from(activeTouches.values()).filter(t => t.element === 'dpad');
-        if (remainingDpadTouches.length === 0) {
-          clearDpad();
-        }
-      }
-    }
-  }, { passive: false });
-
-  dpadArea.addEventListener('touchcancel', (e) => {
-    e.preventDefault();
-    for (const touch of Array.from(e.changedTouches)) {
-      activeTouches.delete(touch.identifier);
-    }
-    clearDpad();
-  }, { passive: false });
-
-  // 滑鼠事件 (用於電腦測試)
-  let mouseDown = false;
-  dpadArea.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    mouseDown = true;
-    const rect = dpad.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const dx = e.clientX - centerX;
-    const dy = e.clientY - centerY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxRadius = rect.width / 2;
-    const deadZone = maxRadius * 0.15;
-    
-    const newState: DpadState = { up: false, down: false, left: false, right: false };
-    
-    if (distance > deadZone) {
-      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-      if (angle >= -22.5 && angle < 22.5) newState.right = true;
-      else if (angle >= 22.5 && angle < 67.5) { newState.right = true; newState.down = true; }
-      else if (angle >= 67.5 && angle < 112.5) newState.down = true;
-      else if (angle >= 112.5 && angle < 157.5) { newState.left = true; newState.down = true; }
-      else if (angle >= 157.5 || angle < -157.5) newState.left = true;
-      else if (angle >= -157.5 && angle < -112.5) { newState.left = true; newState.up = true; }
-      else if (angle >= -112.5 && angle < -67.5) newState.up = true;
-      else if (angle >= -67.5 && angle < -22.5) { newState.right = true; newState.up = true; }
-    }
-    applyDpadState(newState);
-  });
-
-  document.addEventListener('mousemove', (e) => {
-    if (!mouseDown) return;
-    const rect = dpad.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const dx = e.clientX - centerX;
-    const dy = e.clientY - centerY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    const maxRadius = rect.width / 2;
-    const deadZone = maxRadius * 0.15;
-    
-    const newState: DpadState = { up: false, down: false, left: false, right: false };
-    
-    if (distance > deadZone && distance < maxRadius * 1.5) {
-      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-      if (angle >= -22.5 && angle < 22.5) newState.right = true;
-      else if (angle >= 22.5 && angle < 67.5) { newState.right = true; newState.down = true; }
-      else if (angle >= 67.5 && angle < 112.5) newState.down = true;
-      else if (angle >= 112.5 && angle < 157.5) { newState.left = true; newState.down = true; }
-      else if (angle >= 157.5 || angle < -157.5) newState.left = true;
-      else if (angle >= -157.5 && angle < -112.5) { newState.left = true; newState.up = true; }
-      else if (angle >= -112.5 && angle < -67.5) newState.up = true;
-      else if (angle >= -67.5 && angle < -22.5) { newState.right = true; newState.up = true; }
-    }
-    applyDpadState(newState);
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (mouseDown) {
-      mouseDown = false;
-      clearDpad();
-    }
-  });
-}
-
-/**
- * 套用 D-Pad 狀態並更新視覺
- */
-function applyDpadState(newState: DpadState): void {
-  if (isFbNeoActive()) {
-    setArcadeInputBit(ArcadeInputBit.Up, newState.up);
-    setArcadeInputBit(ArcadeInputBit.Down, newState.down);
-    setArcadeInputBit(ArcadeInputBit.Left, newState.left);
-    setArcadeInputBit(ArcadeInputBit.Right, newState.right);
-  }
-
-  // 更新控制器（透過 WASM 介面）
-  if (!isFbNeoActive() && newState.up !== currentDpadState.up) {
-    setNesButton(ControllerButton.Up, newState.up);
-  }
-  if (!isFbNeoActive() && newState.down !== currentDpadState.down) {
-    setNesButton(ControllerButton.Down, newState.down);
-  }
-  if (!isFbNeoActive() && newState.left !== currentDpadState.left) {
-    setNesButton(ControllerButton.Left, newState.left);
-  }
-  if (!isFbNeoActive() && newState.right !== currentDpadState.right) {
-    setNesButton(ControllerButton.Right, newState.right);
-  }
-  
-  // 更新視覺
-  document.getElementById('dpad-up')?.classList.toggle('pressed', newState.up);
-  document.getElementById('dpad-down')?.classList.toggle('pressed', newState.down);
-  document.getElementById('dpad-left')?.classList.toggle('pressed', newState.left);
-  document.getElementById('dpad-right')?.classList.toggle('pressed', newState.right);
-  
-  currentDpadState = { ...newState };
-}
-
-/**
- * 設定 A/B 按鈕 (支援多點觸控同時按)
- */
-interface ThumbContactButton {
-  id: string;
-  element: HTMLElement;
-  setPressed: (pressed: boolean) => void;
-}
-
-function setupThumbContactButtons(container: HTMLElement | null, buttons: ThumbContactButton[]): void {
-  if (!container || buttons.length === 0 || container.dataset.thumbContactWired) return;
-  container.dataset.thumbContactWired = '1';
-
-  const touchHits = new Map<number, Set<string>>();
-  const pressedStates = new Map(buttons.map(button => [button.id, false]));
-
-  const syncPressedStates = () => {
-    for (const button of buttons) {
-      const pressed = Array.from(touchHits.values()).some(hits => hits.has(button.id));
-      if (pressedStates.get(button.id) === pressed) continue;
-      pressedStates.set(button.id, pressed);
-      button.setPressed(pressed);
-      button.element.classList.toggle('pressed', pressed);
-    }
-  };
-
-  const updateTouchHits = (touch: Touch) => {
-    touchHits.set(touch.identifier, getTouchContactTargetIds(
-      touch,
-      buttons.map(button => ({ id: button.id, rect: button.element.getBoundingClientRect() })),
-    ));
-  };
-
-  container.addEventListener('touchstart', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    for (const touch of Array.from(event.changedTouches)) updateTouchHits(touch);
-    syncPressedStates();
-  }, { passive: false });
-
-  container.addEventListener('touchmove', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    for (const touch of Array.from(event.changedTouches)) updateTouchHits(touch);
-    syncPressedStates();
-  }, { passive: false });
-
-  const releaseTouches = (event: TouchEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    for (const touch of Array.from(event.changedTouches)) touchHits.delete(touch.identifier);
-    syncPressedStates();
-  };
-
-  container.addEventListener('touchend', releaseTouches, { passive: false });
-  container.addEventListener('touchcancel', releaseTouches, { passive: false });
-
-  for (const button of buttons) {
-    button.element.addEventListener('mousedown', (event) => {
-      event.preventDefault();
-      button.setPressed(true);
-      button.element.classList.add('pressed');
-    });
-    button.element.addEventListener('mouseup', (event) => {
-      event.preventDefault();
-      button.setPressed(false);
-      button.element.classList.remove('pressed');
-    });
-    button.element.addEventListener('mouseleave', () => {
-      button.setPressed(false);
-      button.element.classList.remove('pressed');
-    });
-  }
-}
-
-function setupABButtons(): void {
-  const btnA = document.getElementById('btn-a');
-  const btnB = document.getElementById('btn-b');
-  const buttons: ThumbContactButton[] = [];
-
-  for (const { id, element, buttonType } of [
-    { id: 'a', element: btnA, buttonType: ControllerButton.A },
-    { id: 'b', element: btnB, buttonType: ControllerButton.B },
-  ]) {
-    if (!element) continue;
-    buttons.push({
-      id,
-      element,
-      setPressed: (pressed) => {
-        if (isFbNeoActive()) {
-          setArcadeInputBit(buttonType === ControllerButton.A ? ArcadeInputBit.ButtonA : ArcadeInputBit.ButtonB, pressed);
-        } else {
-          setNesButton(buttonType, pressed);
-        }
-      },
-    });
-  }
-
-  setupThumbContactButtons(document.getElementById('ab-buttons'), buttons);
-}
-
-/**
- * 設定功能按鈕 (Select/Start)
- */
-function setupFunctionButtons(): void {
-  const container = document.querySelector<HTMLElement>('#nes-controller-area .nes-utility-row .snes-func-row');
-  if (!container || container.dataset.nesUtilityWired) return;
-  container.dataset.nesUtilityWired = '1';
-
-  const saveButton = document.getElementById('mobile-save-state');
-  if (saveButton && !saveButton.dataset.stateWired) {
-    saveButton.dataset.stateWired = '1';
-    saveButton.addEventListener('click', () => {
-      void saveStateForUser(0, true);
-    });
-  }
-
-  const loadButton = document.getElementById('mobile-load-state');
-  if (loadButton && !loadButton.dataset.stateWired) {
-    loadButton.dataset.stateWired = '1';
-    loadButton.addEventListener('click', () => {
-      void loadStateForUser(0, true);
-    });
-  }
-
-  const controllerButtons = container.querySelectorAll<HTMLElement>('[data-btn]');
-  controllerButtons.forEach(button => {
-    if (button.dataset.nesWired) return;
-    button.dataset.nesWired = '1';
-    const btnType = button.dataset.btn;
-    if (btnType !== 'select' && btnType !== 'start') return;
-    const buttonEnum = btnType === 'start' ? ControllerButton.Start : ControllerButton.Select;
-    const setPressed = (pressed: boolean): void => {
-      if (isFbNeoActive()) {
-        setArcadeInputBit(btnType === 'start' ? ArcadeInputBit.Start : ArcadeInputBit.Coin, pressed);
-      } else {
-        setNesButton(buttonEnum, pressed);
-      }
-      button.classList.toggle('pressed', pressed);
-    };
-
-    button.addEventListener('touchstart', (event) => {
-      event.preventDefault();
-      setPressed(true);
-    }, { passive: false });
-    button.addEventListener('touchend', (event) => {
-      event.preventDefault();
-      setPressed(false);
-    }, { passive: false });
-    button.addEventListener('touchcancel', (event) => {
-      event.preventDefault();
-      setPressed(false);
-    }, { passive: false });
-    button.addEventListener('mousedown', (event) => {
-      event.preventDefault();
-      setPressed(true);
-    });
-    button.addEventListener('mouseup', (event) => {
-      event.preventDefault();
-      setPressed(false);
-    });
-    button.addEventListener('mouseleave', () => setPressed(false));
-  });
-}
-
-/**
- * 處理按鈕按下/釋放 (保留給其他用途)
- */
-function handleButtonPress(btnType: string, pressed: boolean): void {
-  if (isFbNeoActive()) {
-    const arcadeButtonMap: Record<string, number> = {
-      'up': ArcadeInputBit.Up,
-      'down': ArcadeInputBit.Down,
-      'left': ArcadeInputBit.Left,
-      'right': ArcadeInputBit.Right,
-      'a': ArcadeInputBit.ButtonA,
-      'b': ArcadeInputBit.ButtonB,
-      'c': ArcadeInputBit.ButtonC,
-      'd': ArcadeInputBit.ButtonD,
-      'e': ArcadeInputBit.ButtonE,
-      'f': ArcadeInputBit.ButtonF,
-      'start': ArcadeInputBit.Start,
-      'select': ArcadeInputBit.Coin,
-      'coin': ArcadeInputBit.Coin,
-    };
-    const arcadeBit = arcadeButtonMap[btnType];
-    if (arcadeBit !== undefined) setArcadeInputBit(arcadeBit, pressed);
-    return;
-  }
-
-  const buttonMap: Record<string, ControllerButton> = {
-    'up': ControllerButton.Up,
-    'down': ControllerButton.Down,
-    'left': ControllerButton.Left,
-    'right': ControllerButton.Right,
-    'a': ControllerButton.A,
-    'b': ControllerButton.B,
-    'start': ControllerButton.Start,
-    'select': ControllerButton.Select,
-  };
-  
-  const button = buttonMap[btnType];
-  if (button !== undefined) {
-    setNesButton(button, pressed);
   }
 }
 
@@ -3202,16 +2814,13 @@ function setN64ButtonPressed(bindingId: string, pressed: boolean, element?: HTML
 
 // ===== 電腦版控制 =====
 
+let desktopStage: DesktopStage | null = null;
+let currentGameTitle = '';
+
 /**
- * 設定電腦版控制按鈕
+ * 設定全螢幕與電腦版舞台（選單抽屜、浮動工具列）
  */
 function setupDesktopControls(): void {
-  const controlToggle = document.getElementById('btn-toggle-controls');
-  controlToggle?.addEventListener('click', () => {
-    const isOpen = document.body.classList.toggle('controls-open');
-    controlToggle.setAttribute('aria-expanded', String(isOpen));
-  });
-
   type WebkitFullscreenDocument = Document & {
     webkitExitFullscreen?: () => void | Promise<void>;
     webkitFullscreenElement?: Element | null;
@@ -3244,34 +2853,38 @@ function setupDesktopControls(): void {
     document.body.classList.toggle('fullscreen-active', Boolean(getFullscreenElement()) || isIOSLandscape);
   };
 
-  document.getElementById('btn-fullscreen')?.addEventListener('click', toggleFullscreen);
   document.getElementById('btn-fullscreen-overlay')?.addEventListener('click', toggleFullscreen);
   document.addEventListener('fullscreenchange', syncFullscreenState);
   document.addEventListener('webkitfullscreenchange', syncFullscreenState);
 
-  document.getElementById('btn-pause')?.addEventListener('click', stopEmulation);
-  document.getElementById('btn-resume')?.addEventListener('click', startEmulation);
-  document.getElementById('btn-reset')?.addEventListener('click', async () => {
-    if (isMupenN64Active() && currentN64RomData) {
-      await startN64Game(currentN64RomData);
-    } else if (isSnes9xActive()) {
-      snes9xBackend?.reset();
-    } else {
-      nes?.reset();
-    }
+  if (!gameboyShell) return;
+  desktopStage = mountDesktopStage({
+    shell: gameboyShell,
+    bindings: inputBindings,
+    actions: {
+      isRunning: () => isRunning,
+      pause: stopEmulation,
+      resume: startEmulation,
+      reset: () => {
+        if (isMupenN64Active() && currentN64RomData) {
+          void startN64Game(currentN64RomData);
+        } else if (isSnes9xActive()) {
+          snes9xBackend?.reset();
+        } else {
+          nes?.reset();
+        }
+      },
+      save: (slot) => { void saveStateForUser(slot, true); },
+      load: (slot) => { void loadStateForUser(slot, true); },
+      returnToLobby: () => { void confirmReturnToMachineMenu(); },
+      openRomFile: () => document.getElementById('rom-input')?.click(),
+      toggleFullscreen,
+      isFullscreen: () => getFullscreenElement() !== null,
+      getLayout: getBindingLayout,
+      getGameTitle: () => currentGameTitle || currentRomFilename.replace(/\.[^.]+$/, ''),
+      notify: showToast,
+    },
   });
-  document.getElementById('btn-select-game')?.addEventListener('click', () => {
-    void confirmReturnToMachineMenu();
-  });
-  
-  // 存檔/讀取按鈕 (電腦版)
-  document.getElementById('btn-save-state')?.addEventListener('click', () => {
-    void saveStateForUser(0, true);
-  });
-  document.getElementById('btn-load-state')?.addEventListener('click', () => {
-    void loadStateForUser(0, true);
-  });
-  
 }
 
 /**
@@ -4417,26 +4030,24 @@ function updateControllerLayout(): void {
     if (snesCtrl) snesCtrl.style.display = 'none';
     if (arcadeCtrl) arcadeCtrl.style.display = 'none';
     if (n64Ctrl) n64Ctrl.style.display = 'flex';
-    setupN64Buttons();
   } else if (isFbNeoActive()) {
     if (nesCtrl) nesCtrl.style.display = 'none';
     if (snesCtrl) snesCtrl.style.display = 'none';
     if (arcadeCtrl) arcadeCtrl.style.display = 'flex';
     if (n64Ctrl) n64Ctrl.style.display = 'none';
-    setupArcadeButtons();
   } else if (usesSixButtonController()) {
     if (nesCtrl) nesCtrl.style.display = 'none';
     if (snesCtrl) snesCtrl.style.display = 'flex';
     if (arcadeCtrl) arcadeCtrl.style.display = 'none';
     if (n64Ctrl) n64Ctrl.style.display = 'none';
-    setupSnesButtons();
   } else {
     if (nesCtrl) nesCtrl.style.display = 'flex';
     if (snesCtrl) snesCtrl.style.display = 'none';
     if (arcadeCtrl) arcadeCtrl.style.display = 'none';
     if (n64Ctrl) n64Ctrl.style.display = 'none';
   }
-  updateKeyboardGuide();
+  mountTouchControls();
+  desktopStage?.refresh();
 }
 
 function updateSnesControllerLabels(): void {
@@ -4452,588 +4063,160 @@ function updateSnesControllerLabels(): void {
 }
 
 function updateArcadeButtonCount(buttonCount: number | null): void {
+  arcadeFireButtonCount = buttonCount;
   document.body.classList.toggle('arcade-no-buttons', buttonCount === 0);
   document.querySelectorAll<HTMLElement>('#arcade-controller-area .arcade-face-btn').forEach((button, index) => {
     button.hidden = buttonCount !== null && index >= buttonCount;
   });
   const grid = document.querySelector<HTMLElement>('#arcade-controller-area .arcade-face-grid');
   if (grid) grid.dataset.buttonCount = buttonCount === null ? '6' : String(buttonCount);
+  if (isFbNeoActive()) mountTouchControls();
 }
 
-function setupArcadeButtons(): void {
-  const buttonBits: Record<string, number> = {
-    up: ArcadeInputBit.Up,
-    down: ArcadeInputBit.Down,
-    left: ArcadeInputBit.Left,
-    right: ArcadeInputBit.Right,
-    a: ArcadeInputBit.ButtonA,
-    b: ArcadeInputBit.ButtonB,
-    c: ArcadeInputBit.ButtonC,
-    d: ArcadeInputBit.ButtonD,
-    e: ArcadeInputBit.ButtonE,
-    f: ArcadeInputBit.ButtonF,
-    coin: ArcadeInputBit.Coin,
-    start: ArcadeInputBit.Start,
-  };
+// ===== 虛擬控制器（觸控引擎） =====
 
-  const faceButtons: ThumbContactButton[] = [];
-  document.querySelectorAll<HTMLElement>('#arcade-controller-area .arcade-face-btn').forEach((button) => {
-    const bitName = button.dataset.arcadeBit;
-    if (!bitName || button.dataset.arcadeWired) return;
-    const bit = buttonBits[bitName];
-    if (bit === undefined) return;
-    button.dataset.arcadeWired = '1';
-    faceButtons.push({
-      id: bitName,
-      element: button,
-      setPressed: pressed => setArcadeInputBit(bit, pressed),
-    });
-  });
-  setupThumbContactButtons(document.querySelector('#arcade-controller-area .arcade-face-grid'), faceButtons);
+let touchControls: TouchControlsEngine | null = null;
+let padFader: IdleFader | null = null;
+let arcadeFireButtonCount: number | null = null;
+const PAD_HISTORY_STORAGE_KEY = 'h5emu.pad-history';
 
-  document.querySelectorAll('#arcade-controller-area [data-arcade-bit]').forEach((node) => {
-    const button = node as HTMLElement;
-    const bitName = button.dataset.arcadeBit;
-    if (!bitName || button.dataset.arcadeWired) return;
-    const bit = buttonBits[bitName];
-    if (bit === undefined) return;
-    button.dataset.arcadeWired = '1';
-
-    const activeTouchIds = new Set<number>();
-    const press = () => {
-      setArcadeInputBit(bit, true);
-      button.classList.add('pressed');
-    };
-    const release = () => {
-      setArcadeInputBit(bit, false);
-      button.classList.remove('pressed');
-    };
-
-    button.addEventListener('touchstart', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      for (const touch of Array.from(event.changedTouches)) activeTouchIds.add(touch.identifier);
-      press();
-    }, { passive: false });
-
-    button.addEventListener('touchend', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      for (const touch of Array.from(event.changedTouches)) activeTouchIds.delete(touch.identifier);
-      if (activeTouchIds.size === 0) release();
-    }, { passive: false });
-
-    button.addEventListener('touchcancel', (event) => {
-      event.preventDefault();
-      for (const touch of Array.from(event.changedTouches)) activeTouchIds.delete(touch.identifier);
-      if (activeTouchIds.size === 0) release();
-    }, { passive: false });
-
-    button.addEventListener('mousedown', (event) => { event.preventDefault(); press(); });
-    button.addEventListener('mouseup', (event) => { event.preventDefault(); release(); });
-    button.addEventListener('mouseleave', release);
-  });
-
-  setupArcadeDpad();
-
-  const saveButton = document.getElementById('arcade-mobile-save');
-  if (saveButton && !saveButton.dataset.arcadeWired) {
-    saveButton.dataset.arcadeWired = '1';
-    saveButton.addEventListener('click', () => {
-      if (saveState(0)) showToast('✅ 存檔成功'); else showToast('❌ 存檔失敗');
-    });
-  }
-
-  const loadButton = document.getElementById('arcade-mobile-load');
-  if (loadButton && !loadButton.dataset.arcadeWired) {
-    loadButton.dataset.arcadeWired = '1';
-    loadButton.addEventListener('click', () => {
-      if (loadState(0)) showToast('✅ 讀取成功'); else showToast('❌ 沒有存檔');
-    });
-  }
+function getPadSystem(): PadSystem {
+  if (isMupenN64Active()) return 'n64';
+  if (isFbNeoActive()) return 'arcade';
+  if (isGenesisCore()) return 'genesis';
+  if (isSnesCore()) return 'snes';
+  const core = nes?.getCoreType();
+  return core === 'gb' || core === 'gg' ? core : 'nes';
 }
 
-function setupArcadeDpad(): void {
-  const dpad = document.getElementById('arcade-dpad');
-  const touchArea = document.getElementById('arcade-dpad-touch-area');
-  if (!dpad || !touchArea || touchArea.dataset.arcadeWired) return;
-  touchArea.dataset.arcadeWired = '1';
+function buildPadTable<T>(entries: Array<[number, T]>, apply: (target: T, pressed: boolean) => void): PadTable {
+  return entries.map(([bit, target]) => [bit, (pressed: boolean) => apply(target, pressed)]);
+}
 
-  let currentState: DpadState = { up: false, down: false, left: false, right: false };
-  let mouseDown = false;
-  let pendingStateFrame: number | null = null;
-  const useDigitalFallback = shouldUseDigitalArcadeDpad(
-    navigator.userAgent,
-    typeof PointerEvent !== 'undefined',
-  );
-
-  const applyState = (newState: DpadState) => {
-    for (const direction of ['up', 'down', 'left', 'right'] as Array<keyof DpadState>) {
-      if (newState[direction] !== currentState[direction]) {
-        const bit = direction === 'up'
-          ? ArcadeInputBit.Up
-          : direction === 'down'
-            ? ArcadeInputBit.Down
-            : direction === 'left'
-              ? ArcadeInputBit.Left
-              : ArcadeInputBit.Right;
-        setArcadeInputBit(bit, newState[direction]);
-      }
-      document.getElementById(`arcade-dpad-${direction}`)?.classList.toggle('pressed', newState[direction]);
+function createCommandHistory(area: HTMLElement): CommandHistory {
+  const wrap = document.createElement('div');
+  wrap.className = 'pad-history-wrap';
+  const list = document.createElement('div');
+  list.className = 'pad-history';
+  const toggle = document.createElement('button');
+  toggle.type = 'button';
+  toggle.className = 'pad-history-toggle';
+  toggle.textContent = '指令';
+  const applyVisibility = (visible: boolean) => {
+    list.hidden = !visible;
+    toggle.setAttribute('aria-pressed', String(visible));
+  };
+  let visible = false;
+  try {
+    visible = localStorage.getItem(PAD_HISTORY_STORAGE_KEY) === '1';
+  } catch {
+    // 無痕模式可能禁止存取 localStorage。
+  }
+  applyVisibility(visible);
+  toggle.addEventListener('click', () => {
+    visible = list.hidden;
+    applyVisibility(visible);
+    try {
+      localStorage.setItem(PAD_HISTORY_STORAGE_KEY, visible ? '1' : '0');
+    } catch {
+      // 設定無法保存時仍保留本次切換。
     }
-    currentState = { ...newState };
-  };
+  });
+  wrap.append(list, toggle);
+  area.appendChild(wrap);
+  return new CommandHistory(list);
+}
 
-  const clearState = () => {
-    if (pendingStateFrame !== null) cancelAnimationFrame(pendingStateFrame);
-    pendingStateFrame = null;
-    dpad.classList.remove('engaged');
-    dpad.style.setProperty('--stick-x', '0px');
-    dpad.style.setProperty('--stick-y', '0px');
-    applyState({ up: false, down: false, left: false, right: false });
-  };
+function mountTouchControls(): void {
+  touchControls?.dispose();
+  touchControls = null;
+  document.querySelector('#arcade-controller-area .pad-history-wrap')?.remove();
 
-  const calculateState = (clientX: number, clientY: number): DpadState => {
-    const rect = dpad.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const dx = clientX - centerX;
-    const dy = clientY - centerY;
-    const deadZone = rect.width / 2 * 0.15;
-    const distance = Math.hypot(dx, dy);
-    const maxTravel = rect.width * 0.24;
-    const travelScale = distance > maxTravel ? maxTravel / distance : 1;
-    dpad.classList.toggle('engaged', distance > deadZone);
-    dpad.style.setProperty('--stick-x', `${dx * travelScale}px`);
-    dpad.style.setProperty('--stick-y', `${dy * travelScale}px`);
-    return quantizeVirtualStick(dx, dy, deadZone);
-  };
+  const system = getPadSystem();
+  const game = system === 'arcade' ? getFbNeoGameName(currentRomFilename) : null;
+  const profileType = selectProfileType(system, game);
+  const profile = getControllerProfile(profileType, { game, fireButtonCount: arcadeFireButtonCount });
+  document.body.dataset.system = system;
+  document.body.dataset.padProfile = profileType;
 
-  const applyPointerState = (clientX: number, clientY: number) => {
-    const newState = calculateState(clientX, clientY);
-    const bridge = getBridgedDiagonal(currentState, newState);
-    if (pendingStateFrame !== null) cancelAnimationFrame(pendingStateFrame);
-    pendingStateFrame = null;
-    if (!bridge) {
-      applyState(newState);
-      return;
-    }
-    applyState(bridge);
-    pendingStateFrame = requestAnimationFrame(() => {
-      pendingStateFrame = null;
-      applyState(newState);
+  const engine = new TouchControlsEngine();
+  touchControls = engine;
+  const forceLegacy = shouldUseDigitalArcadeDpad(navigator.userAgent, typeof PointerEvent !== 'undefined');
+
+  if (system === 'n64') {
+    const n64Table = (bindings: Array<[number, string]>) => buildPadTable(bindings, (id, pressed) => setN64ButtonPressed(id, pressed));
+    mountN64Layout({
+      engine,
+      profile,
+      forceLegacy,
+      stickTable: n64Table([
+        [PadBit.Up, 'analog-up'], [PadBit.Down, 'analog-down'], [PadBit.Left, 'analog-left'], [PadBit.Right, 'analog-right'],
+      ]),
+      dpadTable: n64Table([
+        [PadBit.Up, 'dpad-up'], [PadBit.Down, 'dpad-down'], [PadBit.Left, 'dpad-left'], [PadBit.Right, 'dpad-right'],
+      ]),
+      buttonTable: n64Table([
+        [PadBit.A, 'a'], [PadBit.B, 'b'], [PadBit.Start, 'start'], [PadBit.Z, 'z'], [PadBit.L, 'l'], [PadBit.R, 'r'],
+        [PadBit.CUp, 'c-up'], [PadBit.CDown, 'c-down'], [PadBit.CLeft, 'c-left'], [PadBit.CRight, 'c-right'],
+      ]),
     });
-  };
-
-  if (typeof PointerEvent !== 'undefined' && !useDigitalFallback) {
-    let activePointerId: number | null = null;
-    touchArea.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      if (activePointerId !== null) return;
-      activePointerId = event.pointerId;
-      applyPointerState(event.clientX, event.clientY);
-      try {
-        touchArea.setPointerCapture(event.pointerId);
-      } catch {
-        // Older Android Chrome can reject capture while still delivering pointer events.
-      }
-    });
-    touchArea.addEventListener('pointermove', (event) => {
-      if (event.pointerId !== activePointerId) return;
-      event.preventDefault();
-      applyPointerState(event.clientX, event.clientY);
-    });
-    const releasePointer = (event: PointerEvent) => {
-      if (event.pointerId !== activePointerId) return;
-      event.preventDefault();
-      activePointerId = null;
-      clearState();
-    };
-    touchArea.addEventListener('pointerup', releasePointer);
-    touchArea.addEventListener('pointercancel', releasePointer);
+  } else if (system === 'arcade') {
+    const arcadeArea = document.getElementById('arcade-controller-area');
+    const table = buildPadTable<number>([
+      [PadBit.Up, ArcadeInputBit.Up], [PadBit.Down, ArcadeInputBit.Down],
+      [PadBit.Left, ArcadeInputBit.Left], [PadBit.Right, ArcadeInputBit.Right],
+      [PadBit.A, ArcadeInputBit.ButtonA], [PadBit.B, ArcadeInputBit.ButtonB], [PadBit.C, ArcadeInputBit.ButtonC],
+      [PadBit.D, ArcadeInputBit.ButtonD], [PadBit.E, ArcadeInputBit.ButtonE], [PadBit.F, ArcadeInputBit.ButtonF],
+      [PadBit.Select, ArcadeInputBit.Coin], [PadBit.Start, ArcadeInputBit.Start],
+    ], (bit, pressed) => setArcadeInputBit(bit, pressed));
+    const history = profile.inputTrail && arcadeArea ? createCommandHistory(arcadeArea) : null;
+    mountArcadeLayout({ engine, profile, table, history, forceLegacy });
+  } else if (usesSixButtonController()) {
+    const table = buildPadTable<number>([
+      [PadBit.Up, SnesButton.Up], [PadBit.Down, SnesButton.Down], [PadBit.Left, SnesButton.Left], [PadBit.Right, SnesButton.Right],
+      [PadBit.A, SnesButton.A], [PadBit.B, SnesButton.B], [PadBit.X, SnesButton.X], [PadBit.Y, SnesButton.Y],
+      [PadBit.L, SnesButton.L], [PadBit.R, SnesButton.R], [PadBit.Select, SnesButton.Select], [PadBit.Start, SnesButton.Start],
+    ], (button, pressed) => setSnesButton(button, pressed));
+    mountSnesLayout({ engine, profile, table, forceLegacy });
   } else {
-    touchArea.addEventListener('touchstart', (event) => {
-      event.preventDefault();
-      const touch = event.changedTouches[0];
-      if (touch) applyPointerState(touch.clientX, touch.clientY);
-    }, { passive: false });
-
-    touchArea.addEventListener('touchmove', (event) => {
-      event.preventDefault();
-      const touch = event.changedTouches[0];
-      if (touch) applyPointerState(touch.clientX, touch.clientY);
-    }, { passive: false });
-
-    touchArea.addEventListener('touchend', (event) => { event.preventDefault(); clearState(); }, { passive: false });
-    touchArea.addEventListener('touchcancel', (event) => { event.preventDefault(); clearState(); }, { passive: false });
-
-    touchArea.addEventListener('mousedown', (event) => {
-      event.preventDefault();
-      mouseDown = true;
-      applyPointerState(event.clientX, event.clientY);
-    });
-
-    document.addEventListener('mousemove', (event) => {
-      if (mouseDown) applyPointerState(event.clientX, event.clientY);
-    });
-
-    document.addEventListener('mouseup', () => {
-      if (mouseDown) {
-        mouseDown = false;
-        clearState();
-      }
-    });
+    const table = buildPadTable<ControllerButton>([
+      [PadBit.Up, ControllerButton.Up], [PadBit.Down, ControllerButton.Down],
+      [PadBit.Left, ControllerButton.Left], [PadBit.Right, ControllerButton.Right],
+      [PadBit.A, ControllerButton.A], [PadBit.B, ControllerButton.B],
+      [PadBit.Select, ControllerButton.Select], [PadBit.Start, ControllerButton.Start],
+    ], (button, pressed) => setNesButton(button, pressed));
+    mountNesLayout({ engine, profile, table, forceLegacy });
   }
-}
-
-function setupN64Buttons(): void {
-  document.querySelectorAll('#n64-controller-area [data-n64-button]').forEach((node) => {
-    const button = node as HTMLElement;
-    const bindingId = button.dataset.n64Button;
-    if (!bindingId || button.dataset.n64Wired) return;
-    button.dataset.n64Wired = '1';
-
-    const activeTouchIds = new Set<number>();
-    const press = () => setN64ButtonPressed(bindingId, true, button);
-    const release = () => setN64ButtonPressed(bindingId, false, button);
-
-    button.addEventListener('touchstart', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      for (const touch of Array.from(event.changedTouches)) activeTouchIds.add(touch.identifier);
-      press();
-    }, { passive: false });
-
-    button.addEventListener('touchend', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      for (const touch of Array.from(event.changedTouches)) activeTouchIds.delete(touch.identifier);
-      if (activeTouchIds.size === 0) release();
-    }, { passive: false });
-
-    button.addEventListener('touchcancel', (event) => {
-      event.preventDefault();
-      for (const touch of Array.from(event.changedTouches)) activeTouchIds.delete(touch.identifier);
-      if (activeTouchIds.size === 0) release();
-    }, { passive: false });
-
-    button.addEventListener('mousedown', (event) => { event.preventDefault(); press(); });
-    button.addEventListener('mouseup', (event) => { event.preventDefault(); release(); });
-    button.addEventListener('mouseleave', release);
-  });
-
-  setupN64DirectionalPad('n64-stick', 'n64-stick-touch', {
-    up: 'analog-up',
-    down: 'analog-down',
-    left: 'analog-left',
-    right: 'analog-right',
-  }, {
-    up: 'n64-stick-up',
-    down: 'n64-stick-down',
-    left: 'n64-stick-left',
-    right: 'n64-stick-right',
-  });
-
-  setupN64DirectionalPad('n64-dpad', 'n64-dpad-touch', {
-    up: 'dpad-up',
-    down: 'dpad-down',
-    left: 'dpad-left',
-    right: 'dpad-right',
-  }, {
-    up: 'n64-dpad-up',
-    down: 'n64-dpad-down',
-    left: 'n64-dpad-left',
-    right: 'n64-dpad-right',
-  });
-
-  const saveButton = document.getElementById('n64-mobile-save');
-  if (saveButton && !saveButton.dataset.n64Wired) {
-    saveButton.dataset.n64Wired = '1';
-    saveButton.addEventListener('click', () => {
-      showToast('N64 即時存檔尚未支援，遊戲內存檔會自動保存');
-    });
-  }
-
-  const loadButton = document.getElementById('n64-mobile-load');
-  if (loadButton && !loadButton.dataset.n64Wired) {
-    loadButton.dataset.n64Wired = '1';
-    loadButton.addEventListener('click', () => {
-      showToast('N64 即時讀檔尚未支援，遊戲內存檔會自動載入');
-    });
-  }
-
-}
-
-function setupN64DirectionalPad(
-  padId: string,
-  touchAreaId: string,
-  bindings: Record<keyof DpadState, string>,
-  visualIds: Record<keyof DpadState, string>,
-): void {
-  const pad = document.getElementById(padId);
-  const touchArea = document.getElementById(touchAreaId);
-  if (!pad || !touchArea || touchArea.dataset.n64Wired) return;
-  touchArea.dataset.n64Wired = '1';
-
-  let currentState: DpadState = { up: false, down: false, left: false, right: false };
-  let mouseDown = false;
-  let pendingStateFrame: number | null = null;
-
-  const applyState = (newState: DpadState) => {
-    for (const direction of ['up', 'down', 'left', 'right'] as Array<keyof DpadState>) {
-      if (newState[direction] !== currentState[direction]) {
-        setN64ButtonPressed(bindings[direction], newState[direction]);
-      }
-      document.getElementById(visualIds[direction])?.classList.toggle('pressed', newState[direction]);
-    }
-    currentState = { ...newState };
-  };
-
-  const clearState = () => {
-    if (pendingStateFrame !== null) cancelAnimationFrame(pendingStateFrame);
-    pendingStateFrame = null;
-    pad.classList.remove('engaged');
-    pad.style.setProperty('--stick-x', '0px');
-    pad.style.setProperty('--stick-y', '0px');
-    applyState({ up: false, down: false, left: false, right: false });
-  };
-
-  const calculateState = (clientX: number, clientY: number): DpadState => {
-    const rect = pad.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    const dx = clientX - centerX;
-    const dy = clientY - centerY;
-    const deadZone = rect.width / 2 * 0.15;
-    const distance = Math.hypot(dx, dy);
-    const maxTravel = rect.width * 0.24;
-    const travelScale = distance > maxTravel ? maxTravel / distance : 1;
-    pad.classList.toggle('engaged', distance > deadZone);
-    pad.style.setProperty('--stick-x', `${dx * travelScale}px`);
-    pad.style.setProperty('--stick-y', `${dy * travelScale}px`);
-    return quantizeVirtualStick(dx, dy, deadZone);
-  };
-
-  const applyPointerState = (clientX: number, clientY: number) => {
-    const newState = calculateState(clientX, clientY);
-    const bridge = getBridgedDiagonal(currentState, newState);
-    if (pendingStateFrame !== null) cancelAnimationFrame(pendingStateFrame);
-    pendingStateFrame = null;
-    if (!bridge) {
-      applyState(newState);
-      return;
-    }
-    applyState(bridge);
-    pendingStateFrame = requestAnimationFrame(() => {
-      pendingStateFrame = null;
-      applyState(newState);
-    });
-  };
-
-  touchArea.addEventListener('touchstart', (event) => {
-    event.preventDefault();
-    const touch = event.changedTouches[0];
-    if (touch) applyPointerState(touch.clientX, touch.clientY);
-  }, { passive: false });
-
-  touchArea.addEventListener('touchmove', (event) => {
-    event.preventDefault();
-    const touch = event.changedTouches[0];
-    if (touch) applyPointerState(touch.clientX, touch.clientY);
-  }, { passive: false });
-
-  touchArea.addEventListener('touchend', (event) => { event.preventDefault(); clearState(); }, { passive: false });
-  touchArea.addEventListener('touchcancel', (event) => { event.preventDefault(); clearState(); }, { passive: false });
-
-  touchArea.addEventListener('mousedown', (event) => {
-    event.preventDefault();
-    mouseDown = true;
-    applyPointerState(event.clientX, event.clientY);
-  });
-
-  document.addEventListener('mousemove', (event) => {
-    if (mouseDown) applyPointerState(event.clientX, event.clientY);
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (mouseDown) {
-      mouseDown = false;
-      clearState();
-    }
-  });
+  requestPortraitFit();
 }
 
 /**
- * 設定 SNES 按鈕觸控/滑鼠事件 (支援多點觸控)
+ * 設定虛擬控制器共用行為：淡出、焦點遺失時放開所有按鍵、存讀檔按鈕。
  */
-function setupSnesButtons(): void {
-  // --- ABXY: thumb-contact and multi-touch aware ---
-  const faceBtnDefs: { id: string; btn: number }[] = [
-    { id: 'snes-btn-a', btn: SnesButton.A },
-    { id: 'snes-btn-b', btn: SnesButton.B },
-    { id: 'snes-btn-x', btn: SnesButton.X },
-    { id: 'snes-btn-y', btn: SnesButton.Y },
-  ];
-  const faceButtons: ThumbContactButton[] = [];
-
-  for (const { id, btn } of faceBtnDefs) {
-    const element = document.getElementById(id);
-    if (!element) continue;
-    faceButtons.push({ id, element, setPressed: pressed => setSnesButton(btn, pressed) });
+function setupVirtualController(): void {
+  const controller = document.getElementById('virtual-controller');
+  if (controller) {
+    padFader = new IdleFader(controller, 3000);
+    const wake = () => padFader?.wake();
+    document.addEventListener('pointerdown', wake, { capture: true, passive: true });
+    document.addEventListener('touchstart', wake, { capture: true, passive: true });
   }
-
-  setupThumbContactButtons(document.querySelector('.snes-abxy-diamond'), faceButtons);
-
-  // --- L/R: conventional multi-touch buttons ---
-  const shoulderBtnDefs: { id: string; btn: number }[] = [
-    { id: 'snes-btn-l', btn: SnesButton.L },
-    { id: 'snes-btn-r', btn: SnesButton.R },
-  ];
-
-  const shoulderTouches = new Map<string, Set<number>>();
-
-  for (const { id, btn } of shoulderBtnDefs) {
-    const el = document.getElementById(id);
-    if (!el || el.dataset.snesWired) continue;
-    el.dataset.snesWired = '1';
-    shoulderTouches.set(id, new Set());
-
-    el.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const touches = shoulderTouches.get(id)!;
-      for (const t of Array.from(e.changedTouches)) {
-        touches.add(t.identifier);
-      }
-      setSnesButton(btn, true);
-      el.classList.add('pressed');
-    }, { passive: false });
-
-    el.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const touches = shoulderTouches.get(id)!;
-      for (const t of Array.from(e.changedTouches)) {
-        touches.delete(t.identifier);
-      }
-      if (touches.size === 0) {
-        setSnesButton(btn, false);
-        el.classList.remove('pressed');
-      }
-    }, { passive: false });
-
-    el.addEventListener('touchcancel', (e) => {
-      e.preventDefault();
-      const touches = shoulderTouches.get(id)!;
-      for (const t of Array.from(e.changedTouches)) {
-        touches.delete(t.identifier);
-      }
-      if (touches.size === 0) {
-        setSnesButton(btn, false);
-        el.classList.remove('pressed');
-      }
-    }, { passive: false });
-
-    // Mouse events (for desktop testing)
-    el.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      setSnesButton(btn, true);
-      el.classList.add('pressed');
-    });
-    el.addEventListener('mouseup', (e) => {
-      e.preventDefault();
-      setSnesButton(btn, false);
-      el.classList.remove('pressed');
-    });
-    el.addEventListener('mouseleave', () => {
-      setSnesButton(btn, false);
-      el.classList.remove('pressed');
-    });
-  }
-
-  // SNES Select/Start 使用 SnesButton 編號
-  const snesFuncBtns = document.querySelectorAll('#snes-controller-area [data-snes-btn]');
-  snesFuncBtns.forEach(b => {
-    const el = b as HTMLElement;
-    if (el.dataset.snesWired) return;
-    el.dataset.snesWired = '1';
-    const btnType = el.dataset.snesBtn;
-    const btnId = btnType === 'start' ? SnesButton.Start : SnesButton.Select;
-
-    el.addEventListener('touchstart', (e) => { e.preventDefault(); setSnesButton(btnId, true); el.classList.add('pressed'); }, { passive: false });
-    el.addEventListener('touchend', (e) => { e.preventDefault(); setSnesButton(btnId, false); el.classList.remove('pressed'); }, { passive: false });
-    el.addEventListener('touchcancel', (e) => { e.preventDefault(); setSnesButton(btnId, false); el.classList.remove('pressed'); }, { passive: false });
-    el.addEventListener('mousedown', (e) => { e.preventDefault(); setSnesButton(btnId, true); el.classList.add('pressed'); });
-    el.addEventListener('mouseup', (e) => { e.preventDefault(); setSnesButton(btnId, false); el.classList.remove('pressed'); });
-    el.addEventListener('mouseleave', () => { setSnesButton(btnId, false); el.classList.remove('pressed'); });
+  window.addEventListener('blur', () => touchControls?.releaseAll());
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) touchControls?.releaseAll();
   });
 
-  // SNES D-Pad (reuse same logic)
-  const snesDpad = document.getElementById('snes-dpad');
-  const snesDpadArea = document.getElementById('snes-dpad-touch-area');
-  if (snesDpadArea && snesDpad && !snesDpadArea.dataset.snesWired) {
-    snesDpadArea.dataset.snesWired = '1';
-    let snesCurrentDpad: DpadState = { up: false, down: false, left: false, right: false };
-
-    const applySnesDpad = (newState: DpadState) => {
-      if (newState.up !== snesCurrentDpad.up) setSnesButton(SnesButton.Up, newState.up);
-      if (newState.down !== snesCurrentDpad.down) setSnesButton(SnesButton.Down, newState.down);
-      if (newState.left !== snesCurrentDpad.left) setSnesButton(SnesButton.Left, newState.left);
-      if (newState.right !== snesCurrentDpad.right) setSnesButton(SnesButton.Right, newState.right);
-      document.getElementById('snes-dpad-up')?.classList.toggle('pressed', newState.up);
-      document.getElementById('snes-dpad-down')?.classList.toggle('pressed', newState.down);
-      document.getElementById('snes-dpad-left')?.classList.toggle('pressed', newState.left);
-      document.getElementById('snes-dpad-right')?.classList.toggle('pressed', newState.right);
-      snesCurrentDpad = { ...newState };
-    };
-
-    const calcDpad = (touch: Touch | MouseEvent): DpadState => {
-      const rect = snesDpad.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-      const dx = ('clientX' in touch ? touch.clientX : 0) - cx;
-      const dy = ('clientY' in touch ? touch.clientY : 0) - cy;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const ns: DpadState = { up: false, down: false, left: false, right: false };
-      if (dist > rect.width / 2 * 0.15) {
-        const a = Math.atan2(dy, dx) * 180 / Math.PI;
-        if (a >= -22.5 && a < 22.5) ns.right = true;
-        else if (a >= 22.5 && a < 67.5) { ns.right = true; ns.down = true; }
-        else if (a >= 67.5 && a < 112.5) ns.down = true;
-        else if (a >= 112.5 && a < 157.5) { ns.left = true; ns.down = true; }
-        else if (a >= 157.5 || a < -157.5) ns.left = true;
-        else if (a >= -157.5 && a < -112.5) { ns.left = true; ns.up = true; }
-        else if (a >= -112.5 && a < -67.5) ns.up = true;
-        else if (a >= -67.5 && a < -22.5) { ns.right = true; ns.up = true; }
-      }
-      return ns;
-    };
-    const clearSnesDpad = () => applySnesDpad({ up: false, down: false, left: false, right: false });
-
-    snesDpadArea.addEventListener('touchstart', (e) => { e.preventDefault(); for (const t of Array.from(e.changedTouches)) applySnesDpad(calcDpad(t)); }, { passive: false });
-    snesDpadArea.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of Array.from(e.changedTouches)) applySnesDpad(calcDpad(t)); }, { passive: false });
-    snesDpadArea.addEventListener('touchend', (e) => { e.preventDefault(); clearSnesDpad(); }, { passive: false });
-    snesDpadArea.addEventListener('touchcancel', (e) => { e.preventDefault(); clearSnesDpad(); }, { passive: false });
-
-    let md = false;
-    snesDpadArea.addEventListener('mousedown', (e) => { e.preventDefault(); md = true; applySnesDpad(calcDpad(e)); });
-    document.addEventListener('mousemove', (e) => { if (md) applySnesDpad(calcDpad(e)); });
-    document.addEventListener('mouseup', () => { if (md) { md = false; clearSnesDpad(); } });
-  }
-  // SNES Save/Load buttons
-  const snesSaveButton = document.getElementById('snes-mobile-save');
-  if (snesSaveButton && !snesSaveButton.dataset.stateWired) {
-    snesSaveButton.dataset.stateWired = '1';
-    snesSaveButton.addEventListener('click', () => {
-      void saveStateForUser(0, true);
-    });
-  }
-  const snesLoadButton = document.getElementById('snes-mobile-load');
-  if (snesLoadButton && !snesLoadButton.dataset.stateWired) {
-    snesLoadButton.dataset.stateWired = '1';
-    snesLoadButton.addEventListener('click', () => {
-      void loadStateForUser(0, true);
-    });
-  }
+  const bindClick = (id: string, handler: () => void) => {
+    document.getElementById(id)?.addEventListener('click', handler);
+  };
+  bindClick('mobile-save-state', () => { void saveStateForUser(0, true); });
+  bindClick('mobile-load-state', () => { void loadStateForUser(0, true); });
+  bindClick('snes-mobile-save', () => { void saveStateForUser(0, true); });
+  bindClick('snes-mobile-load', () => { void loadStateForUser(0, true); });
+  bindClick('arcade-mobile-save', () => showToast(saveState(0) ? '✅ 存檔成功' : '❌ 存檔失敗'));
+  bindClick('arcade-mobile-load', () => showToast(loadState(0) ? '✅ 讀取成功' : '❌ 沒有存檔'));
+  bindClick('n64-mobile-save', () => showToast('N64 即時存檔尚未支援，遊戲內存檔會自動保存'));
+  bindClick('n64-mobile-load', () => showToast('N64 即時讀檔尚未支援，遊戲內存檔會自動載入'));
 }
 
 // ===== 鍵盤快捷鍵 =====

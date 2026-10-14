@@ -1,0 +1,349 @@
+/* ==========================================================================
+   遊戲舞台樣式（載入順序最後，覆蓋 index.html 內嵌樣式）
+   A. 共用：虛擬控制器互動、淡出、浮動搖桿、軌跡、指令列、巨集鍵、連發鍵
+   B. 觸控裝置：安全區域只套用一次、直立版面填滿可視高度
+   C. 電腦版：依主機換外框的舞台、浮動工具列、側邊抽屜
+   ========================================================================== */
+
+/* ---------- A. 虛擬控制器 ---------- */
+.virtual-controller,
+.virtual-controller * {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.virtual-controller.pad-fader {
+  transition: opacity 50ms linear;
+}
+
+/* 直立版控制區不遮擋畫面，只有橫向（按鍵疊在畫面旁）才淡出。 */
+body.mobile-landscape-mode .virtual-controller.pad-fader {
+  opacity: 0.85;
+}
+
+body.mobile-landscape-mode .virtual-controller.pad-fader.pad-idle {
+  opacity: 0.35;
+  transition: opacity 700ms ease;
+}
+
+.pad-zone[data-pad-mode="floating"] {
+  position: relative;
+}
+
+.pad-float {
+  --ox: 0px;
+  --oy: 0px;
+  --kx: 0px;
+  --ky: 0px;
+  position: absolute;
+  left: var(--ox);
+  top: var(--oy);
+  width: 0;
+  height: 0;
+  z-index: 8;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease-out;
+}
+
+.pad-zone.is-floating > .pad-float {
+  opacity: 1;
+  transition-duration: 40ms;
+}
+
+.pad-float-base {
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.1) 0 30%, rgba(20, 20, 28, 0.62) 31% 100%);
+  border: 2px solid rgba(160, 225, 255, 0.5);
+  box-shadow: 0 0 22px rgba(90, 190, 255, 0.35), inset 0 0 18px rgba(0, 0, 0, 0.5);
+}
+
+.pad-float-knob {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #c9d4d8, #6b777e);
+  box-shadow: 0 0 16px rgba(110, 210, 255, 0.55), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+  transform: translate(var(--kx), var(--ky));
+}
+
+.pad-zone.is-floating .arcade-stick {
+  opacity: 0.22;
+}
+
+.arcade-stick {
+  transition: opacity 200ms ease;
+}
+
+.pad-ribbon {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9;
+}
+
+/* 格鬥與射擊使用浮動搖桿：左半邊整塊都是觸控區。 */
+body[data-pad-profile="ARCADE_FIGHTING"] #arcade-controller-area .dpad-container,
+body[data-pad-profile="ARCADE_SHMUP"] #arcade-controller-area .dpad-container {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  align-self: stretch;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.pad-history-wrap {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: -30px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.pad-history {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 3px;
+  overflow: hidden;
+  padding: 3px 6px;
+  border-radius: 10px;
+  background: rgba(10, 10, 18, 0.62);
+  transition: opacity 400ms ease;
+}
+
+.pad-history[hidden] {
+  display: none;
+}
+
+.pad-history.is-faded {
+  opacity: 0.35;
+}
+
+.pad-history-dir,
+.pad-history-btn {
+  flex: 0 0 auto;
+  min-width: 18px;
+  text-align: center;
+  font: 800 14px/18px system-ui, sans-serif;
+  color: #dff6ff;
+}
+
+.pad-history-btn {
+  padding: 0 4px;
+  border-radius: 9px;
+  background: rgba(255, 200, 80, 0.9);
+  color: #2a1a00;
+  font-size: 11px;
+}
+
+.pad-history-toggle {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 3px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 10px;
+  background: rgba(10, 10, 18, 0.62);
+  color: rgba(255, 255, 255, 0.85);
+  font: 700 11px/16px system-ui, sans-serif;
+  pointer-events: auto;
+}
+
+.pad-history-toggle[aria-pressed="true"] {
+  background: rgba(70, 150, 230, 0.85);
+}
+
+.arcade-macro-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.arcade-macro-btn {
+  min-width: 58px;
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #8a63d6, #5a3c9a);
+  color: #fff;
+  font: 800 12px/1 system-ui, sans-serif;
+  box-shadow: 0 3px 7px rgba(0, 0, 0, 0.45), inset 0 1px 2px rgba(255, 255, 255, 0.25);
+}
+
+.arcade-macro-btn.pressed {
+  transform: scale(0.92);
+  filter: brightness(0.78);
+}
+
+.turbo-row {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 8px;
+}
+
+.turbo-btn {
+  width: 54px;
+  height: 26px;
+  border: none;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #7a5a22, #55400f);
+  color: rgba(255, 244, 214, 0.95);
+  font: 800 11px/1 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.22);
+}
+
+.turbo-btn.pressed {
+  transform: scale(0.92);
+  filter: brightness(1.2);
+}
+
+/* 橫射遊戲：兩顆超大鍵。 */
+body[data-pad-profile="ARCADE_SHMUP"] .arcade-face-grid {
+  --arcade-face-size: 84px;
+  grid-template-columns: repeat(2, 84px);
+  grid-auto-rows: 84px;
+  gap: 18px;
+}
+
+body[data-pad-profile="ARCADE_SHMUP"] .arcade-face-btn {
+  width: 84px;
+  height: 84px;
+  font-size: 28px;
+}
+
+/* 連發鍵暫時隱藏（會與 A/B 鈕太靠近）；移除此規則即可恢復，引擎與 Profile 仍保留。 */
+.turbo-row {
+  display: none;
+}
+
+/* N64 第二顆 Z 鍵（右手扣板機）。 */
+#n64-controller-area .n64-top-row {
+  gap: 6px;
+}
+
+/* ---------- B. 觸控裝置 ---------- */
+
+/* 安全區域只由 .gameboy-shell 套用一次；body 與 shell 同時加內距會讓橫向畫面少掉兩倍的瀏海寬度。 */
+body.game-active.touch-device-mode {
+  padding-top: 0 !important;
+  padding-right: 0 !important;
+  padding-left: 0 !important;
+}
+
+/* Safari 瀏覽器模式的底部內距是收合網址列用的捲動緩衝，不能清掉。 */
+body.game-active.touch-device-mode:not(.ios-safari-browser-mode) {
+  padding-bottom: 0 !important;
+}
+
+@media (max-width: 768px) {
+  body.game-active.touch-device-mode:not(.mobile-landscape-mode) {
+    justify-content: flex-start;
+  }
+
+  body.game-active.touch-device-mode:not(.mobile-landscape-mode) .gameboy-shell {
+    justify-content: flex-start;
+    height: auto;
+    min-height: var(--app-height, 100dvh);
+    max-width: min(100%, 560px);
+    padding-top: max(8px, env(safe-area-inset-top)) !important;
+    padding-right: max(6px, env(safe-area-inset-right)) !important;
+    padding-bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    padding-left: max(6px, env(safe-area-inset-left)) !important;
+  }
+
+  /* 內容超出可視高度時由腳本算出 --screen-max-h，縮小畫面而不是縮小按鍵。 */
+  body.screen-shrunk.touch-device-mode:not(.mobile-landscape-mode):not(.n64-initializing) #screen,
+  body.screen-shrunk.touch-device-mode:not(.mobile-landscape-mode):not(.n64-initializing) #canvas,
+  body.screen-shrunk.touch-device-mode:not(.mobile-landscape-mode):not(.n64-initializing) #snes9x-screen {
+    width: min(100%, calc(var(--screen-max-h, 9999px) * var(--screen-aspect, 1.3333))) !important;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  body.screen-shrunk.touch-device-mode:not(.mobile-landscape-mode) .screen-bezel {
+    width: fit-content;
+    max-width: 100%;
+    align-self: center;
+  }
+
+  body.n64-mode.touch-device-mode:not(.mobile-landscape-mode) #n64-controller-area {
+    height: auto;
+    gap: 10px;
+    justify-content: flex-start;
+    padding: 12px 8px 10px;
+  }
+}
+
+/* 橫向：按鍵在畫面兩側，組合鍵縮小以放進側欄，浮動搖桿的觸控區涵蓋整個左側。 */
+body.mobile-landscape-mode .arcade-macro-row {
+  gap: 4px;
+  width: 100%;
+}
+
+body.mobile-landscape-mode .arcade-macro-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 24px;
+  padding: 0 2px;
+  font-size: 9px;
+}
+
+body.mobile-landscape-mode[data-pad-profile="ARCADE_FIGHTING"] #arcade-controller-area .dpad-container,
+body.mobile-landscape-mode[data-pad-profile="ARCADE_SHMUP"] #arcade-controller-area .dpad-container {
+  height: calc(var(--app-height, 100dvh) - 16px);
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-50%) !important;
+}
+
+/* 直式街機（雷電、怒首領蜂…）橫向時，直立版 52dvh/減 320px 的公式會把畫面縮成幾十像素。 */
+body.mobile-landscape-mode.arcade-mode.arcade-vertical-mode {
+  --landscape-screen-width: calc((var(--app-height, 100dvh) - 28px) * 3 / 4 + 24px);
+}
+
+body.mobile-landscape-mode.arcade-mode.arcade-vertical-mode #screen {
+  width: 100% !important;
+  height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+body.mobile-landscape-mode .pad-history-wrap {
+  position: fixed;
+  top: max(4px, env(safe-area-inset-top));
+  left: calc(var(--arcade-landscape-side, 170px) + 16px);
+  right: auto;
+  width: min(280px, 36vw);
+}
+
+/* SNES 橫向：菱形四鍵縮小一階，避免 A 鍵被右緣切掉（窄機型）。 */
+body.mobile-landscape-mode.snes-mode .snes-abxy-diamond {
+  --snes-face-size: 50px;
+  grid-template-columns: var(--snes-face-size) 34px var(--snes-face-size);
+  grid-template-rows: var(--snes-face-size) 34px var(--snes-face-size);
+}
+
+body.mobile-landscape-mode.snes-mode .snes-abxy-diamond .snes-face-btn {
+  width: var(--snes-face-size);
+  height: var(--snes-face-size);
+  font-size: 17px;
+}
