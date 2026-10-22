@@ -18,6 +18,7 @@ export interface N64BenchmarkConfig {
   persistentBuffers: boolean;
   persistentRectBuffers: boolean;
   cullStateCache: boolean;
+  suppressGlFinish: boolean;
 }
 
 export interface N64BenchmarkSummary {
@@ -48,6 +49,11 @@ export interface N64BenchmarkSummary {
   audioEmptyUnderruns: number;
   audioMaxCallbackGapMs: number;
   averageCoreResidualMs: number;
+  /** Real VI interrupts; null unless every sampled window had runtime counters. */
+  emulatedViPerSecond: number | null;
+  emulationSpeed: number | null;
+  audioSyncPauses: number | null;
+  audioSyncPausedMs: number | null;
 }
 
 export type N64BenchmarkEvent =
@@ -100,6 +106,7 @@ export function resolveN64BenchmarkConfig(
       persistentBuffers: normalMobileStream,
       persistentRectBuffers: false,
       cullStateCache: runtime === 'fork' && params.get('n64CullStateCache') === '1',
+      suppressGlFinish: runtime === 'fork' && params.get('n64SuppressGlFinish') === '1',
     };
   }
 
@@ -132,6 +139,7 @@ export function resolveN64BenchmarkConfig(
   const persistentRectBuffers = persistentBuffers
     && (mobileTest === 'full'
       || (mobileTest === null && params.get('n64PersistentRectBuffers') === '1'));
+  const suppressGlFinish = runtime === 'fork' && params.get('n64SuppressGlFinish') === '1';
   const warmupMs = mobileTest === null ? 30_000 : 10_000;
   const sampleMs = mobileTest === null ? 60_000 : 20_000;
   const label = [
@@ -147,6 +155,7 @@ export function resolveN64BenchmarkConfig(
         : persistentRectBuffers
           ? 'rice-persistent-full'
           : persistentBuffers ? 'rice-persistent-buffers' : 'rice',
+    ...(suppressGlFinish ? ['no-glfinish'] : []),
   ].join('/');
 
   return {
@@ -163,6 +172,7 @@ export function resolveN64BenchmarkConfig(
     persistentBuffers,
     persistentRectBuffers,
     cullStateCache: runtime === 'fork' && params.get('n64CullStateCache') === '1',
+    suppressGlFinish,
   };
 }
 
@@ -198,6 +208,11 @@ export function createN64BenchmarkSession(
   let audioEmptyUnderruns = 0;
   let audioMaxCallbackGapMs = 0;
   let coreResidualMs = 0;
+  let countersComplete = true;
+  let emulatedViCount = 0;
+  let viRefreshRate: number | null = null;
+  let audioSyncPauses = 0;
+  let audioSyncPausedMs = 0;
   let complete = false;
 
   return {
@@ -235,9 +250,19 @@ export function createN64BenchmarkSession(
       audioEmptyUnderruns += report.audioEmptyUnderruns;
       audioMaxCallbackGapMs = Math.max(audioMaxCallbackGapMs, report.audioMaxCallbackGapMs);
       coreResidualMs += report.coreResidualMs;
+      if (report.emulatedViCount === null || report.audioSyncPauses === null
+        || report.audioSyncPausedMs === null) {
+        countersComplete = false;
+      } else {
+        emulatedViCount += report.emulatedViCount;
+        audioSyncPauses += report.audioSyncPauses;
+        audioSyncPausedMs += report.audioSyncPausedMs;
+        viRefreshRate = report.viRefreshRate ?? viRefreshRate;
+      }
 
       if (sampleElapsedMs < sampleMs) return null;
       complete = true;
+      const emulatedViPerSecond = countersComplete ? emulatedViCount * 1000 / sampleElapsedMs : null;
       return {
         type: 'complete',
         summary: {
@@ -268,6 +293,12 @@ export function createN64BenchmarkSession(
           audioEmptyUnderruns,
           audioMaxCallbackGapMs,
           averageCoreResidualMs: viCount === 0 ? 0 : coreResidualMs / viCount,
+          emulatedViPerSecond,
+          emulationSpeed: emulatedViPerSecond === null || viRefreshRate === null
+            ? null
+            : emulatedViPerSecond / viRefreshRate,
+          audioSyncPauses: countersComplete ? audioSyncPauses : null,
+          audioSyncPausedMs: countersComplete ? audioSyncPausedMs : null,
         },
       };
     },

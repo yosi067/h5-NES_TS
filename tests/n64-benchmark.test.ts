@@ -53,6 +53,12 @@ function report(overrides: Partial<N64TelemetryReport> = {}): N64TelemetryReport
     audioEmptyUnderruns: 1,
     audioMaxCallbackGapMs: 18,
     coreResidualMs: 830,
+    emulatedViCount: 60,
+    emulatedViPerSecond: 60,
+    viRefreshRate: 60,
+    emulationSpeed: 1,
+    audioSyncPauses: 1,
+    audioSyncPausedMs: 12,
     ...overrides,
   };
 }
@@ -84,7 +90,20 @@ describe('N64 benchmark controls', () => {
       persistentBuffers: true,
       persistentRectBuffers: false,
       cullStateCache: false,
+      suppressGlFinish: false,
     });
+  });
+
+  it('selects the glFinish suppression only for an explicit fork request', () => {
+    const baseline = resolveN64BenchmarkConfig(PROFILE, '');
+    expect(resolveN64BenchmarkConfig(PROFILE, '?n64SuppressGlFinish=1'))
+      .toEqual({ ...baseline, suppressGlFinish: true });
+    for (const search of ['?n64SuppressGlFinish=0', '?n64SuppressGlFinish=true', '?n64Runtime=npm&n64SuppressGlFinish=1']) {
+      expect(resolveN64BenchmarkConfig(PROFILE, search).suppressGlFinish).toBe(false);
+    }
+    const benchmark = resolveN64BenchmarkConfig(PROFILE, '?n64Benchmark=1&n64PersistentBuffers=1&n64SuppressGlFinish=1');
+    expect(benchmark.suppressGlFinish).toBe(true);
+    expect(benchmark.label).toBe('ios-high-end/emu1/skip/raf/rice-persistent-buffers/no-glfinish');
   });
 
   it('keeps desktop on npm and supports an explicit mobile rollback', () => {
@@ -240,5 +259,29 @@ describe('N64 benchmark controls', () => {
     expect(event.summary.averageRectDrawCalls).toBeCloseTo(4.44, 2);
     expect(event.summary.audioUnderruns).toBe(4);
     expect(event.summary.averageCoreResidualMs).toBeCloseTo(18.44, 2);
+    expect(event.summary.emulatedViPerSecond).toBe(60);
+    expect(event.summary.emulationSpeed).toBe(1);
+    expect(event.summary.audioSyncPauses).toBe(2);
+    expect(event.summary.audioSyncPausedMs).toBe(24);
+  });
+
+  it('reports real VI speed and sync pauses only when every sampled window has counters', () => {
+    const partial = createN64BenchmarkSession('test', 0, 2000);
+    partial.record(report({ emulatedViCount: 30, audioSyncPauses: 4, audioSyncPausedMs: 100 }));
+    const partialEvent = partial.record(report({
+      emulatedViCount: null, emulatedViPerSecond: null, emulationSpeed: null,
+      audioSyncPauses: null, audioSyncPausedMs: null,
+    }));
+    if (partialEvent?.type !== 'complete') throw new Error('expected complete summary');
+    expect(partialEvent.summary).toMatchObject({
+      emulatedViPerSecond: null, emulationSpeed: null, audioSyncPauses: null, audioSyncPausedMs: null,
+    });
+
+    const pal = createN64BenchmarkSession('test', 0, 2000);
+    pal.record(report({ emulatedViCount: 40, viRefreshRate: 50 }));
+    const palEvent = pal.record(report({ emulatedViCount: 50, viRefreshRate: 50 }));
+    if (palEvent?.type !== 'complete') throw new Error('expected complete summary');
+    expect(palEvent.summary.emulatedViPerSecond).toBe(45);
+    expect(palEvent.summary.emulationSpeed).toBe(0.9);
   });
 });

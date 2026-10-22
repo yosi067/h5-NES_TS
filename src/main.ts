@@ -46,6 +46,14 @@ import { createN64Telemetry } from './n64/telemetry';
 import { audioOutputDiagnosticsEnabled, createAudioOutputDiagnostics, type N64AudioOutputBridge } from './n64/audio-output-diagnostics';
 import { showN64AudioDiagnostics } from './n64/audio-diagnostics-panel';
 import { readRectDiagnostics } from './n64/rect-diagnostics';
+import {
+  glCallStatsEnabled,
+  installGlCallCounter,
+  summarizeGlCalls,
+  type GlCallCounter,
+  type GlCallCounts,
+  type GlCallSummary,
+} from './n64/gl-call-stats';
 import { readBinaryState, writeBinaryState } from './storage/binary-state-store';
 import { computePortraitFit, isInAppBrowser, shouldUseDesktopUi } from './ui/browser-env';
 import { TouchControlsEngine } from './ui/controls/engine';
@@ -282,6 +290,9 @@ let currentN64RomData: ArrayBuffer | null = null;
 let n64PerformanceProfile: N64PerformanceProfile = selectN64PerformanceProfile();
 let n64BenchmarkSession: N64BenchmarkSession | null = null;
 let removeN64BenchmarkDiagnostics: (() => void) | null = null;
+let n64GlCallCounter: GlCallCounter | null = null;
+let n64GlCallBaseline: GlCallCounts = {};
+let n64LatestGlCalls: GlCallSummary | null = null;
 
 interface GameProfileIndex {
   schemaVersion: number;
@@ -512,6 +523,18 @@ function installN64BenchmarkDiagnostics(canvas: HTMLCanvasElement, label: string
 let n64AudioOutputDiagnostics = createAudioOutputDiagnostics(audioOutputDiagnosticsEnabled(window.location.search));
 let n64Telemetry = createN64Telemetry({
   onReport: report => {
+    if (n64GlCallCounter) {
+      const glCalls = n64GlCallCounter.snapshot();
+      n64LatestGlCalls = summarizeGlCalls(n64GlCallBaseline, glCalls, report.viCount);
+      n64GlCallBaseline = glCalls;
+      console.info(
+        `[N64 GL calls] ${n64LatestGlCalls.callsPerLoop.toFixed(1)} calls/loop, ` +
+        `sync-like ${n64LatestGlCalls.syncLikeCallsPerLoop.toFixed(1)}/loop; top: ` +
+        n64LatestGlCalls.top
+          .map(entry => `${entry.name}${entry.syncLike ? '*' : ''} ${entry.perLoop.toFixed(1)}`)
+          .join(', '),
+      );
+    }
     if (audioOutputDiagnosticsEnabled(window.location.search)) {
       // SDL may replace the context/producer without any user gesture. Reattach
       // at the existing telemetry cadence; never retain a retired port's counters.
@@ -525,6 +548,7 @@ let n64Telemetry = createN64Telemetry({
         runtimeCullStateCache: globalThis.__n64CullStateCacheEnabled ?? null,
         audioOutput, sourceAndRenderer: report,
         rectanglePhases: readRectDiagnostics(window.location.search, globalThis.__n64RectPhases),
+        glCalls: n64LatestGlCalls,
       };
       showN64AudioDiagnostics(audioOutput, deviceReport);
       // Same local export surface as benchmark results; available without a benchmark.
@@ -533,9 +557,16 @@ let n64Telemetry = createN64Telemetry({
       } catch { /* Storage can be unavailable in private browsing. */ }
       console.info('[N64 audio output]', audioOutput);
     }
-    const speed = report.viPerSecond >= 56 ? 'real-time' : 'below real-time';
+    // viPerSecond counts main-loop iterations (one per Rice swap), so only the
+    // runtime's VI interrupt counter can tell whether emulation is at full speed.
+    const speed = report.emulationSpeed === null
+      ? 'emulated VI/s unavailable'
+      : `emulated ${report.emulatedViPerSecond?.toFixed(1)} VI/s, ${(report.emulationSpeed * 100).toFixed(1)}% speed`;
+    const syncPauses = report.audioSyncPauses === null
+      ? 'n/a'
+      : `${report.audioSyncPauses} (${report.audioSyncPausedMs?.toFixed(0)} ms)`;
     console.info(
-      `[N64 perf] ${report.viPerSecond.toFixed(1)} VI/s (${speed}), ` +
+      `[N64 perf] ${report.viPerSecond.toFixed(1)} loops/s (${speed}), audio sync pauses ${syncPauses}, ` +
       `VI avg/max ${report.averageViMs.toFixed(1)}/${report.longestViMs.toFixed(1)} ms, ` +
       `long VI ${report.longVis}, recompiles ${report.recompiles}, ` +
       `avg core/RSP/present/audio ${(report.coreResidualMs / report.viCount).toFixed(1)}/` +
@@ -575,9 +606,17 @@ let n64Telemetry = createN64Telemetry({
         config: resolveN64BenchmarkConfig(n64PerformanceProfile),
         rebuiltAssetVersion: N64_REBUILT_ASSET_VERSION,
         runtimeCullStateCache: globalThis.__n64CullStateCacheEnabled ?? null,
+        glCalls: n64LatestGlCalls,
       };
+      const emulatedSpeed = summary.emulationSpeed === null
+        ? 'N/A'
+        : `${summary.emulatedViPerSecond?.toFixed(1)} VI/s (${(summary.emulationSpeed * 100).toFixed(1)}%)`;
+      const audioSyncPauses = summary.audioSyncPauses === null
+        ? 'N/A'
+        : `${summary.audioSyncPauses} (${summary.audioSyncPausedMs?.toFixed(0)} ms)`;
       console.info(
-        `[N64 benchmark result] ${summary.label}: ${summary.viPerSecond.toFixed(1)} VI/s, ` +
+        `[N64 benchmark result] ${summary.label}: ${summary.viPerSecond.toFixed(1)} loops/s, ` +
+        `emulated ${emulatedSpeed}, audio sync pauses ${audioSyncPauses}, ` +
         `VI avg/max ${summary.averageViMs.toFixed(1)}/${summary.longestViMs.toFixed(1)} ms, ` +
         `long VI ${summary.longVis}, recompiles ${summary.recompiles}, ` +
         `avg core/RSP/present/audio ${summary.averageCoreResidualMs.toFixed(1)}/` +
@@ -610,10 +649,12 @@ let n64Telemetry = createN64Telemetry({
       }).catch(error => console.warn('[N64 benchmark] result upload failed:', error));
       void showAppAlert(
         `${mobileTest ? 'N64 手機簡易測試' : 'N64 Benchmark'}完成\n\n${summary.label}\n` +
-        `${summary.viPerSecond.toFixed(1)} VI/s\n` +
+        `${summary.viPerSecond.toFixed(1)} loops/s\n` +
+        `Emulated: ${emulatedSpeed}\n` +
         `VI avg/max: ${summary.averageViMs.toFixed(1)}/${summary.longestViMs.toFixed(1)} ms\n` +
         `Triangle/Rect: ${summary.averageTriangleDrawMs.toFixed(1)}/${summary.averageRectDrawMs.toFixed(1)} ms\n` +
         `SDL audio underruns: ${summary.audioUnderruns}\n` +
+        `SDL sync pauses: ${audioSyncPauses}\n` +
         `Output diagnostics: ${result.audioOutput.status}\n` +
         `Output gap total/max (since attach): ${result.audioOutput.underflowMs ?? 'N/A'}/${result.audioOutput.longestGapMs ?? 'N/A'} ms\n` +
         `Long VI: ${summary.longVis}\nRecompiles: ${summary.recompiles}`,
@@ -2506,6 +2547,11 @@ async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Prom
     // 原本的 #screen 已建立 2D context，瀏覽器不允許同一張 canvas 再切成 WebGL，
     // 因此 N64 模式必須替換成全新的 WebGL canvas，否則會在 EGL 層得到 BAD_MATCH。
     const n64Canvas = activateN64Canvas(n64PerformanceProfile);
+    if (glCallStatsEnabled(window.location.search) && typeof WebGL2RenderingContext !== 'undefined') {
+      // Diagnostic only: wraps the shared prototype until stopN64Backend uninstalls it.
+      n64GlCallCounter = installGlCallCounter(WebGL2RenderingContext.prototype);
+      n64GlCallBaseline = n64GlCallCounter.snapshot();
+    }
     if (benchmarkConfig.enabled) {
       removeN64BenchmarkDiagnostics = installN64BenchmarkDiagnostics(
         n64Canvas,
@@ -2594,6 +2640,7 @@ async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Prom
           SuppressDrawCalls: benchmarkConfig.suppressDrawCalls ? 1 : 0,
           PersistentBuffers: benchmarkConfig.persistentBuffers ? 1 : 0,
           PersistentRectBuffers: benchmarkConfig.persistentRectBuffers ? 1 : 0,
+          SuppressGlFinish: benchmarkConfig.suppressGlFinish ? 1 : 0,
         },
       },
       coreConfig: {
@@ -2722,6 +2769,11 @@ async function stopN64Backend(): Promise<void> {
     }
     n64Controls = null;
   }
+  globalThis.__n64WebCounters = undefined;
+  n64GlCallCounter?.uninstall();
+  n64GlCallCounter = null;
+  n64GlCallBaseline = {};
+  n64LatestGlCalls = null;
   currentN64RomData = null;
 
   restoreWasmCanvas();

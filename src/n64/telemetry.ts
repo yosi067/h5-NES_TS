@@ -26,6 +26,45 @@ export interface N64TelemetryReport {
   audioEmptyUnderruns: number;
   audioMaxCallbackGapMs: number;
   coreResidualMs: number;
+  // `viCount`/`viPerSecond` count main-loop iterations, which end at a Rice swap
+  // (null-video ends at every VI). The fields below count real VI interrupts.
+  // null means the runtime did not publish counters for the whole window.
+  emulatedViCount: number | null;
+  emulatedViPerSecond: number | null;
+  viRefreshRate: number | null;
+  /** emulatedViPerSecond / viRefreshRate; 1 is full speed. */
+  emulationSpeed: number | null;
+  /** SDL pause-for-sync segments; paused callbacks never reach the underrun counters. */
+  audioSyncPauses: number | null;
+  audioSyncPausedMs: number | null;
+}
+
+/** Cumulative counters published by the rebuilt fork on `globalThis.__n64WebCounters`. */
+export interface N64RuntimeCounters {
+  viInterrupts: number;
+  viRefreshRate: number;
+  audioSyncPauses: number;
+  /** Includes the pause segment still in progress. */
+  audioSyncPausedMs: number;
+}
+
+export function readN64RuntimeCounters(raw: unknown, now: number): N64RuntimeCounters | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const data = raw as Record<string, unknown>;
+  const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value);
+  if (data.version !== 1 || !finite(data.viInterrupts) || !finite(data.viRefreshRate)
+    || !finite(data.audioSyncPauses) || !finite(data.audioSyncPausedMs)) return null;
+  const pausedSince = finite(data.audioSyncPausedSince) ? data.audioSyncPausedSince : null;
+  return {
+    viInterrupts: data.viInterrupts,
+    viRefreshRate: data.viRefreshRate,
+    audioSyncPauses: data.audioSyncPauses,
+    audioSyncPausedMs: data.audioSyncPausedMs + (pausedSince === null ? 0 : Math.max(0, now - pausedSince)),
+  };
+}
+
+declare global {
+  var __n64WebCounters: unknown;
 }
 
 export interface N64Telemetry {
@@ -57,6 +96,7 @@ export interface N64Telemetry {
 interface TelemetryOptions {
   now?: () => number;
   reportIntervalMs?: number;
+  readCounters?: () => N64RuntimeCounters | null;
   onReport: (report: N64TelemetryReport) => void;
 }
 
@@ -64,8 +104,11 @@ interface TelemetryOptions {
 export function createN64Telemetry({
   now = () => performance.now(),
   reportIntervalMs = 5000,
+  readCounters = () => readN64RuntimeCounters(globalThis.__n64WebCounters, performance.now()),
   onReport,
 }: TelemetryOptions): N64Telemetry {
+  // undefined: not sampled since reset; null: runtime had no counters at the window start.
+  let counterBaseline: N64RuntimeCounters | null | undefined;
   let viStart: number | null = null;
   let windowStart = now();
   let viCount = 0;
@@ -96,7 +139,7 @@ export function createN64Telemetry({
   let lastAudioPartialUnderrunCount = 0;
   let lastAudioEmptyUnderrunCount = 0;
 
-  const reset = () => {
+  const resetWindow = () => {
     viStart = null;
     windowStart = now();
     viCount = 0;
@@ -124,8 +167,39 @@ export function createN64Telemetry({
     audioMaxCallbackGapMs = 0;
   };
 
+  const reset = () => {
+    counterBaseline = undefined;
+    resetWindow();
+  };
+
+  const counterDeltas = (elapsedMs: number) => {
+    const current = readCounters();
+    const baseline = counterBaseline;
+    counterBaseline = current;
+    // A missing baseline or a smaller cumulative value means the runtime changed mid-window.
+    if (!current || !baseline || current.viInterrupts < baseline.viInterrupts
+      || current.audioSyncPauses < baseline.audioSyncPauses) {
+      return {
+        emulatedViCount: null, emulatedViPerSecond: null, viRefreshRate: current?.viRefreshRate || null,
+        emulationSpeed: null, audioSyncPauses: null, audioSyncPausedMs: null,
+      };
+    }
+    const emulatedViCount = current.viInterrupts - baseline.viInterrupts;
+    const emulatedViPerSecond = emulatedViCount * 1000 / elapsedMs;
+    const viRefreshRate = current.viRefreshRate > 0 ? current.viRefreshRate : null;
+    return {
+      emulatedViCount,
+      emulatedViPerSecond,
+      viRefreshRate,
+      emulationSpeed: viRefreshRate === null ? null : emulatedViPerSecond / viRefreshRate,
+      audioSyncPauses: current.audioSyncPauses - baseline.audioSyncPauses,
+      audioSyncPausedMs: Math.max(0, current.audioSyncPausedMs - baseline.audioSyncPausedMs),
+    };
+  };
+
   return {
     beginStats() {
+      if (counterBaseline === undefined) counterBaseline = readCounters();
       viStart = now();
     },
     endStats(
@@ -219,8 +293,9 @@ export function createN64Telemetry({
         audioEmptyUnderruns,
         audioMaxCallbackGapMs,
         coreResidualMs: Math.max(0, totalViMs - rspMs - presentMs - audioMs),
+        ...counterDeltas(elapsedMs),
       });
-      reset();
+      resetWindow();
     },
     reset,
   };

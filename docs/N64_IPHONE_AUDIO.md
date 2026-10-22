@@ -39,6 +39,7 @@ opt-in 候選仍保留供研究，但不升為預設，也不再進行新的優�
 ## 已知限制與下一步
 
 - **速率差異只是假設**：即使 SDL 零 underrun 的視窗，Worklet 仍有約 8–8.5% 缺樣本。44,100 對 48,000 的 8.125% 差距只是一個待驗證的速率、傳輸或排程假設。應先核對 native obtained spec 與 SDL 內部 conversion；目前**沒有加入 metadata、resampling 或速率修正**。
+- **新的候選解釋（待實測）**：SDL 的 pause-for-sync 不受 `AUDIO_SYNC=0` 控制，預估水位低於 1024 frames 時就會暫停輸出；暫停期間 callback 不執行，所以 SDL underrun 計數為零，Worklet 卻收不到 chunk。`vicount1` 起的 `sourceAndRenderer.audioSyncPauses`／`audioSyncPausedMs` 可以直接驗證：若暫停時間約占 Worklet 缺樣本的大部分，速率差假設就可以降級。
 - **前後改善幅度無法量化**：舊 A/B 的輸出 latest=null，所以無法量化 lifecycle1 前後的音訊改善幅度。
 - **雜訊根因未確認**：先前的嚴重電流聲與氣泡聲沒有找到已證實的根因。capture5 的接受依據是聽感回饋，不是根因證明。
 - **桌面 emu2 長測錯誤未解**：桌面 Zelda emu2 約 110 秒後（06:45:45 UTC）出現 `RuntimeError: null function`，stack 為 Wasm function 1081 → 3822（export `dynCall_vi`）→ Browser main loop。目前沒有證據指向音訊 bridge，也無法證明這是既有問題。手機接受不能取代桌面長測或全 ROM 回歸。
@@ -57,6 +58,8 @@ opt-in 候選仍保留供研究，但不升為預設，也不再進行新的優�
 | `n64RectDiagnostics=1` | 啟用 rectangle phase 細分計時（rectdiag1 起）。需同時開啟音訊診斷才會顯示面板並保留 history；正式 A/B 不要加。 |
 | `n64CullStateCache=1` | 只有在 fork 中明確開啟 cull state cache；缺省、`0`、`true` 或 npm runtime 都不會開啟。旗標在 C++ 首次讀取後固定，做 A/B 時必須完整 reload。 |
 | `n64Runtime=fork` | 明確指定 fork runtime。 |
+| `n64SuppressGlFinish=1` | 只在 fork 中把 Rice `UpdateFrame` 的 `glFinish()` 改成 `glFlush()`（`vicount1` 起）；缺省、`0`、`true` 或 npm runtime 都不會開啟。這是 A/B 候選，尚未在 iPhone 驗證。 |
+| `n64GlCallStats=1` | 每五秒輸出 WebGL 呼叫分布（`[N64 GL calls]`），並在匯出中加入 `glCalls`。包裝本身有開銷，正式 A/B 不要加。 |
 
 - 若要使用既有 benchmark UI 或匯出，也要在 benchmark 網址加上 `n64AudioDiagnostics=1`。
 - `n64Benchmark=1` 不會自動保留手機正常使用的 triangle streaming；要比較目前預設，必須明確設定 `n64PersistentBuffers=1` 並確認使用 fork。`n64Timing` 也只有啟用 benchmark 時才會解析。

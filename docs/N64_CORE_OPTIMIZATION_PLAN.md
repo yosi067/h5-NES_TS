@@ -2,6 +2,7 @@
 
 > 現況：階段 1、2 已完成。手機預設使用可重建的 64 MiB Mupen fork 與 Rice triangle streaming ring，iPhone 固定場景從 16.71 提升到 38.22 VI/s。
 > rectangle ring、較大的 iOS audio buffer 與 cull cache 都未採用。音訊目前接受的版本是 lifecycle1，詳見 [N64_IPHONE_AUDIO.md](N64_IPHONE_AUDIO.md)。
+> `vicount1` 只新增量測：真實 VI 速度、SDL pause-for-sync 與 WebGL 呼叫統計，並把 `glFinish` 抑制補成 opt-in patch。以下表格中的「VI/s」都是舊口徑（每秒 loop 次數），見 Telemetry 一節。
 
 ## 目前決策
 
@@ -63,8 +64,12 @@
 
 ### Telemetry（`src/n64/telemetry.ts`）
 
-- 透過 Mupen 的 `beginStats` / `endStats` hook，每五秒輸出 `[N64 perf]`：VI/s、平均與最長 VI、long VI、recompiles、RSP/DList/RDP、triangle/rectangle draw timing 與 calls，以及 `audioUnderruns`。約 56 VI/s 以上代表 NTSC 遊戲接近 real-time。
-- C 端每個 VI 只跨入 JS 一次。npm rollback runtime 仍可呼叫單參數的 `endStats`，缺少的欄位記為 0。
+- 透過 Mupen 的 `beginStats` / `endStats` hook，每五秒輸出 `[N64 perf]`：loops/s、平均與最長 loop、long VI、recompiles、RSP/DList/RDP、triangle/rectangle draw timing 與 calls，以及 `audioUnderruns`。
+- **口徑注意**：web 主迴圈在 `VidExt_GL_SwapBuffers` 讓出一次，因此報告中的 `viPerSecond`／`viCount`（log 顯示為 loops/s）在 Rice 下是「每秒 swap 次數」，在 null-video（patch 0004 每個 VI 讓出）下才等於 VI 數。兩者不可直接比較；欄位名稱為了相容既有匯出而保留。
+- 真正的模擬速度看 `emulatedViPerSecond` 與 `emulationSpeed`（`vicount1` 起）：core 在每次 VI interrupt（`new_vi`）把累積值寫到 `globalThis.__n64WebCounters`，TypeScript 依五秒視窗取差，`emulationSpeed = emulatedViPerSecond / viRefreshRate`，1 代表全速。npm runtime、舊 artifact 或視窗中途換 runtime 時為 `null`（null 不是零）。
+- `audioSyncPauses`／`audioSyncPausedMs`（`vicount1` 起）：SDL 在預估水位低於 secondary buffer 時會 `SDL_PauseAudio(1)`，這段程式不受 `AUDIO_SYNC=0` 控制。暫停期間 SDL 不呼叫 `my_audio_callback`，所以 underrun 計數器與 Worklet 都看不到這段空窗。計數包含仍在進行中的暫停。
+- C 端每個 loop 只跨入 JS 一次（`endStats`）；VI 計數器每個 VI 多一次很小的 JS 呼叫。npm rollback runtime 仍可呼叫單參數的 `endStats`，缺少的欄位記為 0。
+- `n64GlCallStats=1`（不需重建，任何 runtime 皆可）：包裝 `WebGL2RenderingContext.prototype`，每五秒輸出 `[N64 GL calls]`，列出每個 loop 的 WebGL 呼叫數、可能同步的呼叫數（`get*`、`is*`、`finish`、`readPixels` 等，標 `*`），以及前 15 名。結果也寫入音訊診斷匯出與 benchmark 結果的 `glCalls`。包裝本身有開銷，只用來看呼叫分布，不要和正式 A/B 的時間數據混用。第一個視窗包含 shader 編譯等啟動呼叫。
 - SDL 的 `underrun_count` 以累積值送出，由 TypeScript 跨 VI 計算增量，避免漏掉兩個 VI 之間執行的 callback。另有 partial/empty underrun 與最大 callback gap。
 - Rice persistent triangle draw 會細分 prepare、upload、submit、restore，`other` 由 triangle total 扣除這四個 phase 得出。
 
@@ -163,3 +168,9 @@
 - 2026-07-22：triangle phase telemetry 上線。桌面 smoke 中，Super Mario 64 為 49.0 VI/s（phase 0.02/0.08/0.06/0.04/0.10 ms），Mario Kart 64 為 60.2 VI/s（0.02/0.05/0.04/0.03/0.08 ms）；這些數據只用來驗證欄位。
 - 2026-08-16：加入 SDL → AudioWorklet transport。桌面 smoke 確認 attach、重新 attach 與 callback telemetry 正常，但這不是 iPhone 音效 A/B。triangle-stream 的 underrun 從 706 降到 290，是 renderer 負載下降與 partial-underrun 輸出共同造成，不能歸因於 AudioWorklet。
 - 2026-09-12：完成 iPhone 輸出端診斷、rectdiag1、cullcache1 與 lifecycle1，詳見 [N64_IPHONE_AUDIO.md](N64_IPHONE_AUDIO.md)。
+- 2026-10-22 `vicount1`：只加量測，不改預設行為。
+  - core `0005-web-vi-interrupt-counter`：真實 VI interrupt 計數與 refresh rate。
+  - audio-sdl `0003-web-sync-pause-telemetry`：pause-for-sync 次數與時間。
+  - Rice `0004-opt-in-suppress-glfinish`：`UpdateFrame` 在 Emscripten 下每次換幀都呼叫 `glFinish()`；patch 0001 早已讀入 `SuppressGlFinish`，但原本只存在本機 v2 原始碼、沒有 patch 記錄。現在補成 patch，前端以 `?n64SuppressGlFinish=1`（fork 限定，預設關閉）改用 `glFlush()`。因為 `ScreenUpdateSetting=4` 會在 DList 的 SetCImg 觸發 `UpdateFrame`，這個同步等待被算在 DList/RSP，而不是 present。此項需要 iPhone A/B 才能決定是否預設。
+  - 修正 audio-sdl `0001` 的 zero-context hunk 位置：內容不變，但原本從乾淨 clone bootstrap 時，`partial_len` 會插在 `else` 與 `{` 之間，`memset` 會落到別的函式而無法編譯；既有 v2 因 reverse-check 寬鬆而未受影響。現在四個 submodule 的 patch 都已驗證可從 pinned commit 逐位元組重現 v2。
+  - 新增 `n64GlCallStats=1` WebGL 呼叫統計。

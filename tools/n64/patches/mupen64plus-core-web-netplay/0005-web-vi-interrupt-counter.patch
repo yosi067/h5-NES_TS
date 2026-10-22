@@ -1,0 +1,38 @@
+diff --git a/src/main/main.c b/src/main/main.c
+index 25cf8f80..22ccd71a 100644
+--- a/src/main/main.c
++++ b/src/main/main.c
+@@ -987,6 +987,22 @@ static void pause_loop(void)
+     }
+ }
+ 
++#if EMSCRIPTEN
++/* The web main loop yields per video swap, not per VI. Publish the real
++ * VI interrupt count so the frontend can measure emulation speed. */
++EM_JS(void, web_count_vi, (unsigned int refresh_rate), {
++    var counters = globalThis.__n64WebCounters;
++    if (!counters) {
++        counters = globalThis.__n64WebCounters = {
++            version: 1, viInterrupts: 0, viRefreshRate: 0,
++            audioSyncPauses: 0, audioSyncPausedMs: 0, audioSyncPausedSince: null
++        };
++    }
++    counters.viInterrupts++;
++    counters.viRefreshRate = refresh_rate;
++});
++#endif
++
+ /* called on vertical interrupt.
+  * Allow the core to perform various things */
+ void new_vi(void)
+@@ -995,6 +1011,10 @@ void new_vi(void)
+     timed_sections_refresh();
+ #endif
+ 
++#if EMSCRIPTEN
++    web_count_vi(g_dev.vi.expected_refresh_rate);
++#endif
++
+     gs_apply_cheats(&g_cheat_ctx);
+ 
+     apply_speed_limiter();

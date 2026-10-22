@@ -1,0 +1,16 @@
+diff --git a/src/OGLGraphicsContext.cpp b/src/OGLGraphicsContext.cpp
+index bd4f823..585a3a9 100644
+--- a/src/OGLGraphicsContext.cpp
++++ b/src/OGLGraphicsContext.cpp
+@@ -364,7 +364,10 @@ void COGLGraphicsContext::UpdateFrame(bool swaponly)
+     status.gFrameCount++;
+ 
+ #if EMSCRIPTEN
+-    glFinish();
++    if (g_suppressGlFinish)
++        glFlush();
++    else
++        glFinish();
+ #else
+     glFlush();
+ #endif

@@ -41,7 +41,7 @@ index be6dbc1..8c79947 100644
 +#endif
 +
 diff --git a/src/sdl_backend.c b/src/sdl_backend.c
-index 8771917..1318da8 100644
+index 8771917..66ca0e4 100644
 --- a/src/sdl_backend.c
 +++ b/src/sdl_backend.c
 @@ -103,0 +104,5 @@ struct sdl_backend
@@ -78,16 +78,16 @@ index 8771917..1318da8 100644
 @@ -125 +153 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
 -    sdl_backend->last_cb_time = SDL_GetTicks();
 +    sdl_backend->last_cb_time = now;
-@@ -132,0 +161,1 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
+@@ -131,0 +160 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
 +    size_t web_audio_len = len;
-@@ -144,0 +173,5 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
+@@ -144,0 +174,6 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
 +        size_t partial_len = (available * newsamplerate) / oldsamplerate;
 +        partial_len = (partial_len / SDL_SAMPLE_BYTES) * SDL_SAMPLE_BYTES;
 +        if (partial_len > (size_t)len)
 +            partial_len = len;
 +        web_audio_len = partial_len;
 +
-@@ -146 +179,13 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
+@@ -146 +181,13 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
 -        memset(stream, 0, len);
 +        if (available == 0)
 +            ++sdl_backend->empty_underrun_count;
@@ -102,7 +102,7 @@ index 8771917..1318da8 100644
 +            consume_cbuff_data(&sdl_backend->primary_buffer, consumed);
 +        }
 +        memset(stream + partial_len, 0, len - partial_len);
-@@ -147,0 +193,29 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
+@@ -147,0 +195,29 @@ static void my_audio_callback(void* userdata, unsigned char* stream, int len)
 +
 +#if EMSCRIPTEN
 +    audio_web_push_samples(stream, web_audio_len);
