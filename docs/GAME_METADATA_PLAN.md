@@ -31,12 +31,16 @@
 | 指令 | 腳本 | 說明 |
 |---|---|---|
 | `npm run audit:games` | `tools/audit-game-catalog.mjs` | 合併 `public/roms.json` 與 `public/game-metadata.json`，比對 `roms/`，列出重複、缺檔、未列入資產與封面 / 介紹覆蓋；支援 `--strict`、`--json` |
-| `npm run normalize:descriptions` | `tools/normalize-editorial-descriptions.mjs` | 以內建摘要與 OpenCC（`cn` → `tw`）整理 `game-metadata.json` 的編輯介紹；`--write` 才寫回 |
-| `npm run apply:user-descriptions` | `tools/apply-user-editorial-descriptions.mjs` | 將腳本內使用者提供的介紹套用到 `game-metadata.json` |
 | `npm run normalize:cover-search` | `tools/update-missing-cover-searches.mjs` | 對無封面項目寫入 `coverSearchUrl`，設 `coverStatus`（預設 `missing-candidate`）與 `verified: false` |
 | `npm run import:libretro-covers` | `tools/import-libretro-covers.mjs` | 依指定對照表從 Libretro Thumbnails（NES / SNES / GG）匯入封面，以 `sharp` 輸出 240×320 至 `public/assets/covers/` |
 | `npm run import:user-covers` | `tools/import-user-covers.mjs` | 依指定的檔案與來源網址匯入使用者提供的封面，同樣輸出 240×320 |
 | `npm run collect:covers` | `tools/collect-game-covers.mjs` | 蒐集封面候選；參數 `--limit=`、`--offset=`、`--queries=`、`--system=`、`--download`、`--force`、`--api` / `--no-api`，環境變數 `WIKI_DELAY_MS` |
+
+### 介紹的維護方式
+
+2026-10-22 已逐筆查證 197 款遊戲的身分、年份與介紹，並重寫成 35–75 字的編輯介紹。介紹直接在 `public/game-metadata.json` 維護：`descriptionStatus: "editorial-verified"`，參考來源記在 `descriptionReferences`，年份來源與信心記在 `factCheck`。年份、類型與人數仍在 `src/data/rom-metadata/*.ts`。
+
+舊的批次介紹工具（`normalize:descriptions`、`apply:user-descriptions`、`enrich-editorial-descriptions.mjs`）內建未查證的舊文字，執行會覆蓋查證後的介紹，因此已移除。`collect:covers` 只在加 `--force` 時才會覆寫既有介紹，平常使用不受影響。
 
 ## 驗證規範
 

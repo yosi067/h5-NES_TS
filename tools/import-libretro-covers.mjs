@@ -25,6 +25,8 @@ const targets = [
   ['Ninku (Japan) [T-En by Some Good Shit Translations v0.1] [i].gg', 'gg', 'Ninku (Japan).png'],
   ['打磚塊.zip', 'nes', 'Arkanoid (1986-12-26)(Taito)(JP).png'],
   ['打磚塊2.zip', 'nes', 'Arkanoid II (1988-03-08)(Taito)(JP).png'],
+  ['成龍(美版).zip', 'nes', 'Jackie Chan (Japan).png'],
+  ['忍者劍豪傳(劍豪傳).zip', 'nes', 'Karakuri Kengou Den Musashi Lord - Karakuribito Hashiru (Japan).png'],
   ['方塊.zip', 'nes', 'Palamedes (Japan).png'],
   ['方塊2.zip', 'nes', 'Palamedes II - Star Twinkle, Hoshi no Mabataki (Japan).png'],
   ['快樂貓.zip', 'nes', 'Mappy (Japan).png'],

@@ -43,8 +43,6 @@
     "test:zombie:stats": "node --test tools/zombie-runtime-tuning.test.mjs && vitest run tests/zombie-runtime-tuning.test.ts",
     "test:zombie:stats:rom": "cargo test --manifest-path nes-wasm/Cargo.toml --release zombie_original_stats_research -- --ignored --nocapture",
     "audit:games": "node tools/audit-game-catalog.mjs",
-    "normalize:descriptions": "node tools/normalize-editorial-descriptions.mjs",
-    "apply:user-descriptions": "node tools/apply-user-editorial-descriptions.mjs",
     "normalize:cover-search": "node tools/update-missing-cover-searches.mjs",
     "import:libretro-covers": "node tools/import-libretro-covers.mjs",
     "import:user-covers": "node tools/import-user-covers.mjs",

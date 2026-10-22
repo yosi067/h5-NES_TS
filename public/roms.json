@@ -24,7 +24,7 @@
     {"name": "小叮噹", "file": "機器貓小叮噹冒險.zip", "system": "nes"},
     {"name": "小叮噹 基加殭屍的逆襲", "file": "機器貓小叮噹冒險RPG(日版).zip", "system": "nes"},
 
-    {"name": "七龍珠 Z 2 激戰弗利沙", "file": "龙珠Z2-激斗弗利撒.nes", "system": "nes"},
+    {"name": "七龍珠 Z 2 激神弗利沙", "file": "龙珠Z2-激斗弗利撒.nes", "system": "nes"},
     {"name": "七龍珠 Z 3 烈戰人造人", "file": "龙珠Z3-烈战人造人.nes", "system": "nes"},
     {"name": "七龍珠 Z 外傳 賽亞人滅絕計畫", "file": "龙珠Z外传-塞亚人灭绝计划.nes", "system": "nes"},
 
@@ -65,8 +65,8 @@
     {"name": "兵蜂 3 波克波克大魔王", "file": "兵蜂3.zip", "system": "nes"},
     {"name": "打磚塊", "file": "打磚塊.zip", "system": "nes"},
     {"name": "打磚塊 2", "file": "打磚塊2.zip", "system": "nes"},
-    {"name": "方塊", "file": "方塊.zip", "system": "nes"},
-    {"name": "方塊 2", "file": "方塊2.zip", "system": "nes"},
+    {"name": "骰子方塊", "file": "方塊.zip", "system": "nes"},
+    {"name": "骰子方塊 2", "file": "方塊2.zip", "system": "nes"},
     {"name": "快樂貓", "file": "快樂貓.zip", "system": "nes"},
     {"name": "快樂鼠", "file": "快樂鼠.zip", "system": "nes"},
 
@@ -80,11 +80,11 @@
     {"name": "惡魔城 (日版)", "file": "惡魔城日版.zip", "system": "nes"},
     {"name": "惡魔城傳說", "file": "惡魔城傳說(惡魔城3日版).zip", "system": "nes"},
     {"name": "忍者蛙", "file": "忍者蛙(戰鬥蛙).zip", "system": "nes"},
-    {"name": "忍者劍豪傳 武藏之路", "file": "忍者劍豪傳(劍豪傳).zip", "system": "nes"},
+    {"name": "機巧劍豪傳 武藏之路", "file": "忍者劍豪傳(劍豪傳).zip", "system": "nes"},
     {"name": "忍者貓", "file": "功夫貓黨(忍者貓).zip", "system": "nes"},
     {"name": "半熟英雄", "file": "半熟英雄.zip", "system": "nes"},
     {"name": "神龍之謎 36 計 (中文版)", "file": "36計(中文).zip", "system": "nes"},
-    {"name": "成龍踢館 (美版)", "file": "成龍(美版).zip", "system": "nes"},
+    {"name": "成龍踢館 (日版)", "file": "成龍(美版).zip", "system": "nes"},
     {"name": "小精靈鼠", "file": "貓之迷宮(貓咪小鎮).zip", "system": "nes"},
     {"name": "米老鼠", "file": "米老鼠.zip", "system": "nes"},
     {"name": "火之鳥 鳳凰篇 我王的冒險", "file": "火之鳥鳳凰篇-我王之冒險.zip", "system": "nes"},
@@ -122,7 +122,7 @@
 
     {"name": "超級瑪利歐樂園 2 六個金幣", "file": "Super Mario Land 2 - 6 Golden Coins (USA, Europe) (Rev 2).gb", "system": "gb"},
     {"name": "神奇寶貝黃 (繁體中文加強版)", "file": "口袋妖怪黃 (繁) (加強版) (unknown).gb", "system": "gb"},
-    {"name": "神奇寶貝 Yishiluo (卡帶標題)", "file": "5d049351ad7a1b6f4d9dd1cacfaf8be0a53be23e5a85d6fd0ef3d119d442892d.gb.zip", "system": "gb"},
+    {"name": "神奇寶貝黃 (黃怪獸 中文版)", "file": "5d049351ad7a1b6f4d9dd1cacfaf8be0a53be23e5a85d6fd0ef3d119d442892d.gb.zip", "system": "gb"},
     {"name": "聖劍傳說 (簡體中文版)", "file": "圣剑传说(简)(v1.1)(RangerMarsh)(4Mb).gb", "system": "gb"},
     {"name": "熱鬥格鬥拳王 '96 (簡體中文版)", "file": "热斗拳皇96(简)(v1.0)(Stephen+湮没骑士の镇魂歌+落榜の美术生)(8Mb).gb", "system": "gb"},
 

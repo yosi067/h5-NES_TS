@@ -77,7 +77,7 @@ const titleAliases = new Map([
   ['兵蜂', ['TwinBee']],
   ['兵蜂 3 波克波克大魔王', ['TwinBee 3: Poko Poko Daimaō']],
   ['忍者蛙', ['Battletoads (1991 video game)']],
-  ['忍者劍豪傳 武藏之路', ['Ninja Gaiden (NES video game)']],
+  ['機巧劍豪傳 武藏之路', ['Musashi, the Samurai Lord']],
   ['火之鳥 鳳凰篇 我王的冒險', ['Hi no Tori: Hououhen - Gaou no Bouken']],
   ['大力水手', ['Popeye (1982 video game)']],
   ['米老鼠', ['Mickey Mousecapade']],
