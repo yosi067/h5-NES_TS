@@ -54,7 +54,24 @@ import {
   type GlCallCounts,
   type GlCallSummary,
 } from './n64/gl-call-stats';
-import { readBinaryState, writeBinaryState } from './storage/binary-state-store';
+import { listBinaryStates, readBinaryState, writeBinaryState } from './storage/binary-state-store';
+import { FeatureSettingsStore } from './features/settings';
+import { LobbyPrefs } from './features/lobby-prefs';
+import { RewindBuffer } from './features/rewind';
+import { compileCheats, loadCheats, saveCheats, type CheatEntry, type NativeCheatSystem } from './features/cheats';
+import { resolvePlayer2Action } from './features/player2';
+import { formatSaveTime, getSaveTime, recordSaveTime } from './features/save-meta';
+import {
+  buildBackup,
+  listN64Saves,
+  parseBackup,
+  summarizeBackup,
+  writeN64Saves,
+  base64ToBytes as backupBase64ToBytes,
+} from './features/save-backup';
+import { mountToolsPanel, type ToolsApi } from './ui/tools-panel';
+import { isEditableTarget, mountMobileTools, type MobileTools } from './ui/mobile-tools';
+import { mountLobbyTools, type LobbyRom, type LobbyTools } from './ui/lobby-tools';
 import { computePortraitFit, isInAppBrowser, shouldUseDesktopUi } from './ui/browser-env';
 import { TouchControlsEngine } from './ui/controls/engine';
 import { mountDesktopStage, type DesktopStage } from './ui/desktop-stage';
@@ -668,6 +685,7 @@ let currentFbNeoRomSet: FbNeoRomSet | null = null;
 let arcadeInputP1 = 0;
 let arcadeInputP2 = 0;
 let arcadeGamepadInputP1 = 0;
+let arcadeGamepadInputP2 = 0;
 let arcadeSourceWidth = 320;
 let arcadeSourceHeight = 240;
 let arcadeRotation: ArcadeRotation = 'none';
@@ -701,13 +719,71 @@ function setNesButton(button: ControllerButton, pressed: boolean): void {
       : button;
     snes9xBackend?.setButton(libretroButton, pressed);
   } else {
-    nes?.setButton(0, button, pressed);
+    setNativeButton(0, button, pressed);
   }
 }
 
 function setSnesButton(button: number, pressed: boolean): void {
   if (isSnes9xActive()) snes9xBackend?.setButton(button, pressed);
-  else nes?.setButton(0, button, pressed);
+  else setNativeButton(0, button, pressed);
+}
+
+/** 自製核心按鍵：同時記錄按住狀態，倒帶或讀檔後可把目前手指的狀態補回核心。 */
+const heldNativeButtons: [Set<number>, Set<number>] = [new Set(), new Set()];
+
+function setNativeButton(player: 0 | 1, button: number, pressed: boolean): void {
+  if (pressed) heldNativeButtons[player].add(button);
+  else heldNativeButtons[player].delete(button);
+  nes?.setButton(player, button, pressed);
+}
+
+function resyncNativeButtons(): void {
+  if (!nes) return;
+  const maxButton = nes.getCoreType() === 'snes' ? 11 : 7;
+  for (const player of [0, 1] as const) {
+    for (let button = 0; button <= maxButton; button++) {
+      nes.setButton(player, button, heldNativeButtons[player].has(button));
+    }
+  }
+}
+
+/** 第二玩家：FC / SFC 自製核心與 EmulatorJS 核心支援；GB / GG 只有單一手把。 */
+function supportsPlayerTwo(): boolean {
+  if (isMupenN64Active()) return false;
+  if (isFbNeoActive() || isSnes9xActive()) return true;
+  const core = nes?.getCoreType();
+  return core === 'nes' || core === 'snes';
+}
+
+function performPlayer2Action(layout: BindingLayout, action: string, pressed: boolean): void {
+  if (!supportsPlayerTwo()) return;
+  switch (layout) {
+    case 'nes': {
+      const button = NES_ACTION_BUTTONS[action];
+      if (button === undefined) return;
+      if (isEmulatorJsNesActive()) {
+        const libretroButton = button === ControllerButton.A ? 8 : button === ControllerButton.B ? 0 : button;
+        snes9xBackend?.setButton(libretroButton, pressed, 1);
+      } else {
+        setNativeButton(1, button, pressed);
+      }
+      break;
+    }
+    case 'snes': {
+      const button = SNES_ACTION_BUTTONS[action];
+      if (button === undefined) return;
+      if (isSnes9xActive()) snes9xBackend?.setButton(button, pressed, 1);
+      else setNativeButton(1, button, pressed);
+      break;
+    }
+    case 'arcade': {
+      const bit = ARCADE_ACTION_BITS[action];
+      if (bit !== undefined) setArcadeInputBit(bit, pressed, 2);
+      break;
+    }
+    case 'n64':
+      break;
+  }
 }
 
 async function stopSnes9xBackend(): Promise<void> {
@@ -724,6 +800,7 @@ function stopFbNeoBackend(): void {
   arcadeInputP1 = 0;
   arcadeInputP2 = 0;
   arcadeGamepadInputP1 = 0;
+  arcadeGamepadInputP2 = 0;
   if (activeBackend === 'fbneo') activeBackend = 'wasm';
 }
 
@@ -1205,6 +1282,9 @@ function getSafeStorage(): Storage | null {
 }
 
 const inputBindings = new BindingStore(getSafeStorage());
+const featureSettings = new FeatureSettingsStore(getSafeStorage());
+let featureState = featureSettings.get();
+const lobbyPrefs = new LobbyPrefs(getSafeStorage());
 
 /** 動作 → NES 核心按鍵 */
 const NES_ACTION_BUTTONS: Record<string, ControllerButton> = {
@@ -1335,11 +1415,22 @@ function getFirstGamepad(): Gamepad | null {
   return null;
 }
 
+/** 第二支已連接的手把（2P）。 */
+function getSecondGamepad(): Gamepad | null {
+  const pads = navigator.getGamepads?.() ?? [];
+  let seen = 0;
+  for (const pad of pads) {
+    if (pad && pad.connected && ++seen === 2) return pad;
+  }
+  return null;
+}
+
 /** 街機核心每幀取輸入，這裡把手把動作換成位元遮罩。 */
 function pollArcadeGamepads(): void {
   const pad = getFirstGamepad();
   if (!pad) {
     arcadeGamepadInputP1 = 0;
+    arcadeGamepadInputP2 = 0;
     return;
   }
   let mask = 0;
@@ -1347,6 +1438,15 @@ function pollArcadeGamepads(): void {
     mask |= ARCADE_ACTION_BITS[action] ?? 0;
   }
   arcadeGamepadInputP1 = mask;
+
+  const second = getSecondGamepad();
+  let mask2 = 0;
+  if (second) {
+    for (const action of readPadActions(inputBindings.layout('arcade'), second)) {
+      mask2 |= ARCADE_ACTION_BITS[action] ?? 0;
+    }
+  }
+  arcadeGamepadInputP2 = mask2;
 }
 
 let gamepadLoopHandle: number | null = null;
@@ -1385,16 +1485,55 @@ function pollGamepadActions(): void {
     gamepadHeldActions.clear();
     for (const action of next) gamepadHeldActions.add(action);
   }
+  pollSecondGamepadActions(active ? layout : null);
   gamepadLoopHandle = requestAnimationFrame(pollGamepadActions);
+}
+
+let gamepadP2HeldLayout: BindingLayout | null = null;
+const gamepadP2HeldActions = new Set<string>();
+
+function releaseGamepadP2Actions(): void {
+  if (gamepadP2HeldLayout) {
+    for (const action of gamepadP2HeldActions) performPlayer2Action(gamepadP2HeldLayout, action, false);
+  }
+  gamepadP2HeldActions.clear();
+  gamepadP2HeldLayout = null;
+}
+
+/** 第二支手把 → 2P（街機由 FBNeo 幀迴圈直接讀取）。 */
+function pollSecondGamepadActions(layout: BindingLayout | null): void {
+  const pad = getSecondGamepad();
+  if (!pad || !layout || layout === 'n64' || !supportsPlayerTwo()) {
+    releaseGamepadP2Actions();
+    return;
+  }
+  if (gamepadP2HeldLayout !== layout) releaseGamepadP2Actions();
+  gamepadP2HeldLayout = layout;
+  const next = readPadActions(inputBindings.layout(layout), pad);
+  for (const action of next) {
+    if (!gamepadP2HeldActions.has(action)) performPlayer2Action(layout, action, true);
+  }
+  for (const action of Array.from(gamepadP2HeldActions)) {
+    if (!next.has(action)) performPlayer2Action(layout, action, false);
+  }
+  gamepadP2HeldActions.clear();
+  for (const action of next) gamepadP2HeldActions.add(action);
 }
 
 function setupGamepadInput(): void {
   const start = () => {
     if (gamepadLoopHandle === null) gamepadLoopHandle = requestAnimationFrame(pollGamepadActions);
   };
-  window.addEventListener('gamepadconnected', start);
+  const connectedCount = () => (navigator.getGamepads?.() ?? []).filter((pad) => pad?.connected).length;
+  window.addEventListener('gamepadconnected', (event) => {
+    start();
+    const slot = connectedCount() >= 2 && getSecondGamepad()?.index === event.gamepad.index ? '2P' : '1P';
+    if (document.body.classList.contains('game-active')) showToast(`🎮 手把已連接（${slot}）`);
+  });
   window.addEventListener('gamepaddisconnected', () => {
     if (!getFirstGamepad()) releaseGamepadActions();
+    if (!getSecondGamepad()) releaseGamepadP2Actions();
+    if (document.body.classList.contains('game-active')) showToast('🎮 手把已中斷連線');
   });
   if (getFirstGamepad()) start();
 }
@@ -1402,6 +1541,8 @@ function setupGamepadInput(): void {
 function setupKeyboardInput(): void {
   const handle = (event: KeyboardEvent, pressed: boolean) => {
     if (document.body.classList.contains('binding-capture')) return;
+    // 金手指／搜尋等文字輸入框：讓使用者正常打字，不送進遊戲。
+    if (isEditableTarget(event.target)) return;
     const layout = getBindingLayout();
 
     if (layout === 'n64') {
@@ -1420,7 +1561,15 @@ function setupKeyboardInput(): void {
 
     if (layout === 'nes' && !nes) return;
     const action = resolveKeyAction(inputBindings.layout(layout), event.code);
-    if (!action) return;
+    if (!action) {
+      // 鍵盤 2P：只在雙人模式開啟、且 1P 沒用到此鍵時生效。
+      if (!featureState.twoPlayerKeyboard || !document.body.classList.contains('game-active')) return;
+      const player2Action = resolvePlayer2Action(layout, inputBindings.layout(layout), event.code);
+      if (!player2Action) return;
+      performPlayer2Action(layout, player2Action, pressed);
+      event.preventDefault();
+      return;
+    }
     performInputAction(layout, action, pressed);
     event.preventDefault();
   };
@@ -1438,6 +1587,13 @@ let appDialogResolve: ((confirmed: boolean) => void) | null = null;
 let appDialogPreviousFocus: HTMLElement | null = null;
 
 function beginGameLoad(): AbortController {
+  if (gameSessionActive) {
+    // 遊戲中改載入另一款：先同步擷取自動存檔，再拆掉目前核心。
+    void autosaveNow();
+    gameSessionActive = false;
+    hideResumeBanner();
+    resetSpeedControls();
+  }
   gameLoadAbortController?.abort();
   gameLoadAbortController = new AbortController();
   return gameLoadAbortController;
@@ -1826,6 +1982,7 @@ async function loadRomList(): Promise<void> {
       'is-ready',
       romCatalog.some(rom => rom.file === LOBBY_MARIO_ROM_FILE),
     );
+    setupLobbyTools();
     renderMachineSelector();
     void startLobbyCrtPreview();
   } catch (error) {
@@ -1860,6 +2017,9 @@ function renderMachineSelector(): void {
     return;
   }
 
+  lobbyTools?.clearSearch();
+  lobbyTools?.setListMode(false);
+  lobbyTools?.refresh();
   if (browserHeader) {
     browserHeader.classList.remove('is-visible');
     browserHeader.style.removeProperty('display');
@@ -1936,6 +2096,47 @@ function renderMachineSelector(): void {
  * 渲染 ROM 列表
  */
 function renderRomList(system: SystemKey): void {
+  const roms = romCatalog.filter((rom) => detectRomSystem(rom) === system);
+  const machine = MACHINES.find((item) => item.key === system);
+  renderRomListView({
+    system,
+    roms,
+    title: machine?.title ?? '遊戲列表',
+    year: machine?.year ?? '',
+    issue: machine?.issue ?? '',
+    summary: `本月精選 ${roms.length} 款作品`,
+    artFile: machine?.artFile ?? null,
+    emptyText: '沒有可用的遊戲',
+  });
+}
+
+/** 搜尋結果或我的最愛：沿用同一套卡片，每張卡片帶自己的主機色。 */
+function renderRomCollection(title: string, summary: string, roms: RomInfo[]): void {
+  const firstSystem = roms[0] ? detectRomSystem(roms[0]) : 'nes';
+  renderRomListView({
+    system: firstSystem,
+    roms,
+    title,
+    year: 'INDEX',
+    issue: `${roms.length} TITLES`,
+    summary,
+    artFile: null,
+    emptyText: '沒有符合的遊戲',
+    collection: true,
+  });
+}
+
+function renderRomListView(view: {
+  system: SystemKey;
+  roms: RomInfo[];
+  title: string;
+  year: string;
+  issue: string;
+  summary: string;
+  artFile: string | null;
+  emptyText: string;
+  collection?: boolean;
+}): void {
   const selectorEl = document.getElementById('rom-selector');
   const machineGridEl = document.getElementById('machine-grid');
   const romListEl = document.getElementById('rom-list');
@@ -1949,8 +2150,8 @@ function renderRomList(system: SystemKey): void {
   const scrollTopButton = document.getElementById('rom-scroll-top') as HTMLButtonElement | null;
   if (!romListEl) return;
 
-  const roms = romCatalog.filter((rom) => detectRomSystem(rom) === system);
-  const machine = MACHINES.find((item) => item.key === system);
+  const { system, roms } = view;
+  lobbyTools?.setListMode(true);
   if (scrollTopButton) {
     scrollTopButton.dataset.enabled = String(roms.length > 20);
     scrollTopButton.hidden = true;
@@ -1963,20 +2164,31 @@ function renderRomList(system: SystemKey): void {
     browserHeader.classList.add('is-visible');
     browserHeader.style.removeProperty('display');
   }
-  if (browserHeader) browserHeader.dataset.system = system;
+  if (browserHeader) {
+    browserHeader.dataset.system = system;
+    browserHeader.classList.toggle('is-collection', Boolean(view.collection));
+  }
   romListEl.dataset.system = system;
-  if (browserTitle) browserTitle.textContent = machine?.title ?? '遊戲列表';
-  if (browserYear) browserYear.textContent = machine?.year ?? '';
-  if (browserIssue) browserIssue.textContent = machine?.issue ?? '';
-  if (browserSummary) browserSummary.textContent = `本月精選 ${roms.length} 款作品`;
-  if (browserArt && machine) browserArt.src = getPublicAssetUrl(`assets/machines/${machine.artFile}`);
+  if (browserTitle) browserTitle.textContent = view.title;
+  if (browserYear) browserYear.textContent = view.year;
+  if (browserIssue) browserIssue.textContent = view.issue;
+  if (browserSummary) browserSummary.textContent = view.summary;
+  if (browserArt) {
+    if (view.artFile) {
+      browserArt.hidden = false;
+      browserArt.src = getPublicAssetUrl(`assets/machines/${view.artFile}`);
+    } else if (view.collection) {
+      browserArt.hidden = true;
+    }
+  }
   romListEl.style.display = 'grid';
 
   if (roms.length === 0) {
-    romListEl.innerHTML = '<div class="rom-empty">沒有可用的遊戲</div>';
+    romListEl.innerHTML = `<div class="rom-empty">${escapeHtml(view.emptyText)}</div>`;
     return;
   }
 
+  const favorites = new Set(lobbyPrefs.favorites());
   romListEl.innerHTML = roms.map((rom, index) => {
     const meta = getRomMagazineMeta(rom);
     const number = String(index + 1).padStart(3, '0');
@@ -1985,10 +2197,13 @@ function renderRomList(system: SystemKey): void {
       ? `<img class="rom-cover-image" src="${escapeHtml(coverUrl)}" alt="" loading="lazy" decoding="async"><span class="rom-cover-placeholder" aria-hidden="true" hidden>${escapeHtml(getRomDisplayName(rom).slice(0, 18))}</span>`
       : `<span class="rom-cover-placeholder" aria-hidden="true">${escapeHtml(getRomDisplayName(rom).slice(0, 18))}</span>`;
     const description = rom.description?.trim() || '中文簡介待核對';
+    const itemSystem = view.collection ? detectRomSystem(rom) : system;
+    const isFavorite = favorites.has(rom.file);
+    const favoriteMarkup = `<span class="rom-fav${isFavorite ? ' is-on' : ''}" role="button" tabindex="0" aria-pressed="${isFavorite}" aria-label="${isFavorite ? '從最愛移除' : '加入最愛'}" title="${isFavorite ? '從最愛移除' : '加入最愛'}">${isFavorite ? '★' : '☆'}</span>`;
     return `
-      <button class="rom-item" data-index="${index}" data-system="${system}" data-file="${encodeURIComponent(rom.file)}" style="--i:${Math.min(index, 11)}">
+      <button class="rom-item" data-index="${index}" data-system="${itemSystem}" data-file="${encodeURIComponent(rom.file)}" style="--i:${Math.min(index, 11)}">
         <span class="rom-item-number">No.${number}</span>
-        <span class="rom-cover-frame${coverUrl ? '' : ' is-missing'}">${coverMarkup}</span>
+        <span class="rom-cover-frame${coverUrl ? '' : ' is-missing'}">${coverMarkup}${favoriteMarkup}</span>
         <span class="rom-copy">
           <span class="rom-name">${escapeHtml(getRomDisplayName(rom))}</span>
           <span class="rom-description">${escapeHtml(description)}</span>
@@ -2013,6 +2228,26 @@ function renderRomList(system: SystemKey): void {
     });
   });
 
+  romListEl.querySelectorAll<HTMLElement>('.rom-fav').forEach((star) => {
+    const toggle = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const file = decodeURIComponent(star.closest<HTMLElement>('.rom-item')?.dataset.file || '');
+      if (!file) return;
+      const on = lobbyPrefs.toggleFavorite(file);
+      star.classList.toggle('is-on', on);
+      star.textContent = on ? '★' : '☆';
+      star.setAttribute('aria-pressed', String(on));
+      star.setAttribute('aria-label', on ? '從最愛移除' : '加入最愛');
+      star.title = on ? '從最愛移除' : '加入最愛';
+      showToast(on ? '★ 已加入最愛' : '已從最愛移除');
+    };
+    star.addEventListener('click', toggle);
+    star.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') toggle(event);
+    });
+  });
+
   romListEl.querySelectorAll<HTMLImageElement>('.rom-cover-image').forEach(image => {
     image.addEventListener('error', () => {
       image.hidden = true;
@@ -2028,6 +2263,7 @@ function renderRomList(system: SystemKey): void {
  */
 async function loadRomFromServer(filename: string): Promise<void> {
   const loadController = beginGameLoad();
+  currentCatalogFile = filename;
   const rom = getRomCatalogEntry(filename);
   currentGameTitle = getRomDisplayName(rom);
   let loadingSequence = 0;
@@ -2104,6 +2340,7 @@ async function loadRomFromServer(filename: string): Promise<void> {
  */
 async function loadRomFromFile(file: File): Promise<void> {
   const loadController = beginGameLoad();
+  currentCatalogFile = '';
   const rom = getRomCatalogEntry(file.name, file.name);
   currentGameTitle = getRomDisplayName(rom).replace(/\.[^.]+$/, '');
   let loadingSequence = 0;
@@ -2190,6 +2427,7 @@ async function startFbNeoGame(
   arcadeInputP1 = 0;
   arcadeInputP2 = 0;
   arcadeGamepadInputP1 = 0;
+  arcadeGamepadInputP2 = 0;
   clearAudioQueue();
 
   try {
@@ -2243,6 +2481,7 @@ async function startFbNeoGame(
     console.log(`[FBNeo] ${romSet.gameName} loaded: ${width}x${height}${arcadeRotation === 'none' ? '' : ` rotated-${arcadeRotation}`}`);
     showToast(`FBNeo: ${romSet.gameName} OK`);
     startEmulation();
+    onGameStarted();
   } catch (error) {
     if (fbneoCore === coreInstance) {
       activeBackend = 'wasm';
@@ -2433,6 +2672,7 @@ async function startGame(
 
     // 載入 SRAM（遊戲內建電池存檔）
     loadSram();
+    onGameStarted();
 
   } else {
     console.error('ROM 載入失敗');
@@ -2460,12 +2700,15 @@ async function startSnes9xGame(
   hideRomSelector();
 
   try {
-    snes9xBackend = await startSnes9xBackend(host, romData, currentRomFilename, core, signal);
+    snes9xBackend = await startSnes9xBackend(host, romData, currentRomFilename, core, signal, {
+      rewind: featureState.rewindEnabled,
+    });
     isRunning = true;
     hideRomSelector();
     updateControllerLayout();
     powerLed?.classList.add('on');
     showToast(core === 'genesis' ? 'Mega Drive 核心已啟動' : core === 'nes' ? 'FC 核心已啟動' : 'SFC 核心已啟動');
+    onGameStarted();
   } catch (error) {
     activeBackend = 'wasm';
     await stopSnes9xBackend();
@@ -2677,6 +2920,7 @@ async function startN64Game(romData: ArrayBuffer, forceNpmRuntime = false): Prom
       }
       showToast('N64 啟動失敗');
     });
+    onGameStarted();
   } catch (error) {
     console.error('[N64] Mupen64Plus backend failed:', error);
     if (startupDiagnosticLabel) {
@@ -2798,6 +3042,7 @@ function hideRomSelector(): void {
  */
 async function showRomSelector(): Promise<void> {
   cancelPendingGameLoad();
+  await endGameSession();
   if (!isSnes9xActive()) saveSram();
   stopEmulation();
   await stopN64Backend();
@@ -2935,7 +3180,17 @@ function setupDesktopControls(): void {
       getLayout: getBindingLayout,
       getGameTitle: () => currentGameTitle || currentRomFilename.replace(/\.[^.]+$/, ''),
       notify: showToast,
+      describeSlot: describeSaveSlot,
     },
+    extraTabs: [{
+      id: 'tools',
+      label: '功能',
+      mount: (panel) => {
+        const tools = mountToolsPanel(panel, createToolsApi(), { includeSlots: false, includeTouch: false, keyboardHints: true });
+        toolsPanelRefreshers.add(tools.refresh);
+        return tools;
+      },
+    }],
   });
 }
 
@@ -3012,6 +3267,10 @@ function startEmulation(): void {
     }
 
     while (accumulator >= TARGET_FRAME_TIME) {
+      if (rewindHeld && stepNativeRewind()) {
+        accumulator -= TARGET_FRAME_TIME;
+        continue;
+      }
       nes.frame();
       bootDiagFrameCount++;
       if (coreType === 'nes' && activeGamePresentation) activeGamePresentationFrame++;
@@ -3071,6 +3330,8 @@ function startEmulation(): void {
       }
 
       drainWasmAudioToWorklet();
+      captureNativeRewind();
+      runFastForwardNativeFrames(coreType);
 
       // === SoM diagnostic: DSP voice + CGRAM + framebuffer color monitoring ===
       if (coreType === 'snes') {
@@ -3146,9 +3407,22 @@ function startFbNeoEmulation(): void {
     accumulator = Math.min(accumulator + deltaTime, targetFrameTime * 3);
 
     while (accumulator >= targetFrameTime) {
+      if (rewindHeld && stepFbNeoRewind()) {
+        accumulator -= targetFrameTime;
+        continue;
+      }
       pollArcadeGamepads();
-      fbneoCore.stepFrame(mergeArcadeInputSources(arcadeInputP1, arcadeGamepadInputP1), arcadeInputP2);
+      const player1 = mergeArcadeInputSources(arcadeInputP1, arcadeGamepadInputP1);
+      const player2 = mergeArcadeInputSources(arcadeInputP2, arcadeGamepadInputP2);
+      fbneoCore.stepFrame(player1, player2);
       enqueueAudioSamples(fbneoCore.consumeAudioSamples());
+      captureFbNeoRewind();
+      // 快轉：多跑的幀只丟棄聲音，避免音訊佇列爆量。
+      for (let extra = getSpeedMultiplier() - 1; extra > 0; extra--) {
+        fbneoCore.stepFrame(player1, player2);
+        fbneoCore.consumeAudioSamples();
+        captureFbNeoRewind();
+      }
       accumulator -= targetFrameTime;
     }
 
@@ -3605,7 +3879,7 @@ async function readNesPersistentState(key: string): Promise<string | null> {
 /**
  * 取得帶有核心類型 + ROM 名稱的存檔 key（每個遊戲獨立存檔）
  */
-function getSaveKey(slot: number): string {
+function getSaveKey(slot: number | 'auto'): string {
   const coreType = isMupenN64Active() ? 'n64'
     : isFbNeoActive() ? 'fbneo'
     : isSnes9xActive() ? 'snes9x'
@@ -3956,6 +4230,7 @@ function saveStateForUser(slot: number = 0, showResult = false): Promise<boolean
       ? saveNesStateWithPersistence(slot)
     : Promise.resolve(saveState(slot));
   return operation.then(success => {
+    if (success) recordSaveTime(getSafeStorage(), getSaveKey(slot));
     if (showResult) showToast(success ? '✅ 存檔成功（可跨重新整理）' : '❌ 存檔失敗');
     return success;
   });
@@ -4271,6 +4546,729 @@ function setupVirtualController(): void {
   bindClick('n64-mobile-load', () => showToast('N64 即時讀檔尚未支援，遊戲內存檔會自動載入'));
 }
 
+// ===== 玩家功能：快轉、倒帶、截圖、金手指、自動存檔、存檔備份 =====
+// 全部為選用功能：未開啟時，模擬迴圈、存檔格式與按鍵配置都維持原樣。
+
+let fastForwardHeld = false;
+let fastForwardToggled = false;
+let rewindHeld = false;
+let rewindStepCountdown = 0;
+let rewindAudioCleared = false;
+/** 倒帶時每隔幾個顯示幀退回一份快照（快照間隔 20 幀 → 約 4 倍速倒退）。 */
+const REWIND_STEP_TICKS = 5;
+const rewindBuffer = new RewindBuffer<string | Uint8Array>({ captureInterval: 20 });
+let ejsRewindAvailable = false;
+let gameSessionActive = false;
+let currentCatalogFile = '';
+let activeCheats: CheatEntry[] = [];
+let cheatGameKey = '';
+let mobileTools: MobileTools | null = null;
+let lobbyTools: LobbyTools | null = null;
+const toolsPanelRefreshers = new Set<() => void>();
+
+function refreshToolsPanels(): void {
+  for (const refresh of toolsPanelRefreshers) refresh();
+  mobileTools?.refresh();
+}
+
+function getSpeedMultiplier(): number {
+  return (fastForwardHeld || fastForwardToggled) && !rewindHeld ? featureState.fastForwardSpeed : 1;
+}
+
+function isNativeCoreActive(): boolean {
+  if (activeBackend !== 'wasm' || !nes || !currentRomFilename) return false;
+  const core = nes.getCoreType();
+  return core === 'nes' || core === 'gb' || core === 'gg' || core === 'snes';
+}
+
+/** 中文化圖層依賴連續的文字觀察證據，倒帶會把它重設，所以這類遊戲不提供倒帶。 */
+function nativeRewindBlockedReason(): string | null {
+  if (!isNativeCoreActive()) return '此核心不支援倒帶';
+  if (textOverlay) return '中文化圖層啟用中，此遊戲不支援倒帶';
+  return null;
+}
+
+function exportNativeSnapshot(): string {
+  if (!nes) return '';
+  return nes.getCoreType() === 'nes' ? nes.exportPersistentSaveState() : nes.exportSaveState();
+}
+
+function importNativeSnapshot(snapshot: string): boolean {
+  if (!nes) return false;
+  const nativeNes = nes.getCoreType() === 'nes';
+  const ok = nativeNes ? nes.importPersistentSaveState(snapshot) : nes.importSaveState(snapshot);
+  if (!ok) return false;
+  if (nativeNes) nes.setAudioEnabled(!audioMuted);
+  nes.consumeAudioSamples();
+  resyncNativeButtons();
+  return true;
+}
+
+function captureNativeRewind(): void {
+  if (!featureState.rewindEnabled || !rewindBuffer.tick()) return;
+  if (nativeRewindBlockedReason()) return;
+  try {
+    const snapshot = exportNativeSnapshot();
+    if (snapshot) rewindBuffer.push(snapshot);
+  } catch (error) {
+    console.warn('[倒帶] 擷取快照失敗:', error);
+  }
+}
+
+/** 倒帶中回傳 true，代表這個時間片不執行模擬。 */
+function stepNativeRewind(): boolean {
+  if (!nes || !featureState.rewindEnabled || nativeRewindBlockedReason()) return false;
+  if (!rewindAudioCleared) {
+    clearAudioQueue();
+    rewindAudioCleared = true;
+  }
+  if (--rewindStepCountdown > 0) return true;
+  rewindStepCountdown = REWIND_STEP_TICKS;
+  const snapshot = rewindBuffer.pop();
+  if (typeof snapshot !== 'string') return true;
+  try {
+    if (importNativeSnapshot(snapshot) && nes.getCoreType() !== 'nes') {
+      // 部分核心快照不含畫面緩衝，跑一幀讓畫面跟上（不出聲）。
+      nes.frame();
+      nes.consumeAudioSamples();
+    }
+  } catch (error) {
+    console.warn('[倒帶] 還原快照失敗:', error);
+  }
+  return true;
+}
+
+function runFastForwardNativeFrames(coreType: string): void {
+  for (let extra = getSpeedMultiplier() - 1; extra > 0 && nes; extra--) {
+    nes.frame();
+    if (coreType === 'nes' && activeGamePresentation) activeGamePresentationFrame++;
+    nes.consumeAudioSamples();
+    captureNativeRewind();
+  }
+}
+
+function captureFbNeoRewind(): void {
+  if (!featureState.rewindEnabled || !fbneoCore || !rewindBuffer.tick()) return;
+  try {
+    rewindBuffer.push(fbneoCore.saveState());
+  } catch (error) {
+    console.warn('[倒帶] FBNeo 快照失敗:', error);
+  }
+}
+
+function stepFbNeoRewind(): boolean {
+  if (!fbneoCore || !featureState.rewindEnabled) return false;
+  if (!rewindAudioCleared) {
+    clearAudioQueue();
+    rewindAudioCleared = true;
+  }
+  if (--rewindStepCountdown > 0) return true;
+  rewindStepCountdown = REWIND_STEP_TICKS;
+  const snapshot = rewindBuffer.pop();
+  if (!(snapshot instanceof Uint8Array)) return true;
+  try {
+    fbneoCore.loadState(snapshot);
+    fbneoCore.consumeAudioSamples();
+  } catch (error) {
+    console.warn('[倒帶] FBNeo 還原失敗:', error);
+  }
+  return true;
+}
+
+function rewindUnavailableReason(): string | null {
+  if (!document.body.classList.contains('game-active')) return '請先開始遊戲';
+  if (isMupenN64Active()) return 'N64 核心不支援倒帶';
+  if (isSnes9xActive()) {
+    if (ejsRewindAvailable) return null;
+    return featureState.rewindEnabled ? '已啟用倒帶，重新開啟這款遊戲後生效' : '請先在功能選單啟用倒帶，並重新開啟遊戲';
+  }
+  if (!featureState.rewindEnabled) return '請先在功能選單啟用倒帶';
+  if (isFbNeoActive()) return null;
+  return nativeRewindBlockedReason();
+}
+
+let speedIndicator: HTMLElement | null = null;
+
+function updateSpeedIndicator(): void {
+  if (!speedIndicator) {
+    speedIndicator = document.createElement('div');
+    speedIndicator.className = 'speed-indicator';
+    speedIndicator.setAttribute('aria-live', 'polite');
+    document.body.appendChild(speedIndicator);
+  }
+  const multiplier = getSpeedMultiplier();
+  const text = rewindHeld ? '⏪ 倒帶中' : multiplier > 1 ? `⏩ ${multiplier}×` : '';
+  speedIndicator.textContent = text;
+  speedIndicator.hidden = !text;
+}
+
+function syncFastForwardBackend(): void {
+  if (isSnes9xActive()) snes9xBackend?.setFastForward(getSpeedMultiplier() > 1, featureState.fastForwardSpeed);
+  updateSpeedIndicator();
+}
+
+function setFastForwardHeld(active: boolean): void {
+  if (fastForwardHeld === active) return;
+  fastForwardHeld = active;
+  syncFastForwardBackend();
+}
+
+function setFastForwardToggled(active: boolean): void {
+  if (active && isMupenN64Active()) {
+    showToast('N64 核心不支援快轉');
+    return;
+  }
+  fastForwardToggled = active;
+  syncFastForwardBackend();
+  refreshToolsPanels();
+}
+
+function setRewindHeld(active: boolean): void {
+  if (active === rewindHeld) return;
+  if (active) {
+    const reason = rewindUnavailableReason();
+    if (reason) {
+      showToast(reason);
+      return;
+    }
+    if (isSnes9xActive() && !snes9xBackend?.setRewind(true)) {
+      showToast('此核心暫時無法倒帶');
+      return;
+    }
+    rewindHeld = true;
+    rewindStepCountdown = 0;
+    rewindAudioCleared = false;
+  } else {
+    rewindHeld = false;
+    rewindAudioCleared = false;
+    if (isSnes9xActive()) snes9xBackend?.setRewind(false);
+  }
+  syncFastForwardBackend();
+}
+
+function resetSpeedControls(): void {
+  fastForwardHeld = false;
+  fastForwardToggled = false;
+  if (rewindHeld && isSnes9xActive()) snes9xBackend?.setRewind(false);
+  rewindHeld = false;
+  rewindAudioCleared = false;
+  rewindBuffer.clear();
+  updateSpeedIndicator();
+}
+
+// ---- 截圖 ----
+
+function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
+function fileSafeTitle(): string {
+  const title = currentGameTitle || currentRomFilename.replace(/\.[^.]+$/, '') || 'h5emu';
+  return title.replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60);
+}
+
+function timestampForFile(date = new Date()): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
+async function takeScreenshot(): Promise<void> {
+  let blob: Blob | null = null;
+  try {
+    if (isSnes9xActive()) {
+      const bytes = await snes9xBackend?.screenshot();
+      if (bytes && bytes.length > 0) blob = new Blob([bytes.slice().buffer], { type: 'image/png' });
+    } else if (!isMupenN64Active() && canvas && canvas.width > 0) {
+      // 以整數 3 倍放大，保留像素銳利度。
+      const scale = 3;
+      const output = document.createElement('canvas');
+      output.width = canvas.width * scale;
+      output.height = canvas.height * scale;
+      const outputContext = output.getContext('2d');
+      if (outputContext) {
+        outputContext.imageSmoothingEnabled = false;
+        outputContext.drawImage(canvas, 0, 0, output.width, output.height);
+        blob = await new Promise<Blob | null>((resolve) => output.toBlob(resolve, 'image/png'));
+      }
+    }
+  } catch (error) {
+    console.warn('[截圖] 失敗:', error);
+  }
+  if (!blob) {
+    showToast(isMupenN64Active() ? 'N64 畫面暫不支援截圖' : '❌ 截圖失敗');
+    return;
+  }
+  downloadBlob(blob, `${fileSafeTitle()}_${timestampForFile()}.png`);
+  showToast('📷 已儲存截圖');
+}
+
+// ---- 金手指 ----
+
+function nativeCheatSystem(): NativeCheatSystem | null {
+  if (!isNativeCoreActive() || !nes) return null;
+  const core = nes.getCoreType();
+  return core === 'nes' || core === 'gb' || core === 'gg' || core === 'snes' ? core : null;
+}
+
+function cheatHintForCurrentCore(): string | null {
+  if (isSnes9xActive()) return '使用核心內建格式（Game Genie、Pro Action Replay 等）。';
+  switch (nativeCheatSystem()) {
+    case 'nes': return '支援 Game Genie（如 SXIOPO）與 RAM 鎖值「位址:值」（如 0075:09），可用 + 串接。';
+    case 'snes': return '支援 Pro Action Replay（如 7E0DBE09）與 RAM 鎖值「位址:值」。';
+    case 'gb': return '支援 GameShark（如 01FF16D0）與 RAM 鎖值「位址:值」。';
+    case 'gg':
+    case 'sms': return '支援 RAM 鎖值「位址:值」（如 C010:63）。';
+    default: return null;
+  }
+}
+
+function applyCheatsToCore(entries: CheatEntry[]): string[] {
+  if (isSnes9xActive()) {
+    snes9xBackend?.setCheats(entries.filter((entry) => entry.enabled).map((entry) => entry.code.trim()));
+    return [];
+  }
+  const system = nativeCheatSystem();
+  if (!system || !nes) return [];
+  const compiled = compileCheats(system, entries);
+  const setCheats = (nes as unknown as { setCheats?: (ram: Uint32Array, rom: Int32Array) => number }).setCheats;
+  if (typeof setCheats !== 'function') return ['目前的模擬核心版本不支援金手指，請重新整理頁面'];
+  setCheats.call(nes, new Uint32Array(compiled.ram), new Int32Array(compiled.rom));
+  return compiled.errors.map((error) => `${error.code}：${error.message}`);
+}
+
+function setActiveCheats(entries: CheatEntry[]): string[] {
+  activeCheats = entries.map((entry) => ({ ...entry }));
+  if (cheatGameKey) saveCheats(getSafeStorage(), cheatGameKey, activeCheats);
+  return applyCheatsToCore(activeCheats);
+}
+
+// ---- 自動存檔與續玩 ----
+
+function getAutoSaveKey(): string {
+  return getSaveKey('auto');
+}
+
+/** 同步擷取目前狀態（必須在核心被拆掉之前呼叫）。 */
+function captureAutoSave(): Uint8Array | null {
+  try {
+    if (isMupenN64Active()) return null;
+    if (isSnes9xActive()) return snes9xBackend?.saveState() ?? null;
+    if (isFbNeoActive()) return fbneoCore?.saveState() ?? null;
+    if (isNativeCoreActive()) {
+      const snapshot = exportNativeSnapshot();
+      return snapshot ? new TextEncoder().encode(snapshot) : null;
+    }
+  } catch (error) {
+    console.warn('[自動存檔] 擷取失敗:', error);
+  }
+  return null;
+}
+
+/** 自動存檔只寫 IndexedDB，不占用 localStorage 配額（避免擠掉電池存檔）。 */
+function autosaveNow(): Promise<void> {
+  if (!featureState.autosave || !gameSessionActive || gameLoadAbortController) return Promise.resolve();
+  const key = getAutoSaveKey();
+  const data = captureAutoSave();
+  if (!data || data.length === 0) return Promise.resolve();
+  return writeBinaryState(key, data)
+    .then(() => recordSaveTime(getSafeStorage(), key))
+    .catch((error) => console.warn('[自動存檔] 寫入失敗:', error));
+}
+
+async function restoreAutoSave(): Promise<boolean> {
+  let data: Uint8Array | null = null;
+  try {
+    data = await readBinaryState(getAutoSaveKey());
+  } catch {
+    data = null;
+  }
+  if (!data || data.length === 0) return false;
+  try {
+    if (isSnes9xActive()) {
+      if (!snes9xBackend) return false;
+      snes9xBackend.loadState(data);
+      return true;
+    }
+    if (isFbNeoActive()) {
+      if (!fbneoCore) return false;
+      fbneoCore.loadState(data);
+      clearAudioQueue();
+      return true;
+    }
+    if (isNativeCoreActive()) {
+      clearAudioQueue();
+      if (!importNativeSnapshot(new TextDecoder().decode(data))) return false;
+      renderFrame();
+      return true;
+    }
+  } catch (error) {
+    console.warn('[自動存檔] 讀取失敗:', error);
+  }
+  return false;
+}
+
+let resumeBanner: HTMLElement | null = null;
+
+function hideResumeBanner(): void {
+  resumeBanner?.remove();
+  resumeBanner = null;
+}
+
+async function offerAutoSaveResume(): Promise<void> {
+  hideResumeBanner();
+  if (!featureState.autosave || isMupenN64Active()) return;
+  const key = getAutoSaveKey();
+  let exists = false;
+  try {
+    exists = Boolean((await readBinaryState(key))?.length);
+  } catch {
+    exists = false;
+  }
+  if (!exists || !gameSessionActive || getAutoSaveKey() !== key) return;
+  const savedAt = getSaveTime(getSafeStorage(), key);
+
+  const banner = document.createElement('div');
+  banner.className = 'resume-banner';
+  banner.setAttribute('role', 'status');
+  const text = document.createElement('span');
+  text.textContent = savedAt ? `上次離開：${formatSaveTime(savedAt)}` : '有上次離開時的自動存檔';
+  const resume = document.createElement('button');
+  resume.type = 'button';
+  resume.className = 'resume-banner-go';
+  resume.textContent = '從上次離開處繼續';
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'resume-banner-close';
+  close.setAttribute('aria-label', '不用了');
+  close.textContent = '✕';
+  banner.append(text, resume, close);
+  document.body.appendChild(banner);
+  resumeBanner = banner;
+
+  const timer = window.setTimeout(() => { if (resumeBanner === banner) hideResumeBanner(); }, 12_000);
+  close.addEventListener('click', () => {
+    window.clearTimeout(timer);
+    hideResumeBanner();
+  });
+  resume.addEventListener('click', () => {
+    window.clearTimeout(timer);
+    hideResumeBanner();
+    void restoreAutoSave().then((ok) => showToast(ok ? '✅ 已回到上次離開的進度' : '❌ 自動存檔無法讀取'));
+  });
+}
+
+/** 每款遊戲成功開始執行後呼叫一次。 */
+function onGameStarted(): void {
+  gameSessionActive = true;
+  resetSpeedControls();
+  heldNativeButtons[0].clear();
+  heldNativeButtons[1].clear();
+  ejsRewindAvailable = isSnes9xActive() && featureState.rewindEnabled;
+  if (currentCatalogFile) lobbyPrefs.noteRecent(currentCatalogFile);
+  const coreTag = isMupenN64Active() ? 'n64' : isFbNeoActive() ? 'fbneo' : isSnes9xActive() ? `ejs-${emulatorJsCore}` : nes?.getCoreType() ?? 'nes';
+  cheatGameKey = `${coreTag}:${currentRomFilename}`;
+  activeCheats = loadCheats(getSafeStorage(), cheatGameKey);
+  applyCheatsToCore(activeCheats);
+  syncFastForwardBackend();
+  refreshToolsPanels();
+  void offerAutoSaveResume();
+}
+
+/** 離開目前遊戲前呼叫：自動存檔並清除本局的暫時狀態。 */
+async function endGameSession(): Promise<void> {
+  if (!gameSessionActive) return;
+  await autosaveNow();
+  gameSessionActive = false;
+  hideResumeBanner();
+  resetSpeedControls();
+  mobileTools?.close();
+}
+
+// ---- 存檔欄位說明 ----
+
+async function describeSaveSlot(slot: number): Promise<string> {
+  if (isMupenN64Active()) return '使用遊戲內存檔';
+  const key = getSaveKey(slot);
+  const savedAt = getSaveTime(getSafeStorage(), key);
+  if (savedAt) return formatSaveTime(savedAt);
+  try {
+    if (localStorage.getItem(key)) return '有存檔';
+  } catch {
+    // ignore
+  }
+  try {
+    if ((await readBinaryState(key))?.length) return '有存檔';
+  } catch {
+    // ignore
+  }
+  return '空';
+}
+
+// ---- 存檔備份 ----
+
+async function exportSaveBackup(): Promise<void> {
+  const storage = getSafeStorage();
+  const localEntries: Array<[string, string]> = [];
+  if (storage) {
+    for (let index = 0; index < storage.length; index++) {
+      const key = storage.key(index);
+      const value = key ? storage.getItem(key) : null;
+      if (key && value !== null) localEntries.push([key, value]);
+    }
+  }
+  if (gameSessionActive) await autosaveNow();
+  const binaryEntries = await listBinaryStates().catch(() => [] as Array<[string, Uint8Array]>);
+  const n64Entries = await listN64Saves().catch(() => [] as Array<[string, Uint8Array]>);
+  const backup = buildBackup({ localEntries, binaryEntries, n64Entries });
+  const summary = summarizeBackup(backup);
+  const total = summary.localCount + summary.binaryCount + summary.n64Count;
+  if (total === 0) {
+    showToast('目前沒有可匯出的存檔');
+    return;
+  }
+  downloadBlob(new Blob([JSON.stringify(backup)], { type: 'application/json' }), `h5emu-saves-${timestampForFile()}.json`);
+  showToast(`✅ 已匯出 ${total} 筆存檔資料`);
+}
+
+function mergeJsonMap(existing: string | null, incoming: string): string {
+  try {
+    const base = existing ? JSON.parse(existing) as Record<string, number> : {};
+    const next = JSON.parse(incoming) as Record<string, number>;
+    for (const [key, value] of Object.entries(next)) {
+      if (typeof value === 'number' && (!(key in base) || value > base[key])) base[key] = value;
+    }
+    return JSON.stringify(base);
+  } catch {
+    return incoming;
+  }
+}
+
+function mergeJsonList(existing: string | null, incoming: string): string {
+  try {
+    const base = existing ? JSON.parse(existing) as unknown[] : [];
+    const next = JSON.parse(incoming) as unknown[];
+    const merged = [...base];
+    for (const item of next) if (!merged.includes(item)) merged.push(item);
+    return JSON.stringify(merged);
+  } catch {
+    return incoming;
+  }
+}
+
+async function importSaveBackup(file: File): Promise<void> {
+  let backup;
+  try {
+    backup = parseBackup(await file.text());
+  } catch (error) {
+    await showAppAlert(error instanceof Error ? error.message : '無法讀取備份檔', '匯入失敗');
+    return;
+  }
+  const summary = summarizeBackup(backup);
+  const total = summary.localCount + summary.binaryCount + summary.n64Count;
+  if (total === 0) {
+    showToast('備份檔裡沒有存檔');
+    return;
+  }
+  const confirmed = await showAppConfirm(
+    `備份檔含 ${total} 筆存檔資料。匯入後，同名的存檔會被備份內容取代，其他存檔保持不變。要繼續嗎？`,
+    '匯入存檔備份',
+  );
+  if (!confirmed) return;
+
+  const storage = getSafeStorage();
+  let written = 0;
+  const failed: string[] = [];
+  for (const [key, value] of Object.entries(backup.localStorage)) {
+    try {
+      const existing = storage?.getItem(key) ?? null;
+      const next = key === 'h5emu.save-meta.v1' ? mergeJsonMap(existing, value)
+        : key === 'h5emu.lobby.favorites.v1' ? mergeJsonList(existing, value)
+        : value;
+      storage?.setItem(key, next);
+      written++;
+    } catch {
+      // NES 持久存檔原本就會在 localStorage 滿時改存 IndexedDB，讀檔流程也會查 IndexedDB。
+      if (isNesPersistentState(value)) {
+        try {
+          await writeBinaryState(key, new TextEncoder().encode(value));
+          written++;
+          continue;
+        } catch {
+          // fall through
+        }
+      }
+      failed.push(key);
+    }
+  }
+  for (const [key, encoded] of Object.entries(backup.binaryStates)) {
+    try {
+      await writeBinaryState(key, backupBase64ToBytes(encoded));
+      written++;
+    } catch {
+      failed.push(key);
+    }
+  }
+  const n64Entries = Object.entries(backup.n64Saves).map(([key, encoded]) => [key, backupBase64ToBytes(encoded)] as [string, Uint8Array]);
+  try {
+    await writeN64Saves(n64Entries);
+    written += n64Entries.length;
+  } catch {
+    failed.push(...n64Entries.map(([key]) => key));
+  }
+  lobbyTools?.refresh();
+  refreshToolsPanels();
+  if (failed.length > 0) {
+    await showAppAlert(`已匯入 ${written} 筆，${failed.length} 筆因瀏覽器儲存空間不足而失敗。`, '部分匯入失敗');
+  } else {
+    showToast(`✅ 已匯入 ${written} 筆存檔資料`);
+  }
+  if (gameSessionActive) showToast('執行中的遊戲請重新開啟，才會讀到匯入的電池存檔');
+}
+
+// ---- 功能面板 ----
+
+function currentToolsCapabilities() {
+  const inGame = document.body.classList.contains('game-active') && gameSessionActive;
+  const n64 = isMupenN64Active();
+  return {
+    fastForward: inGame && !n64,
+    rewind: inGame && rewindUnavailableReason() === null,
+    // 只有「已勾選卻無法使用」時才說明原因；未勾選時顯示一般說明即可。
+    rewindNote: inGame && featureState.rewindEnabled ? (rewindUnavailableReason() ?? undefined) : undefined,
+    screenshot: inGame && !n64,
+    cheatHint: inGame ? cheatHintForCurrentCore() : null,
+    twoPlayer: inGame && supportsPlayerTwo(),
+    autosave: !n64,
+  };
+}
+
+function createToolsApi(): ToolsApi {
+  return {
+    settings: featureSettings,
+    capabilities: currentToolsCapabilities,
+    isFastForwardOn: () => fastForwardToggled,
+    setFastForward: setFastForwardToggled,
+    rewindHold: setRewindHeld,
+    screenshot: () => { void takeScreenshot(); },
+    getCheats: () => activeCheats.map((entry) => ({ ...entry })),
+    setCheats: setActiveCheats,
+    exportBackup: exportSaveBackup,
+    importBackup: importSaveBackup,
+    notify: showToast,
+    slots: {
+      list: [0, 1, 2, 3, 4],
+      label: (slot) => (slot === 0 ? '欄位 1（💾 / 📂）' : `欄位 ${slot + 1}`),
+      describe: describeSaveSlot,
+      save: (slot) => saveStateForUser(slot),
+      load: (slot) => loadStateForUser(slot),
+    },
+  };
+}
+
+function applyPadAppearance(): void {
+  const body = document.body;
+  body.classList.toggle('pad-opacity-custom', featureState.padOpacity !== 100);
+  body.style.setProperty('--pad-user-opacity', String(featureState.padOpacity / 100));
+  body.classList.toggle('pad-scale-custom', featureState.padScale !== 100);
+  body.style.setProperty('--pad-user-scale', String(featureState.padScale / 100));
+}
+
+function toLobbyRom(rom: RomInfo): LobbyRom {
+  const systemKey = detectRomSystem(rom);
+  const machine = MACHINES.find((item) => item.key === systemKey);
+  return {
+    file: rom.file,
+    name: rom.name,
+    displayName: getRomDisplayName(rom),
+    systemKey,
+    systemLabel: machine ? `${machine.title} ${machine.label}` : systemKey,
+    description: rom.description,
+    coverUrl: getRomCoverUrl(rom),
+  };
+}
+
+function setupLobbyTools(): void {
+  const machineGridEl = document.getElementById('machine-grid');
+  if (!machineGridEl || lobbyTools) return;
+  lobbyTools = mountLobbyTools(machineGridEl, lobbyPrefs, {
+    catalog: () => romCatalog.map(toLobbyRom),
+    open: (file) => { void loadRomFromServer(file); },
+    showCollection: (title, summary, files) => {
+      const byFile = new Map(romCatalog.map((rom) => [rom.file, rom]));
+      renderRomCollection(title, summary, files.map((file) => byFile.get(file)).filter((rom): rom is RomInfo => Boolean(rom)));
+    },
+    showMachines: () => renderMachineSelector(),
+  });
+}
+
+function registerServiceWorker(): void {
+  if (!import.meta.env.PROD || !('serviceWorker' in navigator) || !window.isSecureContext) return;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
+      .catch((error) => console.warn('[離線] Service Worker 註冊失敗:', error));
+  });
+}
+
+function setupPlayerFeatures(): void {
+  applyPadAppearance();
+  featureSettings.subscribe((next) => {
+    const rewindTurnedOff = featureState.rewindEnabled && !next.rewindEnabled;
+    featureState = next;
+    if (rewindTurnedOff) {
+      setRewindHeld(false);
+      rewindBuffer.clear();
+    }
+    applyPadAppearance();
+    syncFastForwardBackend();
+  });
+
+  // 桌機版的「功能」分頁由 desktop-stage 掛載；這裡建立手機版選單。
+  mobileTools = mountMobileTools({ ...createToolsApi(), returnToLobby: () => { void confirmReturnToMachineMenu(); } });
+
+  const isGameHold = (event: KeyboardEvent) => document.body.classList.contains('game-active')
+    && !document.body.classList.contains('binding-capture')
+    && !isEditableTarget(event.target)
+    && !isMupenN64Active();
+  const onHoldKey = (event: KeyboardEvent, pressed: boolean) => {
+    if (!isGameHold(event) || event.ctrlKey || event.altKey || event.metaKey) return;
+    if (event.code === 'Tab') {
+      // 選單開啟時 Tab 用於移動焦點。
+      if (document.querySelector('.stage-drawer.is-open, .mobile-tools-sheet.is-open, #app-dialog-overlay:not([hidden])')) return;
+      event.preventDefault();
+      if (pressed && event.repeat) return;
+      setFastForwardHeld(pressed);
+    } else if (event.code === 'Backspace') {
+      if (resolveKeyAction(inputBindings.layout(getBindingLayout()), 'Backspace')) return;
+      event.preventDefault();
+      if (pressed && event.repeat) return;
+      setRewindHeld(pressed);
+    }
+  };
+  document.addEventListener('keydown', (event) => onHoldKey(event, true));
+  document.addEventListener('keyup', (event) => onHoldKey(event, false));
+  window.addEventListener('blur', () => {
+    setFastForwardHeld(false);
+    setRewindHeld(false);
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      setFastForwardHeld(false);
+      setRewindHeld(false);
+      void autosaveNow();
+    }
+  });
+  window.addEventListener('pagehide', () => { void autosaveNow(); });
+  registerServiceWorker();
+}
+
 // ===== 鍵盤快捷鍵 =====
 
 function setupKeyboardShortcuts(): void {
@@ -4305,6 +5303,11 @@ function setupKeyboardShortcuts(): void {
     const iframe = document.getElementById('snes9x-screen') as HTMLIFrameElement | null;
     if (event.source !== iframe?.contentWindow) return;
     if (!event.data || typeof event.data !== 'object' || event.data.source !== 'h5-emu-snes9x-shortcut') return;
+    if ((event.data.action === 'fast-forward' || event.data.action === 'rewind') && typeof event.data.pressed === 'boolean') {
+      if (event.data.action === 'fast-forward') setFastForwardHeld(event.data.pressed);
+      else setRewindHeld(event.data.pressed);
+      return;
+    }
 
     const slot = typeof event.data.slot === 'number' && Number.isInteger(event.data.slot)
       ? event.data.slot
@@ -4406,6 +5409,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   setupKeyboardShortcuts();
+  setupPlayerFeatures();
   window.nes = nes;
 
   // 定期自動儲存 SRAM（每 30 秒）

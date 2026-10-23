@@ -12,6 +12,8 @@
     "build": "npm run wasm:build && tsc --noEmit && node -e \"require('fs').rm('dist',{recursive:true,force:true},e=>{if(e)throw e})\" && vite build",
     "preview": "vite preview",
     "test": "vitest",
+    "test:ci": "vitest run --exclude \"tests/{cpu,ppu}.test.ts\"",
+    "test:rust": "cd nes-wasm && cargo test --lib",
     "test:cpu": "vitest run --testPathPattern=cpu",
     "test:ppu": "vitest run --testPathPattern=ppu",
     "test:apu": "vitest run --testPathPattern=apu",

@@ -16,6 +16,15 @@ export interface StageActions {
   getLayout(): BindingLayout;
   getGameTitle(): string;
   notify(message: string): void;
+  /** 選用：回傳欄位的存檔時間或狀態（「空」「有存檔」）。 */
+  describeSlot?(slot: number): Promise<string>;
+}
+
+/** 選用的額外分頁（例如「功能」）。 */
+export interface StageExtraTab {
+  id: string;
+  label: string;
+  mount(panel: HTMLElement): { refresh(): void; release?(): void };
 }
 
 export interface StageSettings {
@@ -85,8 +94,10 @@ export function mountDesktopStage(options: {
   shell: HTMLElement;
   bindings: BindingStore;
   actions: StageActions;
+  extraTabs?: StageExtraTab[];
 }): DesktopStage {
   const { shell, bindings, actions } = options;
+  const extraTabs = options.extraTabs ?? [];
   const settings = loadSettings();
 
   // ---- 跑馬燈（外框內的遊戲名稱） ----
@@ -144,6 +155,7 @@ export function mountDesktopStage(options: {
   const panels = el('div', 'stage-panels');
   const tabDefs = [
     { id: 'play', label: '操作' },
+    ...extraTabs.map((tab) => ({ id: tab.id, label: tab.label })),
     { id: 'keys', label: '按鍵' },
     { id: 'screen', label: '畫面' },
     { id: 'help', label: '說明' },
@@ -158,6 +170,7 @@ export function mountDesktopStage(options: {
     for (const [panelId, panel] of panelNodes) panel.hidden = panelId !== id;
     if (id === 'keys') bindingPanel.showLayout(actions.getLayout());
     else bindingPanel.cancelCapture();
+    extraHandles.get(id)?.refresh();
   };
   for (const tab of tabDefs) {
     const button = el('button', 'stage-tab', tab.label);
@@ -183,12 +196,28 @@ export function mountDesktopStage(options: {
   playGroup.append(pauseButton, resetButton);
   const slotTitle = el('h3', 'stage-heading', '即時存檔');
   const slotList = el('div', 'stage-slots');
+  const slotStatus = new Map<number, HTMLElement>();
+  const updateSlotStatus = () => {
+    if (!actions.describeSlot) return;
+    for (const [slot, node] of slotStatus) {
+      void actions.describeSlot(slot).then((text) => { node.textContent = text; }).catch(() => { node.textContent = ''; });
+    }
+  };
   for (const slot of SAVE_SLOTS) {
     const row = el('div', 'stage-slot');
-    row.appendChild(el('span', 'stage-slot-name', slot === 0 ? '欄位 1（F5 / F7）' : `欄位 ${slot + 1}`));
+    const name = el('span', 'stage-slot-name', slot === 0 ? '欄位 1（F5 / F7）' : `欄位 ${slot + 1}`);
+    if (actions.describeSlot) {
+      const status = el('small', 'stage-slot-status');
+      slotStatus.set(slot, status);
+      name.appendChild(status);
+    }
+    row.appendChild(name);
     const save = el('button', 'stage-action stage-action-small', '存檔');
     save.type = 'button';
-    save.addEventListener('click', () => actions.save(slot));
+    save.addEventListener('click', () => {
+      actions.save(slot);
+      window.setTimeout(updateSlotStatus, 400);
+    });
     const load = el('button', 'stage-action stage-action-small', '讀取');
     load.type = 'button';
     load.addEventListener('click', () => actions.load(slot));
@@ -202,6 +231,12 @@ export function mountDesktopStage(options: {
   lobbyButton.type = 'button';
   systemGroup.append(romButton, lobbyButton);
   playPanel.append(playGroup, slotTitle, slotList, systemGroup);
+
+  // 額外分頁
+  const extraHandles = new Map<string, { refresh(): void; release?(): void }>();
+  for (const tab of extraTabs) {
+    extraHandles.set(tab.id, tab.mount(panelNodes.get(tab.id)!));
+  }
 
   // 按鍵
   const keysPanel = panelNodes.get('keys')!;
@@ -240,6 +275,8 @@ export function mountDesktopStage(options: {
     ['F5 / F7', '快速存檔 / 讀檔（欄位 1）'],
     ['Shift + F1~F4', '存到欄位 2~5'],
     ['Ctrl + 1~4', '讀取欄位 2~5'],
+    ['按住 Tab', '快轉'],
+    ['按住 Backspace', '倒帶（需在「功能」啟用）'],
   ];
   const helpList = el('dl', 'stage-help');
   for (const [keys, text] of shortcuts) {
@@ -270,6 +307,7 @@ export function mountDesktopStage(options: {
     isOpen = true;
     lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     updatePauseLabel();
+    updateSlotStatus();
     drawer.hidden = false;
     scrim.hidden = false;
     menuButton.setAttribute('aria-expanded', 'true');
@@ -285,6 +323,7 @@ export function mountDesktopStage(options: {
     if (!isOpen) return;
     isOpen = false;
     bindingPanel.cancelCapture();
+    for (const handle of extraHandles.values()) handle.release?.();
     drawer.classList.remove('is-open');
     scrim.classList.remove('is-open');
     menuButton.setAttribute('aria-expanded', 'false');
@@ -325,6 +364,16 @@ export function mountDesktopStage(options: {
   window.addEventListener('keydown', (event) => {
     if (!document.body.classList.contains('desktop-ui') || !document.body.classList.contains('game-active')) return;
     if (document.body.classList.contains('binding-capture')) return;
+    const target = event.target;
+    if (target instanceof HTMLElement && (target.isContentEditable || target instanceof HTMLTextAreaElement
+      || (target instanceof HTMLInputElement && ['text', 'search', 'url', 'email', 'number', 'password', 'tel'].includes(target.type)))) {
+      if (isOpen && event.code === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        closeDrawer();
+      }
+      return;
+    }
     const modified = event.ctrlKey || event.altKey || event.metaKey || event.shiftKey;
     if (!modified && (event.code === 'KeyM' || event.code === 'F1')) {
       event.preventDefault();
@@ -471,7 +520,9 @@ export function mountDesktopStage(options: {
       for (const node of [marqueeSystem, hudSystem, drawerSystem]) node.textContent = label;
       for (const node of [marqueeTitle, hudGame, drawerGame]) node.textContent = title;
       if (isOpen && !panelNodes.get('keys')?.hidden) bindingPanel.showLayout(actions.getLayout());
+      for (const [id, handle] of extraHandles) if (isOpen && !panelNodes.get(id)?.hidden) handle.refresh();
       updatePauseLabel();
+      updateSlotStatus();
       scheduleFit();
     },
     toggleDrawer,

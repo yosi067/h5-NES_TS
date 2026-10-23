@@ -53,6 +53,32 @@ export async function readBinaryState(key: string): Promise<Uint8Array | null> {
   });
 }
 
+/** 列出全部二進位存檔（備份用）。 */
+export async function listBinaryStates(): Promise<Array<[string, Uint8Array]>> {
+  const database = await openDatabase();
+  return new Promise<Array<[string, Uint8Array]>>((resolve, reject) => {
+    try {
+      const transaction = database.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const result: Array<[string, Uint8Array]> = [];
+      const request = store.openCursor();
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) {
+          resolve(result);
+          return;
+        }
+        const bytes = asBytes(cursor.value);
+        if (typeof cursor.key === 'string' && bytes) result.push([cursor.key, bytes]);
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error ?? new Error('IndexedDB 列舉失敗'));
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
 export async function writeBinaryState(key: string, data: Uint8Array): Promise<void> {
   const database = await openDatabase();
   await new Promise<void>((resolve, reject) => {

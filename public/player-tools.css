@@ -1,0 +1,602 @@
+/* ==========================================================================
+   玩家功能：功能面板、手機功能選單、快轉/倒帶提示、續玩提示、大廳搜尋與最愛。
+   全部使用新的 class，不覆寫既有大廳卡片、遊戲畫面或虛擬手把的排版。
+   ========================================================================== */
+
+/* ---------- 功能面板（桌機抽屜「功能」分頁與手機底部選單共用） ---------- */
+.tools-panel .stage-heading:first-child {
+  margin-top: 0;
+}
+
+.tools-note {
+  margin: 4px 0 14px;
+  color: rgba(242, 238, 228, 0.6);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tools-note:empty {
+  display: none;
+}
+
+.tools-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 4px;
+}
+
+.tools-choice-label {
+  color: rgba(242, 238, 228, 0.85);
+  font-size: 13px;
+}
+
+.tools-segment {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tools-segment-btn {
+  min-width: 44px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(242, 238, 228, 0.75);
+  font: 600 13px/1 system-ui, 'Noto Sans TC', sans-serif;
+  cursor: pointer;
+}
+
+.tools-segment-btn[aria-checked="true"] {
+  background: var(--stage-accent, #d2a646);
+  color: #15121a;
+}
+
+.tools-segment-btn:focus-visible {
+  outline: 2px solid var(--stage-accent, #d2a646);
+  outline-offset: 1px;
+}
+
+.tools-hold {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.tools-hold.is-active {
+  border-color: transparent;
+  background: var(--stage-accent, #d2a646);
+  color: #15121a;
+}
+
+.tools-slot-status,
+.stage-slot-status {
+  display: block;
+  margin-top: 2px;
+  color: rgba(242, 238, 228, 0.5);
+  font-size: 11px;
+}
+
+.tools-help {
+  margin: 4px 0 8px;
+  font-size: 12px;
+}
+
+.tools-cheat-list {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.tools-cheat {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 6px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+}
+
+.tools-cheat input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--stage-accent, #d2a646);
+}
+
+.tools-cheat-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.tools-cheat-copy code {
+  overflow: hidden;
+  font: 600 13px/1.4 ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tools-cheat-copy small {
+  overflow: hidden;
+  color: rgba(242, 238, 228, 0.6);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tools-cheat-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.tools-input {
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #f2eee4;
+  font: 14px/1.2 system-ui, 'Noto Sans TC', sans-serif;
+}
+
+.tools-input:focus {
+  border-color: var(--stage-accent, #d2a646);
+  outline: none;
+}
+
+.tools-input:disabled {
+  opacity: 0.4;
+}
+
+.tools-error {
+  margin: 0 0 12px;
+  color: #ffb0b0;
+  font-size: 12px;
+}
+
+.tools-empty {
+  margin: 0;
+  color: rgba(242, 238, 228, 0.5);
+  font-size: 12px;
+}
+
+/* ---------- 手機功能選單 ---------- */
+.mobile-tools-trigger,
+.mobile-tools-scrim,
+.mobile-tools-sheet {
+  display: none;
+}
+
+body.game-active:not(.desktop-ui) .mobile-tools-trigger {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  left: calc(env(safe-area-inset-left, 0px) + 6px);
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 10px;
+  background: rgba(10, 10, 14, 0.55);
+  color: #fff;
+  font: 700 17px/1 system-ui, sans-serif;
+  opacity: 0.72;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.game-active:not(.desktop-ui) .mobile-tools-trigger:active {
+  opacity: 1;
+}
+
+body.game-active:not(.desktop-ui) .mobile-tools-scrim:not([hidden]) {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+  display: block;
+  background: rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+body.game-active:not(.desktop-ui) .mobile-tools-scrim.is-open {
+  opacity: 1;
+}
+
+body.game-active:not(.desktop-ui) .mobile-tools-sheet:not([hidden]) {
+  --stage-accent: #d2a646;
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 960;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  max-height: min(82vh, calc(var(--app-height, 100dvh) - 24px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px 18px 0 0;
+  background: linear-gradient(180deg, rgba(26, 26, 34, 0.98), rgba(12, 12, 17, 0.99));
+  box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.5);
+  color: #f2eee4;
+  font: 14px/1.5 system-ui, 'Noto Sans TC', sans-serif;
+  transform: translateY(100%);
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  outline: none;
+}
+
+body.game-active:not(.desktop-ui) .mobile-tools-sheet.is-open {
+  transform: none;
+}
+
+/* 橫向時改成右側面板，避免蓋住整個畫面。 */
+body.game-active.mobile-landscape-mode:not(.desktop-ui) .mobile-tools-sheet:not([hidden]) {
+  top: 0;
+  left: auto;
+  width: min(420px, 70vw);
+  max-height: none;
+  padding-right: env(safe-area-inset-right, 0px);
+  border-top: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px 0 0 18px;
+  transform: translateX(100%);
+}
+
+body.game-active.mobile-landscape-mode:not(.desktop-ui) .mobile-tools-sheet.is-open {
+  transform: none;
+}
+
+.mobile-tools-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mobile-tools-head strong {
+  font-size: 16px;
+}
+
+.mobile-tools-head-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mobile-tools-body {
+  flex: 1;
+  min-height: 0;
+  padding: 14px 16px 22px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mobile-tools-body .stage-action {
+  min-height: 42px;
+}
+
+/* ---------- 快轉／倒帶提示、續玩提示 ---------- */
+.speed-indicator {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  left: 50%;
+  z-index: 880;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font: 700 13px/1.4 system-ui, 'Noto Sans TC', sans-serif;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.speed-indicator[hidden] {
+  display: none;
+}
+
+.resume-banner {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  left: 50%;
+  z-index: 890;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  max-width: calc(100vw - 24px);
+  padding: 8px 8px 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(16, 16, 22, 0.94);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  color: #f2eee4;
+  font: 13px/1.4 system-ui, 'Noto Sans TC', sans-serif;
+  transform: translateX(-50%);
+  animation: resume-banner-in 220ms ease-out;
+}
+
+.resume-banner span {
+  overflow: hidden;
+  color: rgba(242, 238, 228, 0.75);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resume-banner-go {
+  flex: none;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #d2a646;
+  color: #15121a;
+  font: 700 13px/1 system-ui, 'Noto Sans TC', sans-serif;
+  cursor: pointer;
+}
+
+.resume-banner-close {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2eee4;
+  cursor: pointer;
+}
+
+@keyframes resume-banner-in {
+  from { opacity: 0; transform: translate(-50%, -8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---------- 觸控按鍵外觀（只在使用者調整過時套用） ---------- */
+body.pad-opacity-custom :is(
+  .dpad-container, .ab-container, .snes-top-row, .snes-right-area,
+  .arcade-panel, .arcade-system-row,
+  .n64-top-row, .n64-stick-block, .n64-dpad-block, .n64-face-block, .n64-c-block
+) {
+  opacity: var(--pad-user-opacity, 1);
+}
+
+body.pad-scale-custom :is(.dpad-container, .n64-stick-block) {
+  scale: var(--pad-user-scale, 1);
+  transform-origin: left center;
+}
+
+body.pad-scale-custom :is(.ab-container, .snes-right-area, .arcade-panel, .n64-face-block, .n64-c-block) {
+  scale: var(--pad-user-scale, 1);
+  transform-origin: right center;
+}
+
+/* ---------- 大廳：搜尋列與書架 ---------- */
+.lobby-tools {
+  display: grid;
+  gap: 14px;
+  margin: 0 0 clamp(16px, 2.4vw, 26px);
+  --lobby-font: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  font-family: var(--lobby-font);
+  color: #15130e;
+}
+
+.lobby-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lobby-search-icon {
+  position: absolute;
+  left: 14px;
+  color: rgba(21, 19, 14, 0.55);
+  font-size: 20px;
+  pointer-events: none;
+}
+
+.lobby-search-input {
+  width: 100%;
+  min-height: 46px;
+  box-sizing: border-box;
+  padding: 10px 44px 10px 42px;
+  border: 1px solid rgba(21, 19, 14, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 252, 242, 0.9);
+  color: #15130e;
+  font: 500 15px/1.3 var(--lobby-font);
+  box-shadow: inset 0 1px 2px rgba(60, 40, 10, 0.08);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.lobby-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.lobby-search-input:focus {
+  border-color: #c2321f;
+  outline: 2px solid rgba(194, 50, 31, 0.2);
+  outline-offset: 0;
+}
+
+.lobby-search-clear {
+  position: absolute;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(21, 19, 14, 0.08);
+  color: #3a3529;
+  cursor: pointer;
+}
+
+.lobby-search-clear[hidden] {
+  display: none;
+}
+
+.lobby-shelves {
+  display: grid;
+  gap: 12px;
+}
+
+.lobby-shelves[hidden] {
+  display: none;
+}
+
+.lobby-shelf-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.lobby-shelf-title {
+  color: #3a3529;
+  font: 800 13px/1 var(--lobby-font);
+  letter-spacing: 0.12em;
+}
+
+.lobby-shelf-more {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: #c2321f;
+  font: 700 12px/1 var(--lobby-font);
+  cursor: pointer;
+}
+
+.lobby-shelf-row {
+  display: flex;
+  gap: 10px;
+  padding: 2px 2px 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lobby-chip {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 196px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid rgba(21, 19, 14, 0.13);
+  border-left: 4px solid var(--system-color, #c2321f);
+  border-radius: 12px;
+  background: #fbf7ec;
+  color: #15130e;
+  text-align: left;
+  scroll-snap-align: start;
+  cursor: pointer;
+}
+
+.lobby-chip:hover,
+.lobby-chip:focus-visible {
+  border-color: rgba(21, 19, 14, 0.4);
+  border-left-color: var(--system-color, #c2321f);
+}
+
+.lobby-chip-cover {
+  width: 34px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #1f1c17;
+}
+
+.lobby-chip-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lobby-chip-name {
+  display: -webkit-box;
+  overflow: hidden;
+  font: 700 13px/1.35 var(--lobby-font);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.lobby-shelf-hint {
+  margin: 0;
+  color: rgba(21, 19, 14, 0.55);
+  font-size: 12px;
+}
+
+/* 搜尋結果與最愛沒有主機插圖。 */
+#rom-browser-header.is-collection .rom-feature-art {
+  display: none;
+}
+
+/* 最愛星號：放在封面角落，以絕對定位疊上，不佔卡片版面。 */
+#rom-selector #rom-list .rom-cover-frame {
+  position: relative;
+}
+
+#rom-selector #rom-list .rom-fav {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+#rom-selector #rom-list .rom-fav.is-on {
+  background: rgba(194, 50, 31, 0.9);
+  color: #ffe9a8;
+}
+
+#rom-selector #rom-list .rom-fav:hover {
+  transform: scale(1.08);
+}
+
+#rom-selector #rom-list .rom-fav:focus-visible {
+  outline: 2px solid #ffe9a8;
+  outline-offset: 1px;
+}
+
+/* 手機橫向大廳較擠：書架只保留一列，搜尋框縮小。 */
+body.mobile-landscape-mode .lobby-tools {
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+body.mobile-landscape-mode .lobby-search-input {
+  min-height: 38px;
+  font-size: 14px;
+}
+
+body.mobile-landscape-mode .lobby-shelf[data-shelf="favorite"] {
+  display: none;
+}
