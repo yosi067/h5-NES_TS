@@ -44,15 +44,21 @@ body {
   --sk-dpad-a: #3a3a3e;
   --sk-dpad-b: #2a2a2d;
   --sk-dpad-c: #222225;
-  --sk-shell-radius: 12px 12px 64px 12px;
+  --sk-shell-radius: 0;
+  --sk-floor: #cdcdcf;
 }
 
 /* ==========================================================================
    手機直向：Game Boy 造型
    ========================================================================== */
 
+/* 頁面底色與機身底部同色：PWA 或螢幕較長時，機身下方不會露出一條黑邊 */
 body.game-active:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode) {
-  background: var(--sk-page) !important;
+  background: var(--skin-grain), var(--sk-floor) !important;
+}
+
+html:has(> body.game-active:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode)) {
+  background: #cdcdcf !important;
 }
 
 body:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode) #gameboy-shell {
@@ -82,7 +88,7 @@ body:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode) .d
 body:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode) .top-decoration::after {
   content: '';
   position: absolute;
-  top: 13px;
+  top: calc(env(safe-area-inset-top, 0px) + 13px);
   left: 0;
   right: 0;
   height: 2px;
@@ -93,7 +99,7 @@ body:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode) .t
 body:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode) .top-decoration::before {
   content: '◁OFF·ON▷';
   position: absolute;
-  top: 2px;
+  top: calc(env(safe-area-inset-top, 0px) + 2px);
   left: 18px;
   box-sizing: border-box;
   height: 10px;
@@ -169,6 +175,7 @@ body:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode) #g
   color: var(--sk-ink) !important;
   font-style: italic !important;
   letter-spacing: 0.01em;
+  -webkit-text-stroke: 0.6px currentColor;
   text-shadow: 0 1px 0 var(--sk-ink-shadow) !important;
 }
 
@@ -332,17 +339,25 @@ body:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode) .s
     inset 0 1px 3px rgba(0, 0, 0, 0.3) !important;
 }
 
-/* 右下角六條斜向喇叭孔（階梯排列，每條由左上往右下） */
-body:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode) #gameboy-shell::after {
-  content: '';
+/* ---------- 喇叭孔（src/ui/shell-decor.ts 會避開所有按鍵擺放，放不下就隱藏） ---------- */
+.shell-grille {
+  display: none;
   position: absolute;
-  right: 14px;
-  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  width: 112px;
-  height: 84px;
   z-index: 0;
   pointer-events: none;
+}
+
+body.game-active:not([data-skin="original"]):not(.desktop-ui):not(.mobile-landscape-mode) .shell-grille.is-placed {
+  display: block;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 90'%3E%3Cg stroke-linecap='round' fill='none'%3E%3Cg stroke='rgba(255,255,255,0.7)' stroke-width='6'%3E%3Cpath d='M10 41 L25 85'/%3E%3Cpath d='M27 34 L42 78'/%3E%3Cpath d='M44 27 L59 71'/%3E%3Cpath d='M61 20 L76 64'/%3E%3Cpath d='M78 13 L93 57'/%3E%3Cpath d='M95 6 L110 50'/%3E%3C/g%3E%3Cg stroke='rgba(0,0,0,0.42)' stroke-width='5.4' transform='translate(-0.8 -0.9)'%3E%3Cpath d='M10 41 L25 85'/%3E%3Cpath d='M27 34 L42 78'/%3E%3Cpath d='M44 27 L59 71'/%3E%3Cpath d='M61 20 L76 64'/%3E%3Cpath d='M78 13 L93 57'/%3E%3Cpath d='M95 6 L110 50'/%3E%3C/g%3E%3Cg stroke='rgba(0,0,0,0.35)' stroke-width='2.2' transform='translate(-1.6 -1.4)'%3E%3Cpath d='M10 41 L25 85'/%3E%3Cpath d='M27 34 L42 78'/%3E%3Cpath d='M44 27 L59 71'/%3E%3Cpath d='M61 20 L76 64'/%3E%3Cpath d='M78 13 L93 57'/%3E%3Cpath d='M95 6 L110 50'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+body.game-active:not([data-skin="original"]).mobile-landscape-mode:not(.desktop-ui) .shell-grille.is-placed {
+  display: block;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.55) 0 1.7px, rgba(255, 255, 255, 0.22) 2.1px, transparent 2.6px) 0 0 / 10px 10px;
+  -webkit-mask: radial-gradient(circle, #000 64%, transparent 66%);
+  mask: radial-gradient(circle, #000 64%, transparent 66%);
 }
 
 /* ==========================================================================
@@ -455,28 +470,16 @@ body:not([data-skin="original"]).mobile-landscape-mode:not(.desktop-ui) .snes-mi
   box-shadow: 0 0 0 var(--sk-pill-edge), inset 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* 右下角喇叭孔 */
-body:not([data-skin="original"]).mobile-landscape-mode:not(.desktop-ui) #gameboy-shell::after {
-  content: '';
-  position: absolute;
-  right: 12px;
-  bottom: calc(10px + env(safe-area-inset-bottom, 0px));
-  width: 30px;
-  height: 30px;
-  z-index: 0;
-  pointer-events: none;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(0, 0, 0, 0.55) 0 1.7px, rgba(255, 255, 255, 0.22) 2.1px, transparent 2.6px) 0 0 / 10px 10px;
-  -webkit-mask: radial-gradient(circle, #000 64%, transparent 66%);
-  mask: radial-gradient(circle, #000 64%, transparent 66%);
-}
-
 /* ==========================================================================
    畫風（直向）：配色都是原版 Game Boy，只換繪畫手法
    real（寫實質感）為上方的預設規則；以下為其他畫風的覆寫
    ========================================================================== */
 
 /* ---------- 扁平插畫：純色塊、無漸層、實心位移陰影 ---------- */
+body[data-skin="flat"] {
+  --sk-floor: #d4d4d6;
+}
+
 body[data-skin="flat"]:not(.desktop-ui):not(.mobile-landscape-mode) #gameboy-shell {
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0) 92%, rgba(0, 0, 0, 0.05) 92%),
@@ -546,6 +549,7 @@ body[data-skin="flat"]:not(.desktop-ui):not(.mobile-landscape-mode) .snes-mini-b
 
 /* ---------- 卡通描邊：粗黑輪廓線、硬邊兩階明暗、白色亮點 ---------- */
 body[data-skin="cel"] {
+  --sk-floor: #d7d7d9;
   --cel-line: #1f1d24;
 }
 
@@ -554,7 +558,7 @@ body[data-skin="cel"]:not(.desktop-ui):not(.mobile-landscape-mode) #gameboy-shel
     linear-gradient(90deg, rgba(0, 0, 0, 0) 87%, rgba(0, 0, 0, 0.1) 87%),
     linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0 6px, rgba(255, 255, 255, 0) 6px),
     #d7d7d9 !important;
-  box-shadow: inset 0 0 0 3px var(--cel-line) !important;
+  box-shadow: inset 3px 0 0 var(--cel-line), inset -3px 0 0 var(--cel-line), inset 0 3px 0 var(--cel-line) !important;
 }
 
 body[data-skin="cel"]:not(.desktop-ui):not(.mobile-landscape-mode) .top-decoration::before {
@@ -637,6 +641,7 @@ body[data-skin="cel"]:not(.desktop-ui):not(.mobile-landscape-mode) #nes-controll
 
 /* ---------- 鉛筆素描：紙張紋理、石墨線條與排線陰影 ---------- */
 body[data-skin="sketch"] {
+  --sk-floor: #e3e2dd;
   --sketch-line: rgba(45, 45, 52, 0.7);
   --sketch-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.33 0 0 0 0 0.3 0 0 0 0.22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
   --sk-page: #2b2a27;
@@ -651,8 +656,10 @@ body[data-skin="sketch"]:not(.desktop-ui):not(.mobile-landscape-mode) #gameboy-s
     repeating-linear-gradient(135deg, rgba(55, 55, 62, 0.09) 0 1px, rgba(0, 0, 0, 0) 1px 6px) left bottom / 100% 8% no-repeat,
     #e3e2dd !important;
   box-shadow:
-    inset 0 0 0 2px var(--sketch-line),
-    inset 3px 2px 0 0 rgba(45, 45, 52, 0.18) !important;
+    inset 2px 0 0 var(--sketch-line),
+    inset -2px 0 0 var(--sketch-line),
+    inset 0 2px 0 var(--sketch-line),
+    inset 5px 4px 0 -2px rgba(45, 45, 52, 0.18) !important;
 }
 
 body[data-skin="sketch"]:not(.desktop-ui):not(.mobile-landscape-mode) .top-decoration::before {
@@ -718,6 +725,7 @@ body[data-skin="sketch"]:not(.desktop-ui):not(.mobile-landscape-mode) .snes-mini
 
 /* ---------- 水彩：紙張、顏料暈染與邊緣積色 ---------- */
 body[data-skin="watercolor"] {
+  --sk-floor: #dcdcdf;
   --wc-wash: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' height='520'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.006' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.43 0 0 0 0 0.52 0 0 0 1.1 -0.32'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E");
   --wc-paper: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.38 0 0 0 0 0.35 0 0 0 0.16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E");
   --sk-page: #29292c;
@@ -781,19 +789,19 @@ body[data-skin="watercolor"]:not(.desktop-ui):not(.mobile-landscape-mode) .snes-
 
 /* ---------- 像素風：硬邊、粗輪廓、棋盤點陣陰影 ---------- */
 body[data-skin="pixel"] {
+  --sk-floor: #cbcbcd;
   --px-line: #2d2d35;
   --px-dither: conic-gradient(rgba(0, 0, 0, 0.14) 25%, rgba(0, 0, 0, 0) 0 50%, rgba(0, 0, 0, 0.14) 0 75%, rgba(0, 0, 0, 0) 0);
 }
 
 body[data-skin="pixel"]:not(.desktop-ui):not(.mobile-landscape-mode) #gameboy-shell {
   border-radius: 0 !important;
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 48px), calc(100% - 8px) calc(100% - 48px), calc(100% - 8px) calc(100% - 32px), calc(100% - 16px) calc(100% - 32px), calc(100% - 16px) calc(100% - 20px), calc(100% - 24px) calc(100% - 20px), calc(100% - 24px) calc(100% - 12px), calc(100% - 32px) calc(100% - 12px), calc(100% - 32px) calc(100% - 6px), calc(100% - 48px) calc(100% - 6px), calc(100% - 48px) 100%, 0 100%);
   background:
     linear-gradient(180deg, #e6e6e8 0 6px, rgba(0, 0, 0, 0) 6px),
     linear-gradient(90deg, #cbcbcd 0 88%, rgba(0, 0, 0, 0) 88%),
     var(--px-dither) right top / 4px 4px,
     #cbcbcd !important;
-  box-shadow: inset 0 0 0 4px var(--px-line) !important;
+  box-shadow: inset 4px 0 0 var(--px-line), inset -4px 0 0 var(--px-line), inset 0 4px 0 var(--px-line) !important;
 }
 
 body[data-skin="pixel"]:not(.desktop-ui):not(.mobile-landscape-mode) .top-decoration::before {
@@ -854,6 +862,7 @@ body[data-skin="pixel"]:not(.desktop-ui):not(.mobile-landscape-mode) .snes-mini-
 
 /* ---------- 復古網點印刷：半色調網點、輕微套色錯位 ---------- */
 body[data-skin="halftone"] {
+  --sk-floor: #e6e4dd;
   --ht-paper: #e6e4dd;
   --sk-page: #26252a;
 }
@@ -864,7 +873,7 @@ body[data-skin="halftone"]:not(.desktop-ui):not(.mobile-landscape-mode) #gameboy
     linear-gradient(90deg, var(--ht-paper) 0 52%, rgba(230, 228, 221, 0) 88%),
     radial-gradient(circle, rgba(60, 62, 75, 0.32) 0 1.2px, rgba(0, 0, 0, 0) 1.5px) 0 0 / 5px 5px,
     var(--ht-paper) !important;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: inset 1px 0 0 rgba(0, 0, 0, 0.15), inset -1px 0 0 rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(0, 0, 0, 0.15) !important;
 }
 
 body[data-skin="halftone"]:not(.desktop-ui):not(.mobile-landscape-mode) .screen-bezel {

@@ -81,7 +81,10 @@ export function mountMobileTools(api: ToolsApi & { returnToLobby(): void }): Mob
       trigger.classList.remove('is-anchored');
       return;
     }
-    const left = Math.min(window.innerWidth - TRIGGER_SIZE - 4, rect.right + 8);
+    // 品牌字後面若有「TM」等偽元素，按鈕要再往右讓開。
+    const afterContent = brand ? getComputedStyle(brand, '::after').content : 'none';
+    const trailing = afterContent && afterContent !== 'none' && afterContent !== 'normal' ? 16 : 0;
+    const left = Math.min(window.innerWidth - TRIGGER_SIZE - 4, rect.right + 8 + trailing);
     const top = Math.max(4, rect.top + rect.height / 2 - TRIGGER_SIZE / 2);
     trigger.style.left = `${Math.round(left)}px`;
     trigger.style.top = `${Math.round(top)}px`;

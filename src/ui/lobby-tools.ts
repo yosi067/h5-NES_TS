@@ -1,7 +1,7 @@
-import { rankSearchResults, type LobbyPrefs, type SearchableRom } from '../features/lobby-prefs';
+import { type LobbyPrefs, type SearchableRom } from '../features/lobby-prefs';
 
 /**
- * 大廳的搜尋列與「我的最愛／最近玩過」書架。
+ * 大廳的「最近玩過」書架（搜尋列已依使用者回饋移除；最愛改為在主機列表內排到最前面）。
  * 插在主機目錄上方，獨立 class，不改動既有封面與卡片版面。
  */
 export interface LobbyRom extends SearchableRom {
@@ -37,77 +37,12 @@ function escapeText(value: string): string {
 export function mountLobbyTools(anchor: HTMLElement, prefs: LobbyPrefs, host: LobbyToolsHost): LobbyTools {
   const root = document.createElement('section');
   root.className = 'lobby-tools';
-  root.setAttribute('aria-label', '搜尋與快速開始');
-
-  const searchWrap = document.createElement('div');
-  searchWrap.className = 'lobby-search';
-  searchWrap.setAttribute('role', 'search');
-  const icon = document.createElement('span');
-  icon.className = 'lobby-search-icon';
-  icon.setAttribute('aria-hidden', 'true');
-  icon.textContent = '⌕';
-  const input = document.createElement('input');
-  input.type = 'search';
-  input.className = 'lobby-search-input';
-  input.placeholder = '搜尋遊戲名稱，例如：洛克人、KOF、瑪利歐';
-  input.setAttribute('aria-label', '搜尋遊戲');
-  input.autocomplete = 'off';
-  input.spellcheck = false;
-  input.enterKeyHint = 'search';
-  const clear = document.createElement('button');
-  clear.type = 'button';
-  clear.className = 'lobby-search-clear';
-  clear.setAttribute('aria-label', '清除搜尋');
-  clear.textContent = '✕';
-  clear.hidden = true;
-  searchWrap.append(icon, input, clear);
+  root.setAttribute('aria-label', '最近玩過');
 
   const shelves = document.createElement('div');
   shelves.className = 'lobby-shelves';
-  root.append(searchWrap, shelves);
+  root.append(shelves);
   anchor.parentElement?.insertBefore(root, anchor);
-
-  let searching = false;
-  let debounce: number | null = null;
-
-  const runSearch = () => {
-    const query = input.value.trim();
-    clear.hidden = query.length === 0;
-    if (!query) {
-      if (searching) {
-        searching = false;
-        host.showMachines();
-      }
-      return;
-    }
-    searching = true;
-    const results = rankSearchResults(host.catalog(), query, 80);
-    host.showCollection('搜尋結果', results.length > 0 ? `「${query}」找到 ${results.length} 款作品` : `找不到「${query}」，換個關鍵字試試`,
-      results.map((rom) => rom.file));
-  };
-
-  input.addEventListener('input', () => {
-    if (debounce !== null) window.clearTimeout(debounce);
-    debounce = window.setTimeout(runSearch, 160);
-  });
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && input.value) {
-      event.preventDefault();
-      event.stopPropagation();
-      input.value = '';
-      runSearch();
-    }
-    if (event.key === 'Enter') {
-      if (debounce !== null) window.clearTimeout(debounce);
-      runSearch();
-      input.blur();
-    }
-  });
-  clear.addEventListener('click', () => {
-    input.value = '';
-    runSearch();
-    input.focus();
-  });
 
   const chip = (rom: LobbyRom): string => `
     <button type="button" class="lobby-chip" data-file="${encodeURIComponent(rom.file)}" data-system="${escapeText(rom.systemKey)}" title="${escapeText(rom.displayName)}">
@@ -168,12 +103,8 @@ export function mountLobbyTools(anchor: HTMLElement, prefs: LobbyPrefs, host: Lo
   refresh();
   return {
     refresh,
-    isSearching: () => searching,
-    clearSearch: () => {
-      input.value = '';
-      clear.hidden = true;
-      searching = false;
-    },
+    isSearching: () => false,
+    clearSearch: () => undefined,
     setListMode: (on: boolean) => {
       root.classList.toggle('is-list', on);
       shelves.hidden = on || shelves.childElementCount === 0;

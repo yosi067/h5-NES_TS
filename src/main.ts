@@ -70,6 +70,7 @@ import {
 import { mountDesktopFramePicker, mountToolsPanel, type ToolsApi } from './ui/tools-panel';
 import { isEditableTarget, mountMobileTools, type MobileTools } from './ui/mobile-tools';
 import { mountLobbyTools, type LobbyRom, type LobbyTools } from './ui/lobby-tools';
+import { mountShellDecor } from './ui/shell-decor';
 import { computePortraitFit, isInAppBrowser, shouldUseDesktopUi } from './ui/browser-env';
 import { TouchControlsEngine } from './ui/controls/engine';
 import { mountDesktopStage, type DesktopStage } from './ui/desktop-stage';
@@ -5123,6 +5124,7 @@ function setupPlayerFeatures(): void {
     applyPadAppearance();
   });
 
+  if (gameboyShell) mountShellDecor(gameboyShell);
   mobileTools = mountMobileTools({ ...createToolsApi(), returnToLobby: () => { void confirmReturnToMachineMenu(); } });
 
   const isGameHold = (event: KeyboardEvent) => document.body.classList.contains('game-active')
