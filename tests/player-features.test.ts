@@ -24,18 +24,19 @@ describe('feature settings', () => {
   it('defaults keep the original pad appearance', () => {
     const store = new FeatureSettingsStore(new MemoryStorage());
     expect(store.get()).toEqual(DEFAULT_FEATURE_SETTINGS);
-    expect(store.get()).toEqual({ fastForwardSpeed: 2, padOpacity: 100, padScale: 100 });
+    expect(store.get()).toEqual({ fastForwardSpeed: 2, padOpacity: 100, padScale: 100, skin: 'real', desktopFrame: 'arcade' });
   });
 
   it('ignores removed or invalid fields from older versions', () => {
     const storage = new MemoryStorage();
     storage.setItem(FEATURE_SETTINGS_KEY, JSON.stringify({ rewindEnabled: true, twoPlayerKeyboard: true, padOpacity: 60, fastForwardSpeed: 3 }));
-    expect(new FeatureSettingsStore(storage).get()).toEqual({ fastForwardSpeed: 2, padOpacity: 100, padScale: 100 });
+    expect(new FeatureSettingsStore(storage).get()).toEqual({ fastForwardSpeed: 2, padOpacity: 100, padScale: 100, skin: 'real', desktopFrame: 'arcade' });
     storage.setItem(FEATURE_SETTINGS_KEY, '{oops');
     expect(new FeatureSettingsStore(storage).get()).toEqual(DEFAULT_FEATURE_SETTINGS);
-    expect(normalizeFeatureSettings({ padOpacity: 40, padScale: 115, fastForwardSpeed: 4 })).toEqual({
-      fastForwardSpeed: 4, padOpacity: 40, padScale: 115,
+    expect(normalizeFeatureSettings({ padOpacity: 40, padScale: 115, fastForwardSpeed: 4, skin: 'sketch', desktopFrame: 'classic' })).toEqual({
+      fastForwardSpeed: 4, padOpacity: 40, padScale: 115, skin: 'sketch', desktopFrame: 'classic',
     });
+    expect(normalizeFeatureSettings({ skin: 'nope', desktopFrame: 'x' })).toMatchObject({ skin: 'real', desktopFrame: 'arcade' });
   });
 
   it('persists updates and notifies listeners', () => {

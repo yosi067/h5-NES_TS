@@ -9,7 +9,25 @@ export interface FeatureSettings {
   padOpacity: number;
   /** 觸控按鍵大小（%）。100 = 原本大小。 */
   padScale: number;
+  /** 手機機身畫風（配色都是原版 Game Boy）。original = 改版前的外觀。 */
+  skin: SkinId;
+  /** 電腦版外框：大型機台或原本的主機外框。 */
+  desktopFrame: DesktopFrameId;
 }
+
+export const SKINS = [
+  { id: 'real', name: '寫實質感', hint: '霧面塑膠與光影' },
+  { id: 'flat', name: '扁平插畫', hint: '純色塊與實心陰影' },
+  { id: 'cel', name: '卡通描邊', hint: '粗輪廓與兩階明暗' },
+  { id: 'sketch', name: '鉛筆素描', hint: '紙張與排線' },
+  { id: 'watercolor', name: '水彩', hint: '暈染與積色' },
+  { id: 'pixel', name: '像素風', hint: '硬邊與點陣' },
+  { id: 'halftone', name: '網點印刷', hint: '半色調與套色' },
+  { id: 'original', name: '原本樣式', hint: '改版前外觀' },
+] as const;
+
+export type SkinId = typeof SKINS[number]['id'];
+export type DesktopFrameId = 'arcade' | 'classic';
 
 export const FEATURE_SETTINGS_KEY = 'h5emu.features.v1';
 
@@ -17,6 +35,8 @@ export const DEFAULT_FEATURE_SETTINGS: Readonly<FeatureSettings> = Object.freeze
   fastForwardSpeed: 2,
   padOpacity: 100,
   padScale: 100,
+  skin: 'real',
+  desktopFrame: 'arcade',
 });
 
 export const PAD_OPACITY_CHOICES = [100, 70, 40] as const;
@@ -32,6 +52,8 @@ export function normalizeFeatureSettings(raw: unknown): FeatureSettings {
     fastForwardSpeed: pick(value.fastForwardSpeed, [2, 4] as const, 2),
     padOpacity: pick(value.padOpacity, PAD_OPACITY_CHOICES, 100),
     padScale: pick(value.padScale, PAD_SCALE_CHOICES, 100),
+    skin: SKINS.some((skin) => skin.id === value.skin) ? value.skin as SkinId : 'real',
+    desktopFrame: value.desktopFrame === 'classic' ? 'classic' : 'arcade',
   };
 }
 

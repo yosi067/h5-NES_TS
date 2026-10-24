@@ -93,6 +93,7 @@ export function mountDesktopStage(options: {
   bindings: BindingStore;
   actions: StageActions;
   playExtras?: StagePlayExtras;
+  screenExtras?: StagePlayExtras;
 }): DesktopStage {
   const { shell, bindings, actions } = options;
   const settings = loadSettings();
@@ -259,6 +260,10 @@ export function mountDesktopStage(options: {
     label.append(input, copy);
     screenPanel.appendChild(label);
   }
+
+  const screenExtrasContainer = el('div', 'stage-screen-extras');
+  screenPanel.prepend(screenExtrasContainer);
+  options.screenExtras?.mount(screenExtrasContainer);
 
   // 說明
   const helpPanel = panelNodes.get('help')!;

@@ -67,7 +67,7 @@ import {
   writeN64Saves,
   base64ToBytes as backupBase64ToBytes,
 } from './features/save-backup';
-import { mountToolsPanel, type ToolsApi } from './ui/tools-panel';
+import { mountDesktopFramePicker, mountToolsPanel, type ToolsApi } from './ui/tools-panel';
 import { isEditableTarget, mountMobileTools, type MobileTools } from './ui/mobile-tools';
 import { mountLobbyTools, type LobbyRom, type LobbyTools } from './ui/lobby-tools';
 import { computePortraitFit, isInAppBrowser, shouldUseDesktopUi } from './ui/browser-env';
@@ -3176,6 +3176,9 @@ function setupDesktopControls(): void {
       notify: showToast,
       describeSlot: describeSaveSlot,
     },
+    screenExtras: {
+      mount: (container) => mountDesktopFramePicker(container, featureSettings),
+    },
     playExtras: {
       mount: (container) => {
         const tools = mountToolsPanel(container, createToolsApi(), { includeSlots: false, includeTouch: false });
@@ -5069,6 +5072,8 @@ function createToolsApi(): ToolsApi {
 
 function applyPadAppearance(): void {
   const body = document.body;
+  body.dataset.skin = featureState.skin;
+  body.dataset.desktopFrame = featureState.desktopFrame;
   body.classList.toggle('pad-opacity-custom', featureState.padOpacity !== 100);
   body.style.setProperty('--pad-user-opacity', String(featureState.padOpacity / 100));
   body.classList.toggle('pad-scale-custom', featureState.padScale !== 100);

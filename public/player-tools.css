@@ -546,3 +546,92 @@ body.mobile-landscape-mode .lobby-search-input {
   font-size: 14px;
 }
 
+
+/* ---------- 機身樣式色塊 ---------- */
+.skin-picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.skin-chip {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-height: 74px;
+  padding: 8px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(242, 238, 228, 0.85);
+  font: 600 12px/1.2 system-ui, 'Noto Sans TC', sans-serif;
+  cursor: pointer;
+}
+
+.skin-chip[aria-checked="true"] {
+  border-color: var(--stage-accent, #d2a646);
+  background: rgba(210, 166, 70, 0.14);
+  color: #fff;
+}
+
+.skin-chip-swatch {
+  position: relative;
+  width: 34px;
+  height: 46px;
+  border-radius: 4px 4px 12px 4px;
+  background: linear-gradient(180deg, #e2e2e4, #cdcdcf);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
+/* 迷你 GB：上方螢幕＋右下兩顆洋紅按鈕＋左下十字 */
+.skin-chip-swatch::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  height: 16px;
+  border-radius: 2px 2px 6px 2px;
+  background: linear-gradient(#9aa86a, #9aa86a) center / 70% 70% no-repeat, #707884;
+}
+
+.skin-chip-swatch::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 6px;
+  height: 14px;
+  background:
+    radial-gradient(circle, #9a265e 0 3px, transparent 3.5px) 88% 30% / 9px 9px no-repeat,
+    radial-gradient(circle, #9a265e 0 3px, transparent 3.5px) 62% 75% / 9px 9px no-repeat,
+    linear-gradient(#2a2a2d, #2a2a2d) 18% 50% / 3px 11px no-repeat,
+    linear-gradient(#2a2a2d, #2a2a2d) 10% 50% / 11px 3px no-repeat;
+}
+
+.skin-chip[data-style="flat"] .skin-chip-swatch { background: #d4d4d6; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3); }
+.skin-chip[data-style="cel"] .skin-chip-swatch { background: linear-gradient(90deg, #d7d7d9 0 80%, #bdbdbf 80%); box-shadow: 0 0 0 2px #1f1d24; }
+.skin-chip[data-style="sketch"] .skin-chip-swatch {
+  background: repeating-linear-gradient(135deg, rgba(55, 55, 62, 0.22) 0 1px, transparent 1px 4px) right / 30% 100% no-repeat, #e3e2dd;
+  box-shadow: 0 0 0 1px rgba(45, 45, 52, 0.7), 1px 1px 0 1px rgba(45, 45, 52, 0.25);
+  filter: grayscale(0.3);
+}
+.skin-chip[data-style="watercolor"] .skin-chip-swatch {
+  background: radial-gradient(ellipse at 30% 25%, #f2f2f4, #d0d2d8 60%, #b9bdc8);
+  box-shadow: inset 0 0 6px rgba(105, 112, 130, 0.6);
+}
+.skin-chip[data-style="pixel"] .skin-chip-swatch { border-radius: 0; background: #cbcbcd; box-shadow: 0 0 0 2px #2d2d35; }
+.skin-chip[data-style="halftone"] .skin-chip-swatch {
+  background: radial-gradient(circle, rgba(60, 62, 75, 0.4) 0 0.8px, transparent 1.1px) 0 0 / 3px 3px, #e6e4dd;
+  box-shadow: 2px 1px 0 rgba(0, 170, 220, 0.45);
+}
+.skin-chip[data-style="original"] .skin-chip-swatch { background: linear-gradient(180deg, #bdb8a7, #9f9a8a); }
+.skin-chip[data-style="original"] .skin-chip-swatch::before { background: linear-gradient(#9aa86a, #9aa86a) center / 70% 70% no-repeat, #45455a; }
+.skin-chip[data-style="original"] .skin-chip-swatch::after {
+  background:
+    radial-gradient(circle, #8b1a3a 0 3px, transparent 3.5px) 88% 50% / 9px 9px no-repeat,
+    radial-gradient(circle, #8b1a3a 0 3px, transparent 3.5px) 62% 50% / 9px 9px no-repeat,
+    linear-gradient(#303037, #303037) 18% 50% / 3px 11px no-repeat,
+    linear-gradient(#303037, #303037) 10% 50% / 11px 3px no-repeat;
+}

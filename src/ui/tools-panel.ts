@@ -1,6 +1,7 @@
 import {
   PAD_OPACITY_CHOICES,
   PAD_SCALE_CHOICES,
+  SKINS,
   type FeatureSettingsStore,
 } from '../features/settings';
 
@@ -123,6 +124,9 @@ export function mountToolsPanel(
     }
   };
 
+  // ---- 機身樣式 ----
+  const skinPicker = options.includeTouch ? mountSkinPicker(container, api.settings) : null;
+
   // ---- 按鍵外觀 ----
   let opacity: ReturnType<typeof segmentRow<number>> | null = null;
   let scale: ReturnType<typeof segmentRow<number>> | null = null;
@@ -164,6 +168,7 @@ export function mountToolsPanel(
     fastButton.textContent = !canFast ? '⏩ 此遊戲不能快轉' : level > 1 ? `⏩ 快轉中 ${level}×（再按切換）` : '⏩ 快轉';
     fastButton.classList.toggle('stage-action-primary', canFast && level > 1);
     fastButton.setAttribute('aria-pressed', String(level > 1));
+    skinPicker?.refresh();
     opacity?.sync(settings.padOpacity);
     scale?.sync(settings.padScale);
     void updateSlots();
@@ -171,5 +176,42 @@ export function mountToolsPanel(
 
   api.settings.subscribe(() => refresh());
   refresh();
+  return { refresh };
+}
+
+/** 機身樣式色塊：點一下立即套用。 */
+export function mountSkinPicker(container: HTMLElement, settings: FeatureSettingsStore): { refresh(): void } {
+  container.appendChild(el('h3', 'stage-heading', '機身畫風'));
+  const grid = el('div', 'skin-picker');
+  grid.setAttribute('role', 'radiogroup');
+  grid.setAttribute('aria-label', '機身畫風');
+  const items = SKINS.map((skin) => {
+    const node = button('', 'skin-chip');
+    node.setAttribute('role', 'radio');
+    node.dataset.style = skin.id;
+    node.title = skin.hint;
+    node.append(el('span', 'skin-chip-swatch'), el('span', 'skin-chip-name', skin.name));
+    node.addEventListener('click', () => settings.update({ skin: skin.id }));
+    grid.appendChild(node);
+    return { id: skin.id, node };
+  });
+  container.appendChild(grid);
+  const refresh = () => {
+    const current = settings.get().skin;
+    for (const item of items) item.node.setAttribute('aria-checked', String(item.id === current));
+  };
+  refresh();
+  return { refresh };
+}
+
+/** 電腦版外框：大型機台 / 原本主機外框。 */
+export function mountDesktopFramePicker(container: HTMLElement, settings: FeatureSettingsStore): { refresh(): void } {
+  container.appendChild(el('h3', 'stage-heading', '外框樣式'));
+  const row = segmentRow<number>('外框', [{ value: 0, text: '大型機台' }, { value: 1, text: '原本主機外框' }],
+    (value) => settings.update({ desktopFrame: value === 1 ? 'classic' : 'arcade' }));
+  container.appendChild(row.row);
+  const refresh = () => row.sync(settings.get().desktopFrame === 'classic' ? 1 : 0);
+  refresh();
+  settings.subscribe(refresh);
   return { refresh };
 }
