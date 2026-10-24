@@ -57,9 +57,6 @@ pub struct Cartridge {
     pub loaded: bool,
     prg_overlay_values: Vec<u8>,
     prg_overlay_mask: Vec<bool>,
-    /// 使用者啟用的 Game Genie 讀取覆寫（CPU 位址, 新值, 比較值；-1 表示不比較）。
-    /// 不屬於硬體狀態：不寫入任何存檔，清單為空時不影響讀取路徑。
-    pub read_cheats: Vec<(u16, u8, i16)>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -93,7 +90,6 @@ impl Cartridge {
             loaded: false,
             prg_overlay_values: Vec::new(),
             prg_overlay_mask: Vec::new(),
-            read_cheats: Vec::new(),
         }
     }
 
@@ -261,19 +257,10 @@ impl Cartridge {
             if addr >= 0x8000 {
                 // PRG ROM
                 let index = mapped as usize % self.prg_rom.len().max(1);
-                let original = if self.prg_overlay_mask.get(index).copied().unwrap_or(false) {
-                    self.prg_overlay_values[index]
-                } else {
-                    self.prg_rom.get(index).copied().unwrap_or(0)
-                };
-                if !self.read_cheats.is_empty() {
-                    for &(cheat_addr, value, compare) in &self.read_cheats {
-                        if cheat_addr == addr && (compare < 0 || compare as u8 == original) {
-                            return value;
-                        }
-                    }
+                if self.prg_overlay_mask.get(index).copied().unwrap_or(false) {
+                    return self.prg_overlay_values[index];
                 }
-                original
+                self.prg_rom.get(index).copied().unwrap_or(0)
             } else {
                 0
             }

@@ -118,31 +118,26 @@ export function mountLobbyTools(anchor: HTMLElement, prefs: LobbyPrefs, host: Lo
   function refresh(): void {
     const catalog = host.catalog();
     const byFile = new Map(catalog.map((rom) => [rom.file, rom]));
-    const recents = prefs.recents().map((entry) => byFile.get(entry.file)).filter((rom): rom is LobbyRom => Boolean(rom)).slice(0, 8);
-    const favorites = prefs.favorites().map((file) => byFile.get(file)).filter((rom): rom is LobbyRom => Boolean(rom));
+    const recents = prefs.recents().map((entry) => byFile.get(entry.file)).filter((rom): rom is LobbyRom => Boolean(rom));
 
-    const parts: string[] = [];
-    if (recents.length > 0) {
-      parts.push(`
-        <div class="lobby-shelf" data-shelf="recent">
-          <div class="lobby-shelf-head"><span class="lobby-shelf-title">最近玩過</span></div>
-          <div class="lobby-shelf-row">${recents.map(chip).join('')}</div>
-        </div>`);
+    if (recents.length === 0) {
+      shelves.replaceChildren();
+      shelves.hidden = true;
+      return;
     }
-    if (favorites.length > 0) {
-      parts.push(`
-        <div class="lobby-shelf" data-shelf="favorite">
-          <div class="lobby-shelf-head">
-            <span class="lobby-shelf-title">★ 我的最愛</span>
-            <button type="button" class="lobby-shelf-more" data-action="show-favorites">全部 ${favorites.length} 款 →</button>
-          </div>
-          <div class="lobby-shelf-row">${favorites.slice(0, 8).map(chip).join('')}</div>
-        </div>`);
-    }
-    if (parts.length === 0) {
-      parts.push('<p class="lobby-shelf-hint">在遊戲卡片右上角按 ☆ 加入最愛；玩過的遊戲會出現在這裡。</p>');
-    }
-    shelves.innerHTML = parts.join('');
+    shelves.hidden = root.classList.contains('is-list');
+    shelves.innerHTML = `
+      <div class="lobby-shelf" data-shelf="recent">
+        <div class="lobby-shelf-head">
+          <span class="lobby-shelf-title">最近玩過</span>
+          <span class="lobby-shelf-nav">
+            <button type="button" class="lobby-shelf-arrow" data-dir="-1" aria-label="往左捲動">‹</button>
+            <button type="button" class="lobby-shelf-arrow" data-dir="1" aria-label="往右捲動">›</button>
+          </span>
+        </div>
+        <div class="lobby-shelf-row">${recents.map(chip).join('')}</div>
+      </div>`;
+    const row = shelves.querySelector<HTMLElement>('.lobby-shelf-row');
     shelves.querySelectorAll<HTMLButtonElement>('.lobby-chip').forEach((button) => {
       button.addEventListener('click', () => {
         const file = decodeURIComponent(button.dataset.file ?? '');
@@ -152,10 +147,22 @@ export function mountLobbyTools(anchor: HTMLElement, prefs: LobbyPrefs, host: Lo
     shelves.querySelectorAll<HTMLImageElement>('.lobby-chip-cover img').forEach((image) => {
       image.addEventListener('error', () => image.remove(), { once: true });
     });
-    shelves.querySelector('[data-action="show-favorites"]')?.addEventListener('click', () => {
-      const list = prefs.favorites().filter((file) => byFile.has(file));
-      host.showCollection('我的最愛', `收藏 ${list.length} 款作品`, list);
-    });
+    const arrows = Array.from(shelves.querySelectorAll<HTMLButtonElement>('.lobby-shelf-arrow'));
+    const syncArrows = () => {
+      if (!row) return;
+      const max = row.scrollWidth - row.clientWidth;
+      arrows[0].disabled = row.scrollLeft <= 2;
+      arrows[1].disabled = row.scrollLeft >= max - 2;
+      shelves.querySelector('.lobby-shelf-nav')?.toggleAttribute('hidden', max <= 2);
+    };
+    for (const arrow of arrows) {
+      arrow.addEventListener('click', () => {
+        if (!row) return;
+        row.scrollBy({ left: Number(arrow.dataset.dir) * row.clientWidth * 0.8, behavior: 'smooth' });
+      });
+    }
+    row?.addEventListener('scroll', syncArrows, { passive: true });
+    requestAnimationFrame(syncArrows);
   }
 
   refresh();
@@ -168,8 +175,8 @@ export function mountLobbyTools(anchor: HTMLElement, prefs: LobbyPrefs, host: Lo
       searching = false;
     },
     setListMode: (on: boolean) => {
-      shelves.hidden = on;
       root.classList.toggle('is-list', on);
+      shelves.hidden = on || shelves.childElementCount === 0;
     },
   };
 }

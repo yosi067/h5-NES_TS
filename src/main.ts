@@ -56,10 +56,8 @@ import {
 } from './n64/gl-call-stats';
 import { listBinaryStates, readBinaryState, writeBinaryState } from './storage/binary-state-store';
 import { FeatureSettingsStore } from './features/settings';
-import { LobbyPrefs } from './features/lobby-prefs';
+import { LobbyPrefs, sortFavoritesFirst } from './features/lobby-prefs';
 import { RewindBuffer } from './features/rewind';
-import { compileCheats, loadCheats, saveCheats, type CheatEntry, type NativeCheatSystem } from './features/cheats';
-import { resolvePlayer2Action } from './features/player2';
 import { formatSaveTime, getSaveTime, recordSaveTime } from './features/save-meta';
 import {
   buildBackup,
@@ -1561,15 +1559,7 @@ function setupKeyboardInput(): void {
 
     if (layout === 'nes' && !nes) return;
     const action = resolveKeyAction(inputBindings.layout(layout), event.code);
-    if (!action) {
-      // 鍵盤 2P：只在雙人模式開啟、且 1P 沒用到此鍵時生效。
-      if (!featureState.twoPlayerKeyboard || !document.body.classList.contains('game-active')) return;
-      const player2Action = resolvePlayer2Action(layout, inputBindings.layout(layout), event.code);
-      if (!player2Action) return;
-      performPlayer2Action(layout, player2Action, pressed);
-      event.preventDefault();
-      return;
-    }
+    if (!action) return;
     performInputAction(layout, action, pressed);
     event.preventDefault();
   };
@@ -2095,8 +2085,11 @@ function renderMachineSelector(): void {
 /**
  * 渲染 ROM 列表
  */
-function renderRomList(system: SystemKey): void {
-  const roms = romCatalog.filter((rom) => detectRomSystem(rom) === system);
+function renderRomList(system: SystemKey, keepScroll = false): void {
+  // 加了最愛的遊戲排在最前面，其餘維持原本順序。
+  const roms = sortFavoritesFirst(romCatalog.filter((rom) => detectRomSystem(rom) === system), lobbyPrefs.favorites());
+  const selectorEl = document.getElementById('rom-selector');
+  const scrollTop = selectorEl?.scrollTop ?? 0;
   const machine = MACHINES.find((item) => item.key === system);
   renderRomListView({
     system,
@@ -2108,6 +2101,7 @@ function renderRomList(system: SystemKey): void {
     artFile: machine?.artFile ?? null,
     emptyText: '沒有可用的遊戲',
   });
+  if (keepScroll && selectorEl) selectorEl.scrollTop = scrollTop;
 }
 
 /** 搜尋結果或我的最愛：沿用同一套卡片，每張卡片帶自己的主機色。 */
@@ -2240,7 +2234,9 @@ function renderRomListView(view: {
       star.setAttribute('aria-pressed', String(on));
       star.setAttribute('aria-label', on ? '從最愛移除' : '加入最愛');
       star.title = on ? '從最愛移除' : '加入最愛';
-      showToast(on ? '★ 已加入最愛' : '已從最愛移除');
+      showToast(on ? '★ 已加入最愛，排到最前面' : '已取消最愛');
+      // 主機列表立即重新排序（搜尋結果維持搜尋排序）。
+      if (!view.collection) renderRomList(system, true);
     };
     star.addEventListener('click', toggle);
     star.addEventListener('keydown', (event) => {
@@ -2700,9 +2696,7 @@ async function startSnes9xGame(
   hideRomSelector();
 
   try {
-    snes9xBackend = await startSnes9xBackend(host, romData, currentRomFilename, core, signal, {
-      rewind: featureState.rewindEnabled,
-    });
+    snes9xBackend = await startSnes9xBackend(host, romData, currentRomFilename, core, signal);
     isRunning = true;
     hideRomSelector();
     updateControllerLayout();
@@ -3182,15 +3176,13 @@ function setupDesktopControls(): void {
       notify: showToast,
       describeSlot: describeSaveSlot,
     },
-    extraTabs: [{
-      id: 'tools',
-      label: '功能',
-      mount: (panel) => {
-        const tools = mountToolsPanel(panel, createToolsApi(), { includeSlots: false, includeTouch: false, keyboardHints: true });
+    playExtras: {
+      mount: (container) => {
+        const tools = mountToolsPanel(container, createToolsApi(), { includeSlots: false, includeTouch: false });
         toolsPanelRefreshers.add(tools.refresh);
         return tools;
       },
-    }],
+    },
   });
 }
 
@@ -4546,22 +4538,20 @@ function setupVirtualController(): void {
   bindClick('n64-mobile-load', () => showToast('N64 即時讀檔尚未支援，遊戲內存檔會自動載入'));
 }
 
-// ===== 玩家功能：快轉、倒帶、截圖、金手指、自動存檔、存檔備份 =====
-// 全部為選用功能：未開啟時，模擬迴圈、存檔格式與按鍵配置都維持原樣。
+// ===== 玩家功能：快轉、倒帶（電腦版）、自動存檔、存檔備份 =====
+// 未使用時，模擬迴圈、存檔格式與按鍵配置都維持原樣。
 
 let fastForwardHeld = false;
-let fastForwardToggled = false;
+/** 手機／選單切換的快轉倍率；1 表示關閉。 */
+let fastForwardLevel: 1 | 2 | 4 = 1;
 let rewindHeld = false;
 let rewindStepCountdown = 0;
 let rewindAudioCleared = false;
 /** 倒帶時每隔幾個顯示幀退回一份快照（快照間隔 20 幀 → 約 4 倍速倒退）。 */
 const REWIND_STEP_TICKS = 5;
 const rewindBuffer = new RewindBuffer<string | Uint8Array>({ captureInterval: 20 });
-let ejsRewindAvailable = false;
 let gameSessionActive = false;
 let currentCatalogFile = '';
-let activeCheats: CheatEntry[] = [];
-let cheatGameKey = '';
 let mobileTools: MobileTools | null = null;
 let lobbyTools: LobbyTools | null = null;
 const toolsPanelRefreshers = new Set<() => void>();
@@ -4572,7 +4562,9 @@ function refreshToolsPanels(): void {
 }
 
 function getSpeedMultiplier(): number {
-  return (fastForwardHeld || fastForwardToggled) && !rewindHeld ? featureState.fastForwardSpeed : 1;
+  if (rewindHeld) return 1;
+  if (fastForwardLevel > 1) return fastForwardLevel;
+  return fastForwardHeld ? featureState.fastForwardSpeed : 1;
 }
 
 function isNativeCoreActive(): boolean {
@@ -4581,10 +4573,17 @@ function isNativeCoreActive(): boolean {
   return core === 'nes' || core === 'gb' || core === 'gg' || core === 'snes';
 }
 
-/** 中文化圖層依賴連續的文字觀察證據，倒帶會把它重設，所以這類遊戲不提供倒帶。 */
+/**
+ * 倒帶只在電腦版自動啟用（記憶體充足、有 Backspace 可按住）。
+ * 手機選單會蓋住畫面，無法邊看邊倒帶，所以不提供；中文化圖層遊戲也不提供。
+ */
+function rewindCaptureActive(): boolean {
+  return document.body.classList.contains('desktop-ui') && gameSessionActive;
+}
+
 function nativeRewindBlockedReason(): string | null {
-  if (!isNativeCoreActive()) return '此核心不支援倒帶';
-  if (textOverlay) return '中文化圖層啟用中，此遊戲不支援倒帶';
+  if (!isNativeCoreActive()) return '這款遊戲不支援倒帶';
+  if (textOverlay) return '中文化遊戲不支援倒帶';
   return null;
 }
 
@@ -4605,8 +4604,7 @@ function importNativeSnapshot(snapshot: string): boolean {
 }
 
 function captureNativeRewind(): void {
-  if (!featureState.rewindEnabled || !rewindBuffer.tick()) return;
-  if (nativeRewindBlockedReason()) return;
+  if (!rewindCaptureActive() || !rewindBuffer.tick() || nativeRewindBlockedReason()) return;
   try {
     const snapshot = exportNativeSnapshot();
     if (snapshot) rewindBuffer.push(snapshot);
@@ -4617,7 +4615,7 @@ function captureNativeRewind(): void {
 
 /** 倒帶中回傳 true，代表這個時間片不執行模擬。 */
 function stepNativeRewind(): boolean {
-  if (!nes || !featureState.rewindEnabled || nativeRewindBlockedReason()) return false;
+  if (!nes || nativeRewindBlockedReason()) return false;
   if (!rewindAudioCleared) {
     clearAudioQueue();
     rewindAudioCleared = true;
@@ -4648,7 +4646,7 @@ function runFastForwardNativeFrames(coreType: string): void {
 }
 
 function captureFbNeoRewind(): void {
-  if (!featureState.rewindEnabled || !fbneoCore || !rewindBuffer.tick()) return;
+  if (!rewindCaptureActive() || !fbneoCore || !rewindBuffer.tick()) return;
   try {
     rewindBuffer.push(fbneoCore.saveState());
   } catch (error) {
@@ -4657,7 +4655,7 @@ function captureFbNeoRewind(): void {
 }
 
 function stepFbNeoRewind(): boolean {
-  if (!fbneoCore || !featureState.rewindEnabled) return false;
+  if (!fbneoCore) return false;
   if (!rewindAudioCleared) {
     clearAudioQueue();
     rewindAudioCleared = true;
@@ -4676,14 +4674,10 @@ function stepFbNeoRewind(): boolean {
 }
 
 function rewindUnavailableReason(): string | null {
-  if (!document.body.classList.contains('game-active')) return '請先開始遊戲';
-  if (isMupenN64Active()) return 'N64 核心不支援倒帶';
-  if (isSnes9xActive()) {
-    if (ejsRewindAvailable) return null;
-    return featureState.rewindEnabled ? '已啟用倒帶，重新開啟這款遊戲後生效' : '請先在功能選單啟用倒帶，並重新開啟遊戲';
-  }
-  if (!featureState.rewindEnabled) return '請先在功能選單啟用倒帶';
+  if (!gameSessionActive) return '請先開始遊戲';
+  if (!document.body.classList.contains('desktop-ui')) return '倒帶只在電腦版提供';
   if (isFbNeoActive()) return null;
+  if (isMupenN64Active() || isSnes9xActive()) return '這款遊戲不支援倒帶';
   return nativeRewindBlockedReason();
 }
 
@@ -4702,23 +4696,32 @@ function updateSpeedIndicator(): void {
   speedIndicator.hidden = !text;
 }
 
+function canFastForward(): boolean {
+  return gameSessionActive && !isMupenN64Active();
+}
+
 function syncFastForwardBackend(): void {
-  if (isSnes9xActive()) snes9xBackend?.setFastForward(getSpeedMultiplier() > 1, featureState.fastForwardSpeed);
+  if (isSnes9xActive()) {
+    const multiplier = getSpeedMultiplier();
+    snes9xBackend?.setFastForward(multiplier > 1, multiplier > 1 ? multiplier : 2);
+  }
   updateSpeedIndicator();
 }
 
 function setFastForwardHeld(active: boolean): void {
   if (fastForwardHeld === active) return;
+  if (active && !canFastForward()) return;
   fastForwardHeld = active;
   syncFastForwardBackend();
 }
 
-function setFastForwardToggled(active: boolean): void {
-  if (active && isMupenN64Active()) {
-    showToast('N64 核心不支援快轉');
+function setFastForwardLevel(level: 1 | 2 | 4): void {
+  if (level > 1 && !canFastForward()) {
+    showToast('這款遊戲不能快轉');
     return;
   }
-  fastForwardToggled = active;
+  fastForwardLevel = level;
+  if (level !== 1) featureSettings.update({ fastForwardSpeed: level });
   syncFastForwardBackend();
   refreshToolsPanels();
 }
@@ -4731,32 +4734,24 @@ function setRewindHeld(active: boolean): void {
       showToast(reason);
       return;
     }
-    if (isSnes9xActive() && !snes9xBackend?.setRewind(true)) {
-      showToast('此核心暫時無法倒帶');
-      return;
-    }
     rewindHeld = true;
     rewindStepCountdown = 0;
     rewindAudioCleared = false;
   } else {
     rewindHeld = false;
     rewindAudioCleared = false;
-    if (isSnes9xActive()) snes9xBackend?.setRewind(false);
   }
   syncFastForwardBackend();
 }
 
 function resetSpeedControls(): void {
   fastForwardHeld = false;
-  fastForwardToggled = false;
-  if (rewindHeld && isSnes9xActive()) snes9xBackend?.setRewind(false);
+  fastForwardLevel = 1;
   rewindHeld = false;
   rewindAudioCleared = false;
   rewindBuffer.clear();
   updateSpeedIndicator();
 }
-
-// ---- 截圖 ----
 
 function downloadBlob(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
@@ -4769,87 +4764,12 @@ function downloadBlob(blob: Blob, filename: string): void {
   window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
 }
 
-function fileSafeTitle(): string {
-  const title = currentGameTitle || currentRomFilename.replace(/\.[^.]+$/, '') || 'h5emu';
-  return title.replace(/[\\/:*?"<>|\s]+/g, '_').slice(0, 60);
-}
-
 function timestampForFile(date = new Date()): string {
   const pad = (value: number) => String(value).padStart(2, '0');
   return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
 }
 
-async function takeScreenshot(): Promise<void> {
-  let blob: Blob | null = null;
-  try {
-    if (isSnes9xActive()) {
-      const bytes = await snes9xBackend?.screenshot();
-      if (bytes && bytes.length > 0) blob = new Blob([bytes.slice().buffer], { type: 'image/png' });
-    } else if (!isMupenN64Active() && canvas && canvas.width > 0) {
-      // 以整數 3 倍放大，保留像素銳利度。
-      const scale = 3;
-      const output = document.createElement('canvas');
-      output.width = canvas.width * scale;
-      output.height = canvas.height * scale;
-      const outputContext = output.getContext('2d');
-      if (outputContext) {
-        outputContext.imageSmoothingEnabled = false;
-        outputContext.drawImage(canvas, 0, 0, output.width, output.height);
-        blob = await new Promise<Blob | null>((resolve) => output.toBlob(resolve, 'image/png'));
-      }
-    }
-  } catch (error) {
-    console.warn('[截圖] 失敗:', error);
-  }
-  if (!blob) {
-    showToast(isMupenN64Active() ? 'N64 畫面暫不支援截圖' : '❌ 截圖失敗');
-    return;
-  }
-  downloadBlob(blob, `${fileSafeTitle()}_${timestampForFile()}.png`);
-  showToast('📷 已儲存截圖');
-}
-
-// ---- 金手指 ----
-
-function nativeCheatSystem(): NativeCheatSystem | null {
-  if (!isNativeCoreActive() || !nes) return null;
-  const core = nes.getCoreType();
-  return core === 'nes' || core === 'gb' || core === 'gg' || core === 'snes' ? core : null;
-}
-
-function cheatHintForCurrentCore(): string | null {
-  if (isSnes9xActive()) return '使用核心內建格式（Game Genie、Pro Action Replay 等）。';
-  switch (nativeCheatSystem()) {
-    case 'nes': return '支援 Game Genie（如 SXIOPO）與 RAM 鎖值「位址:值」（如 0075:09），可用 + 串接。';
-    case 'snes': return '支援 Pro Action Replay（如 7E0DBE09）與 RAM 鎖值「位址:值」。';
-    case 'gb': return '支援 GameShark（如 01FF16D0）與 RAM 鎖值「位址:值」。';
-    case 'gg':
-    case 'sms': return '支援 RAM 鎖值「位址:值」（如 C010:63）。';
-    default: return null;
-  }
-}
-
-function applyCheatsToCore(entries: CheatEntry[]): string[] {
-  if (isSnes9xActive()) {
-    snes9xBackend?.setCheats(entries.filter((entry) => entry.enabled).map((entry) => entry.code.trim()));
-    return [];
-  }
-  const system = nativeCheatSystem();
-  if (!system || !nes) return [];
-  const compiled = compileCheats(system, entries);
-  const setCheats = (nes as unknown as { setCheats?: (ram: Uint32Array, rom: Int32Array) => number }).setCheats;
-  if (typeof setCheats !== 'function') return ['目前的模擬核心版本不支援金手指，請重新整理頁面'];
-  setCheats.call(nes, new Uint32Array(compiled.ram), new Int32Array(compiled.rom));
-  return compiled.errors.map((error) => `${error.code}：${error.message}`);
-}
-
-function setActiveCheats(entries: CheatEntry[]): string[] {
-  activeCheats = entries.map((entry) => ({ ...entry }));
-  if (cheatGameKey) saveCheats(getSafeStorage(), cheatGameKey, activeCheats);
-  return applyCheatsToCore(activeCheats);
-}
-
-// ---- 自動存檔與續玩 ----
+// ---- 自動存檔與續玩（一律開啟，不需設定） ----
 
 function getAutoSaveKey(): string {
   return getSaveKey('auto');
@@ -4873,7 +4793,7 @@ function captureAutoSave(): Uint8Array | null {
 
 /** 自動存檔只寫 IndexedDB，不占用 localStorage 配額（避免擠掉電池存檔）。 */
 function autosaveNow(): Promise<void> {
-  if (!featureState.autosave || !gameSessionActive || gameLoadAbortController) return Promise.resolve();
+  if (!gameSessionActive || gameLoadAbortController) return Promise.resolve();
   const key = getAutoSaveKey();
   const data = captureAutoSave();
   if (!data || data.length === 0) return Promise.resolve();
@@ -4923,7 +4843,7 @@ function hideResumeBanner(): void {
 
 async function offerAutoSaveResume(): Promise<void> {
   hideResumeBanner();
-  if (!featureState.autosave || isMupenN64Active()) return;
+  if (isMupenN64Active()) return;
   const key = getAutoSaveKey();
   let exists = false;
   try {
@@ -4938,11 +4858,11 @@ async function offerAutoSaveResume(): Promise<void> {
   banner.className = 'resume-banner';
   banner.setAttribute('role', 'status');
   const text = document.createElement('span');
-  text.textContent = savedAt ? `上次離開：${formatSaveTime(savedAt)}` : '有上次離開時的自動存檔';
+  text.textContent = savedAt ? `上次玩到 ${formatSaveTime(savedAt)}` : '有上次的進度';
   const resume = document.createElement('button');
   resume.type = 'button';
   resume.className = 'resume-banner-go';
-  resume.textContent = '從上次離開處繼續';
+  resume.textContent = '繼續上次進度';
   const close = document.createElement('button');
   close.type = 'button';
   close.className = 'resume-banner-close';
@@ -4960,7 +4880,7 @@ async function offerAutoSaveResume(): Promise<void> {
   resume.addEventListener('click', () => {
     window.clearTimeout(timer);
     hideResumeBanner();
-    void restoreAutoSave().then((ok) => showToast(ok ? '✅ 已回到上次離開的進度' : '❌ 自動存檔無法讀取'));
+    void restoreAutoSave().then((ok) => showToast(ok ? '✅ 已回到上次進度' : '❌ 上次進度無法讀取'));
   });
 }
 
@@ -4970,12 +4890,7 @@ function onGameStarted(): void {
   resetSpeedControls();
   heldNativeButtons[0].clear();
   heldNativeButtons[1].clear();
-  ejsRewindAvailable = isSnes9xActive() && featureState.rewindEnabled;
   if (currentCatalogFile) lobbyPrefs.noteRecent(currentCatalogFile);
-  const coreTag = isMupenN64Active() ? 'n64' : isFbNeoActive() ? 'fbneo' : isSnes9xActive() ? `ejs-${emulatorJsCore}` : nes?.getCoreType() ?? 'nes';
-  cheatGameKey = `${coreTag}:${currentRomFilename}`;
-  activeCheats = loadCheats(getSafeStorage(), cheatGameKey);
-  applyCheatsToCore(activeCheats);
   syncFastForwardBackend();
   refreshToolsPanels();
   void offerAutoSaveResume();
@@ -5030,11 +4945,11 @@ async function exportSaveBackup(): Promise<void> {
   const summary = summarizeBackup(backup);
   const total = summary.localCount + summary.binaryCount + summary.n64Count;
   if (total === 0) {
-    showToast('目前沒有可匯出的存檔');
+    showToast('目前沒有存檔可以備份');
     return;
   }
   downloadBlob(new Blob([JSON.stringify(backup)], { type: 'application/json' }), `h5emu-saves-${timestampForFile()}.json`);
-  showToast(`✅ 已匯出 ${total} 筆存檔資料`);
+  showToast(`✅ 已備份 ${total} 筆存檔`);
 }
 
 function mergeJsonMap(existing: string | null, incoming: string): string {
@@ -5067,7 +4982,7 @@ async function importSaveBackup(file: File): Promise<void> {
   try {
     backup = parseBackup(await file.text());
   } catch (error) {
-    await showAppAlert(error instanceof Error ? error.message : '無法讀取備份檔', '匯入失敗');
+    await showAppAlert(error instanceof Error ? error.message : '無法讀取備份檔', '還原失敗');
     return;
   }
   const summary = summarizeBackup(backup);
@@ -5077,8 +4992,8 @@ async function importSaveBackup(file: File): Promise<void> {
     return;
   }
   const confirmed = await showAppConfirm(
-    `備份檔含 ${total} 筆存檔資料。匯入後，同名的存檔會被備份內容取代，其他存檔保持不變。要繼續嗎？`,
-    '匯入存檔備份',
+    `備份檔有 ${total} 筆存檔。還原後，同一款遊戲同一格的存檔會被備份取代，其他存檔不受影響。要還原嗎？`,
+    '還原存檔備份',
   );
   if (!confirmed) return;
 
@@ -5125,46 +5040,26 @@ async function importSaveBackup(file: File): Promise<void> {
   lobbyTools?.refresh();
   refreshToolsPanels();
   if (failed.length > 0) {
-    await showAppAlert(`已匯入 ${written} 筆，${failed.length} 筆因瀏覽器儲存空間不足而失敗。`, '部分匯入失敗');
+    await showAppAlert(`已還原 ${written} 筆，${failed.length} 筆因瀏覽器儲存空間不足而失敗。`, '部分還原失敗');
   } else {
-    showToast(`✅ 已匯入 ${written} 筆存檔資料`);
+    showToast(gameSessionActive ? `✅ 已還原 ${written} 筆，重新開啟遊戲後生效` : `✅ 已還原 ${written} 筆存檔`);
   }
-  if (gameSessionActive) showToast('執行中的遊戲請重新開啟，才會讀到匯入的電池存檔');
 }
 
 // ---- 功能面板 ----
 
-function currentToolsCapabilities() {
-  const inGame = document.body.classList.contains('game-active') && gameSessionActive;
-  const n64 = isMupenN64Active();
-  return {
-    fastForward: inGame && !n64,
-    rewind: inGame && rewindUnavailableReason() === null,
-    // 只有「已勾選卻無法使用」時才說明原因；未勾選時顯示一般說明即可。
-    rewindNote: inGame && featureState.rewindEnabled ? (rewindUnavailableReason() ?? undefined) : undefined,
-    screenshot: inGame && !n64,
-    cheatHint: inGame ? cheatHintForCurrentCore() : null,
-    twoPlayer: inGame && supportsPlayerTwo(),
-    autosave: !n64,
-  };
-}
-
 function createToolsApi(): ToolsApi {
   return {
     settings: featureSettings,
-    capabilities: currentToolsCapabilities,
-    isFastForwardOn: () => fastForwardToggled,
-    setFastForward: setFastForwardToggled,
-    rewindHold: setRewindHeld,
-    screenshot: () => { void takeScreenshot(); },
-    getCheats: () => activeCheats.map((entry) => ({ ...entry })),
-    setCheats: setActiveCheats,
+    canFastForward,
+    fastForwardLevel: () => fastForwardLevel,
+    setFastForwardLevel,
     exportBackup: exportSaveBackup,
     importBackup: importSaveBackup,
     notify: showToast,
     slots: {
-      list: [0, 1, 2, 3, 4],
-      label: (slot) => (slot === 0 ? '欄位 1（💾 / 📂）' : `欄位 ${slot + 1}`),
+      list: [0, 1, 2],
+      label: (slot) => (slot === 0 ? '第 1 格（💾📂 同一格）' : `第 ${slot + 1} 格`),
       describe: describeSaveSlot,
       save: (slot) => saveStateForUser(slot),
       load: (slot) => loadStateForUser(slot),
@@ -5219,17 +5114,10 @@ function registerServiceWorker(): void {
 function setupPlayerFeatures(): void {
   applyPadAppearance();
   featureSettings.subscribe((next) => {
-    const rewindTurnedOff = featureState.rewindEnabled && !next.rewindEnabled;
     featureState = next;
-    if (rewindTurnedOff) {
-      setRewindHeld(false);
-      rewindBuffer.clear();
-    }
     applyPadAppearance();
-    syncFastForwardBackend();
   });
 
-  // 桌機版的「功能」分頁由 desktop-stage 掛載；這裡建立手機版選單。
   mobileTools = mountMobileTools({ ...createToolsApi(), returnToLobby: () => { void confirmReturnToMachineMenu(); } });
 
   const isGameHold = (event: KeyboardEvent) => document.body.classList.contains('game-active')
@@ -5303,9 +5191,8 @@ function setupKeyboardShortcuts(): void {
     const iframe = document.getElementById('snes9x-screen') as HTMLIFrameElement | null;
     if (event.source !== iframe?.contentWindow) return;
     if (!event.data || typeof event.data !== 'object' || event.data.source !== 'h5-emu-snes9x-shortcut') return;
-    if ((event.data.action === 'fast-forward' || event.data.action === 'rewind') && typeof event.data.pressed === 'boolean') {
-      if (event.data.action === 'fast-forward') setFastForwardHeld(event.data.pressed);
-      else setRewindHeld(event.data.pressed);
+    if (event.data.action === 'fast-forward' && typeof event.data.pressed === 'boolean') {
+      setFastForwardHeld(event.data.pressed);
       return;
     }
 

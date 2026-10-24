@@ -218,62 +218,6 @@ enum CoreType {
 #[wasm_bindgen]
 pub struct EmuWasm {
     core: CoreType,
-    /// 使用者啟用的 RAM 鎖值金手指（位址, 值），每幀開始前寫入；不屬於存檔內容。
-    ram_cheats: Vec<(u32, u8)>,
-    /// FC Game Genie 讀取覆寫（CPU 位址, 值, 比較值 / -1）。
-    rom_cheats: Vec<(u16, u8, i16)>,
-}
-
-impl EmuWasm {
-    fn with_core(core: CoreType) -> EmuWasm {
-        EmuWasm { core, ram_cheats: Vec::new(), rom_cheats: Vec::new() }
-    }
-
-    fn apply_cheats(&mut self) {
-        if self.ram_cheats.is_empty() && self.rom_cheats.is_empty() {
-            if let CoreType::Nes(emu) = &mut self.core { emu.sync_rom_cheats(&[]); }
-            return;
-        }
-        let ram_cheats = &self.ram_cheats;
-        match &mut self.core {
-            CoreType::Nes(emu) => {
-                emu.sync_rom_cheats(&self.rom_cheats);
-                for &(addr, value) in ram_cheats { emu.cheat_write_ram(addr, value); }
-            }
-            CoreType::Gb(emu) => {
-                for &(addr, value) in ram_cheats {
-                    match addr {
-                        0xC000..=0xDFFF => emu.wram[(addr - 0xC000) as usize] = value,
-                        0xE000..=0xFDFF => emu.wram[(addr - 0xE000) as usize] = value,
-                        0xFF80..=0xFFFE => emu.hram[(addr - 0xFF80) as usize] = value,
-                        _ => {}
-                    }
-                }
-            }
-            CoreType::Gg(emu) => {
-                for &(addr, value) in ram_cheats {
-                    if (0xC000..=0xFFFF).contains(&addr) {
-                        emu.ram[(addr & 0x1FFF) as usize] = value;
-                    }
-                }
-            }
-            CoreType::Snes(emu) => {
-                for &(addr, value) in ram_cheats {
-                    let bank = addr >> 16;
-                    let offset = addr & 0xFFFF;
-                    let index = match bank {
-                        0x7E | 0x7F => Some(((bank - 0x7E) << 16 | offset) as usize),
-                        0x00..=0x3F | 0x80..=0xBF if offset < 0x2000 => Some(offset as usize),
-                        _ => None,
-                    };
-                    if let Some(slot) = index.and_then(|index| emu.wram.get_mut(index)) {
-                        *slot = value;
-                    }
-                }
-            }
-            CoreType::N64(_) | CoreType::None => {}
-        }
-    }
 }
 
 #[wasm_bindgen]
@@ -352,7 +296,7 @@ impl EmuWasm {
 
     #[wasm_bindgen(constructor)]
     pub fn new() -> EmuWasm {
-        EmuWasm::with_core(CoreType::None)
+        EmuWasm { core: CoreType::None }
     }
 
     /// 載入 ROM（自動偵測格式：NES = "NES\x1A" 標頭, 否則視為 Game Boy）
@@ -365,8 +309,6 @@ impl EmuWasm {
             let mut emu = emulator::Emulator::new();
             if emu.load_rom(rom_data) {
                 self.core = CoreType::Nes(emu);
-                self.ram_cheats.clear();
-                self.rom_cheats.clear();
                 return true;
             }
             return false;
@@ -385,8 +327,6 @@ impl EmuWasm {
         let mut emu = gb::emulator::GbEmulator::new();
         if emu.load_rom(rom_data) {
             self.core = CoreType::Gb(emu);
-            self.ram_cheats.clear();
-            self.rom_cheats.clear();
             return true;
         }
 
@@ -440,8 +380,6 @@ impl EmuWasm {
         let mut emu = gg::emulator::GgEmulator::new();
         if emu.load_rom(rom_data) {
             self.core = CoreType::Gg(emu);
-            self.ram_cheats.clear();
-            self.rom_cheats.clear();
             return true;
         }
         false
@@ -454,8 +392,6 @@ impl EmuWasm {
         let mut emu = snes::emulator::SnesEmulator::new();
         if emu.load_rom(rom_data) {
             self.core = CoreType::Snes(emu);
-            self.ram_cheats.clear();
-            self.rom_cheats.clear();
             return true;
         }
         false
@@ -468,8 +404,6 @@ impl EmuWasm {
         let mut emu = n64::emulator::N64Emulator::new();
         if emu.load_rom(rom_data) {
             self.core = CoreType::N64(emu);
-            self.ram_cheats.clear();
-            self.rom_cheats.clear();
             return true;
         }
         false
@@ -482,8 +416,6 @@ impl EmuWasm {
         let mut emu = gg::emulator::GgEmulator::new();
         if emu.load_rom_sms(rom_data) {
             self.core = CoreType::Gg(emu);
-            self.ram_cheats.clear();
-            self.rom_cheats.clear();
             return true;
         }
         false
@@ -503,7 +435,6 @@ impl EmuWasm {
 
     /// 執行一幀
     pub fn frame(&mut self) {
-        self.apply_cheats();
         match &mut self.core {
             CoreType::Nes(emu) => emu.frame(),
             CoreType::Gb(emu) => emu.frame(),
@@ -575,27 +506,6 @@ impl EmuWasm {
             CoreType::N64(emu) => emu.get_frame_buffer_len(),
             CoreType::None => 0,
         }
-    }
-
-    /// 設定金手指。`ram` 為 [位址, 值, ...]；`rom` 為 FC Game Genie [位址, 值, 比較值或 -1, ...]。
-    /// 傳入空陣列即關閉。回傳實際採用的 RAM/ROM 筆數總和。
-    #[wasm_bindgen(js_name = "setCheats")]
-    pub fn set_cheats(&mut self, ram: &[u32], rom: &[i32]) -> u32 {
-        const MAX_CHEATS: usize = 128;
-        self.ram_cheats = ram.chunks_exact(2)
-            .take(MAX_CHEATS)
-            .filter(|pair| pair[0] <= 0xFF_FFFF && pair[1] <= 0xFF)
-            .map(|pair| (pair[0], pair[1] as u8))
-            .collect();
-        self.rom_cheats = rom.chunks_exact(3)
-            .take(MAX_CHEATS)
-            .filter(|item| (0x8000..=0xFFFF).contains(&item[0]) && (0..=0xFF).contains(&item[1]) && (-1..=0xFF).contains(&item[2]))
-            .map(|item| (item[0] as u16, item[1] as u8, item[2] as i16))
-            .collect();
-        if self.ram_cheats.is_empty() && self.rom_cheats.is_empty() {
-            if let CoreType::Nes(emu) = &mut self.core { emu.sync_rom_cheats(&[]); }
-        }
-        (self.ram_cheats.len() + self.rom_cheats.len()) as u32
     }
 
     #[wasm_bindgen(js_name = "setButton")]
@@ -1001,7 +911,7 @@ mod sram_tests {
         let mut nes = emulator::Emulator::new();
         nes.cartridge.header.has_battery = true;
         nes.cartridge.prg_ram[123] = 0x5a;
-        let mut wrapper = EmuWasm::with_core(CoreType::Nes(nes));
+        let mut wrapper = EmuWasm { core: CoreType::Nes(nes) };
         let saved = wrapper.export_sram();
         if let CoreType::Nes(emu) = &mut wrapper.core { emu.cartridge.prg_ram.fill(0); }
         assert!(wrapper.import_sram(&saved));
@@ -1011,21 +921,21 @@ mod sram_tests {
         gb.cartridge.has_battery = true;
         gb.cartridge.ram = vec![0; 8192];
         gb.cartridge.ram[456] = 0xa5;
-        let mut wrapper = EmuWasm::with_core(CoreType::Gb(gb));
+        let mut wrapper = EmuWasm { core: CoreType::Gb(gb) };
         let saved = wrapper.export_sram();
         if let CoreType::Gb(emu) = &mut wrapper.core { emu.cartridge.ram.fill(0); }
         assert!(wrapper.import_sram(&saved));
         assert!(matches!(&wrapper.core, CoreType::Gb(emu) if emu.cartridge.ram[456] == 0xa5));
 
         let gg = gg::emulator::GgEmulator::new();
-        let mut zeroed_wrapper = EmuWasm::with_core(CoreType::Gg(gg));
+        let mut zeroed_wrapper = EmuWasm { core: CoreType::Gg(gg) };
         let zeroed_save = zeroed_wrapper.export_sram();
         assert!(!zeroed_save.is_empty());
         assert!(zeroed_wrapper.import_sram(&zeroed_save));
 
         let mut gg = gg::emulator::GgEmulator::new();
         gg.cartridge.ram[789] = 0x3c;
-        let mut wrapper = EmuWasm::with_core(CoreType::Gg(gg));
+        let mut wrapper = EmuWasm { core: CoreType::Gg(gg) };
         let saved = wrapper.export_sram();
         if let CoreType::Gg(emu) = &mut wrapper.core { emu.cartridge.ram.fill(0); }
         assert!(wrapper.import_sram(&saved));
@@ -1034,7 +944,7 @@ mod sram_tests {
         let mut snes = snes::emulator::SnesEmulator::new();
         snes.cart.sram_size = snes.cart.sram.len();
         snes.cart.sram[321] = 0xc3;
-        let mut wrapper = EmuWasm::with_core(CoreType::Snes(snes));
+        let mut wrapper = EmuWasm { core: CoreType::Snes(snes) };
         let saved = wrapper.export_sram();
         if let CoreType::Snes(emu) = &mut wrapper.core { emu.cart.sram.fill(0); }
         assert!(wrapper.import_sram(&saved));
@@ -1043,13 +953,13 @@ mod sram_tests {
 
     #[test]
     fn native_sram_rejects_non_battery_and_wrong_size_data() {
-        let wrapper = EmuWasm::with_core(CoreType::Nes(emulator::Emulator::new()));
+        let wrapper = EmuWasm { core: CoreType::Nes(emulator::Emulator::new()) };
         assert!(wrapper.export_sram().is_empty());
 
         let mut gb = gb::emulator::GbEmulator::new();
         gb.cartridge.has_battery = true;
         gb.cartridge.ram = vec![0; 8192];
-        let mut wrapper = EmuWasm::with_core(CoreType::Gb(gb));
+        let mut wrapper = EmuWasm { core: CoreType::Gb(gb) };
         let wrong_size = snes::emulator::SnesEmulator::encode_base64(&[1, 2, 3]);
         assert!(!wrapper.import_sram(&wrong_size));
     }
@@ -1058,7 +968,7 @@ mod sram_tests {
     fn emulator_save_state_round_trips_for_supported_cores() {
         let mut nes = emulator::Emulator::new();
         nes.cartridge.prg_ram[123] = 0x5a;
-        let mut wrapper = EmuWasm::with_core(CoreType::Nes(nes));
+        let mut wrapper = EmuWasm { core: CoreType::Nes(nes) };
         let saved = wrapper.export_save_state();
         if let CoreType::Nes(emu) = &mut wrapper.core { emu.cartridge.prg_ram.fill(0); }
         assert!(wrapper.import_save_state(&saved));
@@ -1067,7 +977,7 @@ mod sram_tests {
         let mut gb = gb::emulator::GbEmulator::new();
         gb.cartridge.ram = vec![0; 8192];
         gb.cartridge.ram[456] = 0xa5;
-        let mut wrapper = EmuWasm::with_core(CoreType::Gb(gb));
+        let mut wrapper = EmuWasm { core: CoreType::Gb(gb) };
         let saved = wrapper.export_save_state();
         if let CoreType::Gb(emu) = &mut wrapper.core { emu.cartridge.ram.fill(0); }
         assert!(wrapper.import_save_state(&saved));
@@ -1075,7 +985,7 @@ mod sram_tests {
 
         let mut gg = gg::emulator::GgEmulator::new();
         gg.cartridge.ram[789] = 0x3c;
-        let mut wrapper = EmuWasm::with_core(CoreType::Gg(gg));
+        let mut wrapper = EmuWasm { core: CoreType::Gg(gg) };
         let saved = wrapper.export_save_state();
         if let CoreType::Gg(emu) = &mut wrapper.core { emu.cartridge.ram.fill(0); }
         assert!(wrapper.import_save_state(&saved));
@@ -1083,74 +993,10 @@ mod sram_tests {
 
         let mut snes = snes::emulator::SnesEmulator::new();
         snes.cart.sram[321] = 0xc3;
-        let mut wrapper = EmuWasm::with_core(CoreType::Snes(snes));
+        let mut wrapper = EmuWasm { core: CoreType::Snes(snes) };
         let saved = wrapper.export_save_state();
         if let CoreType::Snes(emu) = &mut wrapper.core { emu.cart.sram.fill(0); }
         assert!(wrapper.import_save_state(&saved));
         assert!(matches!(&wrapper.core, CoreType::Snes(emu) if emu.cart.sram[321] == 0xc3));
-    }
-}
-
-#[cfg(test)]
-mod cheat_tests {
-    use super::*;
-
-    fn nrom_image() -> Vec<u8> {
-        let mut rom = vec![0u8; 16 + 16384 + 8192];
-        rom[0..4].copy_from_slice(b"NES\x1A");
-        rom[4] = 1;
-        rom[5] = 1;
-        rom[16] = 0xA9; // PRG $8000
-        rom
-    }
-
-    #[test]
-    fn nes_cheats_override_reads_and_clear_cleanly() {
-        let mut nes = emulator::Emulator::new();
-        assert!(nes.load_rom(&nrom_image()));
-        let mut wrapper = EmuWasm::with_core(CoreType::Nes(nes));
-
-        assert_eq!(wrapper.set_cheats(&[0x0010, 0x63, 0x6005, 0x07], &[0x8000, 0x42, -1, 0x8001, 0x11, 0x99]), 4);
-        wrapper.apply_cheats();
-        if let CoreType::Nes(emu) = &mut wrapper.core {
-            assert_eq!(emu.cartridge.cpu_read(0x8000), 0x42);
-            // Compare value mismatch: original byte is 0, so no override.
-            assert_eq!(emu.cartridge.cpu_read(0x8001), 0x00);
-            assert_eq!(emu.bus.ram[0x10], 0x63);
-            assert_eq!(emu.cartridge.prg_ram[5], 0x07);
-        } else { unreachable!(); }
-
-        assert_eq!(wrapper.set_cheats(&[], &[]), 0);
-        wrapper.apply_cheats();
-        if let CoreType::Nes(emu) = &mut wrapper.core {
-            assert_eq!(emu.cartridge.cpu_read(0x8000), 0xA9);
-            assert!(emu.cartridge.read_cheats.is_empty());
-        }
-    }
-
-    #[test]
-    fn invalid_cheats_are_rejected() {
-        let mut wrapper = EmuWasm::with_core(CoreType::Nes(emulator::Emulator::new()));
-        assert_eq!(wrapper.set_cheats(&[0x0010, 0x1FF], &[0x1234, 0x10, -1]), 0);
-    }
-
-    #[test]
-    fn snes_and_gb_ram_cheats_write_work_ram() {
-        let mut wrapper = EmuWasm::with_core(CoreType::Snes(snes::emulator::SnesEmulator::new()));
-        wrapper.set_cheats(&[0x7E0DBE, 0x09, 0x7F0001, 0x05, 0x000010, 0x33], &[]);
-        wrapper.apply_cheats();
-        if let CoreType::Snes(emu) = &wrapper.core {
-            assert_eq!(emu.wram[0x0DBE], 0x09);
-            assert_eq!(emu.wram[0x10001], 0x05);
-            assert_eq!(emu.wram[0x10], 0x33);
-        }
-
-        let mut wrapper = EmuWasm::with_core(CoreType::Gb(gb::emulator::GbEmulator::new()));
-        wrapper.set_cheats(&[0xC123, 0x99, 0xFF90, 0x01], &[]);
-        wrapper.apply_cheats();
-        if let CoreType::Gb(emu) = &wrapper.core {
-            assert_eq!(emu.wram[0x123], 0x99);
-            assert_eq!(emu.hram[0x10], 0x01);
-        }
     }
 }

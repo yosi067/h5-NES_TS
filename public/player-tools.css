@@ -3,20 +3,41 @@
    全部使用新的 class，不覆寫既有大廳卡片、遊戲畫面或虛擬手把的排版。
    ========================================================================== */
 
-/* ---------- 功能面板（桌機抽屜「功能」分頁與手機底部選單共用） ---------- */
+/* ---------- 防止誤選文字 ----------
+   手機遊戲中長按（或手指滑出手把）時，iOS 會選取附近文字並跳出「拷貝」。
+   遊戲進行時整個機身與浮動元件都禁止選取；只有輸入框例外。 */
+body.game-active:not(.desktop-ui) #gameboy-shell,
+body.game-active:not(.desktop-ui) #gameboy-shell *,
+.mobile-tools-trigger,
+.mobile-tools-sheet,
+.mobile-tools-sheet *,
+.speed-indicator,
+.resume-banner,
+.resume-banner *,
+.toast-message {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+body.game-active:not(.desktop-ui) #gameboy-shell :is(input, textarea) {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* ---------- 功能面板（桌機「操作」分頁與手機底部選單共用） ---------- */
+.tools-fast {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 14px;
+  font-size: 15px;
+}
+
+.stage-play-extras:empty {
+  display: none;
+}
 .tools-panel .stage-heading:first-child {
   margin-top: 0;
-}
-
-.tools-note {
-  margin: 4px 0 14px;
-  color: rgba(242, 238, 228, 0.6);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.tools-note:empty {
-  display: none;
 }
 
 .tools-choice {
@@ -62,112 +83,12 @@
   outline-offset: 1px;
 }
 
-.tools-hold {
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
-
-.tools-hold.is-active {
-  border-color: transparent;
-  background: var(--stage-accent, #d2a646);
-  color: #15121a;
-}
-
 .tools-slot-status,
 .stage-slot-status {
   display: block;
   margin-top: 2px;
   color: rgba(242, 238, 228, 0.5);
   font-size: 11px;
-}
-
-.tools-help {
-  margin: 4px 0 8px;
-  font-size: 12px;
-}
-
-.tools-cheat-list {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-
-.tools-cheat {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px 6px 10px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-}
-
-.tools-cheat input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--stage-accent, #d2a646);
-}
-
-.tools-cheat-copy {
-  display: grid;
-  min-width: 0;
-}
-
-.tools-cheat-copy code {
-  overflow: hidden;
-  font: 600 13px/1.4 ui-monospace, 'Cascadia Mono', Consolas, monospace;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tools-cheat-copy small {
-  overflow: hidden;
-  color: rgba(242, 238, 228, 0.6);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.tools-cheat-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) auto;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
-.tools-input {
-  min-width: 0;
-  min-height: 36px;
-  padding: 6px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.3);
-  color: #f2eee4;
-  font: 14px/1.2 system-ui, 'Noto Sans TC', sans-serif;
-}
-
-.tools-input:focus {
-  border-color: var(--stage-accent, #d2a646);
-  outline: none;
-}
-
-.tools-input:disabled {
-  opacity: 0.4;
-}
-
-.tools-error {
-  margin: 0 0 12px;
-  color: #ffb0b0;
-  font-size: 12px;
-}
-
-.tools-empty {
-  margin: 0;
-  color: rgba(242, 238, 228, 0.5);
-  font-size: 12px;
 }
 
 /* ---------- 手機功能選單 ---------- */
@@ -387,6 +308,8 @@ body.pad-scale-custom :is(.ab-container, .snes-right-area, .arcade-panel, .n64-f
 
 /* ---------- 大廳：搜尋列與書架 ---------- */
 .lobby-tools {
+  min-width: 0;
+  max-width: 100%;
   display: grid;
   gap: 14px;
   margin: 0 0 clamp(16px, 2.4vw, 26px);
@@ -451,6 +374,7 @@ body.pad-scale-custom :is(.ab-container, .snes-right-area, .arcade-panel, .n64-f
 }
 
 .lobby-shelves {
+  min-width: 0;
   display: grid;
   gap: 12px;
 }
@@ -473,16 +397,47 @@ body.pad-scale-custom :is(.ab-container, .snes-right-area, .arcade-panel, .n64-f
   letter-spacing: 0.12em;
 }
 
-.lobby-shelf-more {
-  padding: 4px 0;
-  border: 0;
-  background: none;
-  color: #c2321f;
-  font: 700 12px/1 var(--lobby-font);
+.lobby-shelf {
+  min-width: 0;
+}
+
+.lobby-shelf-nav {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.lobby-shelf-nav[hidden] {
+  display: none;
+}
+
+.lobby-shelf-arrow {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(21, 19, 14, 0.18);
+  border-radius: 50%;
+  background: #fbf7ec;
+  color: #15130e;
+  font: 700 18px/1 var(--lobby-font);
   cursor: pointer;
 }
 
+.lobby-shelf-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* 觸控裝置直接用手指橫滑，不需要箭頭。 */
+@media (hover: none) and (pointer: coarse) {
+  .lobby-shelf-nav {
+    display: none;
+  }
+}
+
 .lobby-shelf-row {
+  min-width: 0;
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y;
   display: flex;
   gap: 10px;
   padding: 2px 2px 8px;
@@ -538,12 +493,6 @@ body.pad-scale-custom :is(.ab-container, .snes-right-area, .arcade-panel, .n64-f
   -webkit-line-clamp: 2;
 }
 
-.lobby-shelf-hint {
-  margin: 0;
-  color: rgba(21, 19, 14, 0.55);
-  font-size: 12px;
-}
-
 /* 搜尋結果與最愛沒有主機插圖。 */
 #rom-browser-header.is-collection .rom-feature-art {
   display: none;
@@ -597,6 +546,3 @@ body.mobile-landscape-mode .lobby-search-input {
   font-size: 14px;
 }
 
-body.mobile-landscape-mode .lobby-shelf[data-shelf="favorite"] {
-  display: none;
-}

@@ -1656,29 +1656,6 @@ impl Emulator {
     pub fn get_frame_buffer_len(&self) -> usize { self.ppu.frame_buffer.len() }
 
     /// 設定控制器按鈕
-    /// 金手指：同步 Game Genie 讀取覆寫（只在清單不同時才寫入卡帶）。
-    pub fn sync_rom_cheats(&mut self, cheats: &[(u16, u8, i16)]) {
-        if self.cartridge.read_cheats.as_slice() != cheats {
-            self.cartridge.read_cheats = cheats.to_vec();
-        }
-    }
-
-    /// 金手指：寫入 CPU RAM（$0000-$1FFF 鏡像）或 PRG-RAM（$6000-$7FFF）。
-    pub fn cheat_write_ram(&mut self, addr: u32, value: u8) -> bool {
-        if addr < 0x2000 {
-            self.bus.ram[(addr & 0x07FF) as usize] = value;
-            true
-        } else if (0x6000..0x8000).contains(&addr) {
-            let index = (addr - 0x6000) as usize;
-            match self.cartridge.prg_ram.get_mut(index) {
-                Some(slot) => { *slot = value; true }
-                None => false,
-            }
-        } else {
-            false
-        }
-    }
-
     pub fn set_button(&mut self, controller: u8, button: u8, pressed: bool) {
         match controller {
             0 => self.ctrl1.set_button(button, pressed),

@@ -62,7 +62,7 @@ export function mountMobileTools(api: ToolsApi & { returnToLobby(): void }): Mob
   sheet.append(head, body);
   document.body.append(trigger, scrim, sheet);
 
-  const panel: ToolsPanel = mountToolsPanel(body, api, { includeSlots: true, includeTouch: true, keyboardHints: false });
+  const panel: ToolsPanel = mountToolsPanel(body, api, { includeSlots: true, includeTouch: true });
 
   // 把按鈕貼在「H5-EMU」品牌字右側：直向是畫面與手把之間的橫條，橫向是左欄的標籤，
   // 兩處都是裝飾空間，不會蓋到遊戲畫面或任何按鍵。品牌字不可見時才退回視窗左上角。
@@ -119,7 +119,6 @@ export function mountMobileTools(api: ToolsApi & { returnToLobby(): void }): Mob
   const hide = () => {
     if (!open) return;
     open = false;
-    panel.release();
     sheet.classList.remove('is-open');
     scrim.classList.remove('is-open');
     sheet.hidden = true;

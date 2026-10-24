@@ -4,7 +4,7 @@
  */
 export const FAVORITES_KEY = 'h5emu.lobby.favorites.v1';
 export const RECENTS_KEY = 'h5emu.lobby.recents.v1';
-export const MAX_RECENTS = 12;
+export const MAX_RECENTS = 30;
 
 export interface RecentEntry {
   file: string;
@@ -117,4 +117,10 @@ export function rankSearchResults<T extends SearchableRom>(roms: T[], query: str
   });
   scored.sort((a, b) => b.score - a.score || a.index - b.index);
   return scored.slice(0, limit).map((item) => item.rom);
+}
+
+/** 最愛排在最前面（保持各自原本的先後順序），其他照原順序。 */
+export function sortFavoritesFirst<T extends { file: string }>(roms: T[], favorites: Iterable<string>): T[] {
+  const favoriteSet = new Set(favorites);
+  return [...roms.filter((rom) => favoriteSet.has(rom.file)), ...roms.filter((rom) => !favoriteSet.has(rom.file))];
 }

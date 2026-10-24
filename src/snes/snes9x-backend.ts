@@ -3,12 +3,6 @@ export interface Snes9xBackend {
   setButton(button: number, pressed: boolean, player?: number): void;
   /** 快轉（libretro fast-forward）。 */
   setFastForward(active: boolean, ratio: number): void;
-  /** 倒帶；只有在啟動時選擇啟用倒帶才有效，回傳是否可用。 */
-  setRewind(active: boolean): boolean;
-  /** 截圖（PNG 位元組）；核心不支援時回傳 null。 */
-  screenshot(): Promise<Uint8Array | null>;
-  /** 套用核心內建格式的金手指（Game Genie / PAR 等）。 */
-  setCheats(codes: string[]): void;
   saveState(): Uint8Array;
   loadState(state: Uint8Array): void;
   hasSaveMarker(marker: string): boolean;
@@ -42,16 +36,11 @@ interface EmulatorJsGameManager {
   loadState(state: Uint8Array): void;
   toggleFastForward?(active: number): void;
   setFastForwardRatio?(ratio: number): void;
-  functions?: { toggleRewind?(active: number): void };
-  screenshot?(): Promise<Uint8Array>;
-  setCheat?(index: number, enabled: number, code: string): void;
-  resetCheat?(): void;
 }
 
 interface EmulatorJsInstance {
   gameManager?: EmulatorJsGameManager;
   started?: boolean;
-  rewindEnabled?: boolean;
   callEvent?(event: string): void;
 }
 
@@ -282,7 +271,6 @@ export async function startSnes9xBackend(
   romName: string,
   core: EmulatorJsCore = 'snes',
   signal?: AbortSignal,
-  options: { rewind?: boolean } = {},
 ): Promise<Snes9xBackend> {
   const navigatorWithMemory = navigator as Navigator & { deviceMemory?: number };
   const unsupportedReason = getSnes9xUnsupportedReason(
@@ -325,7 +313,7 @@ window.EJS_threads=false;
 window.EJS_forceLegacyCores=${forceLegacyCore};
 window.EJS_disableAutoLang=true;
 window.EJS_language='en-US';
-${options.rewind ? "window.EJS_defaultOptions={rewindEnabled:'enabled'};\n" : ''}const normalizePromptText=value=>String(value||'').replace(/\\s+/g,' ').trim();
+const normalizePromptText=value=>String(value||'').replace(/\\s+/g,' ').trim();
 const updateAudioResumePrompt=()=>{
 document.querySelectorAll('.ejs_popup_container').forEach(popup=>{
 const button=Array.from(popup.querySelectorAll('button')).find(candidate=>normalizePromptText(candidate.textContent)==='Click to resume Emulator');
@@ -347,8 +335,8 @@ updateAudioResumePrompt();
 if(++promptPolls>=600)window.clearInterval(promptPoll);
 },50);
 const forwardHold=(event,pressed)=>{
-const action=event.code==='Tab'?'fast-forward':event.code==='Backspace'?'rewind':null;
-if(action===null)return;
+if(event.code!=='Tab')return;
+const action='fast-forward';
 event.preventDefault();
 if(pressed&&event.repeat)return;
 window.parent.postMessage({source:'h5-emu-snes9x-shortcut',action,pressed},window.parent.location.origin);
@@ -436,36 +424,6 @@ window.parent.postMessage({source:'h5-emu-snes9x-shortcut',action,slot:action===
       } catch (error) {
         console.warn('[EmulatorJS] 快轉切換失敗:', error);
       }
-    },
-    setRewind(active) {
-      const emulator = getEmulator();
-      const toggle = emulator?.gameManager?.functions?.toggleRewind;
-      if (!emulator?.rewindEnabled || !toggle) return false;
-      try {
-        toggle(active ? 1 : 0);
-        return true;
-      } catch (error) {
-        console.warn('[EmulatorJS] 倒帶切換失敗:', error);
-        return false;
-      }
-    },
-    async screenshot() {
-      const gameManager = getEmulator()?.gameManager;
-      if (!gameManager?.screenshot) return null;
-      const timeout = new Promise<null>((resolve) => window.setTimeout(() => resolve(null), 3000));
-      try {
-        const bytes = await Promise.race([gameManager.screenshot(), timeout]);
-        return bytes ? new Uint8Array(bytes) : null;
-      } catch (error) {
-        console.warn('[EmulatorJS] 截圖失敗:', error);
-        return null;
-      }
-    },
-    setCheats(codes) {
-      const gameManager = getEmulator()?.gameManager;
-      if (!gameManager?.setCheat || !gameManager.resetCheat) return;
-      gameManager.resetCheat();
-      codes.forEach((code, index) => gameManager.setCheat!(index, 1, code));
     },
     saveState() {
       const emulator = getEmulator();

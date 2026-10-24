@@ -6,11 +6,8 @@ import {
   normalizeFeatureSettings,
 } from '../src/features/settings';
 import { formatSaveTime, getSaveTime, recordSaveTime, SAVE_META_KEY } from '../src/features/save-meta';
-import { LobbyPrefs, MAX_RECENTS, matchesSearch, normalizeSearchText, rankSearchResults } from '../src/features/lobby-prefs';
+import { LobbyPrefs, MAX_RECENTS, matchesSearch, normalizeSearchText, rankSearchResults, sortFavoritesFirst } from '../src/features/lobby-prefs';
 import { RewindBuffer } from '../src/features/rewind';
-import { compileCheats, decodeNesGameGenie, loadCheats, parseCheatCode, saveCheats } from '../src/features/cheats';
-import { PLAYER2_KEYS, resolvePlayer2Action } from '../src/features/player2';
-import { DEFAULT_BINDINGS, cloneBindings, type AllBindings } from '../src/ui/input-bindings';
 import { base64ToBytes, buildBackup, parseBackup, summarizeBackup } from '../src/features/save-backup';
 
 class MemoryStorage implements Storage {
@@ -24,31 +21,31 @@ class MemoryStorage implements Storage {
 }
 
 describe('feature settings', () => {
-  it('defaults keep original behaviour (rewind off, pad untouched)', () => {
+  it('defaults keep the original pad appearance', () => {
     const store = new FeatureSettingsStore(new MemoryStorage());
     expect(store.get()).toEqual(DEFAULT_FEATURE_SETTINGS);
-    expect(store.get().rewindEnabled).toBe(false);
-    expect(store.get().padOpacity).toBe(100);
-    expect(store.get().padScale).toBe(100);
+    expect(store.get()).toEqual({ fastForwardSpeed: 2, padOpacity: 100, padScale: 100 });
   });
 
-  it('rejects invalid values and survives corrupt storage', () => {
-    expect(normalizeFeatureSettings({ fastForwardSpeed: 9, padOpacity: 3, padScale: 500 })).toMatchObject({
-      fastForwardSpeed: 2, padOpacity: 100, padScale: 100,
-    });
+  it('ignores removed or invalid fields from older versions', () => {
     const storage = new MemoryStorage();
+    storage.setItem(FEATURE_SETTINGS_KEY, JSON.stringify({ rewindEnabled: true, twoPlayerKeyboard: true, padOpacity: 60, fastForwardSpeed: 3 }));
+    expect(new FeatureSettingsStore(storage).get()).toEqual({ fastForwardSpeed: 2, padOpacity: 100, padScale: 100 });
     storage.setItem(FEATURE_SETTINGS_KEY, '{oops');
     expect(new FeatureSettingsStore(storage).get()).toEqual(DEFAULT_FEATURE_SETTINGS);
+    expect(normalizeFeatureSettings({ padOpacity: 40, padScale: 115, fastForwardSpeed: 4 })).toEqual({
+      fastForwardSpeed: 4, padOpacity: 40, padScale: 115,
+    });
   });
 
   it('persists updates and notifies listeners', () => {
     const storage = new MemoryStorage();
     const store = new FeatureSettingsStore(storage);
     const seen: number[] = [];
-    store.subscribe((value) => seen.push(value.fastForwardSpeed));
-    store.update({ fastForwardSpeed: 3, rewindEnabled: true });
-    expect(new FeatureSettingsStore(storage).get()).toMatchObject({ fastForwardSpeed: 3, rewindEnabled: true });
-    expect(seen).toEqual([3]);
+    store.subscribe((value) => seen.push(value.padScale));
+    store.update({ padScale: 115 });
+    expect(new FeatureSettingsStore(storage).get().padScale).toBe(115);
+    expect(seen).toEqual([115]);
   });
 });
 
@@ -93,6 +90,12 @@ describe('lobby favorites, recents and search', () => {
     expect(matchesSearch(rom, '   ')).toBe(false);
   });
 
+  it('puts favourites first without reordering the rest', () => {
+    const roms = [{ file: 'a' }, { file: 'b' }, { file: 'c' }, { file: 'd' }];
+    expect(sortFavoritesFirst(roms, ['d', 'b']).map((rom) => rom.file)).toEqual(['b', 'd', 'a', 'c']);
+    expect(sortFavoritesFirst(roms, []).map((rom) => rom.file)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
   it('ranks title hits ahead of description hits', () => {
     const roms = [
       { file: 'b.nes', displayName: '冒險島', description: '瑪利歐風格的動作遊戲' },
@@ -126,65 +129,6 @@ describe('rewind buffer', () => {
     expect(buffer.pop()).toBe('one');
     buffer.clear();
     expect(buffer.pop()).toBeNull();
-  });
-});
-
-describe('cheats', () => {
-  it('decodes NES Game Genie codes', () => {
-    expect(decodeNesGameGenie('SXIOPO')).toEqual({ kind: 'rom', address: 0x91D9, value: 0xAD, compare: -1 });
-    const eight = decodeNesGameGenie('YEUZUGAA');
-    expect(eight?.kind).toBe('rom');
-    expect(eight && eight.address >= 0x8000).toBe(true);
-    expect(eight && 'compare' in eight ? eight.compare : -2).toBeGreaterThanOrEqual(0);
-    expect(decodeNesGameGenie('SXIOP')).toBeNull();
-  });
-
-  it('parses RAM codes per system and rejects unsafe addresses', () => {
-    expect(parseCheatCode('nes', '0075:09')).toEqual({ kind: 'ram', address: 0x75, value: 9 });
-    expect(parseCheatCode('nes', '8000:01')).toHaveProperty('error');
-    expect(parseCheatCode('snes', '7E0DBE09')).toEqual({ kind: 'ram', address: 0x7E0DBE, value: 9 });
-    expect(parseCheatCode('snes', 'C08000FF')).toHaveProperty('error');
-    expect(parseCheatCode('gb', '01FF16D0')).toEqual({ kind: 'ram', address: 0xD016, value: 0xFF });
-    expect(parseCheatCode('gg', 'C010=63')).toEqual({ kind: 'ram', address: 0xC010, value: 0x63 });
-  });
-
-  it('compiles only enabled entries and reports errors', () => {
-    const compiled = compileCheats('nes', [
-      { code: 'SXIOPO + 0075:09', label: '', enabled: true },
-      { code: '0010:01', label: '', enabled: false },
-      { code: 'nope', label: '', enabled: true },
-    ]);
-    expect(compiled.rom).toEqual([0x91D9, 0xAD, -1]);
-    expect(compiled.ram).toEqual([0x75, 9]);
-    expect(compiled.errors).toHaveLength(1);
-  });
-
-  it('stores codes but always reloads them disabled', () => {
-    const storage = new MemoryStorage();
-    saveCheats(storage, 'game', [{ code: 'SXIOPO', label: '無限命', enabled: true }]);
-    expect(loadCheats(storage, 'game')).toEqual([{ code: 'SXIOPO', label: '無限命', enabled: false }]);
-    saveCheats(storage, 'game', []);
-    expect(loadCheats(storage, 'game')).toEqual([]);
-  });
-});
-
-describe('player 2 keyboard', () => {
-  const bindings = (): AllBindings => cloneBindings(DEFAULT_BINDINGS as AllBindings);
-
-  it('never overlaps the shipped 1P defaults', () => {
-    const defaults = bindings();
-    for (const layout of ['nes', 'snes', 'arcade'] as const) {
-      const used = new Set(Object.values(defaults[layout]).flatMap((binding) => binding.keys));
-      for (const code of Object.keys(PLAYER2_KEYS[layout])) expect(used.has(code)).toBe(false);
-    }
-  });
-
-  it('lets custom 1P bindings win over 2P keys', () => {
-    const custom = bindings();
-    expect(resolvePlayer2Action('nes', custom.nes, 'KeyP')).toBe('a');
-    custom.nes.a.keys = ['KeyP'];
-    expect(resolvePlayer2Action('nes', custom.nes, 'KeyP')).toBeNull();
-    expect(resolvePlayer2Action('n64', custom.n64, 'KeyI')).toBeNull();
   });
 });
 
