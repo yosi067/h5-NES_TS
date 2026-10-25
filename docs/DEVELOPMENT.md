@@ -26,8 +26,6 @@
 | `npm run lint` | ESLint（`src`） |
 | `npm run n64:source` / `npm run n64:build` | 取得並以 Docker 重建 N64 runtime fork |
 
-> `test:cpu`、`test:ppu`、`test:apu` 使用的 `--testPathPattern` 在 Vitest 1.x 不支援，請改用 `npx vitest run tests/cpu.test.ts` 這類直接指定檔案的方式。
-
 中文化與遊戲資料相關指令另見：[遊戲 Profile 與翻譯框架](GAME_PROFILE_AUTHORING.md)、[足球小將 II](CT2_LOCALIZATION_STUDIO.md)、[Zombie Hunter](ZOMBIE_HUNTER.md)、[遊戲資料與封面](GAME_METADATA_PLAN.md)。
 
 ## 目錄速覽
@@ -110,7 +108,7 @@ EmulatorJS 的 runtime 檔案由 `vite.config.ts` 從 `node_modules/@emulatorjs/
 3. 在 `nes-wasm/src/` 修改，`npm run wasm:build` 後回到瀏覽器驗證。
 4. 補上可重現的測試，並把根因與修正寫進 [問題與修復紀錄](TROUBLESHOOTING.md)。
 
-新增 NES Mapper 時，修改 `nes-wasm/src/mappers.rs`；`src/mappers/` 只屬於早期 TypeScript 實作。
+新增 NES Mapper 時，修改 `nes-wasm/src/mappers.rs`（早期的 TypeScript 核心已移除）。
 
 ## 部署
 
