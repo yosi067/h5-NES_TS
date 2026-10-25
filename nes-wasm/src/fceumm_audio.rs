@@ -325,19 +325,25 @@ impl FceummFirResampler {
         let max = ((input.len() - 1) as u64) << 16;
         let mut position = self.phase;
         let mut output = Vec::new();
+        // 乘積確定不會超出 i32 時改用 32 位元乘法（FC 混音後輸入最大約 82,019，係數最大 21,588），
+        // 否則退回 64 位元；兩條路徑的結果都與逐項 i64 計算完全相同。
+        let products_fit_i32 = max_abs(&input) * max_abs(&self.coefficients) <= i64::from(i32::MAX);
 
         while position < max {
             let center = (position >> 16) as usize;
-            let start = center - tap_count;
             let fraction = position & 0xFFFF;
-            let mut current = 0i64;
-            let mut next = 0i64;
 
-            for (coefficient_index, &coefficient) in self.coefficients.iter().enumerate() {
-                let source_index = start + tap_count - coefficient_index;
-                current += (i64::from(input[source_index]) * i64::from(coefficient)) >> 6;
-                next += (i64::from(input[source_index + 1]) * i64::from(coefficient)) >> 6;
-            }
+            // 係數 k 對應 input[center - k]（current）與 input[center + 1 - k]（next）。
+            // 改成正向切片 + 反向係數迭代：整數加總與順序無關，結果完全相同，
+            // 但省掉每次乘加的邊界檢查。這段是 FC 每幀最耗時的地方（約 2,000 次乘加 × 735 個取樣）。
+            let window_start = center + 1 - tap_count;
+            let current_window = &input[window_start..window_start + tap_count];
+            let next_window = &input[window_start + 1..window_start + 1 + tap_count];
+            let (current, next) = if products_fit_i32 {
+                fir_pair_i32(&self.coefficients, current_window, next_window)
+            } else {
+                fir_pair_i64(&self.coefficients, current_window, next_window)
+            };
 
             let interpolated = current * (0x10000 - fraction) as i64
                 + next * fraction as i64;
@@ -353,6 +359,37 @@ impl FceummFirResampler {
 
         output
     }
+}
+
+fn max_abs(values: &[i32]) -> i64 {
+    values.iter().map(|&value| i64::from(value).abs()).max().unwrap_or(0)
+}
+
+#[inline(always)]
+fn fir_pair_i32(coefficients: &[i32], current_window: &[i32], next_window: &[i32]) -> (i64, i64) {
+    let mut current = 0i64;
+    let mut next = 0i64;
+    for ((&coefficient, &current_input), &next_input) in
+        coefficients.iter().rev().zip(current_window).zip(next_window)
+    {
+        current += i64::from((current_input * coefficient) >> 6);
+        next += i64::from((next_input * coefficient) >> 6);
+    }
+    (current, next)
+}
+
+#[inline(always)]
+fn fir_pair_i64(coefficients: &[i32], current_window: &[i32], next_window: &[i32]) -> (i64, i64) {
+    let mut current = 0i64;
+    let mut next = 0i64;
+    for ((&coefficient, &current_input), &next_input) in
+        coefficients.iter().rev().zip(current_window).zip(next_window)
+    {
+        let coefficient = i64::from(coefficient);
+        current += (i64::from(current_input) * coefficient) >> 6;
+        next += (i64::from(next_input) * coefficient) >> 6;
+    }
+    (current, next)
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -601,6 +638,71 @@ mod tests {
 
         assert_eq!(output.first(), Some(&58));
         assert!(output.iter().any(|&sample| sample != 0));
+    }
+
+    /// 原本逐一索引的寫法，用來證明最佳化後輸出逐位元相同。
+    fn reference_process(resampler: &mut FceummFirResampler, samples: &[i32]) -> Vec<i32> {
+        if samples.is_empty() {
+            return Vec::new();
+        }
+        let tap_count = resampler.coefficients.len();
+        let mut input = resampler.history.clone();
+        input.extend_from_slice(samples);
+        let max = ((input.len() - 1) as u64) << 16;
+        let mut position = resampler.phase;
+        let mut output = Vec::new();
+        while position < max {
+            let center = (position >> 16) as usize;
+            let start = center - tap_count;
+            let fraction = position & 0xFFFF;
+            let mut current = 0i64;
+            let mut next = 0i64;
+            for (coefficient_index, &coefficient) in resampler.coefficients.iter().enumerate() {
+                let source_index = start + tap_count - coefficient_index;
+                current += (i64::from(input[source_index]) * i64::from(coefficient)) >> 6;
+                next += (i64::from(input[source_index + 1]) * i64::from(coefficient)) >> 6;
+            }
+            let interpolated = current * (0x10000 - fraction) as i64 + next * fraction as i64;
+            output.push((interpolated >> 27) as i32);
+            position += resampler.ratio;
+        }
+        resampler.phase = position - max + ((tap_count as u64) << 16);
+        let history_start = input.len().saturating_sub(tap_count + 1);
+        resampler.history = input[history_start..].to_vec();
+        output
+    }
+
+    #[test]
+    fn optimized_fir_matches_reference_bit_for_bit() {
+        // 偽亂數輸入（涵蓋 wave_hi 混音後的數值範圍），分成長短不一的區塊連續處理。
+        let mut seed = 0x1234_5678u32;
+        let mut next_sample = || {
+            seed ^= seed << 13;
+            seed ^= seed >> 17;
+            seed ^= seed << 5;
+            (seed % 90_000) as i32
+        };
+        let asymmetric: Vec<i32> = (0..64).map(|index| (index * 37 % 200) - 90).collect();
+        for coefficients in [very_high_44100_ntsc_coefficients(), asymmetric] {
+            let mut optimized = FceummFirResampler::new(&coefficients, VERY_HIGH_44100_NTSC_RATIO);
+            let mut reference = optimized.clone();
+            for chunk_len in [5, 29_780, 1, 29_781, 40, 29_780, 0, 12_345] {
+                let chunk: Vec<i32> = (0..chunk_len).map(|_| next_sample()).collect();
+                assert_eq!(optimized.process(&chunk), reference_process(&mut reference, &chunk));
+                assert_eq!(optimized.phase, reference.phase);
+                assert_eq!(optimized.history, reference.history);
+            }
+        }
+    }
+
+    #[test]
+    fn large_inputs_use_the_i64_path_and_still_match_reference() {
+        let mut optimized = FceummFirResampler::new_very_high_44100_ntsc();
+        let mut reference = optimized.clone();
+        let chunk: Vec<i32> = (0..30_000).map(|index| (index * 7_919 % 4_000_000) - 2_000_000).collect();
+        assert!(max_abs(&chunk) * max_abs(&optimized.coefficients) > i64::from(i32::MAX));
+        assert_eq!(optimized.process(&chunk), reference_process(&mut reference, &chunk));
+        assert_eq!(optimized.process(&chunk[..777]), reference_process(&mut reference, &chunk[..777]));
     }
 
     #[test]

@@ -5,7 +5,9 @@ edition = "2021"
 description = "NES 模擬器 WASM 核心 - 使用 Rust 實作高效能 NES 硬體模擬"
 
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = false
+# 只開啟目前 Rust 輸出本來就用到的 WASM 功能（不提高瀏覽器需求）。
+# wasm-pack 內附的 wasm-opt 預設不認得 bulk-memory，未指定時會驗證失敗。
+wasm-opt = ["-O3", "--mvp-features", "--enable-bulk-memory", "--enable-sign-ext", "--enable-nontrapping-float-to-int"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
