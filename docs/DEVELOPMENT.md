@@ -31,27 +31,49 @@
 ## 目錄速覽
 
 ```text
-index.html                 # 遊戲大廳與模擬器頁面
+index.html                 # 頁面結構（樣式在 public/styles/ 與 public/*.css）
 translation-studio.html    # CT2 翻譯工作室
 src/
-├── main.ts                # 入口：ROM 路由、後端生命週期、輸入、存檔
-├── arcade/                # FBNeo 適配
-├── n64/                   # N64 效能 profile、遙測、音訊診斷、資產檢查
-├── snes/                  # EmulatorJS iframe 後端（Snes9x / FCEUmm / Genesis Plus GX）
+├── main.ts                # 入口：只負責依序啟動各模組
+├── app/                   # 共用執行期狀態（runtime.ts）、偏好設定、儲存與除錯入口
+├── backends/              # 模擬後端（見下方「前端架構」）
+│   ├── types.ts           # EmulatorBackend 共同介面
+│   ├── registry.ts        # 依目前後端取得 adapter
+│   ├── lifecycle.ts       # 開始／暫停／繪製（分派給 adapter）
+│   ├── native/            # 自製 Rust/WASM 核心：載入、幀迴圈、存檔、SFC 診斷
+│   ├── fbneo/             # FBNeo 街機
+│   ├── emulatorjs/        # EmulatorJS iframe（Snes9x / FCEUmm / Genesis Plus GX）
+│   └── n64/               # Mupen64Plus
+├── saves/                 # 存檔 key、即時存檔入口、自動存檔、SRAM、備份
+├── session/               # 開始／結束一場遊戲、載入流程
+├── input/                 # 鍵盤、手把、觸控按鍵對應與快捷鍵
+├── lobby/                 # 大廳與主機／遊戲清單
+├── features/              # 快轉、倒帶、玩家工具、效能面板
+├── audio/                 # AudioWorklet 輸出
+├── ui/                    # 控制器版面、電腦版舞台、對話框、RWD
+├── catalog/               # 主機與 ROM 分類
+├── arcade/ n64/ snes/     # 各外部核心的底層橋接
 ├── game-profiles/         # 中文化圖層、選單覆蓋、能力調整、翻譯編輯器
-├── ui/                    # ROM 選單、虛擬控制器、觸控
-├── storage/               # 存檔儲存
+├── storage/               # IndexedDB 存檔儲存
 ├── data/rom-metadata/     # 遊戲資料
-├── core/ + mappers/       # 早期 TypeScript NES 實作（測試與參考用，非正式執行路徑）
 └── wasm/                  # wasm-pack 產物（勿手改）
 nes-wasm/src/              # Rust 核心：NES（根目錄）、gb/、gg/、snes/
 game-profiles/             # 遊戲 profile 原始檔、翻譯與 schema
-public/                    # 靜態資源、roms.json、遊戲資料、AudioWorklet、編譯後 profile
+public/                    # 靜態資源、樣式、roms.json、遊戲資料、AudioWorklet、編譯後 profile
 roms/                      # 本機 ROM（不隨文件說明散布）
 tests/                     # Vitest 測試
 tools/                     # ROM 分析、中文化、稽核與 N64 建置工具
 artifacts/                 # 可重現的研究輸出與 N64 runtime 資產
 ```
+
+## 前端架構
+
+- **後端 adapter**：四種模擬後端都實作 `src/backends/types.ts` 的 `EmulatorBackend`（開始／暫停、繪製、重置、即時存檔、自動存檔快照、SRAM、快轉、倒帶與 2P 支援）。其他模組一律透過 `getActiveBackend()` 呼叫，不自行判斷目前是哪個後端。
+- **新增一個後端**：在 `BackendId` 加上代號、實作一個 adapter、在 `registry.ts` 登錄；TypeScript 會檢查每個代號都有 adapter。
+- **存檔位置不可更改**：即時存檔 key 由 `saves/save-keys.ts` 產生（`emu_savestate_<核心標籤>_<ROM>_<欄位>`），核心標籤來自各 adapter 的 `saveKeyTag()`；SRAM 在 `emu_sram_<ROM>`。改動會讓玩家既有存檔讀不到。
+- **共用狀態**：被多個模組寫入的狀態集中在 `src/app/runtime.ts`；其他狀態由各自模組持有並以 `export let` 唯讀公開。
+- **樣式**：`index.html` 的 `<link>` 依序載入 `public/styles/`（基礎到最後覆寫）與 `public/*.css`，順序就是疊加優先序。
+- **效能面板**：網址加 `?perf=1` 或遊戲中按 `F9`。顯示畫面／模擬 fps、每幀模擬與繪製耗時、長幀與音訊斷音；`window.h5Perf.snapshot()` 可供自動化量測。自製 SFC 核心的開發診斷記錄需加 `?snesDiag=1`。
 
 ## ROM 與遊戲目錄
 
@@ -96,7 +118,7 @@ EmulatorJS 的 runtime 檔案由 `vite.config.ts` 從 `node_modules/@emulatorjs/
 
 ## 測試策略
 
-- **單元／整合測試**：`tests/` 涵蓋 CPU、PPU、Mapper、街機輸入、ROM 目錄、SNES 路由、N64 runtime／音訊／遙測、中文化圖層等。
+- **單元／整合測試**：`tests/` 涵蓋音訊 Worklet、街機輸入、ROM 目錄、SNES 路由、N64 runtime／音訊／遙測、中文化圖層等。
 - **Node 測試**：`tools/*.test.mjs`，多數需要本機 ROM，透過 `npm run test:profiles`、`test:localization:*`、`test:zombie:*` 等指令執行。
 - **Rust 原 ROM 診斷**：`cargo test --manifest-path nes-wasm/Cargo.toml --release <name> -- --ignored --nocapture`，例如 `test:ct2:stats:rom`。
 - **實機驗收**：以實際遊戲畫面、音訊與效能數據為準，「能啟動」不等於「行為正確」。N64 的手機驗收規格見 [N64 iPhone 音訊](N64_IPHONE_AUDIO.md)。

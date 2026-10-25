@@ -71,19 +71,21 @@ NES 核心提供執行期觀察與 profile 掛鉤；`src/game-profiles/` 依來�
 
 ```text
 src/
-├── main.ts                 # 應用入口、ROM 路由、後端生命週期
+├── main.ts                 # 應用入口：依序啟動各模組
+├── backends/               # 共同後端介面與四種 adapter（native / fbneo / emulatorjs / n64）
+├── saves/ session/ input/  # 存檔、遊戲流程、輸入
+├── lobby/ ui/ features/    # 大廳、版面、玩家功能與效能面板
 ├── arcade/                 # FBNeo 適配與輸入/音視頻橋接
 ├── n64/                    # N64 runtime、效能 profile、遙測與資產檢查
 ├── snes/                   # EmulatorJS iframe 後端（Snes9x / FCEUmm / Genesis Plus GX）
 ├── game-profiles/          # 中文化圖層、選單覆蓋與翻譯編輯器
-├── core/ + mappers/        # 早期 TypeScript NES 實作與參考
 └── wasm/                   # wasm-pack 產物
 nes-wasm/src/
 ├── lib.rs                  # 統一 WASM API
 ├── gb/                     # Game Boy
 ├── gg/                     # Game Gear / Master System
 └── snes/                   # SFC / SNES
-tests/                      # CPU、PPU、Mapper、N64 runtime/效能測試
+tests/                      # 前端、音訊、中文化、N64 runtime/效能測試
 tools/n64/                  # Mupen fork 取得與重建工具
 artifacts/n64/              # 可重現的 N64 runtime 資產
 ```
