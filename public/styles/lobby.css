@@ -1,0 +1,1601 @@
+/* 大廳：主機與遊戲選擇器（含像素風格改版）。
+ * 原本內嵌在 index.html；載入順序見 index.html 的 <link>，順序即疊加優先序。 */
+
+/* ===== ROM / Machine 選擇器 ===== */
+.rom-selector {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 11% 17%, rgba(178,61,45,0.18), transparent 3%),
+    radial-gradient(circle at 89% 17%, rgba(124,135,75,0.18), transparent 3%),
+    linear-gradient(90deg, rgba(0,0,0,0.7) 0 4%, transparent 4% 96%, rgba(0,0,0,0.7) 96% 100%),
+    repeating-linear-gradient(90deg, rgba(76,41,30,0.48) 0 74px, rgba(31,20,19,0.54) 74px 78px),
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #2b1714 0%, #120b0e 58%, #271613 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 10px;
+  overflow: hidden;
+}
+
+.rom-selector::before,
+.rom-selector::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  image-rendering: pixelated;
+}
+
+.rom-selector::before {
+  display: none;
+}
+
+.rom-selector::after {
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0 1px, transparent 1px 4px),
+    radial-gradient(ellipse at center, transparent 0 58%, rgba(0,0,0,0.52) 100%);
+  opacity: 0.5;
+}
+
+.rom-selector-content {
+  width: 100%;
+  max-width: 920px;
+  height: min(94vh, 712px);
+  max-height: 94vh;
+  background:
+    linear-gradient(180deg, rgba(46,27,23,0.42) 0%, rgba(15,10,12,0.78) 100%),
+    repeating-linear-gradient(90deg, rgba(255,255,255,0.045) 0 35px, transparent 35px 70px),
+    repeating-linear-gradient(0deg, rgba(169,101,64,0.13) 0 48px, rgba(43,27,25,0.18) 48px 96px);
+  border: 5px solid #3e2d2a;
+  border-radius: 9px;
+  padding: 10px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.72),
+      inset 0 0 0 2px rgba(154, 95, 68, 0.76),
+      inset 0 0 70px rgba(0,0,0,0.46);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.rom-selector-content::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 64px;
+  height: 6px;
+  background: repeating-linear-gradient(90deg, #c84437 0 5px, transparent 5px 11px);
+  image-rendering: pixelated;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.rom-selector-header {
+  text-align: center;
+  margin-bottom: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.rom-selector-header h2 {
+  font-size: 30px;
+  color: #fff4df;
+  margin: 12px 0 2px;
+  font-weight: 900;
+  text-shadow: 0 4px 0 #0b0b0f, 3px 0 0 #0b0b0f, -3px 0 0 #0b0b0f;
+}
+
+.rom-selector-header .brand-name {
+  font-family: 'Arial Black', Impact, sans-serif;
+  font-size: 48px;
+  line-height: 0.86;
+  letter-spacing: 1px;
+  transform: none;
+  color: #f5f1e8;
+  text-shadow: 0 5px 0 #07070a, -3px 0 0 #07070a, 3px 0 0 #07070a;
+}
+
+.brand-logo-red {
+  color: #d84b3f;
+  text-shadow: 0 5px 0 #07070a, -3px 0 0 #07070a, 3px 0 0 #07070a, 0 0 12px rgba(216,75,63,0.34);
+}
+
+.brand-logo-white {
+  color: #f6f1e9;
+}
+
+.selector-subtitle {
+  color: rgba(255,244,223,0.76);
+  font-size: 17px;
+  line-height: 1.35;
+  text-shadow: 0 3px 0 rgba(0,0,0,0.65);
+}
+
+.machine-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 20px;
+  overflow-y: auto;
+  padding: 8px 10px 14px 2px;
+  min-height: 0;
+  flex: 1 1 auto;
+  position: relative;
+  z-index: 1;
+  scrollbar-color: #7a4a36 #1a1112;
+  scrollbar-width: thin;
+}
+
+.machine-grid::-webkit-scrollbar {
+  width: 12px;
+}
+
+.machine-grid::-webkit-scrollbar-track {
+  background: #1a1112;
+  border: 2px solid #3b2520;
+}
+
+.machine-grid::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #b36d45, #63311f);
+  border: 2px solid #1a1112;
+}
+
+.machine-card-shell {
+  position: relative;
+  min-height: 116px;
+  padding: 8px 8px 0 0;
+}
+
+.machine-card {
+  width: 100%;
+  height: 100%;
+  min-height: 108px;
+  border: 3px solid #251915;
+  border-radius: 4px;
+  background:
+    repeating-linear-gradient(90deg, rgba(116,88,54,0.12) 0 2px, transparent 2px 6px),
+    repeating-linear-gradient(0deg, rgba(87,54,31,0.09) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #fff8df 0%, #ead8b4 100%);
+  color: #140f0d;
+  cursor: pointer;
+  padding: 10px 14px 10px 10px;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  column-gap: 14px;
+  row-gap: 4px;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 5px 0 #5a3b2c, 0 8px 0 #0a0808, inset 0 0 0 3px rgba(255,255,255,0.72), inset 0 -8px 0 rgba(73,42,29,0.08);
+  transition: transform 0.16s ease, filter 0.16s ease;
+  image-rendering: pixelated;
+}
+
+.machine-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,0.08), transparent 8px, transparent calc(100% - 8px), rgba(0,0,0,0.18)),
+    linear-gradient(90deg, rgba(255,255,255,0.22), transparent 36% 100%);
+  pointer-events: none;
+}
+
+.machine-card::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  bottom: 10px;
+  font-size: 0;
+  width: 64px;
+  height: 8px;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,0.55) 0 7px, rgba(0,0,0,0.1) 7px 10px);
+  opacity: 0.55;
+}
+
+.machine-card:hover,
+.machine-card:focus-visible {
+  transform: translateY(-3px);
+  filter: brightness(1.08);
+  outline: none;
+}
+
+.machine-art {
+  grid-row: 1 / 3;
+  width: 104px;
+  height: 86px;
+  border-radius: 2px;
+  background: #8a2430;
+  position: relative;
+  border: 3px solid #2b1c17;
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,0.18), 0 3px 0 rgba(0,0,0,0.42), 0 0 0 1px rgba(255,244,223,0.45);
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+
+.machine-art.gb { background: #2b9187; }
+.machine-art.gg { background: #3f5e96; }
+.machine-art.md { background: #76618c; }
+.machine-art.snes { background: #8f789a; }
+.machine-art.n64 { background: #3d8a4d; }
+.machine-art.arcade { background: #2b7dad; }
+
+.machine-art-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  transform: none;
+  transform-origin: center;
+}
+
+.machine-title {
+  align-self: end;
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  padding-right: 26px;
+  text-shadow: 2px 2px 0 rgba(255,255,255,0.72);
+}
+
+.machine-meta {
+  align-self: start;
+  display: block;
+  color: #1e1712;
+  font-size: 14px;
+  line-height: 1.25;
+  padding-right: 12px;
+  font-weight: 700;
+}
+
+body.android-device-mode .machine-title,
+body.android-device-mode .machine-meta {
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  color: #1e1712;
+  -webkit-text-fill-color: #1e1712;
+  text-rendering: auto;
+  transform: translateZ(0);
+}
+
+.machine-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e10f19;
+  color: #fff;
+  border: 3px solid #fff7df;
+  border-radius: 999px;
+  font-weight: 900;
+  box-shadow: 0 3px 0 #5a0508, 0 0 0 2px #160d0d;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.rom-browser-header {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 0 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.rom-back-btn {
+  border: 0;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #3b3330, #171114);
+  color: #fff4df;
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.08), 0 4px 0 #080607;
+}
+
+.rom-browser-title {
+  flex: 1;
+  font-weight: 900;
+  color: #fff4df;
+  font-size: 24px;
+  text-shadow: 0 3px 0 rgba(0,0,0,0.75);
+}
+
+.rom-list {
+  flex: 1;
+  overflow-y: auto;
+  background: rgba(15, 10, 12, 0.62);
+  border-radius: 8px;
+  padding: 12px;
+  max-height: min(58vh, 520px);
+  display: none;
+  scrollbar-color: #7a4a36 #1a1112;
+  scrollbar-width: thin;
+  box-shadow: inset 0 0 0 4px rgba(0,0,0,0.26);
+  position: relative;
+  z-index: 1;
+}
+
+.rom-list::-webkit-scrollbar { width: 12px; }
+.rom-list::-webkit-scrollbar-track { background: #1a1112; border: 2px solid #3b2520; }
+.rom-list::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #b36d45, #63311f); border: 2px solid #1a1112; }
+
+.rom-item {
+  width: 100%;
+  min-height: 70px;
+  padding: 12px 16px 12px 14px;
+  margin-bottom: 10px;
+  background:
+    repeating-linear-gradient(0deg, rgba(87,54,31,0.12) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #fff7df 0%, #ead7b2 100%);
+  border: 3px solid #251915;
+  border-radius: 4px;
+  color: #17100d;
+  font-size: 16px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.2s;
+  position: relative;
+  box-shadow: 0 5px 0 #4a3325, 0 8px 0 #0a0808, inset 0 0 0 3px rgba(255,255,255,0.62);
+}
+
+.rom-item:last-child {
+  margin-bottom: 0;
+}
+
+.rom-item:hover, .rom-item:active {
+  filter: brightness(1.06);
+  transform: translateX(4px);
+}
+
+.rom-icon {
+  width: 34px;
+  height: 28px;
+  flex: 0 0 34px;
+  color: transparent;
+  background: #27232a;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 3px #171114, 0 3px 0 rgba(0,0,0,0.35);
+  position: relative;
+  image-rendering: pixelated;
+}
+
+.rom-icon::before,
+.rom-icon::after {
+  content: '';
+  position: absolute;
+  image-rendering: pixelated;
+}
+
+.rom-icon::after {
+  left: 8px;
+  right: 8px;
+  bottom: 5px;
+  height: 5px;
+  background: #111;
+}
+
+.rom-icon.nes,
+.rom-icon.snes {
+  background: #efe4c9;
+  border-radius: 3px 3px 6px 6px;
+  box-shadow: inset 0 0 0 3px #2a1b18, 0 3px 0 rgba(0,0,0,0.35);
+}
+
+.rom-icon.nes::before,
+.rom-icon.snes::before {
+  left: 7px;
+  top: 9px;
+  width: 13px;
+  height: 4px;
+  background: #151515;
+  box-shadow: 4px -4px 0 -1px #151515, 4px 4px 0 -1px #151515;
+}
+
+.rom-icon.nes::after,
+.rom-icon.snes::after {
+  left: auto;
+  right: 6px;
+  top: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c51f2c;
+  box-shadow: 7px 0 0 #c51f2c;
+}
+
+.rom-icon.gb,
+.rom-icon.gg {
+  width: 25px;
+  height: 34px;
+  flex-basis: 25px;
+  background: #c7c2a7;
+  border-radius: 3px 3px 6px 3px;
+  box-shadow: inset 0 0 0 3px #15161a, 0 3px 0 rgba(0,0,0,0.35);
+}
+
+.rom-icon.gg {
+  width: 36px;
+  height: 24px;
+  flex-basis: 36px;
+  background: #111824;
+  border-radius: 10px 4px 10px 4px;
+  box-shadow: inset 0 0 0 3px #05060a, 0 3px 0 rgba(0,0,0,0.35);
+}
+
+.rom-icon.gb::before,
+.rom-icon.gg::before {
+  left: 7px;
+  top: 7px;
+  width: 11px;
+  height: 9px;
+  background: #95a76f;
+  box-shadow: inset 0 0 0 2px #526447;
+}
+
+.rom-icon.gb::after {
+  left: 7px;
+  right: auto;
+  bottom: 6px;
+  width: 10px;
+  height: 4px;
+  background: #20242d;
+  box-shadow: 14px -3px 0 -1px #9b1553;
+}
+
+.rom-icon.gg::after {
+  left: auto;
+  right: 6px;
+  top: 11px;
+  width: 4px;
+  height: 4px;
+  background: #c31e6d;
+  box-shadow: 6px -2px 0 #c31e6d;
+}
+
+.rom-icon.sms,
+.rom-icon.n64,
+.rom-icon.arcade {
+  background: #2a2d34;
+  border-radius: 8px 8px 4px 4px;
+}
+
+.rom-icon.sms::before,
+.rom-icon.n64::before,
+.rom-icon.arcade::before {
+  left: 6px;
+  top: 9px;
+  width: 13px;
+  height: 4px;
+  background: #111;
+  box-shadow: 4px -4px 0 -1px #111, 4px 4px 0 -1px #111;
+}
+
+.rom-icon.sms::after,
+.rom-icon.n64::after,
+.rom-icon.arcade::after {
+  left: auto;
+  right: 7px;
+  top: 9px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d33b32;
+  box-shadow: 0 8px 0 #f2c84b;
+}
+
+.rom-name {
+  flex: 1;
+  min-width: 0;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.rom-arrow {
+  color: #b51f2c;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.rom-loading, .rom-empty, .rom-error {
+  text-align: center;
+  color: #888;
+  padding: 40px 20px;
+}
+
+.rom-error {
+  color: var(--gb-accent);
+}
+
+.rom-selector-footer {
+  margin-top: 8px;
+  text-align: center;
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.rom-selector-footer::before,
+.rom-selector-footer::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 52px;
+  height: 56px;
+  image-rendering: pixelated;
+  pointer-events: none;
+}
+
+.rom-selector-footer::before {
+  right: 60px;
+  background:
+    linear-gradient(#171114 0 0) 5px 5px / 42px 46px no-repeat,
+    linear-gradient(#5d6467 0 0) 9px 9px / 34px 38px no-repeat,
+    linear-gradient(#2b3034 0 0) 13px 13px / 26px 30px no-repeat,
+    linear-gradient(#cdd0c5 0 0) 17px 17px / 18px 4px no-repeat,
+    linear-gradient(#08090b 0 0) 17px 23px / 18px 5px no-repeat,
+    linear-gradient(#d33b32 0 0) 21px 34px / 10px 7px no-repeat;
+  filter: drop-shadow(4px 4px 0 #090709);
+}
+
+.rom-selector-footer::after {
+  display: none;
+}
+
+.upload-btn {
+  display: inline-block;
+  width: min(604px, calc(100% - 140px));
+  padding: 13px 22px;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.08) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #9f5832 0%, #61301f 100%);
+  color: #fff4df;
+  border: 4px solid #171114;
+  border-radius: 4px;
+  font-size: 23px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,0.16), 0 5px 0 #090709, 0 0 0 2px rgba(110,70,50,0.7);
+  text-shadow: 0 3px 0 rgba(0,0,0,0.7);
+}
+
+.upload-btn:hover {
+  filter: brightness(1.08);
+}
+
+.upload-label-compact {
+  display: none;
+}
+
+/* ===== Taipei game shop pixel-art refresh ===== */
+.rom-selector {
+  background:
+    linear-gradient(180deg, transparent 0 63%, rgba(34, 53, 61, 0.16) 63% 100%),
+    repeating-linear-gradient(90deg, transparent 0 47px, rgba(231, 250, 244, 0.24) 47px 49px),
+    repeating-linear-gradient(0deg, transparent 0 47px, rgba(231, 250, 244, 0.2) 47px 49px),
+    linear-gradient(180deg, #75bec9 0 12%, #4f98a5 12% 63%, #536873 63% 100%);
+  isolation: isolate;
+}
+
+.rom-selector::before {
+  display: block;
+  inset: 0;
+  opacity: 1;
+  background:
+    linear-gradient(#fffbe8 0 0) 8% 4% / 22% 8px no-repeat,
+    linear-gradient(#fffbe8 0 0) 39% 4% / 22% 8px no-repeat,
+    linear-gradient(#fffbe8 0 0) 70% 4% / 22% 8px no-repeat,
+    linear-gradient(rgba(255, 249, 211, 0.34), transparent) 8% 4% / 22% 22% no-repeat,
+    linear-gradient(rgba(255, 249, 211, 0.34), transparent) 39% 4% / 22% 22% no-repeat,
+    linear-gradient(rgba(255, 249, 211, 0.34), transparent) 70% 4% / 22% 22% no-repeat,
+    repeating-linear-gradient(90deg, #294f59 0 44px, #578a91 44px 48px, #315d68 48px 82px) 0 73% / 100% 27% no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 79px, rgba(238, 63, 55, 0.72) 79px 83px) 0 73% / 100% 4px no-repeat,
+    linear-gradient(#284951 0 0) 0 72% / 100% 5px no-repeat;
+  filter: drop-shadow(0 8px 0 rgba(21, 49, 57, 0.2));
+}
+
+.rom-selector::after {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 4px),
+    linear-gradient(112deg, transparent 0 24%, rgba(255, 255, 255, 0.1) 24% 28%, transparent 28% 72%, rgba(255, 255, 255, 0.08) 72% 75%, transparent 75%),
+    radial-gradient(ellipse at center, transparent 0 64%, rgba(15, 46, 54, 0.28) 100%);
+  opacity: 0.72;
+}
+
+.rom-selector-content {
+  max-width: 1080px;
+  height: min(94vh, 826px);
+  padding: 14px 18px 16px;
+  border: 5px solid #f8f2d5;
+  border-radius: 2px;
+  background:
+    linear-gradient(108deg, transparent 0 22%, rgba(255, 255, 255, 0.26) 22% 26%, transparent 26% 70%, rgba(255, 255, 255, 0.18) 70% 73%, transparent 73%),
+    repeating-linear-gradient(90deg, rgba(42, 111, 120, 0.1) 0 1px, transparent 1px 31px),
+    repeating-linear-gradient(0deg, rgba(42, 111, 120, 0.1) 0 1px, transparent 1px 31px),
+    linear-gradient(180deg, rgba(218, 241, 237, 0.98), rgba(171, 213, 211, 0.98));
+  box-shadow:
+    0 0 0 4px #174a61,
+    0 0 0 7px #ed4137,
+    14px 18px 0 rgba(23, 64, 72, 0.34),
+    0 28px 70px rgba(17, 50, 58, 0.34),
+    inset 0 0 0 2px #fff9dc,
+    inset 0 0 46px rgba(255, 255, 255, 0.38);
+}
+
+.rom-selector-content::before {
+  left: 18px;
+  right: 18px;
+  top: 86px;
+  height: 8px;
+  opacity: 1;
+  background:
+    repeating-linear-gradient(90deg, #d9d5bd 0 9px, #b83531 9px 18px, #2b7778 18px 27px),
+    #d9d5bd;
+  box-shadow: 0 4px 0 #090e10;
+}
+
+.rom-selector-header {
+  min-height: 82px;
+  margin: 0 0 10px;
+  padding: 7px 92px 10px;
+  border: 4px solid #174a61;
+  background:
+    radial-gradient(circle, #fff9cf 0 2px, transparent 3px) 0 0 / 18px 18px,
+    linear-gradient(180deg, #f9d84c, #f2ad31);
+  box-shadow: 0 5px 0 #e33d35, 0 9px 0 #174a61, inset 0 0 0 3px #fff2a8;
+}
+
+.rom-selector-header h2 {
+  margin: 7px 0 1px;
+  color: #123e59;
+  text-shadow: 2px 2px 0 #fff6d2, -2px 0 0 #fff6d2, 0 -2px 0 #fff6d2;
+}
+
+.rom-selector-header .brand-name {
+  color: #fffdf0;
+  text-shadow: 0 5px 0 #174a61, -3px 0 0 #174a61, 3px 0 0 #174a61, 0 0 10px #fff8c7;
+}
+
+.brand-logo-red {
+  color: #ed3f37;
+  text-shadow: 0 5px 0 #7e1e22, -3px 0 0 #fffdf0, 3px 0 0 #fffdf0, 0 0 14px rgba(255, 250, 189, 0.9);
+}
+
+.selector-subtitle {
+  color: #173c50;
+  font-weight: 800;
+  text-shadow: 1px 1px 0 #fff4b4;
+}
+
+.machine-grid {
+  gap: 8px 18px;
+  padding: 10px 12px 16px 4px;
+  scrollbar-color: #e83f36 #d4ebe6;
+}
+
+.machine-grid::-webkit-scrollbar-track,
+.rom-list::-webkit-scrollbar-track {
+  background: #d4ebe6;
+  border-color: #356f78;
+}
+
+.machine-grid::-webkit-scrollbar-thumb,
+.rom-list::-webkit-scrollbar-thumb {
+  background: repeating-linear-gradient(0deg, #b83b31 0 8px, #d3cba9 8px 12px);
+  border-color: #d4ebe6;
+}
+
+.machine-card-shell {
+  min-height: 126px;
+  padding: 6px 7px 5px 0;
+}
+
+.machine-card {
+  min-height: 116px;
+  padding: 10px 16px 10px 10px;
+  grid-template-columns: 142px minmax(0, 1fr);
+  column-gap: 16px;
+  border: 3px solid #285c6c;
+  border-radius: 2px;
+  color: #17394d;
+  background:
+    linear-gradient(90deg, rgba(70, 162, 172, 0.2), transparent 42%),
+    repeating-linear-gradient(0deg, rgba(27, 84, 96, 0.035) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #fffdf0, #dcece7);
+  box-shadow:
+    0 5px 0 #5c9da2,
+    0 9px 0 #174554,
+    inset 0 0 0 2px #f9d869,
+    inset 0 -10px 0 rgba(53, 123, 132, 0.08);
+}
+
+.machine-card::before {
+  inset: 3px 3px auto;
+  height: 5px;
+  background: repeating-linear-gradient(90deg, #c9c4aa 0 12px, #527b78 12px 24px);
+  opacity: 0.72;
+}
+
+.machine-card::after {
+  left: 169px;
+  right: 18px;
+  bottom: 12px;
+  width: auto;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, #579ca2 0 16px, transparent 16px 22px);
+  opacity: 0.72;
+}
+
+.machine-card[data-system="nes"]::before { background: repeating-linear-gradient(90deg, #d9cfb2 0 12px, #c83439 12px 24px); }
+.machine-card[data-system="gb"]::before { background: repeating-linear-gradient(90deg, #a9c6ae 0 12px, #738b67 12px 24px); }
+.machine-card[data-system="snes"]::before { background: repeating-linear-gradient(90deg, #bfc0ba 0 12px, #8d799a 12px 24px); }
+.machine-card[data-system="arcade"]::before { background: repeating-linear-gradient(90deg, #d7ccb0 0 12px, #258c9e 12px 24px); }
+.machine-card[data-system="gg"]::before { background: repeating-linear-gradient(90deg, #7893bd 0 12px, #171e2c 12px 24px); }
+.machine-card[data-system="sms"]::before { background: repeating-linear-gradient(90deg, #d9d7cf 0 12px, #c92a34 12px 24px); }
+.machine-card[data-system="n64"]::before { background: repeating-linear-gradient(90deg, #5a9f68 0 12px, #2e343b 12px 24px); }
+
+.machine-card:hover,
+.machine-card:focus-visible {
+  transform: translate(-2px, -3px);
+  filter: brightness(1.12);
+  box-shadow: 2px 7px 0 #4c5b5b, 2px 11px 0 #070b0c, inset 0 0 0 2px #111a1d;
+}
+
+.machine-art {
+  width: 142px;
+  height: 96px;
+  border: 3px solid #05090a;
+  border-radius: 0;
+  background:
+    linear-gradient(180deg, rgba(190, 226, 207, 0.13), transparent 44%),
+    repeating-linear-gradient(90deg, rgba(160, 197, 183, 0.08) 0 1px, transparent 1px 13px),
+    repeating-linear-gradient(0deg, rgba(160, 197, 183, 0.08) 0 1px, transparent 1px 13px),
+    #173237;
+  box-shadow: inset 0 0 0 3px #55777a, 0 3px 0 #070b0c, 0 0 0 1px #b9b79f;
+}
+
+.machine-art.gb { background-color: #24483f; }
+.machine-art.gg { background-color: #243858; }
+.machine-art.md { background-color: #4a4058; }
+.machine-art.snes { background-color: #4b4353; }
+.machine-art.n64 { background-color: #264b35; }
+.machine-art.arcade { background-color: #164c58; }
+
+.machine-art-img {
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+  filter: drop-shadow(4px 5px 0 rgba(0, 0, 0, 0.34));
+}
+
+.machine-title {
+  font-size: 25px;
+  color: #123e59;
+  text-shadow: 2px 2px 0 #fffdf0;
+}
+
+.machine-meta {
+  color: #274b57;
+  font-size: 15px;
+  font-weight: 750;
+  text-shadow: 1px 1px 0 #ffffff;
+}
+
+.machine-count {
+  top: 0;
+  right: 0;
+  min-width: 38px;
+  height: 34px;
+  padding: 0 5px;
+  border: 3px solid #e8dfc2;
+  border-radius: 2px;
+  background: #c83437;
+  box-shadow: 4px 4px 0 #080d0f, inset 0 -4px 0 #8d1e25;
+}
+
+.rom-browser-header {
+  min-height: 58px;
+  margin: 5px 4px 12px;
+  padding: 8px 12px;
+  border: 3px solid #174a61;
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(0deg, rgba(27, 75, 89, 0.04) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #ffe174, #f6c64b);
+  box-shadow: 0 5px 0 #e24036, inset 0 0 0 2px #fff4b3;
+}
+
+.rom-back-btn {
+  border: 3px solid #d1c9aa;
+  border-radius: 2px;
+  background: #a93631;
+  box-shadow: 0 4px 0 #080c0e, inset 0 -4px 0 #72201f;
+}
+
+.rom-browser-title {
+  color: #123e59;
+  text-shadow: 2px 2px 0 #fff7d1;
+  text-align: right;
+}
+
+.rom-list {
+  padding: 14px 16px 18px;
+  border: 4px solid #285c6c;
+  border-radius: 0;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 78px, #5e9499 78px 83px, #1a5260 83px 88px),
+    repeating-linear-gradient(90deg, rgba(31, 103, 112, 0.09) 0 1px, transparent 1px 31px),
+    #b9dcd8;
+  box-shadow: inset 0 0 0 3px #eaf5ec, 0 6px 0 #174554;
+}
+
+.rom-item {
+  min-height: 68px;
+  margin-bottom: 12px;
+  padding: 10px 16px 10px 14px;
+  gap: 15px;
+  border: 3px solid #356c77;
+  border-left-width: 9px;
+  border-radius: 2px;
+  color: #16394e;
+  background:
+    linear-gradient(90deg, rgba(89, 184, 190, 0.18), transparent 36%),
+    repeating-linear-gradient(0deg, rgba(22, 74, 88, 0.035) 0 2px, transparent 2px 5px),
+    #fffdf0;
+  box-shadow: 0 5px 0 #397780, inset 0 0 0 2px #d9eee8;
+}
+
+.rom-item[data-system="nes"] { border-left-color: #c93539; }
+.rom-item[data-system="gb"] { border-left-color: #7f9d74; }
+.rom-item[data-system="snes"] { border-left-color: #8f789a; }
+.rom-item[data-system="arcade"] { border-left-color: #2aa6b6; }
+.rom-item[data-system="gg"] { border-left-color: #5575ad; }
+.rom-item[data-system="sms"] { border-left-color: #d14a4f; }
+.rom-item[data-system="n64"] { border-left-color: #4b9a5b; }
+
+.rom-item:hover,
+.rom-item:active {
+  filter: brightness(1.13);
+  transform: translate(4px, -2px);
+}
+
+.rom-icon {
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 3px #080d0f, 3px 3px 0 rgba(0, 0, 0, 0.42);
+}
+
+.rom-name {
+  font-weight: 800;
+  text-shadow: 1px 1px 0 #ffffff;
+}
+
+.rom-arrow {
+  color: #e84235;
+  text-shadow: 1px 1px 0 #fff4a9;
+}
+
+.rom-selector-footer::before {
+  right: 54px;
+  filter: drop-shadow(4px 4px 0 #05090a) saturate(0.8);
+}
+
+.upload-btn {
+  border-color: #a8aca3;
+  border-radius: 2px;
+  color: #f3ead0;
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 2px, transparent 2px 9px),
+    linear-gradient(180deg, #b43d32, #74241f);
+  box-shadow: inset 0 0 0 3px #551c19, 0 5px 0 #060a0c, 0 0 0 2px #d1c8aa;
+}
+
+/* Refined retro wood storefront */
+.rom-selector {
+  background:
+    linear-gradient(180deg, transparent 0 63%, rgba(42, 24, 19, 0.28) 63% 100%),
+    repeating-linear-gradient(90deg, transparent 0 47px, rgba(255, 226, 177, 0.09) 47px 49px),
+    repeating-linear-gradient(0deg, transparent 0 47px, rgba(255, 226, 177, 0.07) 47px 49px),
+    linear-gradient(180deg, #b58b66 0 12%, #835c43 12% 63%, #4f362d 63% 100%);
+}
+
+.rom-selector::before {
+  background:
+    linear-gradient(#fff0ca 0 0) 8% 4% / 22% 7px no-repeat,
+    linear-gradient(#fff0ca 0 0) 39% 4% / 22% 7px no-repeat,
+    linear-gradient(#fff0ca 0 0) 70% 4% / 22% 7px no-repeat,
+    linear-gradient(rgba(255, 227, 178, 0.22), transparent) 8% 4% / 22% 20% no-repeat,
+    linear-gradient(rgba(255, 227, 178, 0.22), transparent) 39% 4% / 22% 20% no-repeat,
+    linear-gradient(rgba(255, 227, 178, 0.22), transparent) 70% 4% / 22% 20% no-repeat,
+    repeating-linear-gradient(90deg, #3b2924 0 44px, #6d4b3a 44px 48px, #493028 48px 82px) 0 73% / 100% 27% no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 79px, rgba(143, 52, 43, 0.62) 79px 83px) 0 73% / 100% 4px no-repeat,
+    linear-gradient(#382721 0 0) 0 72% / 100% 5px no-repeat;
+  filter: drop-shadow(0 8px 0 rgba(45, 24, 18, 0.24));
+}
+
+.rom-selector::after {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 243, 214, 0.035) 0 1px, transparent 1px 4px),
+    linear-gradient(112deg, transparent 0 24%, rgba(255, 235, 198, 0.07) 24% 28%, transparent 28% 72%, rgba(255, 235, 198, 0.05) 72% 75%, transparent 75%),
+    radial-gradient(ellipse at center, transparent 0 62%, rgba(41, 22, 18, 0.38) 100%);
+}
+
+.rom-selector-content {
+  border-color: #c9a66f;
+  background:
+    linear-gradient(108deg, transparent 0 22%, rgba(255, 232, 191, 0.1) 22% 26%, transparent 26% 70%, rgba(255, 232, 191, 0.07) 70% 73%, transparent 73%),
+    repeating-linear-gradient(90deg, rgba(255, 219, 163, 0.055) 0 1px, transparent 1px 31px),
+    repeating-linear-gradient(0deg, rgba(255, 219, 163, 0.045) 0 1px, transparent 1px 31px),
+    linear-gradient(180deg, rgba(112, 75, 55, 0.98), rgba(72, 45, 37, 0.98));
+  box-shadow: 0 0 0 4px #38251f, 0 0 0 7px #7f302d, 14px 18px 0 rgba(39, 21, 17, 0.42), 0 28px 70px rgba(36, 19, 15, 0.5), inset 0 0 0 2px #e1bf83, inset 0 0 46px rgba(255, 218, 163, 0.08);
+}
+
+.rom-selector-content::before {
+  background: repeating-linear-gradient(90deg, #d8b676 0 12px, #7f302d 12px 18px, #51352a 18px 30px), #d8b676;
+  box-shadow: 0 4px 0 #35231d;
+}
+
+.rom-selector-header {
+  border-color: #572c28;
+  background:
+    repeating-linear-gradient(0deg, rgba(121, 75, 45, 0.045) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #f7e8c3, #dfc18a);
+  box-shadow: 0 5px 0 #7f302d, 0 9px 0 #38251f, inset 0 0 0 3px #fff4d4;
+}
+
+.rom-selector-header h2 {
+  color: #4d2b27;
+  text-shadow: 2px 2px 0 #fff3d4, -2px 0 0 #fff3d4, 0 -2px 0 #fff3d4;
+}
+
+.rom-selector-header .brand-name {
+  color: #fff5da;
+  text-shadow: 0 5px 0 #4e2925, -3px 0 0 #4e2925, 3px 0 0 #4e2925, 0 0 10px rgba(255, 232, 183, 0.72);
+}
+
+.brand-logo-red {
+  color: #a73330;
+  text-shadow: 0 5px 0 #5b211f, -3px 0 0 #fff5da, 3px 0 0 #fff5da, 0 0 12px rgba(255, 231, 181, 0.72);
+}
+
+.selector-subtitle {
+  color: #54372d;
+  text-shadow: 1px 1px 0 #fff2d0;
+}
+
+.machine-grid {
+  scrollbar-color: #8b3a32 #d8c09a;
+}
+
+.machine-grid::-webkit-scrollbar-track,
+.rom-list::-webkit-scrollbar-track {
+  background: #d8c09a;
+  border-color: #634438;
+}
+
+.machine-grid::-webkit-scrollbar-thumb,
+.rom-list::-webkit-scrollbar-thumb {
+  border-color: #d8c09a;
+}
+
+.machine-card {
+  border-color: #6a493b;
+  color: #3f2b25;
+  background:
+    linear-gradient(90deg, rgba(168, 112, 71, 0.14), transparent 42%),
+    repeating-linear-gradient(0deg, rgba(103, 65, 43, 0.035) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #f8edd5, #ddc6a1);
+  box-shadow: 0 5px 0 #9c7556, 0 9px 0 #3b2822, inset 0 0 0 2px #fff0c8, inset 0 -10px 0 rgba(101, 62, 41, 0.08);
+}
+
+.machine-card::after {
+  background: repeating-linear-gradient(90deg, #9c7658 0 16px, transparent 16px 22px);
+}
+
+.machine-card:hover,
+.machine-card:focus-visible {
+  box-shadow: 2px 7px 0 #a17c5d, 2px 11px 0 #38251f, inset 0 0 0 2px #fff0c8;
+}
+
+.machine-title {
+  color: #472d27;
+  text-shadow: 2px 2px 0 #fff5dd;
+}
+
+.machine-meta {
+  color: #594238;
+  text-shadow: 1px 1px 0 #fff9e8;
+}
+
+.rom-browser-header {
+  border-color: #572c28;
+  background: repeating-linear-gradient(0deg, rgba(104, 66, 43, 0.04) 0 2px, transparent 2px 5px), linear-gradient(180deg, #f6e5be, #dcb77e);
+  box-shadow: 0 5px 0 #7f302d, inset 0 0 0 2px #fff2ce;
+}
+
+.rom-browser-title {
+  color: #4b2c27;
+  text-shadow: 2px 2px 0 #fff2d0;
+}
+
+.rom-list {
+  border-color: #664438;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 78px, #8d654d 78px 83px, #3e2922 83px 88px),
+    repeating-linear-gradient(90deg, rgba(255, 223, 176, 0.06) 0 1px, transparent 1px 31px),
+    #74513f;
+  box-shadow: inset 0 0 0 3px #c69e70, 0 6px 0 #38251f;
+}
+
+.rom-item {
+  border-color: #76513f;
+  color: #422d27;
+  background:
+    linear-gradient(90deg, rgba(172, 112, 71, 0.14), transparent 36%),
+    repeating-linear-gradient(0deg, rgba(99, 62, 42, 0.035) 0 2px, transparent 2px 5px),
+    #f8edd5;
+  box-shadow: 0 5px 0 #4b332b, inset 0 0 0 2px #fff4d7;
+}
+
+.rom-name {
+  text-shadow: 1px 1px 0 #fff9e9;
+}
+
+.rom-arrow {
+  color: #9e332f;
+  text-shadow: 1px 1px 0 #fff0c8;
+}
+
+/* Nintendo-inspired pixel game store */
+.rom-selector {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 63px, rgba(28, 76, 108, 0.13) 63px 65px) 0 66% / 100% 34% no-repeat,
+    repeating-linear-gradient(0deg, transparent 0 47px, rgba(28, 76, 108, 0.1) 47px 49px) 0 66% / 100% 34% no-repeat,
+    linear-gradient(180deg, #8bb8d0 0 12%, #edf3f5 12% 66%, #c5d2d8 66% 100%);
+}
+
+.rom-selector::before {
+  background:
+    linear-gradient(#fff 0 0) 7% 4% / 22% 8px no-repeat,
+    linear-gradient(#fff 0 0) 39% 4% / 22% 8px no-repeat,
+    linear-gradient(#fff 0 0) 71% 4% / 22% 8px no-repeat,
+    linear-gradient(rgba(255, 255, 255, 0.5), transparent) 7% 4% / 22% 23% no-repeat,
+    linear-gradient(rgba(255, 255, 255, 0.5), transparent) 39% 4% / 22% 23% no-repeat,
+    linear-gradient(rgba(255, 255, 255, 0.5), transparent) 71% 4% / 22% 23% no-repeat,
+    linear-gradient(90deg, #d90012 0 16%, transparent 16% 84%, #d90012 84%) 0 22% / 100% 46% no-repeat,
+    repeating-linear-gradient(90deg, #d90012 0 54px, #fff 54px 58px, #1479b8 58px 64px, #fff 64px 82px) 0 74% / 100% 20% no-repeat,
+    linear-gradient(#236f9e 0 0) 0 72% / 100% 5px no-repeat;
+  filter: drop-shadow(0 8px 0 rgba(29, 61, 79, 0.18));
+}
+
+.rom-selector::after {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 4px),
+    linear-gradient(112deg, transparent 0 25%, rgba(255, 255, 255, 0.18) 25% 29%, transparent 29% 72%, rgba(255, 255, 255, 0.12) 72% 76%, transparent 76%),
+    radial-gradient(ellipse at center, transparent 0 68%, rgba(23, 60, 83, 0.2) 100%);
+  opacity: 0.72;
+}
+
+.rom-selector-content {
+  border-color: #fff;
+  background:
+    linear-gradient(108deg, transparent 0 22%, rgba(255, 255, 255, 0.7) 22% 25%, transparent 25% 72%, rgba(255, 255, 255, 0.38) 72% 75%, transparent 75%),
+    repeating-linear-gradient(90deg, rgba(25, 89, 128, 0.055) 0 1px, transparent 1px 31px),
+    repeating-linear-gradient(0deg, rgba(25, 89, 128, 0.055) 0 1px, transparent 1px 31px),
+    linear-gradient(180deg, rgba(242, 247, 248, 0.98), rgba(213, 226, 231, 0.98));
+  box-shadow: 0 0 0 4px #d90012, 0 0 0 7px #fff, 0 0 0 11px #176fa7, 14px 18px 0 rgba(23, 67, 93, 0.28), 0 28px 70px rgba(30, 69, 91, 0.3), inset 0 0 0 2px #fff, inset 0 0 42px rgba(118, 169, 191, 0.14);
+}
+
+.rom-selector-content::before {
+  background:
+    linear-gradient(#176fa7 0 0) 0 100% / 100% 3px no-repeat,
+    conic-gradient(from 45deg, #d90012 25%, #fff 0 50%, #d90012 0 75%, #fff 0) 0 0 / 16px 16px;
+  box-shadow: 0 4px 0 #164e72;
+}
+
+.rom-selector-header {
+  border-color: #fff;
+  background:
+    linear-gradient(108deg, transparent 0 16%, rgba(255, 255, 255, 0.22) 16% 20%, transparent 20% 74%, rgba(255, 255, 255, 0.12) 74% 78%, transparent 78%),
+    repeating-linear-gradient(0deg, rgba(99, 0, 11, 0.06) 0 2px, transparent 2px 6px),
+    linear-gradient(180deg, #ef1b2d, #c90012);
+  box-shadow: 0 5px 0 #9c0010, 0 9px 0 #176fa7, inset 0 0 0 3px #ff5966;
+}
+
+.rom-selector-header h2 {
+  color: #fff;
+  text-shadow: 3px 3px 0 #8c0010, -2px 0 0 #8c0010, 0 -2px 0 #8c0010;
+}
+
+.rom-selector-header .brand-name,
+.brand-logo-red,
+.brand-logo-white {
+  color: #fff;
+  text-shadow: 0 5px 0 #8f0010, -3px 0 0 #8f0010, 3px 0 0 #8f0010, 0 0 12px rgba(255, 255, 255, 0.55);
+}
+
+.selector-subtitle {
+  color: #fff;
+  text-shadow: 2px 2px 0 #88000e;
+}
+
+.machine-grid {
+  scrollbar-color: #d90012 #dbe8ed;
+}
+
+.machine-grid::-webkit-scrollbar-track,
+.rom-list::-webkit-scrollbar-track {
+  background: #dbe8ed;
+  border-color: #176fa7;
+}
+
+.machine-grid::-webkit-scrollbar-thumb,
+.rom-list::-webkit-scrollbar-thumb {
+  background: repeating-linear-gradient(0deg, #d90012 0 8px, #fff 8px 12px);
+  border-color: #dbe8ed;
+}
+
+.machine-card {
+  border-color: #b8c8cf;
+  color: #202b34;
+  background:
+    linear-gradient(90deg, rgba(23, 111, 167, 0.08), transparent 42%),
+    repeating-linear-gradient(0deg, rgba(34, 78, 101, 0.025) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #fff, #e8eff2);
+  box-shadow: 0 5px 0 #aabcc4, 0 9px 0 #17618f, inset 0 0 0 2px #fff, inset 0 -10px 0 rgba(27, 91, 125, 0.05);
+}
+
+.machine-card::after {
+  background: repeating-linear-gradient(90deg, #1782bf 0 16px, transparent 16px 22px);
+}
+
+.machine-card:hover,
+.machine-card:focus-visible {
+  box-shadow: 2px 7px 0 #7eb4ce, 2px 11px 0 #0d527d, inset 0 0 0 2px #fff;
+}
+
+.machine-title {
+  color: #202a33;
+  text-shadow: 2px 2px 0 #fff;
+}
+
+.machine-meta {
+  color: #465560;
+  text-shadow: 1px 1px 0 #fff;
+}
+
+.machine-count {
+  border-color: #fff;
+  background: #d90012;
+  box-shadow: 4px 4px 0 #115b88, inset 0 -4px 0 #92000d;
+}
+
+.rom-browser-header {
+  border-color: #fff;
+  background: linear-gradient(110deg, transparent 0 70%, rgba(255, 255, 255, 0.18) 70% 76%, transparent 76%), linear-gradient(180deg, #ef1b2d, #c90012);
+  box-shadow: 0 5px 0 #176fa7, inset 0 0 0 2px #ff6671;
+}
+
+.rom-back-btn {
+  border-color: #fff;
+  background: #176fa7;
+  box-shadow: 0 4px 0 #74000c, inset 0 -4px 0 #0e4d77;
+}
+
+.rom-browser-title {
+  color: #fff;
+  text-shadow: 2px 2px 0 #87000e;
+}
+
+.rom-list {
+  border-color: #176fa7;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 78px, #b8cbd3 78px 83px, #17618f 83px 88px),
+    repeating-linear-gradient(90deg, rgba(26, 103, 143, 0.07) 0 1px, transparent 1px 31px),
+    #dce8ec;
+  box-shadow: inset 0 0 0 3px #fff, 0 6px 0 #0e557f;
+}
+
+.rom-item {
+  border-color: #b4c4cc;
+  color: #202b34;
+  background:
+    linear-gradient(90deg, rgba(23, 111, 167, 0.08), transparent 36%),
+    repeating-linear-gradient(0deg, rgba(30, 77, 101, 0.025) 0 2px, transparent 2px 5px),
+    #fff;
+  box-shadow: 0 5px 0 #17618f, inset 0 0 0 2px #edf5f7;
+}
+
+.rom-name {
+  text-shadow: 1px 1px 0 #fff;
+}
+
+.rom-arrow {
+  color: #d90012;
+  text-shadow: 1px 1px 0 #fff;
+}
+
+.upload-btn {
+  border-color: #fff;
+  color: #fff;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0 2px, transparent 2px 9px), linear-gradient(180deg, #ef1b2d, #b90010);
+  box-shadow: inset 0 0 0 3px #9c000e, 0 5px 0 #0d557f, 0 0 0 2px #fff;
+}
+
+/* Taiwanese elementary computer classroom + CRT */
+.rom-selector {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 63px, rgba(69, 82, 78, 0.15) 63px 65px) 0 68% / 100% 32% no-repeat,
+    repeating-linear-gradient(0deg, transparent 0 47px, rgba(69, 82, 78, 0.12) 47px 49px) 0 68% / 100% 32% no-repeat,
+    linear-gradient(180deg, #b9d4c4 0 12%, #e7ead8 12% 68%, #aaa89d 68% 100%);
+}
+
+.rom-selector::before {
+  background:
+    linear-gradient(#fffbe3 0 0) 8% 4% / 22% 7px no-repeat,
+    linear-gradient(#fffbe3 0 0) 39% 4% / 22% 7px no-repeat,
+    linear-gradient(#fffbe3 0 0) 70% 4% / 22% 7px no-repeat,
+    linear-gradient(rgba(255, 251, 222, 0.28), transparent) 8% 4% / 22% 20% no-repeat,
+    linear-gradient(rgba(255, 251, 222, 0.28), transparent) 39% 4% / 22% 20% no-repeat,
+    linear-gradient(rgba(255, 251, 222, 0.28), transparent) 70% 4% / 22% 20% no-repeat,
+    repeating-linear-gradient(90deg, #d7dfd2 0 34px, #8aa5a0 34px 38px, #eef1e4 38px 72px) 0 18% / 16% 47% no-repeat,
+    repeating-linear-gradient(90deg, #d7dfd2 0 34px, #8aa5a0 34px 38px, #eef1e4 38px 72px) 100% 18% / 16% 47% no-repeat,
+    linear-gradient(#1f574b 0 0) 20% 23% / 60% 38% no-repeat,
+    linear-gradient(#d9d0b4 0 0) 19% 22% / 62% 40% no-repeat,
+    repeating-linear-gradient(90deg, #95683f 0 56px, #bd8c58 56px 62px, transparent 62px 94px) 0 76% / 100% 15% no-repeat,
+    repeating-linear-gradient(90deg, transparent 0 68px, #755039 68px 75px, transparent 75px 96px) 0 91% / 100% 9% no-repeat,
+    linear-gradient(#76766d 0 0) 0 68% / 100% 5px no-repeat;
+  filter: drop-shadow(0 8px 0 rgba(49, 55, 50, 0.2));
+}
+
+.rom-selector::after {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 4px),
+    radial-gradient(circle at 18% 76%, rgba(77, 70, 65, 0.16) 0 1px, transparent 2px) 0 0 / 19px 17px,
+    radial-gradient(circle at 71% 82%, rgba(255, 255, 255, 0.2) 0 1px, transparent 2px) 0 0 / 23px 21px,
+    radial-gradient(ellipse at center, transparent 0 70%, rgba(41, 54, 50, 0.24) 100%);
+  opacity: 0.78;
+}
+
+.rom-selector-content {
+  border-color: #d7ccb0;
+  background:
+    linear-gradient(108deg, transparent 0 22%, rgba(255, 255, 245, 0.32) 22% 25%, transparent 25% 72%, rgba(255, 255, 245, 0.18) 72% 75%, transparent 75%),
+    repeating-linear-gradient(90deg, rgba(45, 82, 73, 0.055) 0 1px, transparent 1px 31px),
+    repeating-linear-gradient(0deg, rgba(45, 82, 73, 0.055) 0 1px, transparent 1px 31px),
+    linear-gradient(180deg, rgba(220, 227, 210, 0.98), rgba(183, 195, 178, 0.98));
+  box-shadow: 0 0 0 4px #5f655e, 0 0 0 7px #e5dbc1, 14px 18px 0 rgba(48, 55, 50, 0.34), 0 28px 70px rgba(44, 52, 47, 0.34), inset 0 0 0 2px #f7f0dc, inset 0 0 42px rgba(74, 99, 88, 0.13);
+}
+
+.rom-selector-content::before {
+  background:
+    linear-gradient(#6f5137 0 0) 0 100% / 100% 3px no-repeat,
+    repeating-linear-gradient(90deg, #d6c59f 0 18px, #63766c 18px 21px, #a87849 21px 38px);
+  box-shadow: 0 4px 0 #514337;
+}
+
+.rom-selector-header {
+  border: 10px solid #d8d0b8;
+  border-radius: 14px 14px 8px 8px;
+  background:
+    repeating-linear-gradient(0deg, rgba(182, 224, 196, 0.045) 0 2px, transparent 2px 5px),
+    radial-gradient(ellipse at center, #254c45 0 35%, #15332f 72%, #091b1b 100%);
+  box-shadow: 0 0 0 3px #f0ead7, 0 5px 0 #9c967f, 0 9px 0 #55584f, inset 0 0 0 4px #283f3c, inset 0 0 24px rgba(142, 224, 170, 0.14);
+}
+
+.rom-selector-header h2 {
+  color: #e5f3dc;
+  text-shadow: 0 0 5px rgba(166, 239, 178, 0.78), 3px 3px 0 #102b28;
+}
+
+.rom-selector-header .brand-name,
+.brand-logo-red,
+.brand-logo-white {
+  color: #dff4d8;
+  text-shadow: 0 0 7px rgba(158, 241, 177, 0.82), 0 4px 0 #102b28, -2px 0 0 #102b28, 2px 0 0 #102b28;
+}
+
+.selector-subtitle {
+  color: #c8e7c6;
+  text-shadow: 0 0 4px rgba(146, 230, 163, 0.64), 2px 2px 0 #102b28;
+}
+
+.machine-grid {
+  scrollbar-color: #2f6658 #d0d4c6;
+}
+
+.machine-grid::-webkit-scrollbar-track,
+.rom-list::-webkit-scrollbar-track {
+  background: #d0d4c6;
+  border-color: #596d65;
+}
+
+.machine-grid::-webkit-scrollbar-thumb,
+.rom-list::-webkit-scrollbar-thumb {
+  background: repeating-linear-gradient(0deg, #2f6658 0 8px, #d8c9a6 8px 12px);
+  border-color: #d0d4c6;
+}
+
+.machine-card {
+  border-color: #7d745f;
+  color: #2f302a;
+  background:
+    linear-gradient(90deg, rgba(117, 81, 45, 0.1), transparent 42%),
+    repeating-linear-gradient(0deg, rgba(72, 64, 49, 0.025) 0 2px, transparent 2px 5px),
+    linear-gradient(180deg, #f0ead5, #d8ceb4);
+  box-shadow: 0 5px 0 #a77b4f, 0 9px 0 #5b4534, inset 0 0 0 2px #fff8e7, inset 0 -10px 0 rgba(95, 70, 43, 0.06);
+}
+
+.machine-card::after {
+  background: repeating-linear-gradient(90deg, #356b5d 0 16px, transparent 16px 22px);
+}
+
+.machine-card:hover,
+.machine-card:focus-visible {
+  box-shadow: 2px 7px 0 #b28759, 2px 11px 0 #4f3d30, inset 0 0 0 2px #fff8e7;
+}
+
+.machine-title {
+  color: #30332d;
+  text-shadow: 2px 2px 0 #fff9e8;
+}
+
+.machine-meta {
+  color: #50564d;
+  text-shadow: 1px 1px 0 #fff9e8;
+}
+
+.machine-count {
+  border-color: #efe5ca;
+  background: #2f6658;
+  box-shadow: 4px 4px 0 #6b4a32, inset 0 -4px 0 #1d493f;
+}
+
+.rom-browser-header {
+  border: 8px solid #d8d0b8;
+  border-radius: 10px 10px 5px 5px;
+  background:
+    repeating-linear-gradient(0deg, rgba(180, 224, 195, 0.045) 0 2px, transparent 2px 5px),
+    radial-gradient(ellipse at center, #254c45, #102c29 76%);
+  box-shadow: 0 4px 0 #9c967f, 0 8px 0 #55584f, inset 0 0 0 3px #1d3d38, inset 0 0 16px rgba(143, 223, 169, 0.12);
+}
+
+.rom-back-btn {
+  border-color: #efe4c9;
+  color: #f3f0d9;
+  background: #8f5d38;
+  box-shadow: 0 4px 0 #293f39, inset 0 -4px 0 #624028;
+}
+
+.rom-browser-title {
+  color: #dff1d6;
+  text-shadow: 0 0 5px rgba(154, 232, 169, 0.62), 2px 2px 0 #102b28;
+}
+
+.rom-list {
+  border-color: #725239;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 78px, #9c7048 78px 83px, #5b402d 83px 88px),
+    repeating-linear-gradient(90deg, rgba(255, 236, 195, 0.05) 0 1px, transparent 1px 31px),
+    #6e4d37;
+  box-shadow: inset 0 0 0 3px #b48a5b, 0 6px 0 #493529;
+}
+
+.rom-item {
+  border-color: #81745d;
+  color: #2e302b;
+  background:
+    linear-gradient(90deg, rgba(105, 76, 42, 0.1), transparent 36%),
+    repeating-linear-gradient(0deg, rgba(74, 64, 48, 0.025) 0 2px, transparent 2px 5px),
+    #eee7d2;
+  box-shadow: 0 5px 0 #574134, inset 0 0 0 2px #fff8e5;
+}
+
+.rom-name {
+  text-shadow: 1px 1px 0 #fff9e8;
+}
+
+.rom-arrow {
+  color: #2f6658;
+  text-shadow: 1px 1px 0 #fff9e8;
+}
+
+.upload-btn {
+  border-color: #eee4c9;
+  color: #f3f0d9;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.055) 0 2px, transparent 2px 9px), linear-gradient(180deg, #3f7567, #28594e);
+  box-shadow: inset 0 0 0 3px #1f483f, 0 5px 0 #59422f, 0 0 0 2px #d9c8a4;
+}
+
+.rom-selector-footer::before {
+  right: 34px;
+  bottom: 17px;
+  width: 13px;
+  height: 13px;
+  border: 3px solid #4f554f;
+  background: #7fbe75;
+  filter: none;
+  box-shadow: 0 0 0 3px #cbc3aa, inset 0 -3px 0 #43804c, 0 0 8px rgba(113, 190, 111, 0.5);
+}
+
+@media (max-width: 980px) {
+  .rom-selector-content {
+    padding: 14px;
+  }
+
+  .machine-grid {
+    grid-template-columns: repeat(2, minmax(230px, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .rom-selector-content {
+    max-height: 96vh;
+    padding: 10px;
+  }
+
+  .rom-selector-content::before {
+    top: 58px;
+  }
+
+  .rom-selector-header h2 {
+    margin-top: 16px;
+    font-size: 25px;
+  }
+
+  .rom-selector-header .brand-name {
+    font-size: 40px;
+  }
+
+  .selector-subtitle {
+    font-size: 15px;
+  }
+
+  .machine-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .machine-card {
+    min-height: 112px;
+    grid-template-columns: 96px minmax(0, 1fr);
+    column-gap: 10px;
+  }
+
+  .machine-art {
+    width: 96px;
+    height: 82px;
+  }
+
+  .machine-title {
+    font-size: 22px;
+  }
+
+  .machine-meta {
+    font-size: 13px;
+  }
+
+  .upload-btn {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .upload-label-full {
+    display: none;
+  }
+
+  .upload-label-compact {
+    display: inline;
+  }
+
+  .rom-selector {
+    padding: 6px;
+  }
+
+  .rom-selector-content {
+    max-height: 98vh;
+    padding: 8px;
+    border-width: 3px;
+    box-shadow: 0 0 0 3px #172126, 0 0 0 5px #b63b31, 8px 10px 0 rgba(3, 8, 10, 0.5), inset 0 0 0 2px #d9d5bd;
+  }
+
+  .rom-selector-content::before {
+    left: 9px;
+    right: 9px;
+    top: 69px;
+    height: 6px;
+  }
+
+  .rom-selector-header {
+    min-height: 66px;
+    padding: 5px 10px 8px;
+  }
+
+  .machine-grid {
+    gap: 8px;
+    padding: 8px 6px 12px 2px;
+  }
+
+  .machine-card-shell {
+    min-height: 112px;
+    padding: 4px 5px 4px 0;
+  }
+
+  .machine-card {
+    min-height: 104px;
+    grid-template-columns: 104px minmax(0, 1fr);
+    column-gap: 10px;
+    padding: 8px 10px 8px 8px;
+  }
+
+  .machine-card::after {
+    left: 126px;
+  }
+
+  .machine-art {
+    width: 104px;
+    height: 84px;
+  }
+
+  .machine-title {
+    font-size: 21px;
+  }
+
+  .machine-meta {
+    font-size: 12px;
+  }
+
+  .machine-count {
+    min-width: 34px;
+    height: 30px;
+  }
+
+  .rom-browser-header {
+    min-height: 52px;
+    margin: 4px 2px 9px;
+    padding: 6px 8px;
+  }
+
+  .rom-browser-title {
+    font-size: 20px;
+  }
+
+  .rom-list {
+    padding: 10px 9px 14px;
+  }
+
+  .rom-item {
+    min-height: 62px;
+    margin-bottom: 9px;
+    padding: 9px 10px;
+    gap: 10px;
+  }
+}
