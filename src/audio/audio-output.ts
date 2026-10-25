@@ -81,6 +81,43 @@ export function enqueueAudioSamples(samples: Float32Array, channels = 1): void {
 }
 
 
+export interface AudioQueueStats {
+  /** 佇列中尚未播放的取樣幀數。 */
+  bufferedFrames: number;
+  /** 播放中佇列見底（會聽到斷音）的累計次數。 */
+  underruns: number;
+  /** 佇列過長被丟掉的區塊數（模擬跑太快）。 */
+  droppedChunks: number;
+}
+
+
+/** 向 AudioWorklet 查詢佇列統計（效能面板用）；沒有 AudioWorklet 或逾時時回傳 null。 */
+export function requestAudioQueueStats(timeoutMs = 250): Promise<AudioQueueStats | null> {
+  const port = audioWorkletNode?.port;
+  if (!port) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let timer = 0;
+    const onMessage = (event: MessageEvent): void => {
+      if (event.data?.type !== 'stats') return;
+      window.clearTimeout(timer);
+      port.removeEventListener('message', onMessage);
+      resolve({
+        bufferedFrames: event.data.bufferedFrames,
+        underruns: event.data.underruns,
+        droppedChunks: event.data.droppedChunks,
+      });
+    };
+    timer = window.setTimeout(() => {
+      port.removeEventListener('message', onMessage);
+      resolve(null);
+    }, timeoutMs);
+    port.addEventListener('message', onMessage);
+    port.start();
+    port.postMessage({ type: 'stats' });
+  });
+}
+
+
 export function clearAudioQueue(): void {
   audioWorkletNode?.port.postMessage({ type: 'clear' });
 }

@@ -3,6 +3,7 @@
  */
 import { runtime } from '../../app/runtime';
 import { drainWasmAudioToWorklet, syncAudioWorkletState } from '../../audio/audio-output';
+import { perfNow, recordEmulation, recordRender } from '../../features/perf-monitor';
 import { captureNativeRewind, rewindHeld, runFastForwardNativeFrames, stepNativeRewind } from '../../features/speed';
 import { renderFrame } from '../lifecycle';
 import { createSnesFrameDiagnostics } from './snes-diagnostics';
@@ -39,23 +40,30 @@ export function startNativeLoop(): void {
       accumulator = TARGET_FRAME_TIME;
     }
 
+    const emulationStart = perfNow();
+    let emulatedFrames = 0;
     while (accumulator >= TARGET_FRAME_TIME) {
       if (rewindHeld && stepNativeRewind()) {
         accumulator -= TARGET_FRAME_TIME;
         continue;
       }
       runtime.nes.frame();
+      emulatedFrames++;
       if (coreType === 'nes' && runtime.activeGamePresentation) runtime.activeGamePresentationFrame++;
       diagnostics?.afterFrame();
 
       drainWasmAudioToWorklet();
       captureNativeRewind();
-      runFastForwardNativeFrames(coreType);
+      emulatedFrames += runFastForwardNativeFrames(coreType);
 
       accumulator -= TARGET_FRAME_TIME;
     }
 
+    recordEmulation(emulationStart, emulatedFrames);
+
+    const renderStart = perfNow();
     renderFrame();
+    recordRender(renderStart);
     runtime.animationId = requestAnimationFrame(frameLoop);
   };
 

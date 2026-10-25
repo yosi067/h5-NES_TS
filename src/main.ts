@@ -6,6 +6,7 @@ import { runtime } from './app/runtime';
 import { audioMuted, initAudio, resumeAudio } from './audio/audio-output';
 import { n64AudioOutputDiagnostics } from './backends/n64/n64-backend';
 import { initWasm } from './backends/native/native-core';
+import { setupPerfMonitor } from './features/perf-monitor';
 import { setupPlayerFeatures } from './features/player-features';
 import { setupKeyboardInput } from './input/keyboard';
 import { setupKeyboardShortcuts } from './input/shortcuts';
@@ -122,6 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setupKeyboardShortcuts();
   setupPlayerFeatures();
+  setupPerfMonitor();
   window.nes = runtime.nes;
 
   // 定期自動儲存 SRAM（每 30 秒）

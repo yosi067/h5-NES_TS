@@ -12,6 +12,7 @@ import type { ArcadeRotation } from './fbneo-games';
 import { renderFrame, startEmulation, stopEmulation } from '../lifecycle';
 import { stopN64Backend } from '../n64/n64-backend';
 import { resetWasmCore } from '../native/native-core';
+import { perfNow, recordEmulation, recordRender } from '../../features/perf-monitor';
 import { captureFbNeoRewind, getSpeedMultiplier, rewindHeld, stepFbNeoRewind } from '../../features/speed';
 import { mergeArcadeInputSources, pollArcadeGamepads } from '../../input/arcade-input';
 import { hideRomSelector } from '../../session/game-loader';
@@ -148,6 +149,8 @@ export function startFbNeoEmulation(): void {
     lastFrameTime = currentTime;
     accumulator = Math.min(accumulator + deltaTime, targetFrameTime * 3);
 
+    const emulationStart = perfNow();
+    let emulatedFrames = 0;
     while (accumulator >= targetFrameTime) {
       if (rewindHeld && stepFbNeoRewind()) {
         accumulator -= targetFrameTime;
@@ -157,21 +160,27 @@ export function startFbNeoEmulation(): void {
       const player1 = mergeArcadeInputSources(runtime.arcadeInputP1, runtime.arcadeGamepadInputP1);
       const player2 = mergeArcadeInputSources(runtime.arcadeInputP2, runtime.arcadeGamepadInputP2);
       fbneoCore.stepFrame(player1, player2);
+      emulatedFrames++;
       enqueueAudioSamples(fbneoCore.consumeAudioSamples());
       captureFbNeoRewind();
       // 快轉：多跑的幀只丟棄聲音，避免音訊佇列爆量。
       for (let extra = getSpeedMultiplier() - 1; extra > 0; extra--) {
         fbneoCore.stepFrame(player1, player2);
+        emulatedFrames++;
         fbneoCore.consumeAudioSamples();
         captureFbNeoRewind();
       }
       accumulator -= targetFrameTime;
     }
 
+    recordEmulation(emulationStart, emulatedFrames);
+
+    const renderStart = perfNow();
     const frameBuffer = fbneoCore.getFrameBufferView();
     if (guardedFrames <= 0 || isPresentableFbNeoFrame(frameBuffer)) {
       renderFrame();
     }
+    recordRender(renderStart);
     if (guardedFrames > 0) guardedFrames--;
     runtime.animationId = requestAnimationFrame(frameLoop);
   };

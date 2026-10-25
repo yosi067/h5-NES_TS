@@ -90,13 +90,17 @@ export function stepNativeRewind(): boolean {
 }
 
 
-export function runFastForwardNativeFrames(coreType: string): void {
+/** 快轉時多跑的幀（只丟棄聲音）；回傳實際多跑了幾幀。 */
+export function runFastForwardNativeFrames(coreType: string): number {
+  let extraFrames = 0;
   for (let extra = getSpeedMultiplier() - 1; extra > 0 && runtime.nes; extra--) {
     runtime.nes.frame();
+    extraFrames++;
     if (coreType === 'nes' && runtime.activeGamePresentation) runtime.activeGamePresentationFrame++;
     runtime.nes.consumeAudioSamples();
     captureNativeRewind();
   }
+  return extraFrames;
 }
 
 

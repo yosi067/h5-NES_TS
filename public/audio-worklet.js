@@ -9,6 +9,9 @@ class EmulatorAudioProcessor extends AudioWorkletProcessor {
     this.lastRight = 0;
     this.running = false;
     this.muted = false;
+    // 效能面板用的統計：播放中佇列見底的次數、佇列過長被丟掉的區塊數。
+    this.underruns = 0;
+    this.droppedChunks = 0;
 
     this.port.onmessage = event => {
       const message = event.data;
@@ -19,6 +22,7 @@ class EmulatorAudioProcessor extends AudioWorkletProcessor {
           this.bufferedFrames += message.samples.length / channels;
           while (this.chunks.length > 24) {
             const dropped = this.chunks.shift();
+            this.droppedChunks++;
             this.bufferedFrames -= (dropped.samples.length - this.chunkOffset) / dropped.channels;
             this.chunkOffset = 0;
           }
@@ -29,6 +33,13 @@ class EmulatorAudioProcessor extends AudioWorkletProcessor {
         if (!this.running || this.muted) this.clearQueue();
       } else if (message.type === 'clear') {
         this.clearQueue();
+      } else if (message.type === 'stats') {
+        this.port.postMessage({
+          type: 'stats',
+          bufferedFrames: this.bufferedFrames,
+          underruns: this.underruns,
+          droppedChunks: this.droppedChunks,
+        });
       }
     };
   }
@@ -72,6 +83,7 @@ class EmulatorAudioProcessor extends AudioWorkletProcessor {
     }
 
     this.primed = false;
+    this.underruns++;
     this.lastLeft *= 0.995;
     this.lastRight *= 0.995;
     left[index] = this.lastLeft;
