@@ -3,8 +3,9 @@
  */
 import { type BindingLayout } from '../ui/input-bindings';
 import { runtime } from '../app/runtime';
-import { isEmulatorJsNesActive, isFbNeoActive, isMupenN64Active, isSnes9xActive } from '../backends/active';
-import { snes9xBackend } from '../backends/emulatorjs-backend';
+import { isEmulatorJsNesActive, isSnes9xActive } from '../backends/active';
+import { getActiveBackend } from '../backends/registry';
+import { snes9xBackend } from '../backends/emulatorjs/emulatorjs-backend';
 import { noteGamePresentationInput } from '../backends/native/game-profiles';
 import { setArcadeInputBit } from './arcade-input';
 import { ARCADE_ACTION_BITS, ControllerButton, NES_ACTION_BUTTONS, SNES_ACTION_BUTTONS } from './buttons';
@@ -52,10 +53,7 @@ export function resyncNativeButtons(): void {
 
 /** 第二玩家：FC / SFC 自製核心與 EmulatorJS 核心支援；GB / GG 只有單一手把。 */
 export function supportsPlayerTwo(): boolean {
-  if (isMupenN64Active()) return false;
-  if (isFbNeoActive() || isSnes9xActive()) return true;
-  const core = runtime.nes?.getCoreType();
-  return core === 'nes' || core === 'snes';
+  return getActiveBackend().supportsPlayerTwo();
 }
 
 

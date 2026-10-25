@@ -13,7 +13,7 @@ import { hasN64RomMagic } from '../../rom-assets';
 import { type EmulatorControls } from 'mupen64plus-web';
 import { runtime } from '../../app/runtime';
 import { configureN64AudioWorklet, resumeAudio } from '../../audio/audio-output';
-import { stopSnes9xBackend } from '../emulatorjs-backend';
+import { stopSnes9xBackend } from '../emulatorjs/emulatorjs-backend';
 import { stopFbNeoBackend } from '../fbneo/fbneo-backend';
 import { stopEmulation } from '../lifecycle';
 import { activateN64Canvas, drawN64GraphicsError, getN64GraphicsCapability, lockN64RenderSize, restoreWasmCanvas, settleN64CanvasLayout } from './n64-canvas';

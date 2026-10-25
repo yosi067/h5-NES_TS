@@ -8,7 +8,7 @@ import { downloadBlob, getSafeStorage, timestampForFile } from '../app/storage';
 import { refreshToolsPanels } from '../features/player-features';
 import { lobbyTools } from '../lobby/lobby-view';
 import { autosaveNow } from './autosave';
-import { isNesPersistentState } from './save-states';
+import { isNesPersistentState } from '../backends/native/native-saves';
 import { showAppAlert, showAppConfirm, showToast } from '../ui/dialogs';
 
 // ---- 存檔備份 ----

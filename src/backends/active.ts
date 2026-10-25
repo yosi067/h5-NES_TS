@@ -2,7 +2,7 @@
  * 目前啟用的是哪一個模擬後端／核心。
  */
 import { runtime } from '../app/runtime';
-import { emulatorJsCore } from './emulatorjs-backend';
+import { emulatorJsCore } from './emulatorjs/emulatorjs-backend';
 
 // 判斷當前是否為 SNES 核心
 export function isSnesCore(): boolean {

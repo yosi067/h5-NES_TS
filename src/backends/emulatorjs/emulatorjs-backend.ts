@@ -1,16 +1,16 @@
 /**
  * EmulatorJS 後端（Snes9x、FCEUmm、Genesis Plus GX）的啟動與停止。
  */
-import { type EmulatorJsCore, type Snes9xBackend, startSnes9xBackend } from '../snes/snes9x-backend';
-import { runtime } from '../app/runtime';
-import { stopFbNeoBackend } from './fbneo/fbneo-backend';
-import { stopEmulation } from './lifecycle';
-import { stopN64Backend } from './n64/n64-backend';
-import { resetWasmCore } from './native/native-core';
-import { hideRomSelector } from '../session/game-loader';
-import { onGameStarted } from '../session/game-session';
-import { updateControllerLayout } from '../ui/controller-layout';
-import { showToast } from '../ui/dialogs';
+import { type EmulatorJsCore, type Snes9xBackend, startSnes9xBackend } from '../../snes/snes9x-backend';
+import { runtime } from '../../app/runtime';
+import { stopFbNeoBackend } from '../fbneo/fbneo-backend';
+import { stopEmulation } from '../lifecycle';
+import { stopN64Backend } from '../n64/n64-backend';
+import { resetWasmCore } from '../native/native-core';
+import { hideRomSelector } from '../../session/game-loader';
+import { onGameStarted } from '../../session/game-session';
+import { updateControllerLayout } from '../../ui/controller-layout';
+import { showToast } from '../../ui/dialogs';
 
 export let snes9xBackend: Snes9xBackend | null = null;
 

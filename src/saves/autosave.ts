@@ -5,13 +5,8 @@ import { formatSaveTime, getSaveTime, recordSaveTime } from '../features/save-me
 import { readBinaryState, writeBinaryState } from '../storage/binary-state-store';
 import { runtime } from '../app/runtime';
 import { getSafeStorage } from '../app/storage';
-import { clearAudioQueue } from '../audio/audio-output';
-import { isFbNeoActive, isMupenN64Active, isNativeCoreActive, isSnes9xActive } from '../backends/active';
-import { snes9xBackend } from '../backends/emulatorjs-backend';
-import { fbneoCore } from '../backends/fbneo/fbneo-backend';
-import { renderFrame } from '../backends/lifecycle';
-import { exportNativeSnapshot, importNativeSnapshot } from '../backends/native/native-core';
-import { getSaveKey } from './save-states';
+import { getActiveBackend } from '../backends/registry';
+import { getSaveKey } from './save-keys';
 import { showToast } from '../ui/dialogs';
 
 // ---- 自動存檔與續玩（一律開啟，不需設定） ----
@@ -24,13 +19,7 @@ function getAutoSaveKey(): string {
 /** 同步擷取目前狀態（必須在核心被拆掉之前呼叫）。 */
 function captureAutoSave(): Uint8Array | null {
   try {
-    if (isMupenN64Active()) return null;
-    if (isSnes9xActive()) return snes9xBackend?.saveState() ?? null;
-    if (isFbNeoActive()) return fbneoCore?.saveState() ?? null;
-    if (isNativeCoreActive()) {
-      const snapshot = exportNativeSnapshot();
-      return snapshot ? new TextEncoder().encode(snapshot) : null;
-    }
+    return getActiveBackend().captureSnapshot();
   } catch (error) {
     console.warn('[自動存檔] 擷取失敗:', error);
   }
@@ -59,23 +48,7 @@ async function restoreAutoSave(): Promise<boolean> {
   }
   if (!data || data.length === 0) return false;
   try {
-    if (isSnes9xActive()) {
-      if (!snes9xBackend) return false;
-      snes9xBackend.loadState(data);
-      return true;
-    }
-    if (isFbNeoActive()) {
-      if (!fbneoCore) return false;
-      fbneoCore.loadState(data);
-      clearAudioQueue();
-      return true;
-    }
-    if (isNativeCoreActive()) {
-      clearAudioQueue();
-      if (!importNativeSnapshot(new TextDecoder().decode(data))) return false;
-      renderFrame();
-      return true;
-    }
+    return getActiveBackend().restoreSnapshot(data);
   } catch (error) {
     console.warn('[自動存檔] 讀取失敗:', error);
   }
@@ -94,7 +67,7 @@ export function hideResumeBanner(): void {
 
 export async function offerAutoSaveResume(): Promise<void> {
   hideResumeBanner();
-  if (isMupenN64Active()) return;
+  if (!getActiveBackend().supportsSaveStates) return;
   const key = getAutoSaveKey();
   let exists = false;
   try {

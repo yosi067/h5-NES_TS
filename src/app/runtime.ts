@@ -6,6 +6,7 @@ import { NesTextOverlay } from '../game-profiles/text-overlay';
 import { VerifiedMenuOverlay } from '../game-profiles/verified-menu-overlay';
 import { EmuWasm } from '../wasm/nes_wasm.js';
 import type { GamePresentation } from '../backends/native/game-profiles';
+import type { BackendId } from '../backends/types';
 
 export interface Runtime {
   nes: EmuWasm | null;
@@ -17,7 +18,7 @@ export interface Runtime {
   wasmInitPromise: Promise<void> | null;
   isRunning: boolean;
   currentRomFilename: string;
-  activeBackend: 'wasm' | 'mupen64' | 'fbneo' | 'snes9x';
+  activeBackend: BackendId;
   currentN64RomData: ArrayBuffer | null;
   activeGamePresentation: GamePresentation | null;
   activeGamePresentationFrame: number;

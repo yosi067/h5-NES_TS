@@ -61,3 +61,38 @@ function hashPresentationRegion(frame: ImageData, region: GamePresentationRegion
   }
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
+
+
+/**
+ * 把自製核心的畫面緩衝畫到畫布（FC 會裁掉上方 overscan），再疊上畫面提示與中文化圖層。
+ */
+export function renderNativeFrame(): void {
+  if (!runtime.nes || !runtime.ctx || !runtime.imageData) return;
+
+  // 重要：每次都重新取得 WASM memory 參考
+  // 因為 WASM 記憶體增長後 buffer 會變為 detached
+  const memory = runtime.nes.getWasmMemory() as WebAssembly.Memory;
+
+  // 從 WASM 記憶體讀取 RGBA 畫面資料
+  const ptr = runtime.nes.getFrameBufferPtr();
+  const len = runtime.nes.getFrameBufferLen();
+  const frameBuffer = new Uint8Array(memory.buffer, ptr, len);
+
+  if (runtime.nes.getCoreType() === 'nes') {
+    const rowStride = runtime.nes.getScreenWidth() * 4;
+    const visibleStart = NES_OVERSCAN_TOP * rowStride;
+    runtime.imageData.data.set(frameBuffer.subarray(visibleStart, visibleStart + runtime.imageData.data.length));
+  } else {
+    runtime.imageData.data.set(frameBuffer);
+  }
+  runtime.ctx.putImageData(runtime.imageData, 0, 0);
+  renderGamePresentation();
+  if (runtime.textOverlay && runtime.nes) {
+    try { runtime.textOverlay.render(runtime.nes, NES_OVERSCAN_TOP); }
+    catch (error) {
+      console.error('[中文化] 顯示失敗，保留原遊戲繼續執行', error);
+      runtime.textOverlay.dispose(); runtime.textOverlay = null;
+      runtime.nes.enableTextObserver(false);
+    }
+  }
+}

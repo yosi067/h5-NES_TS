@@ -7,7 +7,7 @@ import { runtime } from '../app/runtime';
 import { isAbortError, throwIfSignalAborted } from '../app/async';
 import { clearAudioQueue } from '../audio/audio-output';
 import { isSnes9xActive } from '../backends/active';
-import { stopSnes9xBackend } from '../backends/emulatorjs-backend';
+import { stopSnes9xBackend } from '../backends/emulatorjs/emulatorjs-backend';
 import { startFbNeoGame, stopFbNeoBackend } from '../backends/fbneo/fbneo-backend';
 import { isFbNeoArcadeRomName } from '../backends/fbneo/fbneo-games';
 import { stopEmulation } from '../backends/lifecycle';

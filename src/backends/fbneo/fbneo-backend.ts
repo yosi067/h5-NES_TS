@@ -6,7 +6,7 @@ import { runtime } from '../../app/runtime';
 import { isAbortError, nextAnimationFrameOrTimeout, throwIfSignalAborted } from '../../app/async';
 import { clearAudioQueue, enqueueAudioSamples, resumeAudio, syncAudioWorkletState } from '../../audio/audio-output';
 import { isFbNeoActive } from '../active';
-import { stopSnes9xBackend } from '../emulatorjs-backend';
+import { stopSnes9xBackend } from '../emulatorjs/emulatorjs-backend';
 import { FBNEO_ROTATIONS } from './fbneo-games';
 import type { ArcadeRotation } from './fbneo-games';
 import { renderFrame, startEmulation, stopEmulation } from '../lifecycle';

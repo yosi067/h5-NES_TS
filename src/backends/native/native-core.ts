@@ -13,7 +13,7 @@ import { runtime } from '../../app/runtime';
 import { isAbortError, throwIfSignalAborted } from '../../app/async';
 import { sha256Hex } from '../../app/storage';
 import { audioContext, audioMuted, clearAudioQueue, resumeAudio } from '../../audio/audio-output';
-import { startSnes9xGame, stopSnes9xBackend } from '../emulatorjs-backend';
+import { startSnes9xGame, stopSnes9xBackend } from '../emulatorjs/emulatorjs-backend';
 import { stopFbNeoBackend } from '../fbneo/fbneo-backend';
 import { startEmulation } from '../lifecycle';
 import { startN64Game, stopN64Backend } from '../n64/n64-backend';

@@ -5,8 +5,8 @@ import { RewindBuffer } from './rewind';
 import { runtime } from '../app/runtime';
 import { featureSettings, featureState } from '../app/preferences';
 import { clearAudioQueue } from '../audio/audio-output';
-import { isFbNeoActive, isMupenN64Active, isNativeCoreActive, isSnes9xActive } from '../backends/active';
-import { snes9xBackend } from '../backends/emulatorjs-backend';
+import { isNativeCoreActive } from '../backends/active';
+import { getActiveBackend } from '../backends/registry';
 import { fbneoCore } from '../backends/fbneo/fbneo-backend';
 import { exportNativeSnapshot, importNativeSnapshot } from '../backends/native/native-core';
 import { refreshToolsPanels } from './player-features';
@@ -48,7 +48,7 @@ function rewindCaptureActive(): boolean {
 }
 
 
-function nativeRewindBlockedReason(): string | null {
+export function nativeRewindBlockedReason(): string | null {
   if (!isNativeCoreActive()) return '這款遊戲不支援倒帶';
   if (runtime.textOverlay) return '中文化遊戲不支援倒帶';
   return null;
@@ -133,9 +133,7 @@ export function stepFbNeoRewind(): boolean {
 function rewindUnavailableReason(): string | null {
   if (!runtime.gameSessionActive) return '請先開始遊戲';
   if (!document.body.classList.contains('desktop-ui')) return '倒帶只在電腦版提供';
-  if (isFbNeoActive()) return null;
-  if (isMupenN64Active() || isSnes9xActive()) return '這款遊戲不支援倒帶';
-  return nativeRewindBlockedReason();
+  return getActiveBackend().rewindBlockedReason();
 }
 
 
@@ -157,15 +155,12 @@ function updateSpeedIndicator(): void {
 
 
 export function canFastForward(): boolean {
-  return runtime.gameSessionActive && !isMupenN64Active();
+  return runtime.gameSessionActive && getActiveBackend().supportsFastForward;
 }
 
 
 export function syncFastForwardBackend(): void {
-  if (isSnes9xActive()) {
-    const multiplier = getSpeedMultiplier();
-    snes9xBackend?.setFastForward(multiplier > 1, multiplier > 1 ? multiplier : 2);
-  }
+  getActiveBackend().applySpeed(getSpeedMultiplier());
   updateSpeedIndicator();
 }
 

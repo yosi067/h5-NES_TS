@@ -5,10 +5,8 @@ import { type DesktopStage, mountDesktopStage } from './desktop-stage';
 import { mountDesktopFramePicker, mountToolsPanel } from './tools-panel';
 import { runtime } from '../app/runtime';
 import { featureSettings, inputBindings } from '../app/preferences';
-import { isMupenN64Active, isSnes9xActive } from '../backends/active';
-import { snes9xBackend } from '../backends/emulatorjs-backend';
+import { getActiveBackend } from '../backends/registry';
 import { startEmulation, stopEmulation } from '../backends/lifecycle';
-import { startN64Game } from '../backends/n64/n64-backend';
 import { createToolsApi, toolsPanelRefreshers } from '../features/player-features';
 import { getBindingLayout } from '../input/actions';
 import { describeSaveSlot, loadStateForUser, saveStateForUser } from '../saves/save-states';
@@ -68,15 +66,7 @@ export function setupDesktopControls(): void {
       isRunning: () => runtime.isRunning,
       pause: stopEmulation,
       resume: startEmulation,
-      reset: () => {
-        if (isMupenN64Active() && runtime.currentN64RomData) {
-          void startN64Game(runtime.currentN64RomData);
-        } else if (isSnes9xActive()) {
-          snes9xBackend?.reset();
-        } else {
-          runtime.nes?.reset();
-        }
-      },
+      reset: () => getActiveBackend().reset(),
       save: (slot) => { void saveStateForUser(slot, true); },
       load: (slot) => { void loadStateForUser(slot, true); },
       returnToLobby: () => { void confirmReturnToMachineMenu(); },
