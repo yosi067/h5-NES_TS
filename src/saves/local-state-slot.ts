@@ -34,13 +34,3 @@ export function readLocalStateSlot(label: string, slot: number, apply: (saveData
   }
 }
 
-
-/** 讓瀏覽器下載一份檔案。 */
-export function downloadBlob(blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}

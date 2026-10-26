@@ -3,7 +3,8 @@
  * 畫面、聲音與幀迴圈都在 EmulatorJS 的 iframe 裡，這裡只負責控制與存檔。
  */
 import { runtime } from '../../app/runtime';
-import { downloadBlob, readLocalStateSlot, writeLocalStateSlot } from '../../saves/local-state-slot';
+import { downloadBlob } from '../../app/storage';
+import { readLocalStateSlot, writeLocalStateSlot } from '../../saves/local-state-slot';
 import type { EmulatorBackend } from '../types';
 import { emulatorJsCore, snes9xBackend } from './emulatorjs-backend';
 import { loadEmulatorJsState, saveEmulatorJsState } from './emulatorjs-saves';

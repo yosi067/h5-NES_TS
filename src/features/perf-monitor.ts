@@ -181,7 +181,9 @@ export function setPerfMonitorEnabled(enabled: boolean): void {
     panel.className = 'perf-panel';
     panel.setAttribute('aria-hidden', 'true');
     Object.assign(panel.style, {
-      position: 'fixed', top: '8px', left: '8px', zIndex: '99999', pointerEvents: 'none',
+      // 電腦版放在頂部工具列下方，避免蓋住主機與遊戲名稱。
+      position: 'fixed', top: document.body.classList.contains('desktop-ui') ? '56px' : '8px', left: '8px',
+      zIndex: '99999', pointerEvents: 'none',
       padding: '6px 8px', borderRadius: '6px', background: 'rgba(0,0,0,0.72)', color: '#9effa0',
       font: '11px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace', whiteSpace: 'pre',
     } satisfies Partial<CSSStyleDeclaration>);

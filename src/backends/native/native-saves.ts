@@ -9,7 +9,7 @@ import { readBinaryState, writeBinaryState } from '../../storage/binary-state-st
 import { EmuWasm } from '../../wasm/nes_wasm.js';
 import { runtime } from '../../app/runtime';
 import { audioMuted, clearAudioQueue } from '../../audio/audio-output';
-import { downloadBlob } from '../../saves/local-state-slot';
+import { downloadBlob } from '../../app/storage';
 import { getSaveKey } from '../../saves/save-keys';
 import { getSramKey } from '../../saves/sram';
 import { showToast } from '../../ui/dialogs';
