@@ -298,6 +298,7 @@ N64 用 Mupen64Plus 自己的 SDL 音訊。EmulatorJS 在 iframe 內出聲。
 | `npm run test:ci` | Vitest 前端測試 |
 | `npm run test:rust` | Rust 核心單元測試（含 FIR 逐位元比對） |
 | `npm run build` | 重建 WASM、型別檢查、產生正式版 |
+| `npm run docs:pdf` | 把使用手冊與本說明書匯出成 PDF（`docs/pdf/`，需要本機 Chrome） |
 
 ### 重構時的回歸驗證
 

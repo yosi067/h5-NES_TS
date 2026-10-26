@@ -24,6 +24,7 @@
 | `npm test` | Vitest（watch 模式） |
 | `npx vitest run tests/<name>.test.ts` | 執行單一測試檔 |
 | `npm run lint` | ESLint（`src`） |
+| `npm run docs:pdf` | 把使用手冊與技術架構說明書匯出成 PDF 到 `docs/pdf/`（需要本機 Chrome，可用 `CHROME_PATH` 指定） |
 | `npm run n64:source` / `npm run n64:build` | 取得並以 Docker 重建 N64 runtime fork |
 
 中文化與遊戲資料相關指令另見：[遊戲 Profile 與翻譯框架](GAME_PROFILE_AUTHORING.md)、[足球小將 II](CT2_LOCALIZATION_STUDIO.md)、[Zombie Hunter](ZOMBIE_HUNTER.md)、[遊戲資料與封面](GAME_METADATA_PLAN.md)。
