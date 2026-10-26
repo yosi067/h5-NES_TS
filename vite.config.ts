@@ -385,14 +385,6 @@ export default defineConfig({
   // 使用環境變數 VITE_BASE_PATH，預設為 './' (本地開發)
   // GitHub Actions會依repository path設定為 '/<name>/'
   base: process.env.VITE_BASE_PATH || './',
-  resolve: {
-    alias: {
-      '@core': resolve(__dirname, 'src/core'),
-      '@mappers': resolve(__dirname, 'src/mappers'),
-      '@utils': resolve(__dirname, 'src/utils'),
-      '@ui': resolve(__dirname, 'src/ui'),
-    },
-  },
   // 開發伺服器設定
   server: {
     ...(process.env.N64_MOBILE_HTTPS === '1' ? {

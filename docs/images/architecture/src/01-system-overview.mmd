@@ -1,0 +1,26 @@
+flowchart TB
+  subgraph L1["① 頁面"]
+    direction LR
+    HTML["index.html<br/>結構"] ~~~ CSS["public/styles<br/>樣式"] ~~~ SW["Service Worker<br/>離線副本"]
+  end
+  subgraph L2["② 玩家功能"]
+    direction LR
+    LOBBY["lobby<br/>大廳"] ~~~ UI["ui<br/>手把・舞台"] ~~~ INPUT["input<br/>按鍵對應"] ~~~ FEAT["features<br/>快轉・倒帶・選單"]
+  end
+  subgraph L3["③ 流程與資料"]
+    direction LR
+    SESSION["session<br/>開始・結束一局"] ~~~ SAVES["saves<br/>存檔・自動存檔"] ~~~ RUNTIME[("app/runtime<br/>共用狀態")]
+  end
+  subgraph L4["④ 後端介面（backends/）"]
+    direction LR
+    REG{{"registry<br/>getActiveBackend()"}} --> NA["native"] & FA["fbneo"] & EA["emulatorjs"] & N64A["n64"]
+  end
+  subgraph L5["⑤ 模擬核心"]
+    direction LR
+    RUST["Rust/WASM<br/>FC GB GG SMS SFC"] ~~~ FBNEO["FBNeo<br/>街機"] ~~~ EJS["EmulatorJS<br/>iframe"] ~~~ MUPEN["Mupen64Plus<br/>N64"]
+  end
+  subgraph L6["⑥ 瀏覽器輸出與儲存"]
+    direction LR
+    CANVAS["Canvas 2D"] ~~~ GL["WebGL2"] ~~~ AUDIO["AudioWorklet"] ~~~ STORE[("localStorage<br/>IndexedDB")]
+  end
+  L1 --> L2 --> L3 --> L4 --> L5 --> L6

@@ -1,0 +1,46 @@
+classDiagram
+  direction TB
+  class EmulatorBackend {
+    <<interface>>
+    +id: BackendId
+    +supportsSaveStates: boolean
+    +supportsFastForward: boolean
+    +supportsPlayerTwo() boolean
+    +rewindBlockedReason() string|null
+    +saveKeyTag() string
+    +resume() / pause() / render() / reset()
+    +saveStateNow(slot) / loadStateNow(slot)
+    +saveState(slot) / loadState(slot) Promise
+    +captureSnapshot() / restoreSnapshot(data)
+    +persistBatterySave() / restoreBatterySave()
+    +applySpeed(multiplier)
+    +exportStateFile()
+  }
+  class nativeAdapter {
+    id = wasm
+    存檔標籤 = 核心類型 nes/gb/gg/snes
+    自己的 rAF 幀迴圈
+    FC 持久存檔 + 同核心暫存
+  }
+  class fbneoAdapter {
+    id = fbneo
+    存檔標籤 = fbneo
+    自己的 rAF 幀迴圈
+    存檔 base64 → localStorage
+  }
+  class emulatorJsAdapter {
+    id = snes9x
+    存檔標籤 = snes9x
+    iframe 內自己跑
+    存檔 IndexedDB（排隊執行）
+  }
+  class n64Adapter {
+    id = mupen64
+    存檔標籤 = n64
+    WebGL2 由核心直接輸出
+    只有遊戲內建存檔
+  }
+  EmulatorBackend <|.. nativeAdapter
+  EmulatorBackend <|.. fbneoAdapter
+  EmulatorBackend <|.. emulatorJsAdapter
+  EmulatorBackend <|.. n64Adapter

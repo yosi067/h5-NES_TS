@@ -1,0 +1,106 @@
+/* 基礎重置與 GameBoy 經典配色。
+ * 原本內嵌在 index.html；載入順序見 index.html 的 <link>，順序即疊加優先序。 */
+
+/* ===== 基礎重置 ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
+html.ios-safari-browser-mode {
+  height: auto;
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+  scroll-behavior: auto;
+}
+
+body.ios-safari-browser-mode {
+  height: auto;
+  min-height: calc(100dvh + 24px);
+  overflow: visible;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+body.ios-safari-browser-mode.mobile-landscape-mode {
+  overflow: visible;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+html.ios-safari-landscape-mode {
+  min-height: 100%;
+}
+
+html.standalone-mode,
+body.standalone-mode {
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+
+/* ===== GameBoy 經典配色 ===== */
+:root {
+  /* 機身顏色 */
+  --gb-body: #bdb8a7;
+  --gb-body-dark: #9f9a8a;
+  --gb-body-light: #d4d0c0;
+  
+  /* 深色部件 */
+  --gb-dark: #565656;
+  --gb-darker: #3C3C3C;
+  --gb-darkest: #2C2C2C;
+  
+  /* 螢幕相關 */
+  --gb-screen-bezel: #505062;
+  --gb-screen-inner: #1a1a2a;
+  --gb-screen-bg: #8b956d;
+  
+  /* 按鈕顏色 */
+  --gb-btn-dpad: #24242b;
+  --gb-btn-dpad-pressed: #141419;
+  --gb-btn-ab: #922040;
+  --gb-btn-ab-pressed: #6a1830;
+  --gb-btn-func: #787878;
+  --gb-btn-func-pressed: #5a5a5a;
+  
+  /* 強調色 */
+  --gb-led-on: #4ade80;
+  --gb-accent: #922040;
+  
+  /* 光暈效果 */
+  --glow-dpad: rgba(100, 180, 255, 0.6);
+  --glow-ab: rgba(255, 100, 100, 0.6);
+  --glow-func: rgba(200, 200, 200, 0.4);
+
+  /* Famicom + arcade cabinet theme */
+  --fc-red: #b51f2c;
+  --fc-red-dark: #7f1420;
+  --fc-cream: #f3ead8;
+  --fc-gold: #d2a646;
+  --arcade-black: #17171c;
+  --arcade-panel: #25252d;
+  --arcade-blue: #2b6fb6;
+  --store-floor: #272022;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(210, 166, 70, 0.22), transparent 34%),
+    linear-gradient(135deg, rgba(181, 31, 44, 0.2) 0 12%, transparent 12% 24%, rgba(243, 234, 216, 0.08) 24% 36%, transparent 36% 100%),
+    linear-gradient(180deg, #3b2b2f 0%, #1b1b21 54%, var(--store-floor) 100%);
+  color: #1a1a1a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}

@@ -87,5 +87,21 @@
 
 ## 測試基線說明
 
-- `tests/cpu.test.ts`、`tests/ppu.test.ts`、`tests/mapper.test.ts` 測的是舊 TypeScript 核心，不是正式的 Rust/Wasm 遊戲路徑。本輪執行時仍有大量既有失敗，不能用來證明正式核心的準確率。
+- 測舊 TypeScript 核心的 `cpu/ppu/mapper` 測試已隨舊核心一併移除（它們從未測到正式的 Rust/Wasm 遊戲路徑）。
 - Rust 原始碼只有 N64 cartridge、NES mapper、GB MBC 與 SNES decimal ADC 的少量單元測試，距離 CPU/PPU/APU conformance coverage 還很遠。應先擴充正式核心測試，再修改硬體時序，以免修好一款遊戲卻弄壞另一款。
+
+## 效能量測與 Worker 評估（2026-10）
+
+以效能面板（`?perf=1`）在桌機 Chrome 量測，並用 DevTools 把 CPU 降速 4 倍模擬中低階手機。數字是每次畫面更新花在模擬上的平均毫秒數，畫面預算約 16.7 ms。
+
+| 遊戲 | 後端 | 一般 CPU | 降速 4 倍 |
+|---|---|---|---|
+| 超級瑪利歐（FC） | 自製 WASM | 60 fps，約 4 ms | 約 44 fps，音訊斷音 |
+| 瑪利歐樂園 2（GB） | 自製 WASM | 60 fps，約 1 ms | 60 fps |
+| 超級瑪利歐世界（SFC） | 自製 WASM | 60 fps，約 3.5 ms | 約 45 fps，音訊斷音 |
+| 瑪利歐賽車、阿拉丁 | EmulatorJS | 60 fps | 60 fps |
+| Pac-Man、KOF 97 | FBNeo | 60 fps，約 1 ms | 60 fps |
+
+- **FC 熱點**：具名剖析顯示每幀約三成花在 FCEUmm 品質的音訊 FIR 重取樣（1,024 階、每個輸出取樣約 2,000 次乘加）。已改寫內迴圈並重新啟用 wasm-opt，FC 每幀約 3.6 ms → 2.9 ms，輸出與舊版逐位元相同。
+- **Worker 結論：暫不遷移。** 桌機一般 CPU 下所有核心都只用掉不到三成預算，沒有長幀或斷音；只有 FC／SFC 自製核心在降速 4 倍時掉幀。遷移到 Worker 需要改寫輸入、畫面傳遞（OffscreenCanvas）、音訊、同步存檔與自動存檔、倒帶、以及每幀讀取核心記憶體的中文化圖層，風險高。
+- **下一步**：先用效能面板在實機手機收集數據。若實機上 FC／SFC 的模擬 fps 低於 60 或斷音數持續增加，再把自製核心遷移到 Worker 作為獨立專案。

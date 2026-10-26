@@ -1,0 +1,7 @@
+flowchart TB
+  A["① types.ts<br/>BackendId 加上新代號"] --> B["② backends/新後端/<br/>啟動、停止、幀迴圈"]
+  B --> C["③ 新後端-adapter.ts<br/>實作 EmulatorBackend"]
+  C --> D["④ registry.ts<br/>switch 加一行"]
+  D --> E["⑤ 路由<br/>native-core / game-loader 決定何時使用"]
+  E --> F["⑥ 版面<br/>controller-layout 選手把配置"]
+  D -. "漏掉任一代號<br/>TypeScript 直接報錯" .-> A

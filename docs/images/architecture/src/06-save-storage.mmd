@@ -1,0 +1,23 @@
+flowchart LR
+  subgraph Player["玩家操作"]
+    U1["存檔 / 讀檔<br/>F5・F7・選單"]
+    U2["離開遊戲・切到背景<br/>關閉頁面"]
+    U3["遊戲內存檔<br/>（電池）"]
+    U4["備份存檔 / 還原備份"]
+  end
+
+  SS["saves/save-states.ts"] --> AD{{"目前的 adapter"}}
+  U1 --> SS
+  U2 --> AUTO["saves/autosave.ts<br/>captureSnapshot()"]
+  U3 --> SRAM["saves/sram.ts<br/>每 30 秒・離開時"]
+  U4 --> BK["saves/backup-flow.ts"]
+  AUTO --> AD
+  SRAM --> AD
+
+  AD -- "FC" --> K1["NES-SAVE-1: 持久存檔<br/>localStorage → 額度不足改 IndexedDB"]
+  AD -- "GB・GG・SFC・街機" --> K2["localStorage<br/>emu_savestate_核心_ROM_欄位"]
+  AD -- "EmulatorJS" --> K3["IndexedDB<br/>（舊 localStorage 自動搬移）"]
+  AD -- "N64" --> K4["只有遊戲內建存檔<br/>Mupen64Plus 自己寫入"]
+  AUTO --> K5["IndexedDB<br/>同一個 key 的 auto 欄位"]
+  SRAM --> K6["localStorage<br/>emu_sram_ROM名稱"]
+  BK --> K7["一個 JSON 檔<br/>所有存檔・最愛"]

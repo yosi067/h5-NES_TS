@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeArcadeInputSources, updateArcadeInputMask } from '../src/main';
+import { mergeArcadeInputSources, updateArcadeInputMask } from '../src/input/arcade-input';
 
 describe('arcade input sources', () => {
   it('keeps touch buttons pressed when an idle gamepad is present', () => {

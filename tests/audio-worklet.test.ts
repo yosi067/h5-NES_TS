@@ -49,4 +49,21 @@ describe('emulator audio worklet', () => {
     expect(Array.from(outputs[0][0].slice(0, 2))).toEqual([0.25, 0.5]);
     expect(Array.from(outputs[0][1].slice(0, 2))).toEqual([-0.25, -0.5]);
   });
+
+  it('reports underruns and dropped chunks only when asked', () => {
+    const processor = createProcessor();
+    const posted: unknown[] = [];
+    (processor.port as { postMessage?: (data: unknown) => void }).postMessage = (data) => posted.push(data);
+    const send = (data: unknown) => processor.port.onmessage?.({ data });
+    send({ type: 'state', running: true, muted: false });
+
+    // 25 個區塊超過上限 24，最舊的一塊會被丟掉。
+    for (let index = 0; index < 25; index++) send({ type: 'samples', samples: new Float32Array(64), channels: 1 });
+    expect(posted).toHaveLength(0);
+
+    // 24 × 64 = 1536 幀可播放；輸出 2048 幀必定見底一次。
+    processor.process([], [[new Float32Array(2048), new Float32Array(2048)]]);
+    send({ type: 'stats' });
+    expect(posted).toEqual([{ type: 'stats', bufferedFrames: 0, underruns: 1, droppedChunks: 1 }]);
+  });
 });

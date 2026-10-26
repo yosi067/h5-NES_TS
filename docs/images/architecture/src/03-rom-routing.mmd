@@ -1,0 +1,11 @@
+flowchart TB
+  START(["玩家選了一款遊戲"]) --> ARC{"街機 ZIP<br/>（FBNeo ROM set）？"}
+  ARC -- 是 --> FB["FBNeo 後端"]
+  ARC -- 否 --> N64{"N64 卡帶？<br/>.z64 .n64 .v64"}
+  N64 -- 是 --> MU["Mupen64Plus 後端"]
+  N64 -- 否 --> MD{"Mega Drive？<br/>.md .gen .smd"}
+  MD -- 是 --> GEN["EmulatorJS<br/>Genesis Plus GX"]
+  MD -- 否 --> SFC{"SFC 且使用<br/>SA-1 / S-DD1？"}
+  SFC -- 是 --> S9X["EmulatorJS<br/>Snes9x"]
+  SFC -- 否 --> NATIVE["自製 Rust/WASM 核心<br/>FC・GB・GG・SMS・SFC"]
+  NATIVE -- "FC Mapper 不支援<br/>或已知黑畫面" --> FCE["EmulatorJS<br/>FCEUmm"]

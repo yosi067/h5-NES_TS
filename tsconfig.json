@@ -15,13 +15,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
-    "rootDir": ".",
-    "paths": {
-      "@core/*": ["./src/core/*"],
-      "@mappers/*": ["./src/mappers/*"],
-      "@utils/*": ["./src/utils/*"],
-      "@ui/*": ["./src/ui/*"]
-    }
+    "rootDir": "."
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]

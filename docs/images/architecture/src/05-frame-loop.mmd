@@ -1,0 +1,14 @@
+flowchart TB
+  RAF(["requestAnimationFrame"]) --> ACC["累加經過時間<br/>落後超過 3 幀就重設"]
+  ACC --> ENOUGH{"累積時間 ≥ 一幀？<br/>FC 60.10・GB 59.73・GG 59.92 fps"}
+  ENOUGH -- 否 --> DRAW
+  ENOUGH -- 是 --> RW{"正在倒帶？"}
+  RW -- 是 --> STEP["還原上一份快照"] --> ENOUGH
+  RW -- 否 --> FRAME["nes.frame()<br/>跑一幀模擬"]
+  FRAME --> DIAG["SFC 診斷<br/>（僅 ?snesDiag=1）"]
+  DIAG --> AUD["音訊送進 AudioWorklet"]
+  AUD --> SNAP["每 20 幀存一份倒帶快照<br/>（僅電腦版）"]
+  SNAP --> FF["快轉：多跑 1～3 幀（不出聲）"]
+  FF --> ENOUGH
+  DRAW["畫到畫布<br/>畫面提示・中文化圖層"] --> PERF["效能面板記錄<br/>（開啟時）"]
+  PERF --> RAF
