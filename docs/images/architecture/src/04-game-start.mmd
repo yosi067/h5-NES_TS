@@ -1,0 +1,19 @@
+sequenceDiagram
+  autonumber
+  actor P as 玩家
+  participant L as 大廳 lobby
+  participant G as 載入 game-loader
+  participant C as 後端啟動<br/>native-core 等
+  participant A as adapter<br/>（經 registry）
+  participant S as game-session
+
+  P->>L: 點選遊戲
+  L->>G: loadRomFromServer(檔名)
+  G->>G: 顯示載入畫面、下載 ROM（可取消）
+  G->>C: 依檔案路由到對應後端
+  C->>C: 停掉其他後端、設定 activeBackend
+  C->>A: startEmulation() → resume()
+  A-->>P: 畫面與聲音開始輸出
+  C->>S: onGameStarted()
+  S->>S: 記錄最近玩過、重設快轉
+  S-->>P: 有上次進度時顯示「繼續上次進度」

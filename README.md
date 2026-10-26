@@ -154,6 +154,8 @@ docs/                # 技術、除錯、規格與優化文件
 
 最新進展、實測結果與細節不再堆疊於 README，完整分類請見 **[文件導覽](docs/README.md)**。常用入口：
 
+- [使用手冊](docs/USER_MANUAL.md)（玩家操作，附截圖）
+- [技術架構說明書](docs/ARCHITECTURE.md)（模組分工與擴充方式，附架構圖）
 - [技術概覽與完整架構](docs/TECHNICAL_OVERVIEW.md)
 - [開發指南](docs/DEVELOPMENT.md)
 - [問題與修復紀錄](docs/TROUBLESHOOTING.md)

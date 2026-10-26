@@ -7,6 +7,8 @@
 | 文件 | 內容 |
 |---|---|
 | [../README.md](../README.md) | 專案介紹、平台、快速開始 |
+| [USER_MANUAL.md](USER_MANUAL.md) | 玩家使用手冊：大廳、手機與電腦操作、存檔、快轉倒帶、常見問題（附截圖） |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | 技術架構說明書：分層、後端介面、存檔、幀迴圈、效能與擴充指南（附架構圖） |
 | [TECHNICAL_OVERVIEW.md](TECHNICAL_OVERVIEW.md) | 執行架構、各後端邊界、主要目錄 |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | 環境、指令、ROM 目錄、後端路由、鍵盤、測試、部署 |
 | [NEAR_AND_SNES9X_TRIBUTE.md](NEAR_AND_SNES9X_TRIBUTE.md) | 致敬 Near 與 Snes9x 團隊的模擬器故事 |
