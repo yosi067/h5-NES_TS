@@ -2,6 +2,7 @@
  * H5-EMU 進入點：建立應用程式外殼並依序啟動各模組。
  */
 import './app/debug-globals';
+import { ensureAccess } from './app/access-gate';
 import { runtime } from './app/runtime';
 import { audioMuted, initAudio, resumeAudio } from './audio/audio-output';
 import { n64AudioOutputDiagnostics } from './backends/n64/n64-backend';
@@ -91,6 +92,8 @@ function setupAppShell(): boolean {
 // ===== 啟動 =====
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // 第一次進站先通關；通過後這台裝置不再詢問。
+  await ensureAccess();
   if (!setupAppShell()) return;
 
   // Safari可能在背景切換或重建backend後再次暫停AudioContext，必須保留解鎖監聽。

@@ -26,6 +26,12 @@
   <link rel="stylesheet" href="/game-stage-desktop.css">
   <link rel="stylesheet" href="/player-tools.css">
   <link rel="stylesheet" href="/console-skins.css">
+  <link rel="stylesheet" href="/styles/access-gate.css">
+  <script>
+    // 尚未通關時先隱藏頁面，避免大廳閃一下。值需與 src/app/access-gate.ts 的 PASSCODE_HASH 相同。
+    try { if (localStorage.getItem('h5emu.access.v1') !== '8d5119eb') document.documentElement.classList.add('access-locked'); }
+    catch (e) { document.documentElement.classList.add('access-locked'); }
+  </script>
 </head>
 <body>
   <div class="game-loading-overlay" id="game-loading-overlay" role="status" aria-live="polite" aria-busy="true" hidden>
